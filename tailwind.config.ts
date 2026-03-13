@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        mono: ['"JetBrains Mono"', 'monospace'],
+        display: ['"Space Grotesk"', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -46,6 +50,13 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        fretboard: {
+          wood: "hsl(var(--fretboard-wood))",
+          fret: "hsl(var(--fretboard-fret))",
+          string: "hsl(var(--fretboard-string))",
+          inlay: "hsl(var(--fretboard-inlay))",
+          nut: "hsl(var(--fretboard-nut))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
