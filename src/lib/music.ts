@@ -7,7 +7,7 @@ export const NOTE_CSS_KEYS: Record<NoteName, string> = {
   'G#': '--note-gs', 'A': '--note-a', 'A#': '--note-as', 'B': '--note-b',
 };
 
-// Standard tuning: E A D G B E (low to high)
+// Standard tuning: E A D G B E (low to high, index 0 = low E)
 export const STANDARD_TUNING = [4, 9, 2, 7, 11, 4]; // E=4, A=9, D=2, G=7, B=11, E=4
 export const STRING_NAMES = ['E', 'A', 'D', 'G', 'B', 'e'];
 
@@ -57,53 +57,100 @@ export const CHORD_FORMULAS: Record<string, number[]> = {
   'Power (5)': [0, 7],
 };
 
-// Guitar chord voicings: [lowE, A, D, G, B, highE] (-1 = muted, 0 = open)
+// Playable chord voicings: [lowE, A, D, G, B, highE] (-1 = muted, 0 = open)
 export const CHORD_VOICINGS: Record<string, Record<string, number[][]>> = {
   'C': {
-    'Major': [[0,-1,3,2,0,1,0], [0,3,3,2,0,1,0]],
-    'Minor': [[-1,3,1,0,1,-1]],
-    'Major 7': [[-1,3,2,0,0,0]],
-    'Minor 7': [[-1,3,1,3,1,3]],
-    'Dominant 7': [[-1,3,2,3,1,0]],
+    'Major': [[-1, 3, 2, 0, 1, 0], [8, 10, 10, 9, 8, 8]],
+    'Minor': [[-1, 3, 5, 5, 4, 3], [8, 10, 10, 8, 8, 8]],
+    'Major 7': [[-1, 3, 2, 0, 0, 0], [8, 10, 9, 9, 8, 8]],
+    'Minor 7': [[-1, 3, 5, 3, 4, 3], [8, 10, 8, 8, 8, 8]],
+    'Dominant 7': [[-1, 3, 2, 3, 1, 0], [8, 10, 8, 9, 8, 8]],
+    'Diminished': [[-1, 3, 4, 5, 4, -1]],
+    'Augmented': [[-1, 3, 2, 1, 1, 0]],
+    'Sus2': [[-1, 3, 0, 0, 1, 3]],
+    'Sus4': [[-1, 3, 3, 0, 1, 1]],
   },
   'D': {
-    'Major': [[-1,-1,0,2,3,2]],
-    'Minor': [[-1,-1,0,2,3,1]],
-    'Major 7': [[-1,-1,0,2,2,2]],
-    'Minor 7': [[-1,-1,0,2,1,1]],
-    'Dominant 7': [[-1,-1,0,2,1,2]],
+    'Major': [[-1, -1, 0, 2, 3, 2], [10, 12, 12, 11, 10, 10]],
+    'Minor': [[-1, -1, 0, 2, 3, 1], [10, 12, 12, 10, 10, 10]],
+    'Major 7': [[-1, -1, 0, 2, 2, 2]],
+    'Minor 7': [[-1, -1, 0, 2, 1, 1]],
+    'Dominant 7': [[-1, -1, 0, 2, 1, 2]],
+    'Sus2': [[-1, -1, 0, 2, 3, 0]],
+    'Sus4': [[-1, -1, 0, 2, 3, 3]],
   },
   'E': {
-    'Major': [[0,2,2,1,0,0]],
-    'Minor': [[0,2,2,0,0,0]],
-    'Major 7': [[0,2,1,1,0,0]],
-    'Minor 7': [[0,2,0,0,0,0]],
-    'Dominant 7': [[0,2,0,1,0,0]],
+    'Major': [[0, 2, 2, 1, 0, 0]],
+    'Minor': [[0, 2, 2, 0, 0, 0]],
+    'Major 7': [[0, 2, 1, 1, 0, 0]],
+    'Minor 7': [[0, 2, 0, 0, 0, 0]],
+    'Dominant 7': [[0, 2, 0, 1, 0, 0]],
+    'Diminished': [[-1, -1, 2, 3, 2, 0]],
+    'Augmented': [[0, 3, 2, 1, 1, 0]],
+    'Sus2': [[0, 2, 4, 4, 0, 0]],
+    'Sus4': [[0, 2, 2, 2, 0, 0]],
   },
   'G': {
-    'Major': [[3,2,0,0,0,3]],
-    'Minor': [[3,1,0,0,3,3]],
-    'Major 7': [[3,2,0,0,0,2]],
-    'Dominant 7': [[3,2,0,0,0,1]],
+    'Major': [[3, 2, 0, 0, 0, 3], [3, 2, 0, 0, 3, 3]],
+    'Minor': [[3, 5, 5, 3, 3, 3]],
+    'Major 7': [[3, 2, 0, 0, 0, 2]],
+    'Dominant 7': [[3, 2, 0, 0, 0, 1]],
+    'Diminished': [[-1, -1, 5, 6, 5, 3]],
+    'Sus2': [[3, 0, 0, 0, 3, 3]],
+    'Sus4': [[3, 3, 0, 0, 1, 3]],
   },
   'A': {
-    'Major': [[-1,0,2,2,2,0]],
-    'Minor': [[-1,0,2,2,1,0]],
-    'Major 7': [[-1,0,2,1,2,0]],
-    'Minor 7': [[-1,0,2,0,1,0]],
-    'Dominant 7': [[-1,0,2,0,2,0]],
+    'Major': [[-1, 0, 2, 2, 2, 0], [5, 7, 7, 6, 5, 5]],
+    'Minor': [[-1, 0, 2, 2, 1, 0], [5, 7, 7, 5, 5, 5]],
+    'Major 7': [[-1, 0, 2, 1, 2, 0]],
+    'Minor 7': [[-1, 0, 2, 0, 1, 0]],
+    'Dominant 7': [[-1, 0, 2, 0, 2, 0]],
+    'Diminished': [[-1, 0, 1, 2, 1, -1]],
+    'Augmented': [[-1, 0, 3, 2, 2, 1]],
+    'Sus2': [[-1, 0, 2, 2, 0, 0]],
+    'Sus4': [[-1, 0, 2, 2, 3, 0]],
   },
   'F': {
-    'Major': [[1,1,2,3,3,1], [-1,-1,3,2,1,1]],
-    'Minor': [[1,1,1,3,3,1]],
-    'Major 7': [[-1,-1,3,2,1,0]],
-    'Dominant 7': [[1,1,2,1,3,1]],
+    'Major': [[1, 1, 2, 3, 3, 1], [-1, -1, 3, 2, 1, 1]],
+    'Minor': [[1, 1, 1, 3, 3, 1]],
+    'Major 7': [[1, -1, 2, 2, 1, 0]],
+    'Dominant 7': [[1, 1, 2, 1, 3, 1]],
+    'Diminished': [[-1, -1, 3, 4, 3, 1]],
+    'Sus2': [[-1, -1, 3, 0, 1, 1]],
+    'Sus4': [[1, 1, 3, 3, 1, 1]],
   },
   'B': {
-    'Major': [[-1,2,4,4,4,2]],
-    'Minor': [[-1,2,4,4,3,2]],
-    'Major 7': [[-1,2,1,3,0,-1]],
-    'Dominant 7': [[-1,2,1,2,0,2]],
+    'Major': [[-1, 2, 4, 4, 4, 2], [7, 9, 9, 8, 7, 7]],
+    'Minor': [[-1, 2, 4, 4, 3, 2], [7, 9, 9, 7, 7, 7]],
+    'Major 7': [[-1, 2, 4, 3, 4, 2]],
+    'Dominant 7': [[-1, 2, 1, 2, 0, 2]],
+    'Diminished': [[-1, -1, 0, 1, 0, 1]],
+    'Sus2': [[-1, 2, 4, 4, 2, 2]],
+    'Sus4': [[-1, 2, 4, 4, 5, 2]],
+  },
+  'C#': {
+    'Major': [[-1, 4, 6, 6, 6, 4], [9, 11, 11, 10, 9, 9]],
+    'Minor': [[-1, 4, 6, 6, 5, 4]],
+  },
+  'D#': {
+    'Major': [[-1, 6, 8, 8, 8, 6]],
+    'Minor': [[-1, 6, 8, 8, 7, 6]],
+  },
+  'F#': {
+    'Major': [[2, 4, 4, 3, 2, 2]],
+    'Minor': [[2, 4, 4, 2, 2, 2]],
+    'Major 7': [[2, -1, 3, 3, 2, 1]],
+    'Dominant 7': [[2, 4, 2, 3, 2, 2]],
+  },
+  'G#': {
+    'Major': [[4, 6, 6, 5, 4, 4]],
+    'Minor': [[4, 6, 6, 4, 4, 4]],
+  },
+  'A#': {
+    'Major': [[-1, 1, 3, 3, 3, 1], [6, 8, 8, 7, 6, 6]],
+    'Minor': [[-1, 1, 3, 3, 2, 1]],
+    'Major 7': [[-1, 1, 3, 2, 3, 1]],
+    'Dominant 7': [[-1, 1, 3, 1, 3, 1]],
   },
 };
 
@@ -115,6 +162,9 @@ export const ARPEGGIO_FORMULAS: Record<string, number[]> = {
   'Major 7': [0, 4, 7, 11],
   'Minor 7': [0, 3, 7, 10],
   'Dominant 7': [0, 4, 7, 10],
+  'Dim 7': [0, 3, 6, 9],
+  'Half-Dim 7': [0, 3, 6, 10],
+  'Min/Maj 7': [0, 3, 7, 11],
 };
 
 export function noteAtFret(stringIndex: number, fret: number): NoteName {
@@ -129,9 +179,26 @@ export function getScaleNotes(root: NoteName, scaleName: string): NoteName[] {
   return formula.map(interval => NOTE_NAMES[(rootIndex + interval) % 12]);
 }
 
+export function getArpeggioNotes(root: NoteName, arpeggioName: string): NoteName[] {
+  const rootIndex = NOTE_NAMES.indexOf(root);
+  const formula = ARPEGGIO_FORMULAS[arpeggioName];
+  if (!formula) return [];
+  return formula.map(interval => NOTE_NAMES[(rootIndex + interval) % 12]);
+}
+
 export function isNoteInScale(note: NoteName, root: NoteName, scaleName: string): boolean {
   const scaleNotes = getScaleNotes(root, scaleName);
   return scaleNotes.includes(note);
+}
+
+export function isNoteInArpeggio(note: NoteName, root: NoteName, arpeggioName: string): boolean {
+  const notes = getArpeggioNotes(root, arpeggioName);
+  return notes.includes(note);
+}
+
+export function isNoteInSelection(note: NoteName, root: NoteName, name: string, mode: 'scale' | 'arpeggio'): boolean {
+  if (mode === 'scale') return isNoteInScale(note, root, name);
+  return isNoteInArpeggio(note, root, name);
 }
 
 export function getChordsForNote(note: NoteName): { name: string; notes: NoteName[] }[] {
@@ -156,4 +223,15 @@ export function getIntervalName(root: NoteName, note: NoteName): string {
   const noteIdx = NOTE_NAMES.indexOf(note);
   const diff = (noteIdx - rootIdx + 12) % 12;
   return intervals[diff];
+}
+
+// Get notes for a chord voicing on the fretboard
+export function getChordVoicingNotes(voicing: number[]): { stringIndex: number; fret: number; note: NoteName }[] {
+  const result: { stringIndex: number; fret: number; note: NoteName }[] = [];
+  voicing.forEach((fret, stringIndex) => {
+    if (fret >= 0) {
+      result.push({ stringIndex, fret, note: noteAtFret(stringIndex, fret) });
+    }
+  });
+  return result;
 }
