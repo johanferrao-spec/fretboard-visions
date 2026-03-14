@@ -3,6 +3,7 @@ import { NoteName, NOTE_NAMES } from '@/lib/music';
 
 export type ScaleMode = 'scale' | 'arpeggio';
 export type DisplayMode = 'notes' | 'degrees';
+export type Orientation = 'horizontal' | 'vertical';
 
 export interface ScaleSelection {
   mode: ScaleMode;
@@ -14,6 +15,7 @@ export interface ChordSelection {
   root: NoteName;
   chordType: string;
   voicingIndex: number;
+  isShell?: boolean;
 }
 
 export interface NoteColors {
@@ -38,7 +40,10 @@ export function useFretboard() {
   const [secondaryOpacity, setSecondaryOpacity] = useState(0.35);
   const [secondaryColor, setSecondaryColor] = useState('hsl(200, 80%, 60%)');
   const [primaryColor, setPrimaryColor] = useState('');
-  
+  const [orientation, setOrientation] = useState<Orientation>('horizontal');
+  const [showFretBox, setShowFretBox] = useState(false);
+  const [fretBoxStart, setFretBoxStart] = useState(1);
+
   // Chord mode
   const [activeChord, setActiveChord] = useState<ChordSelection | null>(null);
 
@@ -69,5 +74,8 @@ export function useFretboard() {
     secondaryColor, setSecondaryColor,
     primaryColor, setPrimaryColor,
     activeChord, setActiveChord,
+    orientation, setOrientation,
+    showFretBox, setShowFretBox,
+    fretBoxStart, setFretBoxStart,
   };
 }

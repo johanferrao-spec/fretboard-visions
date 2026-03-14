@@ -1,5 +1,5 @@
 import { NOTE_NAMES, SCALE_FORMULAS, ARPEGGIO_FORMULAS, NoteName } from '@/lib/music';
-import type { ScaleSelection, ScaleMode, DisplayMode } from '@/hooks/useFretboard';
+import type { ScaleSelection, ScaleMode, DisplayMode, Orientation } from '@/hooks/useFretboard';
 
 interface ControlPanelProps {
   primaryScale: ScaleSelection;
@@ -20,6 +20,12 @@ interface ControlPanelProps {
   setDisplayMode: (v: DisplayMode) => void;
   maxFrets: number;
   setMaxFrets: (v: number) => void;
+  orientation: Orientation;
+  setOrientation: (v: Orientation) => void;
+  showFretBox: boolean;
+  setShowFretBox: (v: boolean) => void;
+  fretBoxStart: number;
+  setFretBoxStart: (v: number) => void;
 }
 
 const scaleNames = Object.keys(SCALE_FORMULAS);
@@ -35,6 +41,9 @@ export default function ControlPanel({
   primaryColor, setPrimaryColor,
   displayMode, setDisplayMode,
   maxFrets, setMaxFrets,
+  orientation, setOrientation,
+  showFretBox, setShowFretBox,
+  fretBoxStart, setFretBoxStart,
 }: ControlPanelProps) {
   return (
     <div className="space-y-4">
@@ -48,6 +57,26 @@ export default function ControlPanel({
           onChange={e => setMaxFrets(Number(e.target.value))}
           className="w-full mt-1 accent-primary"
         />
+      </div>
+
+      {/* Orientation toggle */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setOrientation('horizontal')}
+          className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
+            orientation === 'horizontal' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+          }`}
+        >
+          Horizontal
+        </button>
+        <button
+          onClick={() => setOrientation('vertical')}
+          className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
+            orientation === 'vertical' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+          }`}
+        >
+          Vertical
+        </button>
       </div>
 
       {/* Display mode toggle */}
@@ -70,6 +99,35 @@ export default function ControlPanel({
         </button>
       </div>
 
+      {/* 5-Fret Box */}
+      <div>
+        <div className="flex items-center gap-3 mb-1">
+          <button
+            onClick={() => setShowFretBox(!showFretBox)}
+            className={`relative w-11 h-6 rounded-full transition-colors ${
+              showFretBox ? 'bg-yellow-500' : 'bg-secondary'
+            }`}
+          >
+            <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-foreground transition-transform ${
+              showFretBox ? 'translate-x-5' : ''
+            }`} />
+          </button>
+          <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Position Box</span>
+        </div>
+        {showFretBox && (
+          <div>
+            <label className="text-xs font-mono text-muted-foreground">
+              Frets {fretBoxStart}–{fretBoxStart + 4}
+            </label>
+            <input
+              type="range" min={1} max={maxFrets - 4} value={fretBoxStart}
+              onChange={e => setFretBoxStart(Number(e.target.value))}
+              className="w-full mt-1 accent-yellow-500"
+            />
+          </div>
+        )}
+      </div>
+
       {/* Primary Scale/Arpeggio */}
       <ModeSelector
         label="Primary"
@@ -78,7 +136,6 @@ export default function ControlPanel({
         active={activePrimary}
         color={primaryColor}
         onColorChange={setPrimaryColor}
-        defaultColorLabel="Amber (default)"
       />
 
       {/* Secondary Toggle */}
@@ -105,7 +162,6 @@ export default function ControlPanel({
             active={!activePrimary}
             color={secondaryColor}
             onColorChange={setSecondaryColor}
-            defaultColorLabel="Blue (default)"
           />
 
           {/* Opacity slider */}
@@ -142,7 +198,7 @@ export default function ControlPanel({
 }
 
 function ModeSelector({
-  label, value, onChange, active, color, onColorChange, defaultColorLabel,
+  label, value, onChange, active, color, onColorChange,
 }: {
   label: string;
   value: ScaleSelection;
@@ -150,7 +206,6 @@ function ModeSelector({
   active: boolean;
   color: string;
   onColorChange: (c: string) => void;
-  defaultColorLabel: string;
 }) {
   const names = value.mode === 'scale' ? scaleNames : arpeggioNames;
 
