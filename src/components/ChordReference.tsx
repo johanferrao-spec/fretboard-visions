@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NOTE_NAMES, NoteName, CHORD_FORMULAS, CHORD_VOICINGS, STRING_NAMES } from '@/lib/music';
+import { NOTE_NAMES, NoteName, CHORD_FORMULAS, CHORD_VOICINGS, SHELL_VOICINGS, STRING_NAMES } from '@/lib/music';
 import type { ChordSelection } from '@/hooks/useFretboard';
 
 interface ChordReferenceProps {
@@ -10,16 +10,23 @@ interface ChordReferenceProps {
 export default function ChordReference({ activeChord, setActiveChord }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
   const [expandedChord, setExpandedChord] = useState<string | null>(null);
+  const [showShell, setShowShell] = useState(false);
 
   const chordNames = Object.keys(CHORD_FORMULAS);
-  const voicings = CHORD_VOICINGS[selectedRoot] || {};
+  const regularVoicings = CHORD_VOICINGS[selectedRoot] || {};
+  const shellVoicings = SHELL_VOICINGS[selectedRoot] || {};
 
-  const handleSelectChord = (root: NoteName, chordType: string, voicingIndex: number) => {
-    // Toggle off if same chord selected
-    if (activeChord && activeChord.root === root && activeChord.chordType === chordType && activeChord.voicingIndex === voicingIndex) {
+  const handleSelectChord = (root: NoteName, chordType: string, voicingIndex: number, isShell: boolean) => {
+    if (
+      activeChord &&
+      activeChord.root === root &&
+      activeChord.chordType === chordType &&
+      activeChord.voicingIndex === voicingIndex &&
+      activeChord.isShell === isShell
+    ) {
       setActiveChord(null);
     } else {
-      setActiveChord({ root, chordType, voicingIndex });
+      setActiveChord({ root, chordType, voicingIndex, isShell });
     }
   };
 
@@ -52,13 +59,34 @@ export default function ChordReference({ activeChord, setActiveChord }: ChordRef
         ))}
       </div>
 
+      {/* Shell voicing toggle */}
+      <div className="flex items-center gap-2 mb-3">
+        <button
+          onClick={() => setShowShell(false)}
+          className={`flex-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+            !showShell ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+          }`}
+        >
+          Full Voicings
+        </button>
+        <button
+          onClick={() => setShowShell(true)}
+          className={`flex-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+            showShell ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+          }`}
+        >
+          Shell Voicings
+        </button>
+      </div>
+
       {/* Chord list */}
       <div className="space-y-1 max-h-[40vh] overflow-y-auto pr-1">
-        {chordNames.map(chordType => {
+        {(showShell ? Object.keys(shellVoicings) : chordNames).map(chordType => {
           const isExpanded = expandedChord === chordType;
-          const chordVoicings = voicings[chordType];
+          const chordVoicings = showShell ? shellVoicings[chordType] : regularVoicings[chordType];
           const rootIdx = NOTE_NAMES.indexOf(selectedRoot);
-          const notes = CHORD_FORMULAS[chordType].map(i => NOTE_NAMES[(rootIdx + i) % 12]);
+          const formula = CHORD_FORMULAS[chordType];
+          const notes = formula ? formula.map(i => NOTE_NAMES[(rootIdx + i) % 12]) : [];
 
           return (
             <div key={chordType} className="rounded-lg border border-border overflow-hidden">
@@ -66,8 +94,13 @@ export default function ChordReference({ activeChord, setActiveChord }: ChordRef
                 onClick={() => setExpandedChord(isExpanded ? null : chordType)}
                 className="w-full flex items-center justify-between px-3 py-2 hover:bg-secondary/50 transition-colors text-left"
               >
-                <span className="text-xs font-mono font-semibold text-foreground">{selectedRoot} {chordType}</span>
-                <span className="text-[10px] font-mono text-muted-foreground">{notes.join('–')}</span>
+                <span className="text-xs font-mono font-semibold text-foreground">
+                  {selectedRoot} {chordType}
+                  {showShell && <span className="text-muted-foreground ml-1">(shell)</span>}
+                </span>
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  {notes.length > 0 ? notes.join('–') : ''}
+                </span>
               </button>
 
               {isExpanded && (
@@ -75,11 +108,15 @@ export default function ChordReference({ activeChord, setActiveChord }: ChordRef
                   {chordVoicings && chordVoicings.length > 0 ? (
                     <div className="space-y-2">
                       {chordVoicings.map((voicing, vi) => {
-                        const isActive = activeChord?.root === selectedRoot && activeChord?.chordType === chordType && activeChord?.voicingIndex === vi;
+                        const isActive =
+                          activeChord?.root === selectedRoot &&
+                          activeChord?.chordType === chordType &&
+                          activeChord?.voicingIndex === vi &&
+                          activeChord?.isShell === showShell;
                         return (
                           <button
                             key={vi}
-                            onClick={() => handleSelectChord(selectedRoot, chordType, vi)}
+                            onClick={() => handleSelectChord(selectedRoot, chordType, vi, showShell)}
                             className={`w-full flex items-center gap-2 p-1.5 rounded-md transition-colors ${
                               isActive ? 'bg-primary/20 ring-1 ring-primary' : 'hover:bg-secondary/80'
                             }`}
@@ -98,7 +135,7 @@ export default function ChordReference({ activeChord, setActiveChord }: ChordRef
                     </div>
                   ) : (
                     <div className="text-[10px] font-mono text-muted-foreground italic">
-                      No voicings available — use fretboard to find positions.
+                      No voicings available for this chord type.
                     </div>
                   )}
                 </div>

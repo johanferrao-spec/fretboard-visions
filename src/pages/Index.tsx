@@ -42,6 +42,12 @@ const Index = () => {
               setPrimaryColor={fb.setPrimaryColor}
               displayMode={fb.displayMode}
               setDisplayMode={fb.setDisplayMode}
+              orientation={fb.orientation}
+              setOrientation={fb.setOrientation}
+              showFretBox={fb.showFretBox}
+              setShowFretBox={fb.setShowFretBox}
+              fretBoxStart={fb.fretBoxStart}
+              setFretBoxStart={fb.setFretBoxStart}
             />
           </div>
           <ChordReference
@@ -51,7 +57,7 @@ const Index = () => {
         </aside>
 
         {/* Fretboard area */}
-        <main className="flex-1 p-4 flex items-center min-w-0">
+        <main className="flex-1 p-4 flex items-center justify-center min-w-0 overflow-auto">
           <Fretboard
             maxFrets={fb.maxFrets}
             primaryScale={fb.primaryScale}
@@ -67,6 +73,9 @@ const Index = () => {
             secondaryColor={fb.secondaryColor}
             primaryColor={fb.primaryColor}
             activeChord={fb.activeChord}
+            orientation={fb.orientation}
+            showFretBox={fb.showFretBox}
+            fretBoxStart={fb.fretBoxStart}
           />
         </main>
       </div>

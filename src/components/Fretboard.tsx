@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
-  noteAtFret, isNoteInSelection, getArpeggiosForNote, getIntervalName,
-  NoteName, STRING_NAMES, STANDARD_TUNING, CHORD_VOICINGS, getChordVoicingNotes,
+  noteAtFret, isNoteInSelection, getIntervalName, getDiatonicChord,
+  NoteName, STRING_NAMES, STANDARD_TUNING, CHORD_VOICINGS, SHELL_VOICINGS, getChordVoicingNotes,
 } from '@/lib/music';
-import type { ScaleSelection, ChordSelection, DisplayMode } from '@/hooks/useFretboard';
+import type { ScaleSelection, ChordSelection, DisplayMode, Orientation } from '@/hooks/useFretboard';
 
 interface FretboardProps {
   maxFrets: number;
@@ -20,6 +20,9 @@ interface FretboardProps {
   secondaryColor: string;
   primaryColor: string;
   activeChord: ChordSelection | null;
+  orientation: Orientation;
+  showFretBox: boolean;
+  fretBoxStart: number;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21];
@@ -38,21 +41,16 @@ function fretWidths(count: number): number[] {
   return widths.map(w => (w / total) * 100);
 }
 
-interface HoverInfo {
-  note: NoteName;
-  x: number;
-  y: number;
-}
-
 export default function Fretboard({
   maxFrets, primaryScale, secondaryScale, secondaryEnabled,
   activePrimary, noteColors, onNoteClick, displayMode,
   disabledStrings, onToggleString, secondaryOpacity,
-  secondaryColor, primaryColor, activeChord,
+  secondaryColor, primaryColor, activeChord, orientation,
+  showFretBox, fretBoxStart,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
-  const [hover, setHover] = useState<HoverInfo | null>(null);
+  const [hoveredDiatonic, setHoveredDiatonic] = useState<{ notes: NoteName[]; name: string } | null>(null);
 
   const cumLeft: number[] = [];
   let acc = 0;
@@ -64,7 +62,8 @@ export default function Fretboard({
   // Chord mode: get the voicing notes
   const chordNotes = activeChord
     ? (() => {
-        const voicings = CHORD_VOICINGS[activeChord.root]?.[activeChord.chordType];
+        const source = activeChord.isShell ? SHELL_VOICINGS : CHORD_VOICINGS;
+        const voicings = source[activeChord.root]?.[activeChord.chordType];
         if (!voicings || !voicings[activeChord.voicingIndex]) return null;
         return getChordVoicingNotes(voicings[activeChord.voicingIndex]);
       })()
@@ -82,7 +81,7 @@ export default function Fretboard({
     // In chord mode, only show chord notes
     if (activeChord) {
       if (!isChordNote(stringIndex, fret)) return null;
-      return { backgroundColor: pColor, opacity: 1, ring: false, ringColor: '' };
+      return { backgroundColor: pColor, opacity: 1, ring: false, ringColor: '', greyed: false };
     }
 
     const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
@@ -93,9 +92,9 @@ export default function Fretboard({
     let opacity = 1;
     let ring = false;
     const ringColor = sColor;
+    let greyed = false;
 
     if (inPrimary && inSecondary) {
-      // Show primary color with a ring in secondary color
       bg = activePrimary ? pColor : sColor;
       opacity = 1;
       ring = true;
@@ -107,22 +106,69 @@ export default function Fretboard({
       opacity = activePrimary ? secondaryOpacity : 1;
     }
 
-    return { backgroundColor: bg, opacity, ring, ringColor };
+    // Diatonic hover: grey out notes not in the hovered chord
+    if (hoveredDiatonic && hoveredDiatonic.notes.length > 0) {
+      if (!hoveredDiatonic.notes.includes(note)) {
+        greyed = true;
+        opacity = 0.2;
+      } else {
+        opacity = 1;
+      }
+    }
+
+    return { backgroundColor: bg, opacity, ring, ringColor, greyed };
   }
 
-  const arpeggios = hover ? getArpeggiosForNote(hover.note) : [];
+  const handleNoteHover = (note: NoteName) => {
+    if (activeChord) return;
+    const activeScale = activePrimary ? primaryScale : secondaryScale;
+    const inScale = isNoteInSelection(note, activeScale.root, activeScale.scale, activeScale.mode);
+    if (inScale && activeScale.mode === 'scale') {
+      const diatonic = getDiatonicChord(activeScale.root, activeScale.scale, note);
+      if (diatonic.notes.length > 0) {
+        setHoveredDiatonic(diatonic);
+        return;
+      }
+    }
+    setHoveredDiatonic(null);
+  };
 
   // Render strings bottom-to-top: index 0 (low E) at bottom, index 5 (high e) at top
-  const stringOrder = [5, 4, 3, 2, 1, 0]; // render top-to-bottom: high e first, low E last
+  const stringOrder = [5, 4, 3, 2, 1, 0];
+
+  const isVertical = orientation === 'vertical';
+
+  // Fret box boundaries
+  const fretBoxEnd = fretBoxStart + 4;
 
   return (
-    <div className="w-full overflow-x-auto pb-4 relative">
-      <div className="min-w-[600px]">
+    <div className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}>
+      <div
+        className={isVertical ? 'origin-center' : ''}
+        style={isVertical ? { transform: 'rotate(-90deg)', width: '70vh', maxWidth: 800 } : {}}
+      >
+        {/* Guitar headstock silhouette */}
+        <div className="flex items-end mb-0">
+          <div style={{ width: 28 }} />
+          <svg viewBox="0 0 200 20" className="w-full h-5 opacity-40" preserveAspectRatio="none">
+            <path
+              d="M0 10 Q10 0, 30 2 L50 0 L200 0 L200 20 L50 20 L30 18 Q10 20, 0 10Z"
+              fill="hsl(var(--fretboard-wood))"
+              stroke="hsl(var(--border))"
+              strokeWidth="0.5"
+            />
+          </svg>
+        </div>
+
         {/* Fret numbers */}
         <div className="flex items-center mb-1">
-          <div style={{ width: 28 }} /> {/* space for string labels */}
+          <div style={{ width: 28 }} />
           {frets.map(f => (
-            <div key={f} className="text-center text-[9px] font-mono text-muted-foreground" style={{ width: `calc((100% - 28px) * ${widths[f]} / 100)` }}>
+            <div
+              key={f}
+              className={`text-center font-mono text-muted-foreground ${isVertical ? 'rotate-90' : ''}`}
+              style={{ width: `calc((100% - 28px) * ${widths[f]} / 100)`, fontSize: 9 }}
+            >
               {f === 0 ? '' : f}
             </div>
           ))}
@@ -148,20 +194,31 @@ export default function Fretboard({
             })}
           </div>
 
-          {/* Strings - rendered top to bottom: high e, B, G, D, A, E */}
+          {/* 5-fret box overlay */}
+          {showFretBox && (
+            <div
+              className="absolute top-0 bottom-0 border-2 border-yellow-400/70 bg-yellow-400/10 rounded-md pointer-events-none z-20 transition-all duration-500 ease-in-out"
+              style={{
+                left: `calc(28px + (100% - 28px) * ${cumLeft[fretBoxStart] || 0} / 100)`,
+                width: `calc((100% - 28px) * ${(cumLeft[fretBoxEnd + 1] || cumLeft[maxFrets] || 100) - (cumLeft[fretBoxStart] || 0)} / 100)`,
+              }}
+            />
+          )}
+
+          {/* Strings */}
           {stringOrder.map(stringIdx => {
             const isDisabled = disabledStrings.has(stringIdx);
-            // String thickness: low E (idx 0) thickest, high e (idx 5) thinnest
             const thickness = Math.max(1, 3.5 - stringIdx * 0.5);
 
             return (
               <div key={stringIdx} className="flex items-center relative" style={{ height: 30 }}>
-                {/* String label / open string (double-click to disable) */}
+                {/* String label */}
                 <button
                   onDoubleClick={() => onToggleString(stringIdx)}
-                  className={`shrink-0 w-7 h-full flex items-center justify-center text-[9px] font-mono font-bold transition-colors z-10 ${
+                  className={`shrink-0 w-7 h-full flex items-center justify-center font-mono font-bold transition-colors z-10 ${
                     isDisabled ? 'text-muted-foreground/30 line-through' : 'text-muted-foreground'
-                  }`}
+                  } ${isVertical ? 'rotate-90' : ''}`}
+                  style={{ fontSize: 9 }}
                   title="Double-click to toggle string"
                 >
                   {STRING_NAMES[stringIdx]}
@@ -188,18 +245,16 @@ export default function Fretboard({
                         {style && (
                           <button
                             onClick={() => onNoteClick(note)}
-                            onMouseEnter={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setHover({ note, x: rect.left + rect.width / 2, y: rect.top });
-                            }}
-                            onMouseLeave={() => setHover(null)}
-                            className={`relative z-10 w-4 h-4 rounded-full flex items-center justify-center text-[6px] font-mono font-bold transition-all duration-150 hover:scale-125 active:scale-95 shadow cursor-pointer ${
+                            onMouseEnter={() => handleNoteHover(note)}
+                            onMouseLeave={() => setHoveredDiatonic(null)}
+                            className={`relative z-10 w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold transition-all duration-150 hover:scale-125 active:scale-95 shadow cursor-pointer ${
                               style.ring ? 'ring-2' : ''
-                            }`}
+                            } ${isVertical ? 'rotate-90' : ''}`}
                             style={{
-                              backgroundColor: style.backgroundColor,
+                              backgroundColor: style.greyed ? 'hsl(var(--muted))' : style.backgroundColor,
                               opacity: style.opacity,
-                              color: 'hsl(220, 20%, 8%)',
+                              color: style.greyed ? 'hsl(var(--muted-foreground))' : 'hsl(220, 20%, 8%)',
+                              fontSize: 7,
                               ...(style.ring ? { boxShadow: `0 0 0 2px ${style.ringColor}` } : {}),
                             }}
                           >
@@ -214,27 +269,29 @@ export default function Fretboard({
             );
           })}
         </div>
+
+        {/* Guitar body silhouette */}
+        <div className="flex items-start mt-0">
+          <div style={{ width: 28 }} />
+          <svg viewBox="0 0 200 30" className="w-full h-6 opacity-30" preserveAspectRatio="none">
+            <path
+              d="M0 0 L200 0 L200 5 Q180 8, 170 15 Q160 25, 140 28 L60 28 Q40 25, 30 15 Q20 8, 0 5Z"
+              fill="hsl(var(--fretboard-wood))"
+              stroke="hsl(var(--border))"
+              strokeWidth="0.5"
+            />
+          </svg>
+        </div>
       </div>
 
-      {/* Hover tooltip */}
-      {hover && !activeChord && (
-        <div
-          className="fixed z-50 bg-card border border-border rounded-lg shadow-xl p-3 pointer-events-none"
-          style={{
-            left: Math.min(hover.x, window.innerWidth - 200),
-            top: hover.y - 8,
-            transform: 'translate(-50%, -100%)',
-            minWidth: 160,
-          }}
-        >
-          <div className="text-xs font-mono font-bold text-foreground mb-1.5">{hover.note} Arpeggios</div>
-          <div className="space-y-1">
-            {arpeggios.map(arp => (
-              <div key={arp.name} className="flex justify-between gap-3">
-                <span className="text-[10px] font-mono text-secondary-foreground">{arp.name}</span>
-                <span className="text-[10px] font-mono text-muted-foreground">{arp.notes.join('–')}</span>
-              </div>
-            ))}
+      {/* Diatonic hover tooltip */}
+      {hoveredDiatonic && hoveredDiatonic.name && !activeChord && (
+        <div className={`absolute z-50 bg-card border border-border rounded-lg shadow-xl px-3 py-2 pointer-events-none ${
+          isVertical ? 'top-2 right-2' : 'top-0 right-0'
+        }`}>
+          <div className="text-xs font-mono font-bold text-foreground">{hoveredDiatonic.name}</div>
+          <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+            {hoveredDiatonic.notes.join(' – ')}
           </div>
         </div>
       )}
