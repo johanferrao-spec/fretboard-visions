@@ -34,11 +34,20 @@ const Index = () => {
               setSecondaryEnabled={fb.setSecondaryEnabled}
               activePrimary={fb.activePrimary}
               setActivePrimary={fb.setActivePrimary}
-              noteColors={fb.noteColors}
-              updateNoteColor={fb.updateNoteColor}
+              secondaryOpacity={fb.secondaryOpacity}
+              setSecondaryOpacity={fb.setSecondaryOpacity}
+              secondaryColor={fb.secondaryColor}
+              setSecondaryColor={fb.setSecondaryColor}
+              primaryColor={fb.primaryColor}
+              setPrimaryColor={fb.setPrimaryColor}
+              displayMode={fb.displayMode}
+              setDisplayMode={fb.setDisplayMode}
             />
           </div>
-          <ChordReference />
+          <ChordReference
+            activeChord={fb.activeChord}
+            setActiveChord={fb.setActiveChord}
+          />
         </aside>
 
         {/* Fretboard area */}
@@ -51,6 +60,13 @@ const Index = () => {
             activePrimary={fb.activePrimary}
             noteColors={fb.noteColors}
             onNoteClick={fb.setSelectedNote}
+            displayMode={fb.displayMode}
+            disabledStrings={fb.disabledStrings}
+            onToggleString={fb.toggleStringDisabled}
+            secondaryOpacity={fb.secondaryOpacity}
+            secondaryColor={fb.secondaryColor}
+            primaryColor={fb.primaryColor}
+            activeChord={fb.activeChord}
           />
         </main>
       </div>
