@@ -235,3 +235,64 @@ export function getChordVoicingNotes(voicing: number[]): { stringIndex: number; 
   });
   return result;
 }
+
+// Shell voicings - 3-note jazz voicings (Root, 3rd/b3rd, 7th/b7th)
+function generateShellVoicings(): Record<string, Record<string, number[][]>> {
+  const result: Record<string, Record<string, number[][]>> = {};
+
+  NOTE_NAMES.forEach(root => {
+    const rootIdx = NOTE_NAMES.indexOf(root);
+    let f6 = (rootIdx - STANDARD_TUNING[0] + 12) % 12;
+    if (f6 < 3) f6 += 12;
+    let f5 = (rootIdx - STANDARD_TUNING[1] + 12) % 12;
+    if (f5 < 3) f5 += 12;
+
+    result[root] = {
+      'Major 7': [
+        [f6, f6 - 1, f6 + 1, -1, -1, -1],
+        [-1, f5, f5 - 1, f5 + 1, -1, -1],
+      ],
+      'Dominant 7': [
+        [f6, f6 - 1, f6, -1, -1, -1],
+        [-1, f5, f5 - 1, f5, -1, -1],
+      ],
+      'Minor 7': [
+        [f6, f6 - 2, f6, -1, -1, -1],
+        [-1, f5, f5 - 2, f5, -1, -1],
+      ],
+      'Half-Dim 7': [
+        [f6, f6 - 2, f6 - 1, -1, -1, -1],
+        [-1, f5, f5 - 2, f5 - 1, -1, -1],
+      ],
+    };
+  });
+
+  return result;
+}
+
+export const SHELL_VOICINGS = generateShellVoicings();
+
+// Get diatonic chord (stacked thirds) for a note within a scale
+export function getDiatonicChord(root: NoteName, scaleName: string, degree: NoteName): { notes: NoteName[]; name: string } {
+  const scaleNotes = getScaleNotes(root, scaleName);
+  if (scaleNotes.length < 7) return { notes: [], name: '' };
+  const degreeIndex = scaleNotes.indexOf(degree);
+  if (degreeIndex === -1) return { notes: [], name: '' };
+
+  const chordTones: NoteName[] = [];
+  for (let i = 0; i < 4; i++) {
+    chordTones.push(scaleNotes[(degreeIndex + i * 2) % scaleNotes.length]);
+  }
+
+  const intervals = chordTones.map(n => (NOTE_NAMES.indexOf(n) - NOTE_NAMES.indexOf(degree) + 12) % 12);
+  const [, i2, i3, i4] = intervals;
+  let quality = '';
+  if (i2 === 4 && i3 === 7 && i4 === 11) quality = 'maj7';
+  else if (i2 === 3 && i3 === 7 && i4 === 10) quality = 'min7';
+  else if (i2 === 4 && i3 === 7 && i4 === 10) quality = '7';
+  else if (i2 === 3 && i3 === 6 && i4 === 10) quality = 'ø7';
+  else if (i2 === 3 && i3 === 6 && i4 === 9) quality = '°7';
+  else if (i2 === 4 && i3 === 8) quality = 'aug';
+
+  return { notes: chordTones, name: `${degree}${quality}` };
+}
