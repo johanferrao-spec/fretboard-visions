@@ -57,103 +57,6 @@ export const CHORD_FORMULAS: Record<string, number[]> = {
   'Power (5)': [0, 7],
 };
 
-// Playable chord voicings: [lowE, A, D, G, B, highE] (-1 = muted, 0 = open)
-export const CHORD_VOICINGS: Record<string, Record<string, number[][]>> = {
-  'C': {
-    'Major': [[-1, 3, 2, 0, 1, 0], [8, 10, 10, 9, 8, 8]],
-    'Minor': [[-1, 3, 5, 5, 4, 3], [8, 10, 10, 8, 8, 8]],
-    'Major 7': [[-1, 3, 2, 0, 0, 0], [8, 10, 9, 9, 8, 8]],
-    'Minor 7': [[-1, 3, 5, 3, 4, 3], [8, 10, 8, 8, 8, 8]],
-    'Dominant 7': [[-1, 3, 2, 3, 1, 0], [8, 10, 8, 9, 8, 8]],
-    'Diminished': [[-1, 3, 4, 5, 4, -1]],
-    'Augmented': [[-1, 3, 2, 1, 1, 0]],
-    'Sus2': [[-1, 3, 0, 0, 1, 3]],
-    'Sus4': [[-1, 3, 3, 0, 1, 1]],
-  },
-  'D': {
-    'Major': [[-1, -1, 0, 2, 3, 2], [10, 12, 12, 11, 10, 10]],
-    'Minor': [[-1, -1, 0, 2, 3, 1], [10, 12, 12, 10, 10, 10]],
-    'Major 7': [[-1, -1, 0, 2, 2, 2]],
-    'Minor 7': [[-1, -1, 0, 2, 1, 1]],
-    'Dominant 7': [[-1, -1, 0, 2, 1, 2]],
-    'Sus2': [[-1, -1, 0, 2, 3, 0]],
-    'Sus4': [[-1, -1, 0, 2, 3, 3]],
-  },
-  'E': {
-    'Major': [[0, 2, 2, 1, 0, 0]],
-    'Minor': [[0, 2, 2, 0, 0, 0]],
-    'Major 7': [[0, 2, 1, 1, 0, 0]],
-    'Minor 7': [[0, 2, 0, 0, 0, 0]],
-    'Dominant 7': [[0, 2, 0, 1, 0, 0]],
-    'Diminished': [[-1, -1, 2, 3, 2, 0]],
-    'Augmented': [[0, 3, 2, 1, 1, 0]],
-    'Sus2': [[0, 2, 4, 4, 0, 0]],
-    'Sus4': [[0, 2, 2, 2, 0, 0]],
-  },
-  'G': {
-    'Major': [[3, 2, 0, 0, 0, 3], [3, 2, 0, 0, 3, 3]],
-    'Minor': [[3, 5, 5, 3, 3, 3]],
-    'Major 7': [[3, 2, 0, 0, 0, 2]],
-    'Dominant 7': [[3, 2, 0, 0, 0, 1]],
-    'Diminished': [[-1, -1, 5, 6, 5, 3]],
-    'Sus2': [[3, 0, 0, 0, 3, 3]],
-    'Sus4': [[3, 3, 0, 0, 1, 3]],
-  },
-  'A': {
-    'Major': [[-1, 0, 2, 2, 2, 0], [5, 7, 7, 6, 5, 5]],
-    'Minor': [[-1, 0, 2, 2, 1, 0], [5, 7, 7, 5, 5, 5]],
-    'Major 7': [[-1, 0, 2, 1, 2, 0]],
-    'Minor 7': [[-1, 0, 2, 0, 1, 0]],
-    'Dominant 7': [[-1, 0, 2, 0, 2, 0]],
-    'Diminished': [[-1, 0, 1, 2, 1, -1]],
-    'Augmented': [[-1, 0, 3, 2, 2, 1]],
-    'Sus2': [[-1, 0, 2, 2, 0, 0]],
-    'Sus4': [[-1, 0, 2, 2, 3, 0]],
-  },
-  'F': {
-    'Major': [[1, 1, 2, 3, 3, 1], [-1, -1, 3, 2, 1, 1]],
-    'Minor': [[1, 1, 1, 3, 3, 1]],
-    'Major 7': [[1, -1, 2, 2, 1, 0]],
-    'Dominant 7': [[1, 1, 2, 1, 3, 1]],
-    'Diminished': [[-1, -1, 3, 4, 3, 1]],
-    'Sus2': [[-1, -1, 3, 0, 1, 1]],
-    'Sus4': [[1, 1, 3, 3, 1, 1]],
-  },
-  'B': {
-    'Major': [[-1, 2, 4, 4, 4, 2], [7, 9, 9, 8, 7, 7]],
-    'Minor': [[-1, 2, 4, 4, 3, 2], [7, 9, 9, 7, 7, 7]],
-    'Major 7': [[-1, 2, 4, 3, 4, 2]],
-    'Dominant 7': [[-1, 2, 1, 2, 0, 2]],
-    'Diminished': [[-1, -1, 0, 1, 0, 1]],
-    'Sus2': [[-1, 2, 4, 4, 2, 2]],
-    'Sus4': [[-1, 2, 4, 4, 5, 2]],
-  },
-  'C#': {
-    'Major': [[-1, 4, 6, 6, 6, 4], [9, 11, 11, 10, 9, 9]],
-    'Minor': [[-1, 4, 6, 6, 5, 4]],
-  },
-  'D#': {
-    'Major': [[-1, 6, 8, 8, 8, 6]],
-    'Minor': [[-1, 6, 8, 8, 7, 6]],
-  },
-  'F#': {
-    'Major': [[2, 4, 4, 3, 2, 2]],
-    'Minor': [[2, 4, 4, 2, 2, 2]],
-    'Major 7': [[2, -1, 3, 3, 2, 1]],
-    'Dominant 7': [[2, 4, 2, 3, 2, 2]],
-  },
-  'G#': {
-    'Major': [[4, 6, 6, 5, 4, 4]],
-    'Minor': [[4, 6, 6, 4, 4, 4]],
-  },
-  'A#': {
-    'Major': [[-1, 1, 3, 3, 3, 1], [6, 8, 8, 7, 6, 6]],
-    'Minor': [[-1, 1, 3, 3, 2, 1]],
-    'Major 7': [[-1, 1, 3, 2, 3, 1]],
-    'Dominant 7': [[-1, 1, 3, 1, 3, 1]],
-  },
-};
-
 export const ARPEGGIO_FORMULAS: Record<string, number[]> = {
   'Major': [0, 4, 7],
   'Minor': [0, 3, 7],
@@ -187,13 +90,11 @@ export function getArpeggioNotes(root: NoteName, arpeggioName: string): NoteName
 }
 
 export function isNoteInScale(note: NoteName, root: NoteName, scaleName: string): boolean {
-  const scaleNotes = getScaleNotes(root, scaleName);
-  return scaleNotes.includes(note);
+  return getScaleNotes(root, scaleName).includes(note);
 }
 
 export function isNoteInArpeggio(note: NoteName, root: NoteName, arpeggioName: string): boolean {
-  const notes = getArpeggioNotes(root, arpeggioName);
-  return notes.includes(note);
+  return getArpeggioNotes(root, arpeggioName).includes(note);
 }
 
 export function isNoteInSelection(note: NoteName, root: NoteName, name: string, mode: 'scale' | 'arpeggio'): boolean {
@@ -236,41 +137,300 @@ export function getChordVoicingNotes(voicing: number[]): { stringIndex: number; 
   return result;
 }
 
-// Shell voicings - 3-note jazz voicings (Root, 3rd/b3rd, 7th/b7th)
-function generateShellVoicings(): Record<string, Record<string, number[][]>> {
-  const result: Record<string, Record<string, number[][]>> = {};
+// ============================================================
+// VOICING GENERATORS
+// ============================================================
 
-  NOTE_NAMES.forEach(root => {
-    const rootIdx = NOTE_NAMES.indexOf(root);
-    let f6 = (rootIdx - STANDARD_TUNING[0] + 12) % 12;
-    if (f6 < 3) f6 += 12;
-    let f5 = (rootIdx - STANDARD_TUNING[1] + 12) % 12;
-    if (f5 < 3) f5 += 12;
+/**
+ * Generate playable chord voicings algorithmically.
+ * Constraint: no two fretted notes more than 4 frets apart.
+ * Returns up to `limit` unique voicings sorted by position.
+ */
+export function generatePlayableVoicings(
+  root: NoteName,
+  chordType: string,
+  maxFretSearch: number = 14,
+  limit: number = 24,
+): number[][] {
+  const formula = CHORD_FORMULAS[chordType];
+  if (!formula) return [];
 
-    result[root] = {
-      'Major 7': [
-        [f6, f6 - 1, f6 + 1, -1, -1, -1],
-        [-1, f5, f5 - 1, f5 + 1, -1, -1],
-      ],
-      'Dominant 7': [
-        [f6, f6 - 1, f6, -1, -1, -1],
-        [-1, f5, f5 - 1, f5, -1, -1],
-      ],
-      'Minor 7': [
-        [f6, f6 - 2, f6, -1, -1, -1],
-        [-1, f5, f5 - 2, f5, -1, -1],
-      ],
-      'Half-Dim 7': [
-        [f6, f6 - 2, f6 - 1, -1, -1, -1],
-        [-1, f5, f5 - 2, f5 - 1, -1, -1],
-      ],
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  const chordTones = [...new Set(formula.map(i => (rootIdx + i) % 12))];
+  const chordTonesSet = new Set(chordTones);
+  const minRequired = Math.min(chordTones.length, 4); // need at least this many unique tones
+
+  const results: number[][] = [];
+  const seen = new Set<string>();
+
+  for (let baseFret = 0; baseFret <= maxFretSearch && results.length < limit * 3; baseFret++) {
+    const lo = baseFret;
+    const hi = baseFret + 4;
+
+    // Per-string options in this window
+    const perString: number[][] = [];
+    for (let s = 0; s < 6; s++) {
+      const opts: number[] = [-1];
+      for (let f = lo; f <= Math.min(hi, 24); f++) {
+        if (chordTonesSet.has((STANDARD_TUNING[s] + f) % 12)) {
+          opts.push(f);
+        }
+      }
+      // Also allow open strings when base is low
+      if (lo > 0 && lo <= 4) {
+        if (chordTonesSet.has(STANDARD_TUNING[s] % 12) && !opts.includes(0)) {
+          opts.push(0);
+        }
+      }
+      perString.push(opts);
+    }
+
+    const search = (s: number, current: number[]) => {
+      if (results.length >= limit * 3) return;
+      if (s === 6) {
+        const played = current.filter(f => f >= 0);
+        if (played.length < Math.max(3, minRequired)) return;
+
+        // All required tones present?
+        const present = new Set<number>();
+        current.forEach((f, i) => { if (f >= 0) present.add((STANDARD_TUNING[i] + f) % 12); });
+        let count = 0;
+        for (const t of chordTones) { if (present.has(t)) count++; }
+        if (count < minRequired) return;
+
+        // Span check
+        const fretted = played.filter(f => f > 0);
+        if (fretted.length > 1 && Math.max(...fretted) - Math.min(...fretted) > 4) return;
+
+        // No muted middle strings
+        let first = -1, last = -1;
+        for (let i = 0; i < 6; i++) {
+          if (current[i] >= 0) { if (first === -1) first = i; last = i; }
+        }
+        for (let i = first + 1; i < last; i++) {
+          if (current[i] === -1) return;
+        }
+
+        const key = current.join(',');
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push([...current]);
+        }
+        return;
+      }
+      for (const fret of perString[s]) {
+        current.push(fret);
+        search(s + 1, current);
+        current.pop();
+      }
     };
+
+    search(0, []);
+  }
+
+  // Sort: prefer root in bass, then by position
+  results.sort((a, b) => {
+    const aFirst = a.findIndex(f => f >= 0);
+    const bFirst = b.findIndex(f => f >= 0);
+    const aHasRoot = aFirst >= 0 && (STANDARD_TUNING[aFirst] + a[aFirst]) % 12 === rootIdx % 12;
+    const bHasRoot = bFirst >= 0 && (STANDARD_TUNING[bFirst] + b[bFirst]) % 12 === rootIdx % 12;
+    if (aHasRoot !== bHasRoot) return aHasRoot ? -1 : 1;
+    const aMin = Math.min(...a.filter(f => f > 0).concat([99]));
+    const bMin = Math.min(...b.filter(f => f > 0).concat([99]));
+    return aMin - bMin;
   });
 
-  return result;
+  return results.slice(0, limit);
 }
 
-export const SHELL_VOICINGS = generateShellVoicings();
+/**
+ * Drop 2 voicings: Take a close-position 4-note chord, drop the 2nd voice
+ * from the top down an octave. Placed on 4 adjacent strings.
+ *
+ * Close position (bottom to top): R 3 5 7
+ * Drop 2 of root pos: 5 R 3 7 (drop the 5 down)
+ * Applied to each inversion on adjacent string groups.
+ */
+export function generateDrop2Voicings(root: NoteName, chordType: string): number[][] {
+  const formula = CHORD_FORMULAS[chordType];
+  if (!formula || formula.length < 4) return [];
+
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  const tones = formula.slice(0, 4).map(i => (rootIdx + i) % 12);
+  const results: number[][] = [];
+  const seen = new Set<string>();
+  const stringGroups = [[0,1,2,3], [1,2,3,4], [2,3,4,5]];
+
+  for (let inv = 0; inv < 4; inv++) {
+    const invTones = [...tones.slice(inv), ...tones.slice(0, inv)];
+    // Drop 2nd from top (index 2) to bottom
+    const drop2 = [invTones[2], invTones[0], invTones[1], invTones[3]];
+
+    for (const strings of stringGroups) {
+      for (let baseFret = 0; baseFret <= 14; baseFret++) {
+        const voicing: number[] = [-1, -1, -1, -1, -1, -1];
+        let valid = true;
+        const frets: number[] = [];
+
+        for (let i = 0; i < 4; i++) {
+          const s = strings[i];
+          const target = drop2[i];
+          let found = false;
+          for (let f = Math.max(0, baseFret); f <= baseFret + 4; f++) {
+            if ((STANDARD_TUNING[s] + f) % 12 === target) {
+              voicing[s] = f;
+              frets.push(f);
+              found = true;
+              break;
+            }
+          }
+          if (!found) { valid = false; break; }
+        }
+
+        if (!valid) continue;
+        const playedFrets = frets.filter(f => f > 0);
+        if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
+
+        const key = voicing.join(',');
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push([...voicing]);
+        }
+      }
+    }
+  }
+
+  return results.slice(0, 20);
+}
+
+/**
+ * Drop 3 voicings: Drop the 3rd voice from the top down an octave.
+ * These skip a string, creating wider interval spacing.
+ *
+ * String groups: {6,5,3,2}, {5,4,2,1} (skipping one string)
+ */
+export function generateDrop3Voicings(root: NoteName, chordType: string): number[][] {
+  const formula = CHORD_FORMULAS[chordType];
+  if (!formula || formula.length < 4) return [];
+
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  const tones = formula.slice(0, 4).map(i => (rootIdx + i) % 12);
+  const results: number[][] = [];
+  const seen = new Set<string>();
+  // Drop 3 typically skips a string
+  const stringGroups = [[0,1,3,4], [1,2,4,5], [0,1,4,5]];
+
+  for (let inv = 0; inv < 4; inv++) {
+    const invTones = [...tones.slice(inv), ...tones.slice(0, inv)];
+    // Drop 3rd from top (index 1) to bottom
+    const drop3 = [invTones[1], invTones[0], invTones[2], invTones[3]];
+
+    for (const strings of stringGroups) {
+      for (let baseFret = 0; baseFret <= 14; baseFret++) {
+        const voicing: number[] = [-1, -1, -1, -1, -1, -1];
+        let valid = true;
+        const frets: number[] = [];
+
+        for (let i = 0; i < 4; i++) {
+          const s = strings[i];
+          const target = drop3[i];
+          let found = false;
+          for (let f = Math.max(0, baseFret); f <= baseFret + 4; f++) {
+            if ((STANDARD_TUNING[s] + f) % 12 === target) {
+              voicing[s] = f;
+              frets.push(f);
+              found = true;
+              break;
+            }
+          }
+          if (!found) { valid = false; break; }
+        }
+
+        if (!valid) continue;
+        const playedFrets = frets.filter(f => f > 0);
+        if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
+
+        const key = voicing.join(',');
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push([...voicing]);
+        }
+      }
+    }
+  }
+
+  return results.slice(0, 20);
+}
+
+/**
+ * Generate shell voicings for a chord type.
+ * Shell voicings use Root + 3rd (or guide tone) + 7th.
+ * Placed on string sets rooted on E and A strings.
+ */
+export function generateShellVoicings(root: NoteName, chordType: string): number[][] {
+  const formula = CHORD_FORMULAS[chordType];
+  if (!formula) return [];
+
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  // For shells we want: root, 3rd (or substitute), 7th (or substitute)
+  // Pick root + 2nd interval + last interval for 4-note chords
+  // For triads: root + 2nd + 3rd interval
+  let shellTones: number[];
+  if (formula.length >= 4) {
+    shellTones = [formula[0], formula[1], formula[3]].map(i => (rootIdx + i) % 12);
+  } else if (formula.length === 3) {
+    shellTones = formula.map(i => (rootIdx + i) % 12);
+  } else {
+    shellTones = formula.map(i => (rootIdx + i) % 12);
+  }
+
+  const shellSet = new Set(shellTones);
+  const results: number[][] = [];
+  const seen = new Set<string>();
+  // Root strings: 0 (low E), 1 (A), 2 (D)
+  const rootStrings = [0, 1, 2];
+
+  for (const rootStr of rootStrings) {
+    for (let baseFret = 0; baseFret <= 14; baseFret++) {
+      // Find root on root string
+      if ((STANDARD_TUNING[rootStr] + baseFret) % 12 !== shellTones[0]) continue;
+
+      // Find other tones on adjacent higher strings
+      const voicing: number[] = [-1, -1, -1, -1, -1, -1];
+      voicing[rootStr] = baseFret;
+      const usedTones = new Set([shellTones[0]]);
+
+      for (let s = rootStr + 1; s < Math.min(rootStr + 4, 6); s++) {
+        for (let f = Math.max(0, baseFret - 2); f <= baseFret + 4; f++) {
+          const n = (STANDARD_TUNING[s] + f) % 12;
+          if (shellSet.has(n) && !usedTones.has(n)) {
+            voicing[s] = f;
+            usedTones.add(n);
+            break;
+          }
+        }
+      }
+
+      // Check we got all shell tones
+      if (usedTones.size < shellTones.length) continue;
+
+      const playedFrets = voicing.filter(f => f > 0);
+      if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
+
+      const key = voicing.join(',');
+      if (!seen.has(key)) {
+        seen.add(key);
+        results.push([...voicing]);
+      }
+    }
+  }
+
+  return results.slice(0, 16);
+}
+
+// Legacy exports for backward compat
+export const CHORD_VOICINGS: Record<string, Record<string, number[][]>> = {};
+export const SHELL_VOICINGS: Record<string, Record<string, number[][]>> = {};
 
 // Get diatonic chord (stacked thirds) for a note within a scale
 export function getDiatonicChord(root: NoteName, scaleName: string, degree: NoteName): { notes: NoteName[]; name: string } {
@@ -296,3 +456,19 @@ export function getDiatonicChord(root: NoteName, scaleName: string, degree: Note
 
   return { notes: chordTones, name: `${degree}${quality}` };
 }
+
+// Degree color map for arpeggios
+export const DEGREE_COLORS: Record<string, string> = {
+  'R': '0 85% 60%',
+  '♭2': '20 75% 50%',
+  '2': '45 90% 55%',
+  '♭3': '80 70% 45%',
+  '3': '120 70% 45%',
+  '4': '160 75% 45%',
+  '♭5': '185 80% 50%',
+  '5': '210 85% 55%',
+  '♭6': '240 75% 60%',
+  '6': '270 80% 60%',
+  '♭7': '310 80% 55%',
+  '7': '340 85% 58%',
+};

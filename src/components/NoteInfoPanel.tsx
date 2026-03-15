@@ -1,18 +1,38 @@
-import { getChordsForNote, getArpeggiosForNote, NoteName, NOTE_CSS_KEYS } from '@/lib/music';
+import { getChordsForNote, getArpeggiosForNote, NoteName, NOTE_CSS_KEYS, CHORD_FORMULAS, ARPEGGIO_FORMULAS } from '@/lib/music';
+import type { ChordSelection, ScaleSelection } from '@/hooks/useFretboard';
 
 interface NoteInfoPanelProps {
   note: NoteName | null;
   noteColors: Record<string, string>;
   onClose: () => void;
+  onApplyChord?: (chord: ChordSelection) => void;
+  onApplyArpeggio?: (root: NoteName, arpeggioName: string) => void;
 }
 
-export default function NoteInfoPanel({ note, noteColors, onClose }: NoteInfoPanelProps) {
+export default function NoteInfoPanel({ note, noteColors, onClose, onApplyChord, onApplyArpeggio }: NoteInfoPanelProps) {
   if (!note) return null;
 
   const chords = getChordsForNote(note);
   const arpeggios = getArpeggiosForNote(note);
   const cssVar = NOTE_CSS_KEYS[note];
   const color = noteColors[note] || `hsl(var(${cssVar}))`;
+
+  const handleChordClick = (chordName: string) => {
+    // Extract chord type from name (e.g., "C Major 7" → "Major 7")
+    const chordType = chordName.replace(`${note} `, '');
+    if (onApplyChord && CHORD_FORMULAS[chordType]) {
+      onApplyChord({ root: note, chordType, voicingIndex: 0, voicingSource: 'full' });
+      onClose();
+    }
+  };
+
+  const handleArpeggioClick = (arpName: string) => {
+    const arpeggioType = arpName.replace(`${note} `, '');
+    if (onApplyArpeggio && ARPEGGIO_FORMULAS[arpeggioType]) {
+      onApplyArpeggio(note, arpeggioType);
+      onClose();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm"
@@ -46,16 +66,20 @@ export default function NoteInfoPanel({ note, noteColors, onClose }: NoteInfoPan
         {/* Chords */}
         <div className="mb-4">
           <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">
-            Chords
+            Chords <span className="text-[9px] normal-case">(click to apply)</span>
           </h3>
           <div className="grid grid-cols-2 gap-1.5">
             {chords.map(chord => (
-              <div key={chord.name} className="bg-secondary rounded-lg px-3 py-2">
+              <button
+                key={chord.name}
+                onClick={() => handleChordClick(chord.name)}
+                className="bg-secondary rounded-lg px-3 py-2 text-left hover:bg-primary/20 hover:ring-1 hover:ring-primary transition-all cursor-pointer"
+              >
                 <div className="text-xs font-mono font-semibold text-foreground">{chord.name}</div>
                 <div className="text-[10px] font-mono text-muted-foreground">
                   {chord.notes.join(' – ')}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -63,16 +87,20 @@ export default function NoteInfoPanel({ note, noteColors, onClose }: NoteInfoPan
         {/* Arpeggios */}
         <div>
           <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">
-            Arpeggios
+            Arpeggios <span className="text-[9px] normal-case">(click to apply)</span>
           </h3>
           <div className="grid grid-cols-2 gap-1.5">
             {arpeggios.map(arp => (
-              <div key={arp.name} className="bg-secondary rounded-lg px-3 py-2">
+              <button
+                key={arp.name}
+                onClick={() => handleArpeggioClick(arp.name)}
+                className="bg-secondary rounded-lg px-3 py-2 text-left hover:bg-primary/20 hover:ring-1 hover:ring-primary transition-all cursor-pointer"
+              >
                 <div className="text-xs font-mono font-semibold text-foreground">{arp.name}</div>
                 <div className="text-[10px] font-mono text-muted-foreground">
                   {arp.notes.join(' – ')}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

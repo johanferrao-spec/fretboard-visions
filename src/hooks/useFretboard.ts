@@ -15,7 +15,7 @@ export interface ChordSelection {
   root: NoteName;
   chordType: string;
   voicingIndex: number;
-  isShell?: boolean;
+  voicingSource: 'full' | 'shell' | 'drop2' | 'drop3';
 }
 
 export interface NoteColors {
@@ -43,6 +43,9 @@ export function useFretboard() {
   const [orientation, setOrientation] = useState<Orientation>('horizontal');
   const [showFretBox, setShowFretBox] = useState(false);
   const [fretBoxStart, setFretBoxStart] = useState(1);
+  const [fretBoxSize, setFretBoxSize] = useState(5);
+  const [noteMarkerSize, setNoteMarkerSize] = useState(20);
+  const [degreeColors, setDegreeColors] = useState(true);
 
   // Chord mode
   const [activeChord, setActiveChord] = useState<ChordSelection | null>(null);
@@ -58,6 +61,13 @@ export function useFretboard() {
       else next.add(stringIndex);
       return next;
     });
+  }, []);
+
+  const clearFretboard = useCallback(() => {
+    setActiveChord(null);
+    setSelectedNote(null);
+    setDisabledStrings(new Set());
+    setShowFretBox(false);
   }, []);
 
   return {
@@ -77,5 +87,9 @@ export function useFretboard() {
     orientation, setOrientation,
     showFretBox, setShowFretBox,
     fretBoxStart, setFretBoxStart,
+    fretBoxSize, setFretBoxSize,
+    noteMarkerSize, setNoteMarkerSize,
+    degreeColors, setDegreeColors,
+    clearFretboard,
   };
 }

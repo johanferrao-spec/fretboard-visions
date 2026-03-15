@@ -1,5 +1,9 @@
-import { useState } from 'react';
-import { NOTE_NAMES, NoteName, CHORD_FORMULAS, CHORD_VOICINGS, SHELL_VOICINGS, STRING_NAMES } from '@/lib/music';
+import { useState, useMemo } from 'react';
+import {
+  NOTE_NAMES, NoteName, CHORD_FORMULAS, STRING_NAMES, STANDARD_TUNING,
+  generatePlayableVoicings, generateShellVoicings, generateDrop2Voicings, generateDrop3Voicings,
+  noteAtFret,
+} from '@/lib/music';
 import type { ChordSelection } from '@/hooks/useFretboard';
 
 interface ChordReferenceProps {
@@ -7,27 +11,58 @@ interface ChordReferenceProps {
   setActiveChord: (c: ChordSelection | null) => void;
 }
 
+type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3';
+
 export default function ChordReference({ activeChord, setActiveChord }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
   const [expandedChord, setExpandedChord] = useState<string | null>(null);
-  const [showShell, setShowShell] = useState(false);
+  const [voicingTab, setVoicingTab] = useState<VoicingTab>('full');
 
   const chordNames = Object.keys(CHORD_FORMULAS);
-  const regularVoicings = CHORD_VOICINGS[selectedRoot] || {};
-  const shellVoicings = SHELL_VOICINGS[selectedRoot] || {};
 
-  const handleSelectChord = (root: NoteName, chordType: string, voicingIndex: number, isShell: boolean) => {
+  const getVoicings = useMemo(() => {
+    return (chordType: string) => {
+      switch (voicingTab) {
+        case 'full': return generatePlayableVoicings(selectedRoot, chordType);
+        case 'shell': return generateShellVoicings(selectedRoot, chordType);
+        case 'drop2': return generateDrop2Voicings(selectedRoot, chordType);
+        case 'drop3': return generateDrop3Voicings(selectedRoot, chordType);
+        default: return [];
+      }
+    };
+  }, [selectedRoot, voicingTab]);
+
+  const handleSelectChord = (root: NoteName, chordType: string, voicingIndex: number, source: VoicingTab) => {
     if (
       activeChord &&
       activeChord.root === root &&
       activeChord.chordType === chordType &&
       activeChord.voicingIndex === voicingIndex &&
-      activeChord.isShell === isShell
+      activeChord.voicingSource === source
     ) {
       setActiveChord(null);
     } else {
-      setActiveChord({ root, chordType, voicingIndex, isShell });
+      setActiveChord({ root, chordType, voicingIndex, voicingSource: source });
     }
+  };
+
+  const tabInfo: Record<VoicingTab, { label: string; description: string }> = {
+    full: {
+      label: 'Full',
+      description: 'Standard voicings using all chord tones across multiple strings.',
+    },
+    shell: {
+      label: 'Shell',
+      description: 'Minimal 3-note voicings using Root, 3rd, and 7th — essential jazz comping shapes.',
+    },
+    drop2: {
+      label: 'Drop 2',
+      description: 'Take a close-position chord and drop the 2nd voice from the top down an octave. Creates wider, open voicings on adjacent strings. Common in jazz guitar.',
+    },
+    drop3: {
+      label: 'Drop 3',
+      description: 'Drop the 3rd voice from the top down an octave. Creates even wider voicings that skip a string, giving a spread sound.',
+    },
   };
 
   return (
@@ -59,34 +94,37 @@ export default function ChordReference({ activeChord, setActiveChord }: ChordRef
         ))}
       </div>
 
-      {/* Shell voicing toggle */}
-      <div className="flex items-center gap-2 mb-3">
-        <button
-          onClick={() => setShowShell(false)}
-          className={`flex-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
-            !showShell ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-          }`}
-        >
-          Full Voicings
-        </button>
-        <button
-          onClick={() => setShowShell(true)}
-          className={`flex-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
-            showShell ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-          }`}
-        >
-          Shell Voicings
-        </button>
+      {/* Voicing type tabs */}
+      <div className="flex gap-1 mb-2">
+        {(['full', 'shell', 'drop2', 'drop3'] as VoicingTab[]).map(tab => (
+          <button
+            key={tab}
+            onClick={() => { setVoicingTab(tab); setExpandedChord(null); }}
+            className={`flex-1 px-1.5 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+              voicingTab === tab ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+            }`}
+          >
+            {tabInfo[tab].label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab description */}
+      <div className="text-[9px] font-mono text-muted-foreground mb-3 leading-relaxed px-1">
+        {tabInfo[voicingTab].description}
       </div>
 
       {/* Chord list */}
       <div className="space-y-1 max-h-[40vh] overflow-y-auto pr-1">
-        {(showShell ? Object.keys(shellVoicings) : chordNames).map(chordType => {
+        {chordNames.map(chordType => {
           const isExpanded = expandedChord === chordType;
-          const chordVoicings = showShell ? shellVoicings[chordType] : regularVoicings[chordType];
           const rootIdx = NOTE_NAMES.indexOf(selectedRoot);
           const formula = CHORD_FORMULAS[chordType];
           const notes = formula ? formula.map(i => NOTE_NAMES[(rootIdx + i) % 12]) : [];
+
+          // For drop2/drop3, need at least 4-note chords
+          const needsFour = voicingTab === 'drop2' || voicingTab === 'drop3';
+          if (needsFour && formula && formula.length < 4) return null;
 
           return (
             <div key={chordType} className="rounded-lg border border-border overflow-hidden">
@@ -96,51 +134,82 @@ export default function ChordReference({ activeChord, setActiveChord }: ChordRef
               >
                 <span className="text-xs font-mono font-semibold text-foreground">
                   {selectedRoot} {chordType}
-                  {showShell && <span className="text-muted-foreground ml-1">(shell)</span>}
                 </span>
                 <span className="text-[10px] font-mono text-muted-foreground">
-                  {notes.length > 0 ? notes.join('–') : ''}
+                  {notes.length > 0 ? [...new Set(notes)].join('–') : ''}
                 </span>
               </button>
 
               {isExpanded && (
-                <div className="px-3 pb-3 pt-1 border-t border-border bg-secondary/30">
-                  {chordVoicings && chordVoicings.length > 0 ? (
-                    <div className="space-y-2">
-                      {chordVoicings.map((voicing, vi) => {
-                        const isActive =
-                          activeChord?.root === selectedRoot &&
-                          activeChord?.chordType === chordType &&
-                          activeChord?.voicingIndex === vi &&
-                          activeChord?.isShell === showShell;
-                        return (
-                          <button
-                            key={vi}
-                            onClick={() => handleSelectChord(selectedRoot, chordType, vi, showShell)}
-                            className={`w-full flex items-center gap-2 p-1.5 rounded-md transition-colors ${
-                              isActive ? 'bg-primary/20 ring-1 ring-primary' : 'hover:bg-secondary/80'
-                            }`}
-                          >
-                            <ChordDiagram voicing={voicing} />
-                            <div className="text-[9px] font-mono text-muted-foreground">
-                              {STRING_NAMES.map((s, i) => (
-                                <span key={i} className="inline-block w-5 text-center">
-                                  {voicing[i] === -1 ? 'x' : voicing[i]}
-                                </span>
-                              ))}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-[10px] font-mono text-muted-foreground italic">
-                      No voicings available for this chord type.
-                    </div>
-                  )}
-                </div>
+                <ExpandedVoicings
+                  root={selectedRoot}
+                  chordType={chordType}
+                  voicingTab={voicingTab}
+                  getVoicings={getVoicings}
+                  activeChord={activeChord}
+                  onSelect={handleSelectChord}
+                />
               )}
             </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ExpandedVoicings({
+  root, chordType, voicingTab, getVoicings, activeChord, onSelect,
+}: {
+  root: NoteName;
+  chordType: string;
+  voicingTab: VoicingTab;
+  getVoicings: (chordType: string) => number[][];
+  activeChord: ChordSelection | null;
+  onSelect: (root: NoteName, chordType: string, vi: number, source: VoicingTab) => void;
+}) {
+  const voicings = useMemo(() => getVoicings(chordType), [chordType, getVoicings]);
+
+  if (!voicings || voicings.length === 0) {
+    return (
+      <div className="px-3 pb-3 pt-1 border-t border-border bg-secondary/30">
+        <div className="text-[10px] font-mono text-muted-foreground italic">
+          No voicings found for this chord type in this category.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 pb-3 pt-1 border-t border-border bg-secondary/30">
+      <div className="text-[9px] font-mono text-muted-foreground mb-2">
+        {voicings.length} voicing{voicings.length !== 1 ? 's' : ''} found
+      </div>
+      <div className="space-y-2">
+        {voicings.map((voicing, vi) => {
+          const isActive =
+            activeChord?.root === root &&
+            activeChord?.chordType === chordType &&
+            activeChord?.voicingIndex === vi &&
+            activeChord?.voicingSource === voicingTab;
+
+          return (
+            <button
+              key={vi}
+              onClick={() => onSelect(root, chordType, vi, voicingTab)}
+              className={`w-full flex items-center gap-2 p-1.5 rounded-md transition-colors ${
+                isActive ? 'bg-primary/20 ring-1 ring-primary' : 'hover:bg-secondary/80'
+              }`}
+            >
+              <ChordDiagram voicing={voicing} />
+              <div className="text-[9px] font-mono text-muted-foreground flex flex-wrap gap-0.5">
+                {STRING_NAMES.map((s, i) => (
+                  <span key={i} className="inline-block w-5 text-center">
+                    {voicing[i] === -1 ? 'x' : voicing[i]}
+                  </span>
+                ))}
+              </div>
+            </button>
           );
         })}
       </div>
