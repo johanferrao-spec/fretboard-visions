@@ -26,6 +26,13 @@ interface ControlPanelProps {
   setShowFretBox: (v: boolean) => void;
   fretBoxStart: number;
   setFretBoxStart: (v: number) => void;
+  fretBoxSize: number;
+  setFretBoxSize: (v: number) => void;
+  noteMarkerSize: number;
+  setNoteMarkerSize: (v: number) => void;
+  degreeColors: boolean;
+  setDegreeColors: (v: boolean) => void;
+  clearFretboard: () => void;
 }
 
 const scaleNames = Object.keys(SCALE_FORMULAS);
@@ -44,16 +51,28 @@ export default function ControlPanel({
   orientation, setOrientation,
   showFretBox, setShowFretBox,
   fretBoxStart, setFretBoxStart,
+  fretBoxSize, setFretBoxSize,
+  noteMarkerSize, setNoteMarkerSize,
+  degreeColors, setDegreeColors,
+  clearFretboard,
 }: ControlPanelProps) {
   return (
     <div className="space-y-4">
+      {/* Clear button */}
+      <button
+        onClick={clearFretboard}
+        className="w-full px-3 py-2 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors text-xs font-mono uppercase tracking-wider font-semibold"
+      >
+        Clear Fretboard
+      </button>
+
       {/* Fret count */}
       <div>
         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
           Frets: {maxFrets}
         </label>
         <input
-          type="range" min={12} max={22} value={maxFrets}
+          type="range" min={12} max={24} value={maxFrets}
           onChange={e => setMaxFrets(Number(e.target.value))}
           className="w-full mt-1 accent-primary"
         />
@@ -99,13 +118,46 @@ export default function ControlPanel({
         </button>
       </div>
 
-      {/* 5-Fret Box */}
+      {/* Degree colors toggle */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setDegreeColors(!degreeColors)}
+          className={`relative w-11 h-6 rounded-full transition-colors ${
+            degreeColors ? 'bg-primary' : 'bg-secondary'
+          }`}
+        >
+          <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-foreground transition-transform ${
+            degreeColors ? 'translate-x-5' : ''
+          }`} />
+        </button>
+        <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Degree Colors</span>
+      </div>
+
+      {/* Note marker size */}
+      <div>
+        <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+          Marker Size
+        </label>
+        <div className="flex items-center gap-2 mt-1">
+          <button
+            onClick={() => setNoteMarkerSize(Math.max(12, noteMarkerSize - 2))}
+            className="w-7 h-7 rounded bg-secondary text-secondary-foreground flex items-center justify-center font-mono font-bold text-sm hover:bg-muted transition-colors"
+          >−</button>
+          <span className="text-xs font-mono text-foreground w-8 text-center">{noteMarkerSize}</span>
+          <button
+            onClick={() => setNoteMarkerSize(Math.min(32, noteMarkerSize + 2))}
+            className="w-7 h-7 rounded bg-secondary text-secondary-foreground flex items-center justify-center font-mono font-bold text-sm hover:bg-muted transition-colors"
+          >+</button>
+        </div>
+      </div>
+
+      {/* Position Box */}
       <div>
         <div className="flex items-center gap-3 mb-1">
           <button
             onClick={() => setShowFretBox(!showFretBox)}
             className={`relative w-11 h-6 rounded-full transition-colors ${
-              showFretBox ? 'bg-yellow-500' : 'bg-secondary'
+              showFretBox ? 'bg-accent' : 'bg-secondary'
             }`}
           >
             <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-foreground transition-transform ${
@@ -115,15 +167,31 @@ export default function ControlPanel({
           <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Position Box</span>
         </div>
         {showFretBox && (
-          <div>
-            <label className="text-xs font-mono text-muted-foreground">
-              Frets {fretBoxStart}–{fretBoxStart + 4}
-            </label>
-            <input
-              type="range" min={1} max={maxFrets - 4} value={fretBoxStart}
-              onChange={e => setFretBoxStart(Number(e.target.value))}
-              className="w-full mt-1 accent-yellow-500"
-            />
+          <div className="space-y-2">
+            <div>
+              <label className="text-xs font-mono text-muted-foreground">
+                Position: Frets {fretBoxStart}–{fretBoxStart + fretBoxSize - 1}
+              </label>
+              <input
+                type="range" min={1} max={maxFrets - fretBoxSize + 1} value={fretBoxStart}
+                onChange={e => setFretBoxStart(Number(e.target.value))}
+                className="w-full mt-1 accent-accent"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Box Size</label>
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  onClick={() => setFretBoxSize(Math.max(3, fretBoxSize - 1))}
+                  className="w-7 h-7 rounded bg-secondary text-secondary-foreground flex items-center justify-center font-mono font-bold text-sm hover:bg-muted transition-colors"
+                >−</button>
+                <span className="text-xs font-mono text-foreground w-8 text-center">{fretBoxSize}</span>
+                <button
+                  onClick={() => setFretBoxSize(Math.min(8, fretBoxSize + 1))}
+                  className="w-7 h-7 rounded bg-secondary text-secondary-foreground flex items-center justify-center font-mono font-bold text-sm hover:bg-muted transition-colors"
+                >+</button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -164,7 +232,6 @@ export default function ControlPanel({
             onColorChange={setSecondaryColor}
           />
 
-          {/* Opacity slider */}
           <div>
             <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
               Secondary Opacity: {Math.round(secondaryOpacity * 100)}%
@@ -176,7 +243,6 @@ export default function ControlPanel({
             />
           </div>
 
-          {/* Active scale toggle */}
           <div className="flex gap-2">
             <button
               onClick={() => setActivePrimary(true)}
@@ -229,7 +295,6 @@ function ModeSelector({
         </div>
       </div>
 
-      {/* Mode: Scale or Arpeggio */}
       <div className="flex gap-1 mb-2">
         <button
           onClick={() => onChange({ ...value, mode: 'scale', scale: scaleNames[0] })}
@@ -245,7 +310,6 @@ function ModeSelector({
         >Arpeggio</button>
       </div>
 
-      {/* Root note */}
       <select
         value={value.root}
         onChange={e => onChange({ ...value, root: e.target.value as NoteName })}
@@ -254,7 +318,6 @@ function ModeSelector({
         {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
       </select>
 
-      {/* Scale/Arpeggio name */}
       <select
         value={value.scale}
         onChange={e => onChange({ ...value, scale: e.target.value })}

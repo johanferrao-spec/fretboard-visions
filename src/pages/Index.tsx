@@ -1,11 +1,22 @@
 import { useFretboard } from '@/hooks/useFretboard';
+import type { ChordSelection } from '@/hooks/useFretboard';
 import Fretboard from '@/components/Fretboard';
 import ControlPanel from '@/components/ControlPanel';
 import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
+import type { NoteName } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
+
+  const handleApplyChord = (chord: ChordSelection) => {
+    fb.setActiveChord(chord);
+  };
+
+  const handleApplyArpeggio = (root: NoteName, arpeggioName: string) => {
+    fb.setPrimaryScale({ mode: 'arpeggio', root, scale: arpeggioName });
+    fb.setActiveChord(null);
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -48,6 +59,13 @@ const Index = () => {
               setShowFretBox={fb.setShowFretBox}
               fretBoxStart={fb.fretBoxStart}
               setFretBoxStart={fb.setFretBoxStart}
+              fretBoxSize={fb.fretBoxSize}
+              setFretBoxSize={fb.setFretBoxSize}
+              noteMarkerSize={fb.noteMarkerSize}
+              setNoteMarkerSize={fb.setNoteMarkerSize}
+              degreeColors={fb.degreeColors}
+              setDegreeColors={fb.setDegreeColors}
+              clearFretboard={fb.clearFretboard}
             />
           </div>
           <ChordReference
@@ -76,6 +94,9 @@ const Index = () => {
             orientation={fb.orientation}
             showFretBox={fb.showFretBox}
             fretBoxStart={fb.fretBoxStart}
+            fretBoxSize={fb.fretBoxSize}
+            noteMarkerSize={fb.noteMarkerSize}
+            degreeColors={fb.degreeColors}
           />
         </main>
       </div>
@@ -84,6 +105,8 @@ const Index = () => {
         note={fb.selectedNote}
         noteColors={fb.noteColors}
         onClose={() => fb.setSelectedNote(null)}
+        onApplyChord={handleApplyChord}
+        onApplyArpeggio={handleApplyArpeggio}
       />
     </div>
   );
