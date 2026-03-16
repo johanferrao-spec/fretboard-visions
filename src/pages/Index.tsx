@@ -21,7 +21,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
+      <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
         <h1 className="text-lg font-display font-bold text-foreground tracking-tight">
           <span className="text-primary">Fret</span>Flow
         </h1>
@@ -31,9 +31,9 @@ const Index = () => {
       </header>
 
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        {/* Side panel */}
-        <aside className="lg:w-72 shrink-0 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
-          <div className="p-4">
+        {/* Side panel — controls only, no chords */}
+        <aside className="lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
+          <div className="p-3">
             <ControlPanel
               maxFrets={fb.maxFrets}
               setMaxFrets={fb.setMaxFrets}
@@ -68,36 +68,45 @@ const Index = () => {
               clearFretboard={fb.clearFretboard}
             />
           </div>
-          <ChordReference
-            activeChord={fb.activeChord}
-            setActiveChord={fb.setActiveChord}
-          />
         </aside>
 
-        {/* Fretboard area */}
-        <main className="flex-1 p-4 flex items-center justify-center min-w-0 overflow-auto">
-          <Fretboard
-            maxFrets={fb.maxFrets}
-            primaryScale={fb.primaryScale}
-            secondaryScale={fb.secondaryScale}
-            secondaryEnabled={fb.secondaryEnabled}
-            activePrimary={fb.activePrimary}
-            noteColors={fb.noteColors}
-            onNoteClick={fb.setSelectedNote}
-            displayMode={fb.displayMode}
-            disabledStrings={fb.disabledStrings}
-            onToggleString={fb.toggleStringDisabled}
-            secondaryOpacity={fb.secondaryOpacity}
-            secondaryColor={fb.secondaryColor}
-            primaryColor={fb.primaryColor}
-            activeChord={fb.activeChord}
-            orientation={fb.orientation}
-            showFretBox={fb.showFretBox}
-            fretBoxStart={fb.fretBoxStart}
-            fretBoxSize={fb.fretBoxSize}
-            noteMarkerSize={fb.noteMarkerSize}
-            degreeColors={fb.degreeColors}
-          />
+        {/* Main area: fretboard + chords below */}
+        <main className="flex-1 flex flex-col min-w-0 overflow-auto">
+          {/* Fretboard */}
+          <div className="p-4 flex items-center justify-center">
+            <Fretboard
+              maxFrets={fb.maxFrets}
+              primaryScale={fb.primaryScale}
+              secondaryScale={fb.secondaryScale}
+              secondaryEnabled={fb.secondaryEnabled}
+              activePrimary={fb.activePrimary}
+              noteColors={fb.noteColors}
+              onNoteClick={fb.setSelectedNote}
+              displayMode={fb.displayMode}
+              disabledStrings={fb.disabledStrings}
+              onToggleString={fb.toggleStringDisabled}
+              secondaryOpacity={fb.secondaryOpacity}
+              secondaryColor={fb.secondaryColor}
+              primaryColor={fb.primaryColor}
+              activeChord={fb.activeChord}
+              orientation={fb.orientation}
+              showFretBox={fb.showFretBox}
+              fretBoxStart={fb.fretBoxStart}
+              fretBoxSize={fb.fretBoxSize}
+              setFretBoxStart={fb.setFretBoxStart}
+              setFretBoxSize={fb.setFretBoxSize}
+              noteMarkerSize={fb.noteMarkerSize}
+              degreeColors={fb.degreeColors}
+            />
+          </div>
+
+          {/* Chords panel below fretboard */}
+          <div className="border-t border-border shrink-0">
+            <ChordReference
+              activeChord={fb.activeChord}
+              setActiveChord={fb.setActiveChord}
+            />
+          </div>
         </main>
       </div>
 
