@@ -52,8 +52,10 @@ export const CHORD_FORMULAS: Record<string, number[]> = {
   '7sus4': [0, 5, 7, 10],
   '7#9': [0, 4, 7, 10, 15],
   '7♭9': [0, 4, 7, 10, 13],
-  '11': [0, 4, 7, 10, 14, 17],
-  '13': [0, 4, 7, 10, 14, 21],
+  '11': [0, 4, 7, 10, 17],
+  'Minor 11': [0, 3, 7, 10, 17],
+  '13': [0, 4, 7, 10, 21],
+  'Minor 13': [0, 3, 7, 10, 21],
   'Power (5)': [0, 7],
 };
 
@@ -126,7 +128,18 @@ export function getIntervalName(root: NoteName, note: NoteName): string {
   return intervals[diff];
 }
 
-// Get notes for a chord voicing on the fretboard
+// Extended interval name (for chords with 9th, 11th, 13th)
+export function getExtendedIntervalName(root: NoteName, note: NoteName): string {
+  const intervals: Record<number, string> = {
+    0: 'R', 1: '♭9', 2: '9', 3: '♭3', 4: '3', 5: '11',
+    6: '♭5', 7: '5', 8: '♭13', 9: '13', 10: '♭7', 11: '7',
+  };
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  const noteIdx = NOTE_NAMES.indexOf(note);
+  const diff = (noteIdx - rootIdx + 12) % 12;
+  return intervals[diff] || '?';
+}
+
 export function getChordVoicingNotes(voicing: number[]): { stringIndex: number; fret: number; note: NoteName }[] {
   const result: { stringIndex: number; fret: number; note: NoteName }[] = [];
   voicing.forEach((fret, stringIndex) => {
@@ -141,11 +154,6 @@ export function getChordVoicingNotes(voicing: number[]): { stringIndex: number; 
 // VOICING GENERATORS
 // ============================================================
 
-/**
- * Generate playable chord voicings algorithmically.
- * Constraint: no two fretted notes more than 4 frets apart.
- * Returns up to `limit` unique voicings sorted by position.
- */
 export function generatePlayableVoicings(
   root: NoteName,
   chordType: string,
@@ -158,7 +166,7 @@ export function generatePlayableVoicings(
   const rootIdx = NOTE_NAMES.indexOf(root);
   const chordTones = [...new Set(formula.map(i => (rootIdx + i) % 12))];
   const chordTonesSet = new Set(chordTones);
-  const minRequired = Math.min(chordTones.length, 4); // need at least this many unique tones
+  const minRequired = Math.min(chordTones.length, 4);
 
   const results: number[][] = [];
   const seen = new Set<string>();
@@ -167,7 +175,6 @@ export function generatePlayableVoicings(
     const lo = baseFret;
     const hi = baseFret + 4;
 
-    // Per-string options in this window
     const perString: number[][] = [];
     for (let s = 0; s < 6; s++) {
       const opts: number[] = [-1];
@@ -176,7 +183,6 @@ export function generatePlayableVoicings(
           opts.push(f);
         }
       }
-      // Also allow open strings when base is low
       if (lo > 0 && lo <= 4) {
         if (chordTonesSet.has(STANDARD_TUNING[s] % 12) && !opts.includes(0)) {
           opts.push(0);
@@ -191,14 +197,12 @@ export function generatePlayableVoicings(
         const played = current.filter(f => f >= 0);
         if (played.length < Math.max(3, minRequired)) return;
 
-        // All required tones present?
         const present = new Set<number>();
         current.forEach((f, i) => { if (f >= 0) present.add((STANDARD_TUNING[i] + f) % 12); });
         let count = 0;
         for (const t of chordTones) { if (present.has(t)) count++; }
         if (count < minRequired) return;
 
-        // Span check
         const fretted = played.filter(f => f > 0);
         if (fretted.length > 1 && Math.max(...fretted) - Math.min(...fretted) > 4) return;
 
@@ -228,13 +232,17 @@ export function generatePlayableVoicings(
     search(0, []);
   }
 
-  // Sort: prefer root in bass, then by position
+  // Sort: prefer root in bass, fewer muted strings, lower position
   results.sort((a, b) => {
     const aFirst = a.findIndex(f => f >= 0);
     const bFirst = b.findIndex(f => f >= 0);
     const aHasRoot = aFirst >= 0 && (STANDARD_TUNING[aFirst] + a[aFirst]) % 12 === rootIdx % 12;
     const bHasRoot = bFirst >= 0 && (STANDARD_TUNING[bFirst] + b[bFirst]) % 12 === rootIdx % 12;
     if (aHasRoot !== bHasRoot) return aHasRoot ? -1 : 1;
+    // Prefer more strings played
+    const aPlayed = a.filter(f => f >= 0).length;
+    const bPlayed = b.filter(f => f >= 0).length;
+    if (aPlayed !== bPlayed) return bPlayed - aPlayed;
     const aMin = Math.min(...a.filter(f => f > 0).concat([99]));
     const bMin = Math.min(...b.filter(f => f > 0).concat([99]));
     return aMin - bMin;
@@ -243,14 +251,6 @@ export function generatePlayableVoicings(
   return results.slice(0, limit);
 }
 
-/**
- * Drop 2 voicings: Take a close-position 4-note chord, drop the 2nd voice
- * from the top down an octave. Placed on 4 adjacent strings.
- *
- * Close position (bottom to top): R 3 5 7
- * Drop 2 of root pos: 5 R 3 7 (drop the 5 down)
- * Applied to each inversion on adjacent string groups.
- */
 export function generateDrop2Voicings(root: NoteName, chordType: string): number[][] {
   const formula = CHORD_FORMULAS[chordType];
   if (!formula || formula.length < 4) return [];
@@ -263,7 +263,6 @@ export function generateDrop2Voicings(root: NoteName, chordType: string): number
 
   for (let inv = 0; inv < 4; inv++) {
     const invTones = [...tones.slice(inv), ...tones.slice(0, inv)];
-    // Drop 2nd from top (index 2) to bottom
     const drop2 = [invTones[2], invTones[0], invTones[1], invTones[3]];
 
     for (const strings of stringGroups) {
@@ -303,12 +302,6 @@ export function generateDrop2Voicings(root: NoteName, chordType: string): number
   return results.slice(0, 20);
 }
 
-/**
- * Drop 3 voicings: Drop the 3rd voice from the top down an octave.
- * These skip a string, creating wider interval spacing.
- *
- * String groups: {6,5,3,2}, {5,4,2,1} (skipping one string)
- */
 export function generateDrop3Voicings(root: NoteName, chordType: string): number[][] {
   const formula = CHORD_FORMULAS[chordType];
   if (!formula || formula.length < 4) return [];
@@ -317,12 +310,10 @@ export function generateDrop3Voicings(root: NoteName, chordType: string): number
   const tones = formula.slice(0, 4).map(i => (rootIdx + i) % 12);
   const results: number[][] = [];
   const seen = new Set<string>();
-  // Drop 3 typically skips a string
   const stringGroups = [[0,1,3,4], [1,2,4,5], [0,1,4,5]];
 
   for (let inv = 0; inv < 4; inv++) {
     const invTones = [...tones.slice(inv), ...tones.slice(0, inv)];
-    // Drop 3rd from top (index 1) to bottom
     const drop3 = [invTones[1], invTones[0], invTones[2], invTones[3]];
 
     for (const strings of stringGroups) {
@@ -362,19 +353,11 @@ export function generateDrop3Voicings(root: NoteName, chordType: string): number
   return results.slice(0, 20);
 }
 
-/**
- * Generate shell voicings for a chord type.
- * Shell voicings use Root + 3rd (or guide tone) + 7th.
- * Placed on string sets rooted on E and A strings.
- */
 export function generateShellVoicings(root: NoteName, chordType: string): number[][] {
   const formula = CHORD_FORMULAS[chordType];
   if (!formula) return [];
 
   const rootIdx = NOTE_NAMES.indexOf(root);
-  // For shells we want: root, 3rd (or substitute), 7th (or substitute)
-  // Pick root + 2nd interval + last interval for 4-note chords
-  // For triads: root + 2nd + 3rd interval
   let shellTones: number[];
   if (formula.length >= 4) {
     shellTones = [formula[0], formula[1], formula[3]].map(i => (rootIdx + i) % 12);
@@ -387,15 +370,12 @@ export function generateShellVoicings(root: NoteName, chordType: string): number
   const shellSet = new Set(shellTones);
   const results: number[][] = [];
   const seen = new Set<string>();
-  // Root strings: 0 (low E), 1 (A), 2 (D)
   const rootStrings = [0, 1, 2];
 
   for (const rootStr of rootStrings) {
     for (let baseFret = 0; baseFret <= 14; baseFret++) {
-      // Find root on root string
       if ((STANDARD_TUNING[rootStr] + baseFret) % 12 !== shellTones[0]) continue;
 
-      // Find other tones on adjacent higher strings
       const voicing: number[] = [-1, -1, -1, -1, -1, -1];
       voicing[rootStr] = baseFret;
       const usedTones = new Set([shellTones[0]]);
@@ -411,7 +391,6 @@ export function generateShellVoicings(root: NoteName, chordType: string): number
         }
       }
 
-      // Check we got all shell tones
       if (usedTones.size < shellTones.length) continue;
 
       const playedFrets = voicing.filter(f => f > 0);
@@ -428,11 +407,9 @@ export function generateShellVoicings(root: NoteName, chordType: string): number
   return results.slice(0, 16);
 }
 
-// Legacy exports for backward compat
 export const CHORD_VOICINGS: Record<string, Record<string, number[][]>> = {};
 export const SHELL_VOICINGS: Record<string, Record<string, number[][]>> = {};
 
-// Get diatonic chord (stacked thirds) for a note within a scale
 export function getDiatonicChord(root: NoteName, scaleName: string, degree: NoteName): { notes: NoteName[]; name: string } {
   const scaleNotes = getScaleNotes(root, scaleName);
   if (scaleNotes.length < 7) return { notes: [], name: '' };
@@ -457,18 +434,39 @@ export function getDiatonicChord(root: NoteName, scaleName: string, degree: Note
   return { notes: chordTones, name: `${degree}${quality}` };
 }
 
-// Degree color map for arpeggios
+// Degree color map — fixed colors per user spec
+// Root=green, 3rd=red, 5th=blue, 7th=orange, 9th=light grey, 11th=pink, 13th=turquoise
 export const DEGREE_COLORS: Record<string, string> = {
-  'R': '0 85% 60%',
-  '♭2': '20 75% 50%',
-  '2': '45 90% 55%',
-  '♭3': '80 70% 45%',
-  '3': '120 70% 45%',
-  '4': '160 75% 45%',
-  '♭5': '185 80% 50%',
-  '5': '210 85% 55%',
-  '♭6': '240 75% 60%',
-  '6': '270 80% 60%',
-  '♭7': '310 80% 55%',
-  '7': '340 85% 58%',
+  'R':  '130 70% 45%',     // green
+  '♭2': '20 60% 50%',
+  '2':  '0 0% 65%',        // light grey (same as 9th)
+  '♭3': '350 70% 50%',
+  '3':  '0 85% 55%',       // red
+  '4':  '330 75% 60%',     // pink (same as 11th)
+  '♭5': '200 60% 50%',
+  '5':  '215 85% 55%',     // blue
+  '♭6': '175 60% 45%',
+  '6':  '175 75% 50%',     // turquoise (same as 13th)
+  '♭7': '25 85% 55%',      // orange-ish
+  '7':  '30 90% 55%',      // orange
+  '9':  '0 0% 65%',        // light grey
+  '♭9': '20 60% 50%',
+  '11': '330 75% 60%',     // pink
+  '♭13':'175 60% 45%',
+  '13': '175 75% 50%',     // turquoise
 };
+
+// Degree legend entries for display (ordered)
+export const DEGREE_LEGEND: { label: string; color: string }[] = [
+  { label: 'R',   color: DEGREE_COLORS['R'] },
+  { label: '♭3',  color: DEGREE_COLORS['♭3'] },
+  { label: '3',   color: DEGREE_COLORS['3'] },
+  { label: '4',   color: DEGREE_COLORS['4'] },
+  { label: '♭5',  color: DEGREE_COLORS['♭5'] },
+  { label: '5',   color: DEGREE_COLORS['5'] },
+  { label: '♭7',  color: DEGREE_COLORS['♭7'] },
+  { label: '7',   color: DEGREE_COLORS['7'] },
+  { label: '9',   color: DEGREE_COLORS['9'] },
+  { label: '11',  color: DEGREE_COLORS['11'] },
+  { label: '13',  color: DEGREE_COLORS['13'] },
+];
