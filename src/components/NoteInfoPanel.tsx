@@ -44,7 +44,7 @@ export default function NoteInfoPanel({ note, noteColors, onClose, onApplyChord,
   };
 
   const category = CHORD_CATEGORIES[activeCategory];
-  const rootIdx = (await import('@/lib/music')).then ? 0 : 0; // not needed, just use inline
+  // Note index computed inline where needed
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm"
