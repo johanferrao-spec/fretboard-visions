@@ -29,8 +29,8 @@ NOTE_NAMES.forEach(note => {
 
 export function useFretboard() {
   const [maxFrets, setMaxFrets] = useState(22);
-  const [primaryScale, setPrimaryScale] = useState<ScaleSelection>({ mode: 'scale', root: 'A', scale: 'Natural Minor' });
-  const [secondaryScale, setSecondaryScale] = useState<ScaleSelection>({ mode: 'scale', root: 'E', scale: 'Superlocrian' });
+  const [primaryScale, setPrimaryScale] = useState<ScaleSelection>({ mode: 'scale', root: 'A', scale: 'Natural Minor (Aeolian)' });
+  const [secondaryScale, setSecondaryScale] = useState<ScaleSelection>({ mode: 'scale', root: 'E', scale: 'Superlocrian (Altered)' });
   const [secondaryEnabled, setSecondaryEnabled] = useState(false);
   const [activePrimary, setActivePrimary] = useState(true);
   const [noteColors, setNoteColors] = useState<NoteColors>(DEFAULT_COLORS);
@@ -46,9 +46,10 @@ export function useFretboard() {
   const [fretBoxSize, setFretBoxSize] = useState(5);
   const [noteMarkerSize, setNoteMarkerSize] = useState(20);
   const [degreeColors, setDegreeColors] = useState(true);
-
-  // Chord mode
+  const [disabledDegrees, setDisabledDegrees] = useState<Set<string>>(new Set());
   const [activeChord, setActiveChord] = useState<ChordSelection | null>(null);
+  const [showCAGED, setShowCAGED] = useState(false);
+  const [cagedShape, setCagedShape] = useState<string>('E');
 
   const updateNoteColor = useCallback((note: NoteName, color: string) => {
     setNoteColors(prev => ({ ...prev, [note]: color }));
@@ -63,18 +64,35 @@ export function useFretboard() {
     });
   }, []);
 
+  const toggleDegree = useCallback((degree: string) => {
+    setDisabledDegrees(prev => {
+      const next = new Set(prev);
+      if (next.has(degree)) next.delete(degree);
+      else next.add(degree);
+      return next;
+    });
+  }, []);
+
   const clearFretboard = useCallback(() => {
     setActiveChord(null);
     setSelectedNote(null);
     setDisabledStrings(new Set());
     setShowFretBox(false);
+    setShowCAGED(false);
+    setDisabledDegrees(new Set());
+  }, []);
+
+  // When enabling dual scale, turn off degree colors by default
+  const handleSetSecondaryEnabled = useCallback((v: boolean) => {
+    setSecondaryEnabled(v);
+    if (v) setDegreeColors(false);
   }, []);
 
   return {
     maxFrets, setMaxFrets,
     primaryScale, setPrimaryScale,
     secondaryScale, setSecondaryScale,
-    secondaryEnabled, setSecondaryEnabled,
+    secondaryEnabled, setSecondaryEnabled: handleSetSecondaryEnabled,
     activePrimary, setActivePrimary,
     noteColors, updateNoteColor,
     selectedNote, setSelectedNote,
@@ -90,6 +108,9 @@ export function useFretboard() {
     fretBoxSize, setFretBoxSize,
     noteMarkerSize, setNoteMarkerSize,
     degreeColors, setDegreeColors,
+    disabledDegrees, toggleDegree,
+    showCAGED, setShowCAGED,
+    cagedShape, setCagedShape,
     clearFretboard,
   };
 }
