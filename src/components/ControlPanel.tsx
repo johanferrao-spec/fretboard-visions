@@ -1,4 +1,4 @@
-import { NOTE_NAMES, SCALE_FORMULAS, ARPEGGIO_FORMULAS, NoteName } from '@/lib/music';
+import { NOTE_NAMES, SCALE_FORMULAS, ARPEGGIO_FORMULAS, SCALE_DESCRIPTIONS, NoteName } from '@/lib/music';
 import type { ScaleSelection, ScaleMode, DisplayMode, Orientation } from '@/hooks/useFretboard';
 
 interface ControlPanelProps {
@@ -22,14 +22,6 @@ interface ControlPanelProps {
   setMaxFrets: (v: number) => void;
   orientation: Orientation;
   setOrientation: (v: Orientation) => void;
-  showFretBox: boolean;
-  setShowFretBox: (v: boolean) => void;
-  fretBoxStart: number;
-  setFretBoxStart: (v: number) => void;
-  fretBoxSize: number;
-  setFretBoxSize: (v: number) => void;
-  noteMarkerSize: number;
-  setNoteMarkerSize: (v: number) => void;
   degreeColors: boolean;
   setDegreeColors: (v: boolean) => void;
   clearFretboard: () => void;
@@ -49,10 +41,6 @@ export default function ControlPanel({
   displayMode, setDisplayMode,
   maxFrets, setMaxFrets,
   orientation, setOrientation,
-  showFretBox, setShowFretBox,
-  fretBoxStart, setFretBoxStart,
-  fretBoxSize, setFretBoxSize,
-  noteMarkerSize, setNoteMarkerSize,
   degreeColors, setDegreeColors,
   clearFretboard,
 }: ControlPanelProps) {
@@ -85,17 +73,13 @@ export default function ControlPanel({
           className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
             orientation === 'horizontal' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
           }`}
-        >
-          Horizontal
-        </button>
+        >Horizontal</button>
         <button
           onClick={() => setOrientation('vertical')}
           className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
             orientation === 'vertical' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
           }`}
-        >
-          Vertical
-        </button>
+        >Vertical</button>
       </div>
 
       {/* Display mode toggle */}
@@ -105,17 +89,13 @@ export default function ControlPanel({
           className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
             displayMode === 'notes' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
           }`}
-        >
-          Note Names
-        </button>
+        >Note Names</button>
         <button
           onClick={() => setDisplayMode('degrees')}
           className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
             displayMode === 'degrees' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
           }`}
-        >
-          Scale Degrees
-        </button>
+        >Scale Degrees</button>
       </div>
 
       {/* Degree colors toggle */}
@@ -131,69 +111,6 @@ export default function ControlPanel({
           }`} />
         </button>
         <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Degree Colors</span>
-      </div>
-
-      {/* Note marker size */}
-      <div>
-        <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-          Marker Size
-        </label>
-        <div className="flex items-center gap-2 mt-1">
-          <button
-            onClick={() => setNoteMarkerSize(Math.max(12, noteMarkerSize - 2))}
-            className="w-7 h-7 rounded bg-secondary text-secondary-foreground flex items-center justify-center font-mono font-bold text-sm hover:bg-muted transition-colors"
-          >−</button>
-          <span className="text-xs font-mono text-foreground w-8 text-center">{noteMarkerSize}</span>
-          <button
-            onClick={() => setNoteMarkerSize(Math.min(32, noteMarkerSize + 2))}
-            className="w-7 h-7 rounded bg-secondary text-secondary-foreground flex items-center justify-center font-mono font-bold text-sm hover:bg-muted transition-colors"
-          >+</button>
-        </div>
-      </div>
-
-      {/* Position Box */}
-      <div>
-        <div className="flex items-center gap-3 mb-1">
-          <button
-            onClick={() => setShowFretBox(!showFretBox)}
-            className={`relative w-11 h-6 rounded-full transition-colors ${
-              showFretBox ? 'bg-accent' : 'bg-secondary'
-            }`}
-          >
-            <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-foreground transition-transform ${
-              showFretBox ? 'translate-x-5' : ''
-            }`} />
-          </button>
-          <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Position Box</span>
-        </div>
-        {showFretBox && (
-          <div className="space-y-2">
-            <div>
-              <label className="text-xs font-mono text-muted-foreground">
-                Position: Frets {fretBoxStart}–{fretBoxStart + fretBoxSize - 1}
-              </label>
-              <input
-                type="range" min={1} max={maxFrets - fretBoxSize + 1} value={fretBoxStart}
-                onChange={e => setFretBoxStart(Number(e.target.value))}
-                className="w-full mt-1 accent-accent"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Box Size</label>
-              <div className="flex items-center gap-2 mt-1">
-                <button
-                  onClick={() => setFretBoxSize(Math.max(3, fretBoxSize - 1))}
-                  className="w-7 h-7 rounded bg-secondary text-secondary-foreground flex items-center justify-center font-mono font-bold text-sm hover:bg-muted transition-colors"
-                >−</button>
-                <span className="text-xs font-mono text-foreground w-8 text-center">{fretBoxSize}</span>
-                <button
-                  onClick={() => setFretBoxSize(Math.min(8, fretBoxSize + 1))}
-                  className="w-7 h-7 rounded bg-secondary text-secondary-foreground flex items-center justify-center font-mono font-bold text-sm hover:bg-muted transition-colors"
-                >+</button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Primary Scale/Arpeggio */}
@@ -231,7 +148,6 @@ export default function ControlPanel({
             color={secondaryColor}
             onColorChange={setSecondaryColor}
           />
-
           <div>
             <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
               Secondary Opacity: {Math.round(secondaryOpacity * 100)}%
@@ -242,7 +158,6 @@ export default function ControlPanel({
               className="w-full mt-1 accent-primary"
             />
           </div>
-
           <div className="flex gap-2">
             <button
               onClick={() => setActivePrimary(true)}
@@ -274,6 +189,7 @@ function ModeSelector({
   onColorChange: (c: string) => void;
 }) {
   const names = value.mode === 'scale' ? scaleNames : arpeggioNames;
+  const description = value.mode === 'scale' ? SCALE_DESCRIPTIONS[value.scale] : undefined;
 
   return (
     <div className={`p-3 rounded-lg border transition-colors ${active ? 'border-primary bg-secondary/50' : 'border-border'}`}>
@@ -325,6 +241,13 @@ function ModeSelector({
       >
         {names.map(s => <option key={s} value={s}>{s}</option>)}
       </select>
+
+      {/* Scale description */}
+      {description && (
+        <div className="mt-2 text-[9px] font-mono text-muted-foreground leading-relaxed bg-muted/50 rounded p-2">
+          {description}
+        </div>
+      )}
     </div>
   );
 }
