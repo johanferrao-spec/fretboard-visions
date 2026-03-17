@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   noteAtFret, isNoteInSelection, getIntervalName, getExtendedIntervalName, getDiatonicChord,
   NoteName, STRING_NAMES, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND,
-  generatePlayableVoicings, generateShellVoicings, generateDrop2Voicings, generateDrop3Voicings,
+  getVoicingsForChord,
 } from '@/lib/music';
 import type { ScaleSelection, ChordSelection, DisplayMode, Orientation } from '@/hooks/useFretboard';
 
@@ -29,6 +29,9 @@ interface FretboardProps {
   setFretBoxSize: (v: number) => void;
   noteMarkerSize: number;
   degreeColors: boolean;
+  disabledDegrees: Set<string>;
+  toggleDegree: (d: string) => void;
+  setShowFretBox: (v: boolean) => void;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -56,7 +59,7 @@ export default function Fretboard({
   disabledStrings, onToggleString, secondaryOpacity,
   secondaryColor, primaryColor, activeChord, orientation,
   showFretBox, fretBoxStart, fretBoxSize, setFretBoxStart, setFretBoxSize,
-  noteMarkerSize, degreeColors,
+  noteMarkerSize, degreeColors, disabledDegrees, toggleDegree, setShowFretBox,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -75,21 +78,12 @@ export default function Fretboard({
 
   const cumLeft: number[] = [];
   let acc = 0;
-  for (const w of widths) {
-    cumLeft.push(acc);
-    acc += w;
-  }
+  for (const w of widths) { cumLeft.push(acc); acc += w; }
 
   // Get chord voicing notes
   const chordVoicing = activeChord
     ? (() => {
-        let voicings: number[][] = [];
-        switch (activeChord.voicingSource) {
-          case 'full': voicings = generatePlayableVoicings(activeChord.root, activeChord.chordType); break;
-          case 'shell': voicings = generateShellVoicings(activeChord.root, activeChord.chordType); break;
-          case 'drop2': voicings = generateDrop2Voicings(activeChord.root, activeChord.chordType); break;
-          case 'drop3': voicings = generateDrop3Voicings(activeChord.root, activeChord.chordType); break;
-        }
+        const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
         return voicings[activeChord.voicingIndex] || null;
       })()
     : null;
@@ -107,13 +101,13 @@ export default function Fretboard({
 
   function getDegreeColor(root: NoteName, note: NoteName): string | null {
     const interval = getIntervalName(root, note);
+    if (disabledDegrees.has(interval)) return null;
     const degColor = DEGREE_COLORS[interval];
     if (degColor) return `hsl(${degColor})`;
     return null;
   }
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
-    // In chord mode, only show chord notes with degree colors relative to chord root
     if (activeChord) {
       if (!chordNoteSet.has(`${stringIndex}-${fret}`)) return null;
       let bg = pColor;
@@ -129,8 +123,11 @@ export default function Fretboard({
     if (!inPrimary && !inSecondary) return null;
 
     const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
+    const interval = getIntervalName(activeRoot, note);
+    
+    // Check if this degree is disabled
+    if (disabledDegrees.has(interval)) return null;
 
-    // Degree-based coloring — works for BOTH scale and arpeggio mode
     let bg = pColor;
     if (degreeColors) {
       const dc = getDegreeColor(activeRoot, note);
@@ -144,7 +141,6 @@ export default function Fretboard({
 
     if (inPrimary && inSecondary) {
       if (!degreeColors) bg = activePrimary ? pColor : sColor;
-      opacity = 1;
       ring = true;
     } else if (inPrimary && !inSecondary) {
       if (!degreeColors) bg = pColor;
@@ -154,11 +150,10 @@ export default function Fretboard({
       opacity = activePrimary ? secondaryOpacity : 1;
     }
 
-    // Diatonic hover: grey out notes not in hovered chord, color hovered by degree relative to hovered root
+    // Diatonic hover
     if (hoveredDiatonic && hoveredDiatonic.notes.length > 0) {
       if (!hoveredDiatonic.notes.includes(note)) {
-        greyed = true;
-        opacity = 0.15;
+        greyed = true; opacity = 0.15;
       } else {
         opacity = 1;
         if (degreeColors) {
@@ -172,16 +167,12 @@ export default function Fretboard({
     if (isDragging && dragPath.length > 0 && dragDirection) {
       const first = dragPath[0];
       if (dragDirection === 'ascending') {
-        // Grey out everything to the left of the first note
         if (fret < first.fret || (fret === first.fret && stringIndex > first.stringIndex)) {
-          greyed = true;
-          opacity = 0.15;
+          greyed = true; opacity = 0.15;
         }
       } else if (dragDirection === 'descending') {
-        // Grey out everything to the right of the first note
         if (fret > first.fret || (fret === first.fret && stringIndex < first.stringIndex)) {
-          greyed = true;
-          opacity = 0.15;
+          greyed = true; opacity = 0.15;
         }
       }
     }
@@ -189,8 +180,7 @@ export default function Fretboard({
     // Position box: grey out notes outside
     if (showFretBox && fret > 0) {
       if (fret < fretBoxStart || fret > fretBoxEnd) {
-        greyed = true;
-        opacity = 0.15;
+        greyed = true; opacity = 0.15;
       }
     }
 
@@ -223,6 +213,19 @@ export default function Fretboard({
     const last = dragPath[dragPath.length - 1];
     if (last.stringIndex === stringIndex && last.fret === fret) return;
 
+    // Cancel if returning to start note
+    if (dragPath.length > 1 && dragPath[0].stringIndex === stringIndex && dragPath[0].fret === fret) {
+      setDragPath([]);
+      setDragDirection(null);
+      setIsDragging(false);
+      return;
+    }
+
+    // Only connect to visible (non-greyed) notes
+    const noteObj = noteAtFret(stringIndex, fret);
+    const style = getNoteStyle(noteObj, stringIndex, fret);
+    if (!style || style.greyed) return;
+
     let dir = dragDirection;
     if (!dir && dragPath.length >= 1) {
       const first = dragPath[0];
@@ -234,22 +237,16 @@ export default function Fretboard({
       setDragDirection(dir);
     }
 
-    // Validate direction
-    if (dir === 'ascending') {
-      if (fret < last.fret - 1) return;
-    } else if (dir === 'descending') {
-      if (fret > last.fret + 1) return;
-    }
-
     setDragPath(prev => [...prev, { stringIndex, fret, note }]);
   };
 
   const handleDragEnd = () => {
-    setIsDragging(false);
-    // Persist the path if it has at least 2 notes
-    if (dragPath.length >= 2) {
+    if (isDragging && dragPath.length >= 2) {
       setPersistedPaths(prev => [...prev, dragPath]);
     }
+    setIsDragging(false);
+    setDragPath([]);
+    setDragDirection(null);
   };
 
   const clearAllPaths = () => {
@@ -274,20 +271,17 @@ export default function Fretboard({
     return points;
   };
 
-  // Detect open string notes for glow
+  // Open string glow detection
   const getOpenStringGlow = () => {
     const glowSet = new Set<number>();
     for (const si of stringOrder) {
       if (disabledStrings.has(si)) continue;
       const note = noteAtFret(si, 0);
       const style = getNoteStyle(note, si, 0);
-      if (style && !style.greyed) {
-        glowSet.add(si);
-      }
+      if (style && !style.greyed) glowSet.add(si);
     }
     return glowSet;
   };
-
   const glowStrings = getOpenStringGlow();
 
   // Position box drag handlers
@@ -300,7 +294,6 @@ export default function Fretboard({
 
   useEffect(() => {
     if (!boxDragging) return;
-
     const handleMouseMove = (e: MouseEvent) => {
       const fb = fretboardRef.current;
       if (!fb) return;
@@ -309,48 +302,30 @@ export default function Fretboard({
       const pixPerPercent = fretAreaWidth / 100;
       const dx = e.clientX - boxDragStartRef.current.mouseX;
       const dPct = dx / pixPerPercent;
-
-      // Estimate frets moved
       const avgFretWidth = 100 / (maxFrets + 1);
       const dFrets = Math.round(dPct / avgFretWidth);
       const { startFret, startSize } = boxDragStartRef.current;
-
       if (boxDragging === 'move') {
-        const newStart = Math.max(1, Math.min(maxFrets - startSize + 1, startFret + dFrets));
-        setFretBoxStart(newStart);
+        setFretBoxStart(Math.max(1, Math.min(maxFrets - startSize + 1, startFret + dFrets)));
       } else if (boxDragging === 'left') {
         const newStart = Math.max(1, Math.min(startFret + startSize - 3, startFret + dFrets));
         const newSize = startSize - (newStart - startFret);
-        if (newSize >= 3 && newSize <= 12) {
-          setFretBoxStart(newStart);
-          setFretBoxSize(newSize);
-        }
+        if (newSize >= 3 && newSize <= 12) { setFretBoxStart(newStart); setFretBoxSize(newSize); }
       } else if (boxDragging === 'right') {
         const newSize = Math.max(3, Math.min(12, startSize + dFrets));
-        if (startFret + newSize - 1 <= maxFrets) {
-          setFretBoxSize(newSize);
-        }
+        if (startFret + newSize - 1 <= maxFrets) setFretBoxSize(newSize);
       }
     };
-
     const handleMouseUp = () => setBoxDragging(null);
-
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
+    return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
   }, [boxDragging, maxFrets, setFretBoxStart, setFretBoxSize]);
 
-  // Render all SVG paths (current drag + persisted)
-  const allPaths = [...persistedPaths, ...(dragPath.length >= 2 ? [dragPath] : [])];
+  const allPaths = [...persistedPaths, ...(isDragging && dragPath.length >= 2 ? [dragPath] : [])];
 
-  // Get chord label for a note when chord is active
   const getChordLabel = (note: NoteName, fret: number, stringIndex: number): string => {
-    if (activeChord && degreeColors) {
-      return getExtendedIntervalName(activeChord.root, note);
-    }
+    if (activeChord && degreeColors) return getExtendedIntervalName(activeChord.root, note);
     if (displayMode === 'degrees') {
       const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
       return getIntervalName(activeRoot, note);
@@ -361,25 +336,46 @@ export default function Fretboard({
   return (
     <div
       className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}
-      onClick={() => { if (!isDragging && (dragPath.length > 0 || persistedPaths.length > 0)) clearAllPaths(); }}
       onMouseUp={handleDragEnd}
     >
       <div
         className={isVertical ? 'origin-center' : ''}
-        style={isVertical ? { transform: 'rotate(-90deg)', width: '70vh', maxWidth: 800 } : {}}
+        style={isVertical ? { transform: 'rotate(90deg)', width: '80vh', maxWidth: 900 } : {}}
       >
-        {/* Degree color key */}
-        {degreeColors && (
-          <div className={`flex items-center gap-1 mb-2 flex-wrap ${isVertical ? 'rotate-90' : ''}`}>
-            <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Degrees:</span>
-            {DEGREE_LEGEND.map(d => (
-              <div key={d.label} className="flex items-center gap-0.5">
+        {/* Degree color key + toggles + position box toggle */}
+        <div className={`flex items-center gap-1 mb-2 flex-wrap ${isVertical ? '-rotate-90' : ''}`}>
+          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Degrees:</span>
+          {DEGREE_LEGEND.map(d => {
+            const isOff = disabledDegrees.has(d.label);
+            return (
+              <button
+                key={d.label}
+                onClick={() => toggleDegree(d.label)}
+                className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${isOff ? 'opacity-30' : 'opacity-100'}`}
+                title={`Toggle ${d.label}`}
+              >
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${d.color})` }} />
                 <span className="text-[8px] font-mono text-muted-foreground">{d.label}</span>
-              </div>
-            ))}
+              </button>
+            );
+          })}
+          <div className="ml-auto flex items-center gap-2">
+            {/* Marker size */}
+            <div className="flex items-center gap-1">
+              <span className="text-[8px] font-mono text-muted-foreground">Size</span>
+              <button onClick={() => { /* handled via parent */ }} className="hidden" />
+            </div>
+            {/* Position Box toggle */}
+            <button
+              onClick={() => setShowFretBox(!showFretBox)}
+              className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
+                showFretBox ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+              }`}
+            >
+              Box {showFretBox ? 'ON' : 'OFF'}
+            </button>
           </div>
-        )}
+        </div>
 
         {/* Fret numbers */}
         <div className="flex items-center mb-1">
@@ -387,15 +383,16 @@ export default function Fretboard({
           {frets.map(f => (
             <div
               key={f}
-              className={`text-center font-mono text-muted-foreground ${isVertical ? 'rotate-90' : ''} ${
+              className={`text-center font-mono text-muted-foreground ${isVertical ? '-rotate-90' : ''} ${
                 DOUBLE_INLAY.includes(f) ? 'font-bold text-foreground' : ''
               }`}
               style={{
                 width: `calc((100% - 28px) * ${widths[f]} / 100)`,
                 fontSize: 9,
                 ...(GLOW_FRETS.includes(f) ? {
-                  textShadow: '0 0 8px hsl(var(--primary)), 0 0 16px hsl(var(--primary))',
-                  color: 'hsl(var(--primary))',
+                  textShadow: '0 0 8px hsl(130 70% 45%), 0 0 16px hsl(130 70% 45%)',
+                  color: 'hsl(130, 70%, 55%)',
+                  fontWeight: 700,
                 } : {}),
               }}
             >
@@ -424,7 +421,7 @@ export default function Fretboard({
             })}
           </div>
 
-          {/* Position box overlay — draggable */}
+          {/* Position box overlay */}
           {showFretBox && (
             <div
               className="absolute top-0 bottom-0 border-2 border-accent/70 bg-accent/10 rounded-md z-20 transition-[left,width] duration-100"
@@ -435,20 +432,12 @@ export default function Fretboard({
               }}
               onMouseDown={e => handleBoxMouseDown(e, 'move')}
             >
-              {/* Left resize handle */}
-              <div
-                className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-accent/30 z-30"
-                onMouseDown={e => handleBoxMouseDown(e, 'left')}
-              />
-              {/* Right resize handle */}
-              <div
-                className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-accent/30 z-30"
-                onMouseDown={e => handleBoxMouseDown(e, 'right')}
-              />
+              <div className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-accent/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'left')} />
+              <div className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-accent/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'right')} />
             </div>
           )}
 
-          {/* Drag arpeggio lines overlay */}
+          {/* Drag arpeggio lines overlay — with glow circles */}
           {allPaths.map((path, pathIdx) => {
             const pts = getPathLinePoints(path);
             if (pts.length < 2) return null;
@@ -460,34 +449,52 @@ export default function Fretboard({
                 viewBox={`0 0 100 ${6 * stringH}`}
                 preserveAspectRatio="none"
               >
+                <defs>
+                  <filter id={`glow-${pathIdx}`}>
+                    <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
+                    <feMerge>
+                      <feMergeNode in="coloredBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
                 {pts.map((pt, i, arr) => {
                   if (i === 0) return null;
                   const prev = arr[i - 1];
                   return (
                     <line
                       key={i}
-                      x1={prev.x}
-                      y1={prev.y / 100 * 6 * stringH}
-                      x2={pt.x}
-                      y2={pt.y / 100 * 6 * stringH}
-                      stroke="hsl(var(--primary))"
+                      x1={prev.x} y1={prev.y / 100 * 6 * stringH}
+                      x2={pt.x} y2={pt.y / 100 * 6 * stringH}
+                      stroke="hsl(130, 70%, 50%)"
                       strokeWidth={2}
                       strokeLinecap="round"
                       opacity={0.8}
                       vectorEffect="non-scaling-stroke"
+                      filter={`url(#glow-${pathIdx})`}
                     />
                   );
                 })}
                 {pts.map((pt, i) => (
-                  <circle
-                    key={`dot-${i}`}
-                    cx={pt.x}
-                    cy={pt.y / 100 * 6 * stringH}
-                    r={4}
-                    fill="hsl(var(--primary))"
-                    opacity={0.9}
-                    vectorEffect="non-scaling-stroke"
-                  />
+                  <g key={`dot-${i}`}>
+                    <circle
+                      cx={pt.x} cy={pt.y / 100 * 6 * stringH}
+                      r={7}
+                      fill="none"
+                      stroke="hsl(130, 70%, 50%)"
+                      strokeWidth={1.5}
+                      opacity={0.6}
+                      vectorEffect="non-scaling-stroke"
+                      filter={`url(#glow-${pathIdx})`}
+                    />
+                    <circle
+                      cx={pt.x} cy={pt.y / 100 * 6 * stringH}
+                      r={3}
+                      fill="hsl(130, 70%, 50%)"
+                      opacity={0.9}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </g>
                 ))}
               </svg>
             );
@@ -498,8 +505,6 @@ export default function Fretboard({
             const isDisabled = disabledStrings.has(stringIdx);
             const thickness = Math.max(1, 3.5 - stringIdx * 0.5);
             const isGlowing = glowStrings.has(stringIdx);
-
-            // In chord mode, check if this string is muted
             const isChordMuted = activeChord && chordVoicing && chordVoicing[stringIdx] === -1;
 
             return (
@@ -509,7 +514,7 @@ export default function Fretboard({
                   onDoubleClick={() => onToggleString(stringIdx)}
                   className={`shrink-0 w-7 h-full flex items-center justify-center font-mono font-bold transition-all z-10 ${
                     isDisabled ? 'text-muted-foreground/30 line-through' : 'text-muted-foreground'
-                  } ${isVertical ? 'rotate-90' : ''}`}
+                  } ${isVertical ? '-rotate-90' : ''}`}
                   style={{
                     fontSize: 9,
                     ...(isChordMuted ? { color: 'hsl(var(--destructive))', fontSize: 10 } : {}),
@@ -536,7 +541,6 @@ export default function Fretboard({
                     const label = getChordLabel(note, fret, stringIdx);
                     const isOpenString = fret === 0;
 
-                    // For open strings: show glow on label, not a dot
                     if (isOpenString && style && !style.greyed) {
                       return (
                         <div key={fret} className="flex items-center justify-center relative" style={{ width: `${widths[fret]}%`, height: stringH }}>
@@ -547,13 +551,7 @@ export default function Fretboard({
 
                     return (
                       <div key={fret} className="flex items-center justify-center relative" style={{ width: `${widths[fret]}%`, height: stringH }}>
-                        {/* Fret wire */}
-                        {fret > 0 && (
-                          <div
-                            className="absolute left-0 top-0 bottom-0 bg-fretboard-fret"
-                            style={{ width: 2, opacity: 0.6 }}
-                          />
-                        )}
+                        {fret > 0 && <div className="absolute left-0 top-0 bottom-0 bg-fretboard-fret" style={{ width: 2, opacity: 0.6 }} />}
                         {fret === 0 && <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-fretboard-nut" />}
 
                         {style && (
@@ -564,9 +562,7 @@ export default function Fretboard({
                             onMouseLeave={() => { if (!isDragging) setHoveredDiatonic(null); }}
                             className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold transition-all duration-150 hover:scale-110 active:scale-95 shadow-md cursor-pointer select-none ${
                               style.ring ? 'ring-2' : ''
-                            } ${isVertical ? 'rotate-90' : ''} ${
-                              dragPath.some(d => d.stringIndex === stringIdx && d.fret === fret) ? 'ring-2 ring-primary scale-110' : ''
-                            }`}
+                            } ${isVertical ? '-rotate-90' : ''}`}
                             style={{
                               width: noteMarkerSize,
                               height: noteMarkerSize,
@@ -590,23 +586,9 @@ export default function Fretboard({
         </div>
 
         {/* Guitar body silhouette */}
-        <svg viewBox="0 0 800 50" className="w-full h-8 mt-0" preserveAspectRatio="none" style={{ marginLeft: 28, width: 'calc(100% - 28px)' }}>
-          <defs>
-            <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(30, 25%, 16%)" />
-              <stop offset="50%" stopColor="hsl(30, 20%, 10%)" />
-              <stop offset="100%" stopColor="hsl(30, 15%, 6%)" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M0 0 L800 0 L800 6 Q760 10, 740 16 Q720 26, 680 34 Q640 42, 580 46 Q520 50, 440 48 Q400 46, 380 40 Q360 34, 340 32 Q320 34, 300 40 Q280 46, 220 48 Q160 50, 100 42 Q60 36, 40 24 Q25 14, 0 6Z"
-            fill="url(#bodyGrad)"
-            stroke="hsl(var(--border))"
-            strokeWidth="0.5"
-          />
-          <rect x="300" y="14" width="80" height="6" rx="2" fill="hsl(var(--muted))" opacity="0.25" />
-          <rect x="410" y="14" width="80" height="6" rx="2" fill="hsl(var(--muted))" opacity="0.25" />
-        </svg>
+        <div className="relative" style={{ marginLeft: 28, width: 'calc(100% - 28px)', height: 10 }}>
+          <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-b from-[hsl(30,25%,14%)] to-transparent rounded-b-lg" />
+        </div>
       </div>
 
       {/* Diatonic hover tooltip */}
@@ -615,9 +597,7 @@ export default function Fretboard({
           isVertical ? 'top-2 right-2' : 'top-0 right-0'
         }`}>
           <div className="text-xs font-mono font-bold text-foreground">{hoveredDiatonic.name}</div>
-          <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
-            {hoveredDiatonic.notes.join(' – ')}
-          </div>
+          <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{hoveredDiatonic.notes.join(' – ')}</div>
         </div>
       )}
 

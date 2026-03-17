@@ -18,6 +18,13 @@ const Index = () => {
     fb.setActiveChord(null);
   };
 
+  const handleApplySecondaryArpeggio = (root: NoteName, arpeggioName: string) => {
+    fb.setSecondaryEnabled(true);
+    fb.setSecondaryScale({ mode: 'arpeggio', root, scale: arpeggioName });
+  };
+
+  const isVertical = fb.orientation === 'vertical';
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -31,8 +38,8 @@ const Index = () => {
       </header>
 
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        {/* Side panel — controls only, no chords */}
-        <aside className="lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
+        {/* Side panel — controls */}
+        <aside className="lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
           <div className="p-3">
             <ControlPanel
               maxFrets={fb.maxFrets}
@@ -55,14 +62,6 @@ const Index = () => {
               setDisplayMode={fb.setDisplayMode}
               orientation={fb.orientation}
               setOrientation={fb.setOrientation}
-              showFretBox={fb.showFretBox}
-              setShowFretBox={fb.setShowFretBox}
-              fretBoxStart={fb.fretBoxStart}
-              setFretBoxStart={fb.setFretBoxStart}
-              fretBoxSize={fb.fretBoxSize}
-              setFretBoxSize={fb.setFretBoxSize}
-              noteMarkerSize={fb.noteMarkerSize}
-              setNoteMarkerSize={fb.setNoteMarkerSize}
               degreeColors={fb.degreeColors}
               setDegreeColors={fb.setDegreeColors}
               clearFretboard={fb.clearFretboard}
@@ -70,10 +69,10 @@ const Index = () => {
           </div>
         </aside>
 
-        {/* Main area: fretboard + chords below */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-auto">
+        {/* Main area */}
+        <main className={`flex-1 flex ${isVertical ? 'flex-row' : 'flex-col'} min-w-0 overflow-auto`}>
           {/* Fretboard */}
-          <div className="p-4 flex items-center justify-center">
+          <div className={`${isVertical ? 'flex-1' : ''} p-4 flex items-center justify-center`}>
             <Fretboard
               maxFrets={fb.maxFrets}
               primaryScale={fb.primaryScale}
@@ -97,14 +96,22 @@ const Index = () => {
               setFretBoxSize={fb.setFretBoxSize}
               noteMarkerSize={fb.noteMarkerSize}
               degreeColors={fb.degreeColors}
+              disabledDegrees={fb.disabledDegrees}
+              toggleDegree={fb.toggleDegree}
+              setShowFretBox={fb.setShowFretBox}
             />
           </div>
 
-          {/* Chords panel below fretboard */}
-          <div className="border-t border-border shrink-0">
+          {/* Chords panel — below (horizontal) or right side (vertical) */}
+          <div className={`border-${isVertical ? 'l' : 't'} border-border shrink-0 ${isVertical ? 'w-72 overflow-y-auto' : ''}`}>
             <ChordReference
               activeChord={fb.activeChord}
               setActiveChord={fb.setActiveChord}
+              showCAGED={fb.showCAGED}
+              setShowCAGED={fb.setShowCAGED}
+              cagedShape={fb.cagedShape}
+              setCagedShape={fb.setCagedShape}
+              cagedRoot={fb.primaryScale.root}
             />
           </div>
         </main>
@@ -116,6 +123,7 @@ const Index = () => {
         onClose={() => fb.setSelectedNote(null)}
         onApplyChord={handleApplyChord}
         onApplyArpeggio={handleApplyArpeggio}
+        onApplySecondaryArpeggio={handleApplySecondaryArpeggio}
       />
     </div>
   );
