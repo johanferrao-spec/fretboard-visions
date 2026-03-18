@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   noteAtFret, isNoteInSelection, getIntervalName, getExtendedIntervalName, getDiatonicChord,
   NoteName, STRING_NAMES, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND,
-  getVoicingsForChord,
+  getVoicingsForChord, getArpeggioSequence, getDiatonicArpeggioType, getMidiNote, findNotePositions,
+  type ChordVoicing,
 } from '@/lib/music';
 import type { ScaleSelection, ChordSelection, DisplayMode, Orientation } from '@/hooks/useFretboard';
 
@@ -65,10 +66,12 @@ export default function Fretboard({
   const widths = fretWidths(maxFrets);
   const [hoveredDiatonic, setHoveredDiatonic] = useState<{ notes: NoteName[]; name: string; root: NoteName } | null>(null);
 
-  // Drag arpeggio state
+  // Guided drag arpeggio state
   const [isDragging, setIsDragging] = useState(false);
   const [dragPath, setDragPath] = useState<DragNote[]>([]);
-  const [dragDirection, setDragDirection] = useState<'ascending' | 'descending' | null>(null);
+  const [dragArpRoot, setDragArpRoot] = useState<NoteName | null>(null);
+  const [dragArpSequence, setDragArpSequence] = useState<number[]>([]);
+  const [dragArpStepIndex, setDragArpStepIndex] = useState(0);
   const [persistedPaths, setPersistedPaths] = useState<DragNote[][]>([]);
   const fretboardRef = useRef<HTMLDivElement>(null);
 
@@ -84,7 +87,8 @@ export default function Fretboard({
   const chordVoicing = activeChord
     ? (() => {
         const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
-        return voicings[activeChord.voicingIndex] || null;
+        const v = voicings[activeChord.voicingIndex];
+        return v ? v.frets : null;
       })()
     : null;
 
@@ -98,6 +102,58 @@ export default function Fretboard({
   const pColor = primaryColor || 'hsl(var(--primary))';
   const sColor = secondaryColor || 'hsl(200, 80%, 60%)';
   const fretBoxEnd = fretBoxStart + fretBoxSize - 1;
+
+  // Compute which notes are valid targets for guided arpeggio
+  const guidedTargets = useMemo(() => {
+    if (!isDragging || !dragArpRoot || dragArpSequence.length === 0 || dragPath.length === 0) return new Set<string>();
+    
+    const rootIdx = (['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).indexOf(dragArpRoot);
+    const nextStep = dragArpStepIndex < dragArpSequence.length ? dragArpSequence[dragArpStepIndex] : 0; // wrap to root
+    const targetNote = (['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const)[(rootIdx + (nextStep % 12)) % 12];
+    
+    // Find the MIDI note of the last note in the path
+    const lastNote = dragPath[dragPath.length - 1];
+    const lastMidi = getMidiNote(lastNote.stringIndex, lastNote.fret);
+    
+    // Find closest target note positions (same octave = within ~6 semitones)
+    const positions = findNotePositions(targetNote, 0, maxFrets);
+    const targets = new Set<string>();
+    
+    // Filter to nearby positions (within reasonable reach)
+    for (const pos of positions) {
+      const posMidi = getMidiNote(pos.stringIndex, pos.fret);
+      // For ascending: target should be higher or same octave
+      // For the 3rd step specifically, restrict to same octave
+      const midiDiff = posMidi - lastMidi;
+      if (dragArpStepIndex === 0) {
+        // First step (finding 3rd): within ~7 semitones up or down
+        if (Math.abs(midiDiff) <= 7 && midiDiff !== 0) {
+          targets.add(`${pos.stringIndex}-${pos.fret}`);
+        }
+      } else {
+        // Subsequent steps: prefer ascending
+        if (midiDiff > 0 && midiDiff <= 12) {
+          targets.add(`${pos.stringIndex}-${pos.fret}`);
+        }
+        // Also allow descending for flexibility
+        if (midiDiff < 0 && midiDiff >= -5) {
+          targets.add(`${pos.stringIndex}-${pos.fret}`);
+        }
+      }
+    }
+    
+    return targets;
+  }, [isDragging, dragArpRoot, dragArpSequence, dragArpStepIndex, dragPath, maxFrets]);
+
+  // Notes already in the drag path
+  const pathNoteSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const dn of dragPath) set.add(`${dn.stringIndex}-${dn.fret}`);
+    for (const path of persistedPaths) {
+      for (const dn of path) set.add(`${dn.stringIndex}-${dn.fret}`);
+    }
+    return set;
+  }, [dragPath, persistedPaths]);
 
   function getDegreeColor(root: NoteName, note: NoteName): string | null {
     const interval = getIntervalName(root, note);
@@ -124,14 +180,12 @@ export default function Fretboard({
 
     const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
     const interval = getIntervalName(activeRoot, note);
-    
-    // Check if this degree is disabled
-    if (disabledDegrees.has(interval)) return null;
 
     let bg = pColor;
     if (degreeColors) {
       const dc = getDegreeColor(activeRoot, note);
       if (dc) bg = dc;
+      else bg = pColor; // disabled degree → default color
     }
 
     let opacity = 1;
@@ -163,17 +217,11 @@ export default function Fretboard({
       }
     }
 
-    // Drag arpeggio: grey out notes in wrong direction
-    if (isDragging && dragPath.length > 0 && dragDirection) {
-      const first = dragPath[0];
-      if (dragDirection === 'ascending') {
-        if (fret < first.fret || (fret === first.fret && stringIndex > first.stringIndex)) {
-          greyed = true; opacity = 0.15;
-        }
-      } else if (dragDirection === 'descending') {
-        if (fret > first.fret || (fret === first.fret && stringIndex < first.stringIndex)) {
-          greyed = true; opacity = 0.15;
-        }
+    // Guided drag arpeggio: only show target notes + path notes
+    if (isDragging && dragPath.length > 0 && guidedTargets.size > 0) {
+      const key = `${stringIndex}-${fret}`;
+      if (!guidedTargets.has(key) && !pathNoteSet.has(key)) {
+        greyed = true; opacity = 0.1;
       }
     }
 
@@ -201,43 +249,47 @@ export default function Fretboard({
     setHoveredDiatonic(null);
   };
 
-  // Drag arpeggio handlers
+  // Guided drag arpeggio handlers
   const handleDragStart = (stringIndex: number, fret: number, note: NoteName) => {
+    // Determine diatonic arpeggio type for this note
+    const activeScale = activePrimary ? primaryScale : secondaryScale;
+    const arpType = getDiatonicArpeggioType(activeScale.root, activeScale.scale, note);
+    if (!arpType) return;
+
+    const sequence = getArpeggioSequence(arpType);
     setIsDragging(true);
     setDragPath([{ stringIndex, fret, note }]);
-    setDragDirection(null);
+    setDragArpRoot(note);
+    setDragArpSequence(sequence);
+    setDragArpStepIndex(1); // Next step is the 2nd tone (e.g., 3rd)
   };
 
   const handleDragEnter = (stringIndex: number, fret: number, note: NoteName) => {
-    if (!isDragging) return;
+    if (!isDragging || !dragArpRoot) return;
     const last = dragPath[dragPath.length - 1];
     if (last.stringIndex === stringIndex && last.fret === fret) return;
 
-    // Cancel if returning to start note
+    // Cancel if returning to start
     if (dragPath.length > 1 && dragPath[0].stringIndex === stringIndex && dragPath[0].fret === fret) {
       setDragPath([]);
-      setDragDirection(null);
       setIsDragging(false);
+      setDragArpRoot(null);
       return;
     }
 
-    // Only connect to visible (non-greyed) notes
-    const noteObj = noteAtFret(stringIndex, fret);
-    const style = getNoteStyle(noteObj, stringIndex, fret);
-    if (!style || style.greyed) return;
-
-    let dir = dragDirection;
-    if (!dir && dragPath.length >= 1) {
-      const first = dragPath[0];
-      if (fret > first.fret || (fret === first.fret && stringIndex < first.stringIndex)) {
-        dir = 'ascending';
-      } else {
-        dir = 'descending';
-      }
-      setDragDirection(dir);
-    }
+    // Only connect to guided target notes
+    const key = `${stringIndex}-${fret}`;
+    if (!guidedTargets.has(key)) return;
 
     setDragPath(prev => [...prev, { stringIndex, fret, note }]);
+    
+    // Advance to next step
+    if (dragArpStepIndex < dragArpSequence.length - 1) {
+      setDragArpStepIndex(prev => prev + 1);
+    } else {
+      // Completed one cycle, allow extending to next octave
+      setDragArpStepIndex(0);
+    }
   };
 
   const handleDragEnd = () => {
@@ -246,14 +298,17 @@ export default function Fretboard({
     }
     setIsDragging(false);
     setDragPath([]);
-    setDragDirection(null);
+    setDragArpRoot(null);
+    setDragArpSequence([]);
+    setDragArpStepIndex(0);
   };
 
-  const clearAllPaths = () => {
-    setDragPath([]);
-    setPersistedPaths([]);
-    setDragDirection(null);
-  };
+  // Double-click on fretboard to clear paths
+  const handleDoubleClick = useCallback(() => {
+    if (persistedPaths.length > 0) {
+      setPersistedPaths([]);
+    }
+  }, [persistedPaths]);
 
   const stringOrder = [5, 4, 3, 2, 1, 0];
   const isVertical = orientation === 'vertical';
@@ -325,10 +380,20 @@ export default function Fretboard({
   const allPaths = [...persistedPaths, ...(isDragging && dragPath.length >= 2 ? [dragPath] : [])];
 
   const getChordLabel = (note: NoteName, fret: number, stringIndex: number): string => {
-    if (activeChord && degreeColors) return getExtendedIntervalName(activeChord.root, note);
+    if (activeChord && displayMode !== 'notes') return getExtendedIntervalName(activeChord.root, note);
     if (displayMode === 'degrees') {
       const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
       return getIntervalName(activeRoot, note);
+    }
+    if (displayMode === 'fingers' && activeChord) {
+      const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
+      const v = voicings[activeChord.voicingIndex];
+      if (v?.fingers) {
+        const f = v.fingers[stringIndex];
+        if (f === 0) return 'O';
+        if (f === 'B') return 'B';
+        return String(f);
+      }
     }
     return note;
   };
@@ -337,6 +402,7 @@ export default function Fretboard({
     <div
       className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}
       onMouseUp={handleDragEnd}
+      onDoubleClick={handleDoubleClick}
     >
       <div
         className={isVertical ? 'origin-center' : ''}
@@ -360,12 +426,6 @@ export default function Fretboard({
             );
           })}
           <div className="ml-auto flex items-center gap-2">
-            {/* Marker size */}
-            <div className="flex items-center gap-1">
-              <span className="text-[8px] font-mono text-muted-foreground">Size</span>
-              <button onClick={() => { /* handled via parent */ }} className="hidden" />
-            </div>
-            {/* Position Box toggle */}
             <button
               onClick={() => setShowFretBox(!showFretBox)}
               className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
@@ -388,7 +448,7 @@ export default function Fretboard({
               }`}
               style={{
                 width: `calc((100% - 28px) * ${widths[f]} / 100)`,
-                fontSize: 9,
+                fontSize: 10,
                 ...(GLOW_FRETS.includes(f) ? {
                   textShadow: '0 0 8px hsl(130 70% 45%), 0 0 16px hsl(130 70% 45%)',
                   color: 'hsl(130, 70%, 55%)',
@@ -446,12 +506,12 @@ export default function Fretboard({
                 key={pathIdx}
                 className="absolute inset-0 pointer-events-none z-30"
                 style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
-                viewBox={`0 0 100 ${6 * stringH}`}
+                viewBox={`0 0 100 100`}
                 preserveAspectRatio="none"
               >
                 <defs>
                   <filter id={`glow-${pathIdx}`}>
-                    <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
+                    <feGaussianBlur stdDeviation="1" result="coloredBlur" />
                     <feMerge>
                       <feMergeNode in="coloredBlur" />
                       <feMergeNode in="SourceGraphic" />
@@ -464,13 +524,12 @@ export default function Fretboard({
                   return (
                     <line
                       key={i}
-                      x1={prev.x} y1={prev.y / 100 * 6 * stringH}
-                      x2={pt.x} y2={pt.y / 100 * 6 * stringH}
+                      x1={prev.x} y1={prev.y}
+                      x2={pt.x} y2={pt.y}
                       stroke="hsl(130, 70%, 50%)"
-                      strokeWidth={2}
+                      strokeWidth={0.5}
                       strokeLinecap="round"
                       opacity={0.8}
-                      vectorEffect="non-scaling-stroke"
                       filter={`url(#glow-${pathIdx})`}
                     />
                   );
@@ -478,21 +537,19 @@ export default function Fretboard({
                 {pts.map((pt, i) => (
                   <g key={`dot-${i}`}>
                     <circle
-                      cx={pt.x} cy={pt.y / 100 * 6 * stringH}
-                      r={7}
+                      cx={pt.x} cy={pt.y}
+                      r={1.5}
                       fill="none"
                       stroke="hsl(130, 70%, 50%)"
-                      strokeWidth={1.5}
+                      strokeWidth={0.3}
                       opacity={0.6}
-                      vectorEffect="non-scaling-stroke"
                       filter={`url(#glow-${pathIdx})`}
                     />
                     <circle
-                      cx={pt.x} cy={pt.y / 100 * 6 * stringH}
-                      r={3}
+                      cx={pt.x} cy={pt.y}
+                      r={0.6}
                       fill="hsl(130, 70%, 50%)"
                       opacity={0.9}
-                      vectorEffect="non-scaling-stroke"
                     />
                   </g>
                 ))}
@@ -511,13 +568,13 @@ export default function Fretboard({
               <div key={stringIdx} className="flex items-center relative" style={{ height: stringH }}>
                 {/* String label */}
                 <button
-                  onDoubleClick={() => onToggleString(stringIdx)}
+                  onDoubleClick={(e) => { e.stopPropagation(); onToggleString(stringIdx); }}
                   className={`shrink-0 w-7 h-full flex items-center justify-center font-mono font-bold transition-all z-10 ${
                     isDisabled ? 'text-muted-foreground/30 line-through' : 'text-muted-foreground'
                   } ${isVertical ? '-rotate-90' : ''}`}
                   style={{
                     fontSize: 9,
-                    ...(isChordMuted ? { color: 'hsl(var(--destructive))', fontSize: 10 } : {}),
+                    ...(isChordMuted ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isGlowing && !isChordMuted ? {
                       color: pColor,
                       textShadow: `0 0 6px ${pColor}, 0 0 12px ${pColor}`,
@@ -599,16 +656,6 @@ export default function Fretboard({
           <div className="text-xs font-mono font-bold text-foreground">{hoveredDiatonic.name}</div>
           <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{hoveredDiatonic.notes.join(' – ')}</div>
         </div>
-      )}
-
-      {/* Clear paths button */}
-      {persistedPaths.length > 0 && (
-        <button
-          onClick={(e) => { e.stopPropagation(); clearAllPaths(); }}
-          className="absolute top-1 left-8 z-40 px-2 py-1 rounded bg-destructive/80 text-destructive-foreground text-[9px] font-mono uppercase tracking-wider hover:bg-destructive transition-colors"
-        >
-          Clear Paths
-        </button>
       )}
     </div>
   );

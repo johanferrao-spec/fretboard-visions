@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NoteName, NOTE_CSS_KEYS, CHORD_FORMULAS, ARPEGGIO_FORMULAS, CHORD_CATEGORIES } from '@/lib/music';
+import { NoteName, NOTE_NAMES, NOTE_CSS_KEYS, CHORD_FORMULAS, ARPEGGIO_FORMULAS, CHORD_CATEGORIES, getDiatonicChord, getScaleNotes } from '@/lib/music';
 import type { ChordSelection, ScaleSelection } from '@/hooks/useFretboard';
 
 interface NoteInfoPanelProps {
@@ -9,32 +9,35 @@ interface NoteInfoPanelProps {
   onApplyChord?: (chord: ChordSelection) => void;
   onApplyArpeggio?: (root: NoteName, arpeggioName: string) => void;
   onApplySecondaryArpeggio?: (root: NoteName, arpeggioName: string) => void;
+  activeScale?: ScaleSelection;
 }
 
-export default function NoteInfoPanel({ note, noteColors, onClose, onApplyChord, onApplyArpeggio, onApplySecondaryArpeggio }: NoteInfoPanelProps) {
+export default function NoteInfoPanel({ note, noteColors, onClose, onApplyChord, onApplyArpeggio, onApplySecondaryArpeggio, activeScale }: NoteInfoPanelProps) {
   const [activeCategory, setActiveCategory] = useState(0);
   const [showArpeggios, setShowArpeggios] = useState(false);
-  const [dragItem, setDragItem] = useState<string | null>(null);
 
   if (!note) return null;
 
   const cssVar = NOTE_CSS_KEYS[note];
   const color = noteColors[note] || `hsl(var(${cssVar}))`;
 
+  // Determine diatonic chord quality for this note in the active scale
+  const diatonicInfo = activeScale && activeScale.mode === 'scale'
+    ? getDiatonicChord(activeScale.root, activeScale.scale, note)
+    : null;
+
   const handleChordClick = (chordType: string) => {
     if (onApplyChord && CHORD_FORMULAS[chordType]) {
       onApplyChord({ root: note, chordType, voicingIndex: 0, voicingSource: 'full' });
+      onClose(); // Close menu after selection
     }
   };
 
   const handleArpeggioClick = (arpeggioType: string) => {
     if (onApplyArpeggio && ARPEGGIO_FORMULAS[arpeggioType]) {
       onApplyArpeggio(note, arpeggioType);
+      onClose(); // Close menu after selection
     }
-  };
-
-  const handleDragStart = (type: string) => {
-    setDragItem(type);
   };
 
   const handleDragToSecondary = (type: string) => {
@@ -43,15 +46,34 @@ export default function NoteInfoPanel({ note, noteColors, onClose, onApplyChord,
     }
   };
 
+  // Filter arpeggios to diatonic ones if we have scale context
+  const diatonicArpeggios = activeScale && activeScale.mode === 'scale'
+    ? (() => {
+        const scaleNotes = getScaleNotes(activeScale.root, activeScale.scale);
+        if (scaleNotes.length < 7 || !scaleNotes.includes(note)) return null;
+        const chord = getDiatonicChord(activeScale.root, activeScale.scale, note);
+        if (!chord.name) return null;
+        // Map quality to arpeggio types
+        const q = chord.name.replace(note, '');
+        const types: string[] = [];
+        if (q.includes('maj7')) types.push('Major 7', 'Major');
+        else if (q.includes('min7')) types.push('Minor 7', 'Minor');
+        else if (q.includes('7')) types.push('Dominant 7', 'Major');
+        else if (q.includes('ø7')) types.push('Half-Dim 7', 'Diminished');
+        else if (q.includes('°7')) types.push('Dim 7', 'Diminished');
+        else types.push('Major', 'Minor');
+        return types.filter(t => ARPEGGIO_FORMULAS[t]);
+      })()
+    : null;
+
   const category = CHORD_CATEGORIES[activeCategory];
-  // Note index computed inline where needed
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="bg-card border border-border rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[70vh] overflow-hidden flex flex-col p-4"
+        className="bg-card border border-border rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[60vh] overflow-hidden flex flex-col p-4"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -63,7 +85,14 @@ export default function NoteInfoPanel({ note, noteColors, onClose, onApplyChord,
             >
               {note}
             </div>
-            <h2 className="text-base font-display font-semibold text-foreground">{note} Note</h2>
+            <div>
+              <h2 className="text-base font-display font-semibold text-foreground">{note}</h2>
+              {diatonicInfo && diatonicInfo.name && (
+                <div className="text-[10px] font-mono text-muted-foreground">
+                  Diatonic: {diatonicInfo.name} ({diatonicInfo.notes.join('-')})
+                </div>
+              )}
+            </div>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors text-xl leading-none">×</button>
         </div>
@@ -102,12 +131,12 @@ export default function NoteInfoPanel({ note, noteColors, onClose, onApplyChord,
             </div>
 
             {/* Chord buttons */}
-            <div className="grid grid-cols-2 gap-1.5 overflow-y-auto max-h-[40vh] pr-1">
+            <div className="grid grid-cols-2 gap-1.5 overflow-y-auto max-h-[35vh] pr-1">
               {category.types.map(chordType => {
                 if (!CHORD_FORMULAS[chordType]) return null;
-                const rootIndex = (['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).indexOf(note);
+                const rootIndex = NOTE_NAMES.indexOf(note);
                 const formula = CHORD_FORMULAS[chordType];
-                const notes = formula.map(i => (['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const)[(rootIndex + i) % 12]);
+                const notes = formula.map(i => NOTE_NAMES[(rootIndex + i) % 12]);
                 return (
                   <button
                     key={chordType}
@@ -122,26 +151,56 @@ export default function NoteInfoPanel({ note, noteColors, onClose, onApplyChord,
             </div>
           </>
         ) : (
-          /* Arpeggios */
-          <div className="grid grid-cols-2 gap-1.5 overflow-y-auto max-h-[40vh] pr-1">
-            {Object.entries(ARPEGGIO_FORMULAS).map(([arpType, formula]) => {
-              const rootIndex = (['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).indexOf(note);
-              const notes = formula.map(i => (['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const)[(rootIndex + i) % 12]);
-              return (
-                <button
-                  key={arpType}
-                  onClick={() => handleArpeggioClick(arpType)}
-                  draggable
-                  onDragStart={() => handleDragStart(arpType)}
-                  onDragEnd={() => { if (dragItem) handleDragToSecondary(dragItem); setDragItem(null); }}
-                  className="bg-secondary rounded-lg px-3 py-2 text-left hover:bg-primary/20 hover:ring-1 hover:ring-primary transition-all cursor-pointer"
-                  title="Click to apply, drag to secondary"
-                >
-                  <div className="text-xs font-mono font-semibold text-foreground">{note} {arpType}</div>
-                  <div className="text-[10px] font-mono text-muted-foreground">{notes.join(' – ')}</div>
-                </button>
-              );
-            })}
+          /* Arpeggios — show diatonic first if available */
+          <div className="overflow-y-auto max-h-[35vh] pr-1 space-y-2">
+            {diatonicArpeggios && (
+              <div>
+                <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Diatonic to current scale</div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {diatonicArpeggios.map(arpType => {
+                    const rootIndex = NOTE_NAMES.indexOf(note);
+                    const formula = ARPEGGIO_FORMULAS[arpType];
+                    const notes = formula.map(i => NOTE_NAMES[(rootIndex + i) % 12]);
+                    return (
+                      <button
+                        key={arpType}
+                        onClick={() => handleArpeggioClick(arpType)}
+                        draggable
+                        onDragEnd={() => handleDragToSecondary(arpType)}
+                        className="bg-primary/10 border border-primary/30 rounded-lg px-3 py-2 text-left hover:bg-primary/20 hover:ring-1 hover:ring-primary transition-all cursor-pointer"
+                        title="Click to apply, drag to secondary"
+                      >
+                        <div className="text-xs font-mono font-semibold text-foreground">{note} {arpType}</div>
+                        <div className="text-[10px] font-mono text-muted-foreground">{notes.join(' – ')}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">All arpeggios</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {Object.entries(ARPEGGIO_FORMULAS).map(([arpType, formula]) => {
+                  const rootIndex = NOTE_NAMES.indexOf(note);
+                  const notes = formula.map(i => NOTE_NAMES[(rootIndex + i) % 12]);
+                  return (
+                    <button
+                      key={arpType}
+                      onClick={() => handleArpeggioClick(arpType)}
+                      draggable
+                      onDragEnd={() => handleDragToSecondary(arpType)}
+                      className="bg-secondary rounded-lg px-3 py-2 text-left hover:bg-primary/20 hover:ring-1 hover:ring-primary transition-all cursor-pointer"
+                      title="Click to apply, drag to secondary"
+                    >
+                      <div className="text-xs font-mono font-semibold text-foreground">{note} {arpType}</div>
+                      <div className="text-[10px] font-mono text-muted-foreground">{notes.join(' – ')}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>

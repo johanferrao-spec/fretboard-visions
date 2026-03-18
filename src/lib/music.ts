@@ -588,7 +588,7 @@ for (const root of ALL_ROOTS) {
           barreFret: v.barreFret != null ? v.barreFret + semitoneOffset : undefined,
         };
       })
-      .filter((v): v is ChordVoicing => v !== null);
+      .filter((v): v is NonNullable<typeof v> => v !== null) as ChordVoicing[];
   }
 }
 

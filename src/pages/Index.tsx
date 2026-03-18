@@ -124,6 +124,7 @@ const Index = () => {
         onApplyChord={handleApplyChord}
         onApplyArpeggio={handleApplyArpeggio}
         onApplySecondaryArpeggio={handleApplySecondaryArpeggio}
+        activeScale={fb.primaryScale}
       />
     </div>
   );
