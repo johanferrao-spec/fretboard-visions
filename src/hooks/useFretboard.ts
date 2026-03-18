@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { NoteName, NOTE_NAMES } from '@/lib/music';
 
 export type ScaleMode = 'scale' | 'arpeggio';
-export type DisplayMode = 'notes' | 'degrees';
+export type DisplayMode = 'notes' | 'degrees' | 'fingers';
 export type Orientation = 'horizontal' | 'vertical';
 
 export interface ScaleSelection {
@@ -15,7 +15,7 @@ export interface ChordSelection {
   root: NoteName;
   chordType: string;
   voicingIndex: number;
-  voicingSource: 'full' | 'shell' | 'drop2' | 'drop3';
+  voicingSource: 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
 }
 
 export interface NoteColors {
@@ -80,6 +80,7 @@ export function useFretboard() {
     setShowFretBox(false);
     setShowCAGED(false);
     setDisabledDegrees(new Set());
+    // Note: does NOT reset scale/arpeggio selection
   }, []);
 
   // When enabling dual scale, turn off degree colors by default
