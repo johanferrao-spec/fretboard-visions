@@ -52,6 +52,8 @@ export function useFretboard() {
   const [activeChord, setActiveChord] = useState<ChordSelection | null>(null);
   const [showCAGED, setShowCAGED] = useState(false);
   const [cagedShape, setCagedShape] = useState<string>('E');
+  const [identifyMode, setIdentifyMode] = useState(false);
+  const [identifyFrets, setIdentifyFrets] = useState<(number | -1)[]>([-1, -1, -1, -1, -1, -1]);
 
   const updateNoteColor = useCallback((note: NoteName, color: string) => {
     setNoteColors(prev => ({ ...prev, [note]: color }));
