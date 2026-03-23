@@ -65,6 +65,7 @@ export default function Fretboard({
   disabledStrings, onToggleString, secondaryOpacity,
   secondaryColor, primaryColor, activeChord, orientation,
   showFretBox, fretBoxStart, fretBoxSize, setFretBoxStart, setFretBoxSize,
+  fretBoxStringStart, fretBoxStringSize, setFretBoxStringStart, setFretBoxStringSize,
   noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
