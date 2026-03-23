@@ -407,45 +407,53 @@ function IdentifyPanel({
         Click notes on the fretboard to identify a chord.
       </div>
 
-      {/* Current selection display */}
-      <div className="flex gap-1 mb-2">
+      {/* Current selection + buttons in one row */}
+      <div className="flex items-center gap-1 mb-2 flex-wrap">
         {STRING_NAMES.map((name, i) => {
           const fret = frets[i];
           const note = fret >= 0 ? noteAtFret(i, fret) : null;
+          // Determine degree color if a chord interpretation is selected
+          let cellBg = fret >= 0 ? 'hsl(var(--primary) / 0.2)' : 'hsl(var(--muted) / 0.5)';
+          let cellText = fret >= 0 ? 'hsl(var(--primary))' : 'hsl(var(--destructive))';
+          let cellBorder = fret >= 0 ? 'hsl(var(--primary) / 0.3)' : 'hsl(var(--destructive) / 0.4)';
+          if (fret >= 0 && note && currentRoot && degreeColors) {
+            const interval = getIntervalName(currentRoot, note);
+            const degColor = DEGREE_COLORS[interval];
+            if (degColor) {
+              cellBg = `hsl(${degColor} / 0.25)`;
+              cellText = `hsl(${degColor})`;
+              cellBorder = `hsl(${degColor} / 0.5)`;
+            }
+          }
           return (
-            <div key={i} className="flex-1 text-center">
-              <div className="text-[8px] font-mono text-muted-foreground mb-0.5">{name}</div>
-              <button
-                onClick={() => {
-                  const nf = [...frets];
-                  nf[i] = fret === -1 ? 0 : -1;
-                  setFrets(nf);
-                }}
-                className={`w-full rounded text-[10px] font-mono py-0.5 transition-colors ${
-                  fret >= 0
-                    ? 'bg-primary/20 text-primary border border-primary/30'
-                    : 'bg-muted/50 text-destructive border border-destructive/40'
-                }`}
-              >
-                {fret === -1 ? 'X' : `${note} (${fret})`}
-              </button>
-            </div>
+            <button
+              key={i}
+              onClick={() => {
+                const nf = [...frets];
+                nf[i] = fret === -1 ? 0 : -1;
+                setFrets(nf);
+              }}
+              className="rounded text-[9px] font-mono px-1.5 py-0.5 transition-colors border"
+              style={{
+                backgroundColor: cellBg,
+                color: cellText,
+                borderColor: cellBorder,
+              }}
+            >
+              {fret === -1 ? 'X' : `${note}${fret}`}
+            </button>
           );
         })}
-      </div>
-
-      {/* Clear + Copy */}
-      <div className="flex gap-1 mb-2">
         <button
           onClick={() => { setFrets([-1, -1, -1, -1, -1, -1]); setViewRoot(null); }}
-          className="flex-1 py-0.5 rounded text-[9px] font-mono text-muted-foreground bg-muted/30 hover:bg-muted/50 transition-colors"
+          className="px-2 py-0.5 rounded text-[9px] font-mono text-muted-foreground bg-muted/30 hover:bg-muted/50 transition-colors"
         >Clear</button>
         {frets.some(f => f >= 0) && (
           <button
             onClick={handleCopy}
             title="Copy tab"
-            className="flex-1 py-0.5 rounded text-[9px] font-mono text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
-          >{copied ? 'COPIED' : tabStr}</button>
+            className="px-2 py-0.5 rounded text-[9px] font-mono text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+          >{copied ? '✓' : tabStr}</button>
         )}
       </div>
 

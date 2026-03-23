@@ -634,21 +634,30 @@ export default function Fretboard({
               <div key={stringIdx} className="flex items-center relative" style={{ height: stringH }}>
                 {/* String label */}
                 <button
-                  onDoubleClick={(e) => { e.stopPropagation(); onToggleString(stringIdx); }}
+                  onDoubleClick={(e) => { e.stopPropagation(); if (!identifyMode) onToggleString(stringIdx); }}
+                  onClick={(e) => {
+                    if (identifyMode) {
+                      e.stopPropagation();
+                      const newFrets = [...identifyFrets];
+                      newFrets[stringIdx] = newFrets[stringIdx] === -1 ? 0 : -1;
+                      setIdentifyFrets(newFrets);
+                    }
+                  }}
                   className={`shrink-0 w-7 h-full flex items-center justify-center font-mono font-bold transition-all z-10 ${
                     isDisabled ? 'text-muted-foreground/30 line-through' : 'text-muted-foreground'
                   } ${isVertical ? '-rotate-90' : ''}`}
                   style={{
                     fontSize: 9,
-                    ...(isChordMuted ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
-                    ...(isGlowing && !isChordMuted ? {
+                    ...(identifyMode && identifyFrets[stringIdx] === -1 ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
+                    ...(isChordMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
+                    ...(isGlowing && !isChordMuted && !identifyMode ? {
                       color: pColor,
                       textShadow: `0 0 6px ${pColor}, 0 0 12px ${pColor}`,
                     } : {}),
                   }}
-                  title="Double-click to toggle string"
+                  title={identifyMode ? "Click to toggle open string" : "Double-click to toggle string"}
                 >
-                  {isChordMuted ? '×' : STRING_NAMES[stringIdx]}
+                  {identifyMode && identifyFrets[stringIdx] === -1 ? '×' : isChordMuted && !identifyMode ? '×' : STRING_NAMES[stringIdx]}
                 </button>
 
                 {/* String line */}
