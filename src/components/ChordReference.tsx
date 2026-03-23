@@ -153,9 +153,9 @@ export default function ChordReference({
           setFrets={setIdentifyFrets}
           results={identifiedChords}
           degreeColors={degreeColors}
-          viewRoot={identifyRoot}
+          viewRoot={identifyViewName}
           setViewRoot={(name) => {
-            // When selecting a chord name, parse root and set identifyRoot
+            setIdentifyViewName(name);
             if (name) {
               const match = name.match(/^([A-G]#?)/);
               if (match) setIdentifyRoot(match[1] as NoteName);
@@ -163,7 +163,6 @@ export default function ChordReference({
               setIdentifyRoot(null);
             }
           }}
-          setViewRootRaw={setIdentifyRoot}
           currentRoot={currentIdentifyRoot}
         />
       ) : (
