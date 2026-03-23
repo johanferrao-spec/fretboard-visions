@@ -347,12 +347,12 @@ export default function Fretboard({
   const glowStrings = getOpenStringGlow();
 
   // Position box drag handlers
-  const handleBoxMouseDown = useCallback((e: React.MouseEvent, mode: 'move' | 'left' | 'right') => {
+  const handleBoxMouseDown = useCallback((e: React.MouseEvent, mode: 'move' | 'left' | 'right' | 'bottom' | 'corner') => {
     e.preventDefault();
     e.stopPropagation();
     setBoxDragging(mode);
-    boxDragStartRef.current = { mouseX: e.clientX, startFret: fretBoxStart, startSize: fretBoxSize };
-  }, [fretBoxStart, fretBoxSize]);
+    boxDragStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, startFret: fretBoxStart, startSize: fretBoxSize, startStrStart: fretBoxStringStart, startStrSize: fretBoxStringSize };
+  }, [fretBoxStart, fretBoxSize, fretBoxStringStart, fretBoxStringSize]);
 
   useEffect(() => {
     if (!boxDragging) return;
