@@ -118,6 +118,8 @@ export function useFretboard() {
     disabledDegrees, toggleDegree,
     showCAGED, setShowCAGED,
     cagedShape, setCagedShape,
+    identifyMode, setIdentifyMode,
+    identifyFrets, setIdentifyFrets,
     clearFretboard,
   };
 }
