@@ -516,7 +516,16 @@ function IdentifyPanel({
                 </div>
               )}
 
-              {selectedResult.explanations.map((exp, j) => (
+              {/* Chord-specific description */}
+              {(() => {
+                const match = viewRoot?.match(/^([A-G]#?)(.*?)(?:\/.*)?$/);
+                const suffix = match ? match[2] : '';
+                const desc = getChordTypeDescription(suffix);
+                return desc ? (
+                  <div className="text-[10px] font-mono text-foreground/80 mt-1 leading-relaxed">{desc}</div>
+                ) : null;
+              })()}
+              {selectedResult.explanations.length > 0 && selectedResult.explanations.map((exp, j) => (
                 <div key={j} className="text-[10px] font-mono text-muted-foreground mt-0.5 leading-relaxed">{exp}</div>
               ))}
               <div className="text-[10px] font-mono text-muted-foreground mt-2">
