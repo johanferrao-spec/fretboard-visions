@@ -232,9 +232,12 @@ export default function Fretboard({
       }
     }
 
-    // Position box: grey out notes outside
+    // Position box: grey out notes outside (horizontal + vertical)
     if (showFretBox && fret > 0) {
-      if (fret < fretBoxStart || fret > fretBoxEnd) {
+      const row = stringOrder.indexOf(stringIndex);
+      const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
+      const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
+      if (outsideH || outsideV) {
         greyed = true; opacity = 0.15;
       }
     }
