@@ -75,6 +75,7 @@ export default function Fretboard({
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
   const [hoveredDiatonic, setHoveredDiatonic] = useState<{ notes: NoteName[]; name: string; root: NoteName } | null>(null);
+  const [identifyHover, setIdentifyHover] = useState<{ stringIndex: number; fret: number } | null>(null);
 
   // Guided drag arpeggio state
   const [isDragging, setIsDragging] = useState(false);
@@ -175,15 +176,14 @@ export default function Fretboard({
   }
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
-    // In identify mode, only show notes that have been clicked
+    // In identify mode, only show notes that have been clicked or hovered
     if (identifyMode) {
       if (identifyFrets[stringIndex] === fret) {
-        let bg = pColor;
-        if (degreeColors) {
-          const dc = getDegreeColor(primaryScale.root, note);
-          if (dc) bg = dc;
-        }
         return { backgroundColor: 'hsl(var(--primary))', opacity: 1, ring: false, ringColor: '', greyed: false };
+      }
+      // Show greyed-out preview on hover
+      if (identifyHover && identifyHover.stringIndex === stringIndex && identifyHover.fret === fret) {
+        return { backgroundColor: 'hsl(var(--muted-foreground))', opacity: 0.35, ring: false, ringColor: '', greyed: true };
       }
       return null;
     }
@@ -670,6 +670,30 @@ export default function Fretboard({
                         {fret > 0 && <div className="absolute left-0 top-0 bottom-0 bg-fretboard-fret" style={{ width: 2, opacity: 0.6 }} />}
                         {fret === 0 && <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-fretboard-nut" />}
 
+                        {/* In identify mode, always render a clickable/hoverable target */}
+                        {identifyMode && !style && fret > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newFrets = [...identifyFrets];
+                              newFrets[stringIdx] = fret;
+                              setIdentifyFrets(newFrets);
+                            }}
+                            onMouseEnter={() => setIdentifyHover({ stringIndex: stringIdx, fret })}
+                            onMouseLeave={() => setIdentifyHover(null)}
+                            className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold cursor-pointer select-none opacity-0 hover:opacity-40 transition-opacity ${isVertical ? '-rotate-90' : ''}`}
+                            style={{
+                              width: noteMarkerSize,
+                              height: noteMarkerSize,
+                              backgroundColor: 'hsl(var(--muted-foreground))',
+                              color: 'hsl(var(--muted-foreground))',
+                              fontSize: Math.max(6, noteMarkerSize * 0.35),
+                            }}
+                          >
+                            {note}
+                          </button>
+                        )}
+
                         {style && (
                           <button
                             onClick={(e) => {
@@ -677,9 +701,9 @@ export default function Fretboard({
                               if (identifyMode) {
                                 const newFrets = [...identifyFrets];
                                 if (newFrets[stringIdx] === fret) {
-                                  newFrets[stringIdx] = -1; // toggle off
+                                  newFrets[stringIdx] = -1;
                                 } else {
-                                  newFrets[stringIdx] = fret; // set this fret
+                                  newFrets[stringIdx] = fret;
                                 }
                                 setIdentifyFrets(newFrets);
                               } else {
@@ -687,8 +711,17 @@ export default function Fretboard({
                               }
                             }}
                             onMouseDown={(e) => { if (!identifyMode) { e.preventDefault(); handleDragStart(stringIdx, fret, note); } }}
-                            onMouseEnter={() => { if (!identifyMode) { handleDragEnter(stringIdx, fret, note); handleNoteHover(note); } }}
-                            onMouseLeave={() => { if (!isDragging && !identifyMode) setHoveredDiatonic(null); }}
+                            onMouseEnter={() => {
+                              if (identifyMode) {
+                                setIdentifyHover({ stringIndex: stringIdx, fret });
+                              } else {
+                                handleDragEnter(stringIdx, fret, note); handleNoteHover(note);
+                              }
+                            }}
+                            onMouseLeave={() => {
+                              if (identifyMode) setIdentifyHover(null);
+                              else if (!isDragging) setHoveredDiatonic(null);
+                            }}
                             className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold transition-all duration-150 hover:scale-110 active:scale-95 shadow-md cursor-pointer select-none ${
                               style.ring ? 'ring-2' : ''
                             } ${isVertical ? '-rotate-90' : ''} ${
