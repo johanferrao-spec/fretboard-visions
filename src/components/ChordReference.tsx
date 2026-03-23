@@ -15,27 +15,34 @@ interface ChordReferenceProps {
   cagedShape: string;
   setCagedShape: (v: string) => void;
   cagedRoot: NoteName;
+  identifyMode: boolean;
+  setIdentifyMode: (v: boolean) => void;
+  identifyFrets: (number | -1)[];
+  setIdentifyFrets: (f: (number | -1)[]) => void;
+  degreeColors: boolean;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
 type MainTab = 'chords' | 'caged' | 'identify';
 
-// Chord columns: major-third, minor-third, suspended
 const CHORD_COLUMNS: { label: string; types: string[] }[] = [
   { label: 'Major', types: ['Major', 'Major 7', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', 'Major 9', 'Dominant 9', 'Major 6', '7#9', '7♭9', '7#5', '7♭5', '11', '13'] },
   { label: 'Minor', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'] },
   { label: 'Sus', types: ['Sus2', 'Sus4', '7sus4', 'Power (5)'] },
 ];
 
-export default function ChordReference({ activeChord, setActiveChord, showCAGED, setShowCAGED, cagedShape, setCagedShape, cagedRoot }: ChordReferenceProps) {
+export default function ChordReference({
+  activeChord, setActiveChord, showCAGED, setShowCAGED,
+  cagedShape, setCagedShape, cagedRoot,
+  identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets,
+  degreeColors,
+}: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
   const [voicingTab, setVoicingTab] = useState<VoicingTab>('full');
   const [activeTab, setActiveTab] = useState<MainTab>('chords');
   const [voicingPage, setVoicingPage] = useState(0);
-
-  // "What chord is this" state
-  const [identifyFrets, setIdentifyFrets] = useState<(number | -1)[]>([-1, -1, -1, -1, -1, -1]);
+  const [identifyViewRoot, setIdentifyViewRoot] = useState<string | null>(null);
 
   const VOICINGS_PER_PAGE = 4;
 
@@ -81,40 +88,48 @@ export default function ChordReference({ activeChord, setActiveChord, showCAGED,
 
   const cagedPositions = useMemo(() => getCAGEDPositions(cagedRoot), [cagedRoot]);
 
-  // Chord identification
+  // Chord identification from fretboard clicks
   const identifiedChords = useMemo(() => {
     const hasInput = identifyFrets.some(f => f >= 0);
     if (!hasInput) return [];
     return identifyChord(identifyFrets);
   }, [identifyFrets]);
 
-  const updateIdentifyFret = (stringIdx: number, value: string) => {
-    const newFrets = [...identifyFrets];
-    if (value === '' || value === 'x' || value === 'X') {
-      newFrets[stringIdx] = -1;
+  const handleTabSwitch = (tab: MainTab) => {
+    setActiveTab(tab);
+    if (tab === 'caged') setShowCAGED(true);
+    if (tab === 'identify') {
+      setIdentifyMode(true);
     } else {
-      const n = parseInt(value);
-      if (!isNaN(n) && n >= 0 && n <= 24) newFrets[stringIdx] = n;
+      setIdentifyMode(false);
     }
-    setIdentifyFrets(newFrets);
   };
 
+  // Get the selected interpretation root for scale degree display
+  const currentIdentifyRoot = useMemo(() => {
+    if (!identifyViewRoot || identifiedChords.length === 0) return null;
+    // Parse root from name like "C Major" or "Em7/G"
+    const match = identifyViewRoot.match(/^([A-G]#?)/);
+    return match ? match[1] as NoteName : null;
+  }, [identifyViewRoot, identifiedChords]);
+
   return (
-    <div className="p-3">
+    <div className="p-2">
       {/* Tab switcher */}
       <div className="flex gap-1 mb-2">
-        {(['chords', 'caged', 'identify'] as MainTab[]).map(tab => (
+        {([
+          { key: 'chords' as MainTab, label: 'Chord Library' },
+          { key: 'caged' as MainTab, label: 'CAGED' },
+          { key: 'identify' as MainTab, label: "What's This" },
+        ]).map(tab => (
           <button
-            key={tab}
-            onClick={() => {
-              setActiveTab(tab);
-              if (tab === 'caged') setShowCAGED(true);
-            }}
+            key={tab.key}
+            onClick={() => handleTabSwitch(tab.key)}
             className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
-              activeTab === tab ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+              activeTab === tab.key ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
             }`}
           >
-            {tab === 'chords' ? 'Chords' : tab === 'caged' ? 'CAGED' : 'What Chord?'}
+            {tab.label}
           </button>
         ))}
         {activeChord && (
@@ -130,205 +145,365 @@ export default function ChordReference({ activeChord, setActiveChord, showCAGED,
       ) : activeTab === 'identify' ? (
         <IdentifyPanel
           frets={identifyFrets}
-          onUpdate={updateIdentifyFret}
+          setFrets={setIdentifyFrets}
           results={identifiedChords}
+          degreeColors={degreeColors}
+          viewRoot={identifyViewRoot}
+          setViewRoot={setIdentifyViewRoot}
+          currentRoot={currentIdentifyRoot}
         />
       ) : (
-        <>
-          {/* Root selector - compact */}
-          <div className="flex flex-wrap gap-0.5 mb-2">
-            {NOTE_NAMES.map(n => (
-              <button
-                key={n}
-                onClick={() => { setSelectedRoot(n); setSelectedChord(null); setActiveChord(null); setVoicingPage(0); }}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-colors ${
-                  n === selectedRoot ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
-                }`}
-              >{n}</button>
-            ))}
-          </div>
-
-          {/* 3 chord columns + 4 voicing type columns */}
-          <div className="flex gap-1 mb-2">
-            {/* Chord quality columns */}
-            <div className="flex-1 flex gap-px">
-              {CHORD_COLUMNS.map(col => (
-                <div key={col.label} className="flex-1 min-w-0">
-                  <div className="text-[7px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-0.5 truncate">{col.label}</div>
-                  <div className="space-y-px max-h-[18vh] overflow-y-auto pr-0.5">
-                    {col.types.map(ct => {
-                      if (!CHORD_FORMULAS[ct]) return null;
-                      const isSelected = selectedChord === ct;
-                      return (
-                        <button
-                          key={ct}
-                          onClick={() => handleSelectChord(ct)}
-                          className={`w-full text-left px-1 py-0.5 rounded text-[8px] font-mono transition-colors truncate ${
-                            isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                          }`}
-                          title={ct}
-                        >{ct}</button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Voicing type column */}
-            <div className="w-12 shrink-0">
-              <div className="text-[7px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-0.5">Type</div>
-              <div className="space-y-px">
-                {(['full', 'shell', 'drop2', 'drop3', 'triads'] as VoicingTab[]).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => handleVoicingTabChange(tab)}
-                    className={`w-full px-1 py-0.5 rounded text-[7px] font-mono uppercase tracking-wider transition-colors ${
-                      voicingTab === tab ? 'bg-accent text-accent-foreground' : 'bg-muted/30 text-muted-foreground hover:bg-muted'
-                    }`}
-                  >{tab === 'drop2' ? 'D2' : tab === 'drop3' ? 'D3' : tab.charAt(0).toUpperCase() + tab.slice(1, 4)}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Voicing type description */}
-          <div className="text-[7px] font-mono text-muted-foreground mb-1">
-            {voicingTab === 'full' && 'Standard curated voicings'}
-            {voicingTab === 'shell' && 'Shell: Root, 3rd, 7th — jazz comping essentials'}
-            {voicingTab === 'drop2' && 'Drop 2: 2nd voice dropped an octave — open jazz voicings'}
-            {voicingTab === 'drop3' && 'Drop 3: 3rd voice dropped an octave — wide spread'}
-            {voicingTab === 'triads' && 'Triads: 3 adjacent strings, no gaps'}
-          </div>
-
-          {/* Voicing diagrams - 4 at a time */}
-          {selectedChord && (
-            <div className="bg-secondary/30 rounded-lg p-2">
-              <div className="flex items-center justify-between mb-1">
-                <div className="text-[10px] font-mono font-bold text-foreground">{selectedRoot} {selectedChord}</div>
-                <div className="text-[8px] font-mono text-muted-foreground">
-                  {currentVoicings.length > 0 ? `${voicingPage * VOICINGS_PER_PAGE + 1}-${Math.min((voicingPage + 1) * VOICINGS_PER_PAGE, currentVoicings.length)} of ${currentVoicings.length}` : 'No voicings'}
-                </div>
-              </div>
-
-              {currentVoicings.length > 0 ? (
-                <>
-                  <div className="flex gap-1">
-                    {pagedVoicings.map((v, i) => {
-                      const globalIdx = voicingPage * VOICINGS_PER_PAGE + i;
-                      const isActive = activeChord?.voicingIndex === globalIdx && activeChord?.voicingSource === voicingTab;
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => handleSelectVoicing(i)}
-                          className={`flex-1 rounded-md p-1 transition-all border ${
-                            isActive ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-muted/50'
-                          }`}
-                        >
-                          <MiniChordDiagram voicing={v} root={selectedRoot} />
-                          <div className="text-[7px] font-mono text-muted-foreground text-center mt-0.5">
-                            {v.frets.map(f => f === -1 ? 'x' : f).join('')}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Pagination */}
-                  {totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-2 mt-1">
-                      <button
-                        onClick={() => setVoicingPage(p => Math.max(0, p - 1))}
-                        disabled={voicingPage === 0}
-                        className="px-2 py-0.5 rounded text-[9px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors"
-                      >◀</button>
-                      <span className="text-[8px] font-mono text-muted-foreground">{voicingPage + 1}/{totalPages}</span>
-                      <button
-                        onClick={() => setVoicingPage(p => Math.min(totalPages - 1, p + 1))}
-                        disabled={voicingPage >= totalPages - 1}
-                        className="px-2 py-0.5 rounded text-[9px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors"
-                      >▶</button>
-                    </div>
-                  )}
-
-                  {/* Structure description */}
-                  <div className="text-[7px] font-mono text-muted-foreground mt-1 text-center">
-                    {getChordStructureDescription(selectedChord, voicingTab)}
-                  </div>
-                </>
-              ) : (
-                <div className="text-[8px] font-mono text-muted-foreground text-center py-2">No voicings available for this type</div>
-              )}
-            </div>
-          )}
-        </>
+        <ChordLibraryPanel
+          selectedRoot={selectedRoot}
+          setSelectedRoot={(n) => { setSelectedRoot(n); setSelectedChord(null); setActiveChord(null); setVoicingPage(0); }}
+          selectedChord={selectedChord}
+          handleSelectChord={handleSelectChord}
+          voicingTab={voicingTab}
+          handleVoicingTabChange={handleVoicingTabChange}
+          currentVoicings={currentVoicings}
+          pagedVoicings={pagedVoicings}
+          voicingPage={voicingPage}
+          setVoicingPage={setVoicingPage}
+          totalPages={totalPages}
+          activeChord={activeChord}
+          handleSelectVoicing={handleSelectVoicing}
+          degreeColors={degreeColors}
+        />
       )}
     </div>
   );
 }
 
-function getChordStructureDescription(chordType: string, source: string): string {
-  const descriptions: Record<string, string> = {
-    'Major': 'R-3-5 — Bright, stable, resolved',
-    'Minor': 'R-♭3-5 — Dark, melancholic',
-    'Diminished': 'R-♭3-♭5 — Tense, unstable',
-    'Augmented': 'R-3-#5 — Bright, unresolved',
-    'Sus2': 'R-2-5 — Open, ambiguous',
-    'Sus4': 'R-4-5 — Suspended, wants to resolve',
-    'Major 7': 'R-3-5-7 — Lush, jazzy',
-    'Minor 7': 'R-♭3-5-♭7 — Smooth, mellow',
-    'Dominant 7': 'R-3-5-♭7 — Bluesy, wants to resolve',
-    'Dim 7': 'R-♭3-♭5-♭♭7 — Symmetric, passing chord',
-    'Half-Dim 7': 'R-♭3-♭5-♭7 — Jazz ii in minor keys',
-    'Min/Maj 7': 'R-♭3-5-7 — Dark yet luminous',
-    'Aug 7': 'R-3-#5-♭7 — Altered dominant',
-    'Add9': 'R-3-5-9 — Major with color',
-    'Major 9': 'R-3-5-7-9 — Rich, sophisticated',
-    'Minor 9': 'R-♭3-5-♭7-9 — Smooth jazz staple',
-    'Dominant 9': 'R-3-5-♭7-9 — Funky, soulful',
-    '7sus4': 'R-4-5-♭7 — Suspended dominant',
-    '7#9': 'R-3-5-♭7-#9 — "Hendrix chord"',
-    '7♭9': 'R-3-5-♭7-♭9 — Altered dominant',
-    'Power (5)': 'R-5 — Raw, distortion-friendly',
-  };
-  let desc = descriptions[chordType] || `${chordType} voicing`;
-  if (source === 'shell') desc += ' [Shell]';
-  if (source === 'drop2') desc += ' [Drop 2]';
-  if (source === 'drop3') desc += ' [Drop 3]';
-  if (source === 'triads') desc += ' [Triad]';
-  return desc;
+// ============================================================
+// CHORD LIBRARY PANEL — compact 3-column layout with inline diagrams
+// ============================================================
+
+function ChordLibraryPanel({
+  selectedRoot, setSelectedRoot, selectedChord, handleSelectChord,
+  voicingTab, handleVoicingTabChange, currentVoicings, pagedVoicings,
+  voicingPage, setVoicingPage, totalPages, activeChord, handleSelectVoicing,
+  degreeColors,
+}: {
+  selectedRoot: NoteName;
+  setSelectedRoot: (n: NoteName) => void;
+  selectedChord: string | null;
+  handleSelectChord: (ct: string) => void;
+  voicingTab: VoicingTab;
+  handleVoicingTabChange: (tab: VoicingTab) => void;
+  currentVoicings: ChordVoicing[];
+  pagedVoicings: ChordVoicing[];
+  voicingPage: number;
+  setVoicingPage: (p: number) => void;
+  totalPages: number;
+  activeChord: ChordSelection | null;
+  handleSelectVoicing: (idx: number) => void;
+  degreeColors: boolean;
+}) {
+  const VOICINGS_PER_PAGE = 4;
+
+  return (
+    <>
+      {/* Root selector */}
+      <div className="flex flex-wrap gap-0.5 mb-2">
+        {NOTE_NAMES.map(n => (
+          <button
+            key={n}
+            onClick={() => setSelectedRoot(n)}
+            className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-colors ${
+              n === selectedRoot ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
+            }`}
+          >{n}</button>
+        ))}
+      </div>
+
+      {/* Main layout: chord columns + type + diagrams all in one row */}
+      <div className="flex gap-1">
+        {/* 3 chord quality columns — narrow, 2-column layout */}
+        <div className="flex gap-px shrink-0" style={{ width: '45%' }}>
+          {CHORD_COLUMNS.map((col, ci) => (
+            <div key={col.label} className={`flex-1 min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/30' : ''} px-0.5`}>
+              <div className="text-[7px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-0.5 truncate">{col.label}</div>
+              <div className="space-y-px">
+                {col.types.map(ct => {
+                  if (!CHORD_FORMULAS[ct]) return null;
+                  const isSelected = selectedChord === ct;
+                  return (
+                    <button
+                      key={ct}
+                      onClick={() => handleSelectChord(ct)}
+                      className={`w-full text-left px-0.5 py-px rounded text-[7px] font-mono transition-colors truncate leading-tight ${
+                        isSelected ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50'
+                      }`}
+                      title={ct}
+                    >{ct}</button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Voicing type selector */}
+        <div className="w-10 shrink-0">
+          <div className="text-[6px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-0.5">Type</div>
+          <div className="space-y-px">
+            {(['full', 'shell', 'drop2', 'drop3', 'triads'] as VoicingTab[]).map(tab => (
+              <button
+                key={tab}
+                onClick={() => handleVoicingTabChange(tab)}
+                className={`w-full px-0.5 py-px rounded text-[6px] font-mono uppercase tracking-wider transition-colors leading-tight ${
+                  voicingTab === tab ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted/30'
+                }`}
+              >{tab === 'drop2' ? 'D2' : tab === 'drop3' ? 'D3' : tab.charAt(0).toUpperCase() + tab.slice(1, 4)}</button>
+            ))}
+          </div>
+          <div className="text-[5px] font-mono text-muted-foreground mt-1 text-center leading-tight">
+            {voicingTab === 'shell' && 'R,3,7'}
+            {voicingTab === 'drop2' && '2nd ↓8va'}
+            {voicingTab === 'drop3' && '3rd ↓8va'}
+            {voicingTab === 'triads' && '3 adj str'}
+          </div>
+        </div>
+
+        {/* Diagrams panel — right side, always visible */}
+        <div className="flex-1 min-w-0">
+          {selectedChord ? (
+            <div className="bg-secondary/20 rounded p-1">
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-[8px] font-mono font-bold text-foreground truncate">{selectedRoot} {selectedChord}</div>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => setVoicingPage(Math.max(0, voicingPage - 1))} disabled={voicingPage === 0}
+                      className="px-1 py-px rounded text-[8px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">◀</button>
+                    <span className="text-[7px] font-mono text-muted-foreground">{voicingPage + 1}/{totalPages}</span>
+                    <button onClick={() => setVoicingPage(Math.min(totalPages - 1, voicingPage + 1))} disabled={voicingPage >= totalPages - 1}
+                      className="px-1 py-px rounded text-[8px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">▶</button>
+                  </div>
+                )}
+              </div>
+              {currentVoicings.length > 0 ? (
+                <div className="grid grid-cols-2 gap-1">
+                  {pagedVoicings.map((v, i) => {
+                    const globalIdx = voicingPage * VOICINGS_PER_PAGE + i;
+                    const isActive = activeChord?.voicingIndex === globalIdx && activeChord?.voicingSource === voicingTab;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleSelectVoicing(i)}
+                        className={`rounded p-0.5 transition-all border ${
+                          isActive ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-muted/50'
+                        }`}
+                      >
+                        <MiniChordDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} />
+                        <div className="text-[6px] font-mono text-muted-foreground text-center">
+                          {v.frets.map(f => f === -1 ? 'x' : f).join('')}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-[7px] font-mono text-muted-foreground text-center py-2">No voicings</div>
+              )}
+              <div className="text-[6px] font-mono text-muted-foreground mt-1 text-center">
+                {getChordStructureDescription(selectedChord, voicingTab)}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-[8px] font-mono text-muted-foreground">
+              ← Select a chord
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
 }
 
-function MiniChordDiagram({ voicing, root }: { voicing: ChordVoicing; root: NoteName }) {
+// ============================================================
+// WHAT'S THIS PANEL — fretboard-click based identification
+// ============================================================
+
+function IdentifyPanel({
+  frets, setFrets, results, degreeColors, viewRoot, setViewRoot, currentRoot,
+}: {
+  frets: (number | -1)[];
+  setFrets: (f: (number | -1)[]) => void;
+  results: ReturnType<typeof identifyChord>;
+  degreeColors: boolean;
+  viewRoot: string | null;
+  setViewRoot: (v: string | null) => void;
+  currentRoot: NoteName | null;
+}) {
+  return (
+    <div>
+      <div className="text-[9px] font-mono text-muted-foreground mb-2">
+        Click notes on the fretboard to build a chord. One note per string.
+      </div>
+
+      {/* Current selection display */}
+      <div className="flex gap-1 mb-2">
+        {STRING_NAMES.map((name, i) => {
+          const fret = frets[i];
+          const note = fret >= 0 ? noteAtFret(i, fret) : null;
+          return (
+            <div key={i} className="flex-1 text-center">
+              <div className="text-[7px] font-mono text-muted-foreground mb-0.5">{name}</div>
+              <button
+                onClick={() => { const nf = [...frets]; nf[i] = -1; setFrets(nf); }}
+                className={`w-full rounded text-[9px] font-mono py-0.5 transition-colors ${
+                  fret >= 0
+                    ? 'bg-primary/20 text-primary border border-primary/30'
+                    : 'bg-muted/30 text-muted-foreground border border-transparent'
+                }`}
+              >
+                {fret === -1 ? '×' : `${note} (${fret})`}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Clear button */}
+      <button
+        onClick={() => setFrets([-1, -1, -1, -1, -1, -1])}
+        className="w-full py-0.5 rounded text-[8px] font-mono text-muted-foreground bg-muted/30 hover:bg-muted/50 transition-colors mb-2"
+      >Clear Selection</button>
+
+      {/* Results */}
+      {results.length > 0 ? (
+        <div className="space-y-1.5">
+          {results.map((r, i) => {
+            // All possible root interpretations
+            const allNames = r.names;
+            const isSelected = viewRoot && allNames.includes(viewRoot);
+            
+            return (
+              <div key={i} className="bg-secondary/50 rounded-lg p-2">
+                <div className="flex flex-wrap gap-1 mb-1">
+                  {allNames.map((name, ni) => {
+                    const rootMatch = name.match(/^([A-G]#?)/);
+                    const root = rootMatch ? rootMatch[1] as NoteName : null;
+                    const isActive = viewRoot === name;
+                    return (
+                      <button
+                        key={ni}
+                        onClick={() => setViewRoot(isActive ? null : name)}
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all ${
+                          isActive
+                            ? 'bg-primary text-primary-foreground shadow-[0_0_6px_hsl(var(--primary))]'
+                            : 'bg-muted text-foreground hover:bg-muted/80'
+                        }`}
+                      >
+                        {name}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Show scale degrees relative to selected root */}
+                {currentRoot && isSelected && (
+                  <div className="flex gap-1 mb-1">
+                    {STRING_NAMES.map((_, si) => {
+                      if (frets[si] < 0) return <div key={si} className="flex-1" />;
+                      const note = noteAtFret(si, frets[si]);
+                      const interval = getExtendedIntervalName(currentRoot, note);
+                      const degColor = DEGREE_COLORS[interval];
+                      return (
+                        <div key={si} className="flex-1 text-center">
+                          <div
+                            className="w-5 h-5 rounded-full mx-auto flex items-center justify-center text-[7px] font-mono font-bold"
+                            style={{
+                              backgroundColor: degColor ? `hsl(${degColor})` : 'hsl(var(--muted))',
+                              color: 'hsl(220, 20%, 8%)',
+                            }}
+                          >{interval}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {r.explanations.map((exp, j) => (
+                  <div key={j} className="text-[7px] font-mono text-muted-foreground mt-0.5">{exp}</div>
+                ))}
+                <div className="text-[7px] font-mono text-muted-foreground mt-1">
+                  Notes: {[...new Set(r.notes)].join(' – ')}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : frets.some(f => f >= 0) ? (
+        <div className="text-[8px] font-mono text-muted-foreground text-center py-2">
+          No matching chord found. Try adding more notes.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function getChordStructureDescription(chordType: string, source: string): string {
+  const descriptions: Record<string, string> = {
+    'Major': 'R-3-5',
+    'Minor': 'R-♭3-5',
+    'Diminished': 'R-♭3-♭5',
+    'Augmented': 'R-3-#5',
+    'Sus2': 'R-2-5',
+    'Sus4': 'R-4-5',
+    'Major 7': 'R-3-5-7',
+    'Minor 7': 'R-♭3-5-♭7',
+    'Dominant 7': 'R-3-5-♭7',
+    'Dim 7': 'R-♭3-♭5-♭♭7',
+    'Half-Dim 7': 'R-♭3-♭5-♭7',
+    'Min/Maj 7': 'R-♭3-5-7',
+    'Aug 7': 'R-3-#5-♭7',
+    'Add9': 'R-3-5-9',
+    'Major 9': 'R-3-5-7-9',
+    'Minor 9': 'R-♭3-5-♭7-9',
+    'Dominant 9': 'R-3-5-♭7-9',
+    '7sus4': 'R-4-5-♭7',
+    '7#9': 'R-3-5-♭7-#9',
+    '7♭9': 'R-3-5-♭7-♭9',
+    'Power (5)': 'R-5',
+  };
+  return descriptions[chordType] || chordType;
+}
+
+function MiniChordDiagram({ voicing, root, showDegrees = false }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean }) {
   const positiveFrets = voicing.frets.filter(f => f > 0);
   const maxFret = positiveFrets.length > 0 ? Math.max(...positiveFrets) : 1;
   const minFret = positiveFrets.length > 0 ? Math.min(...positiveFrets) : 1;
   const startFret = minFret <= 4 ? 1 : minFret;
   const numFrets = Math.max(4, maxFret - startFret + 1);
-  const w = 48;
-  const h = 60;
+  const w = 44;
+  const h = 52;
   const stringSpacing = w / 7;
   const fretSpacing = h / (numFrets + 1);
 
   return (
     <div className="flex justify-center">
-      <svg width={w} height={h + 8} className="shrink-0">
+      <svg width={w} height={h + 6} className="shrink-0">
         {startFret > 1 && (
-          <text x={2} y={fretSpacing + 8} fontSize={6} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+          <text x={2} y={fretSpacing + 6} fontSize={5} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
         )}
         {startFret === 1 && (
-          <line x1={stringSpacing} y1={6} x2={stringSpacing * 6} y2={6} stroke="hsl(var(--fretboard-nut))" strokeWidth={2} />
+          <line x1={stringSpacing} y1={5} x2={stringSpacing * 6} y2={5} stroke="hsl(var(--fretboard-nut))" strokeWidth={2} />
         )}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
-          <line key={i} x1={stringSpacing} y1={6 + i * fretSpacing} x2={stringSpacing * 6} y2={6 + i * fretSpacing} stroke="hsl(var(--border))" strokeWidth={0.5} />
+          <line key={i} x1={stringSpacing} y1={5 + i * fretSpacing} x2={stringSpacing * 6} y2={5 + i * fretSpacing} stroke="hsl(var(--border))" strokeWidth={0.5} />
         ))}
         {[1, 2, 3, 4, 5, 6].map(s => (
-          <line key={s} x1={s * stringSpacing} y1={6} x2={s * stringSpacing} y2={6 + numFrets * fretSpacing} stroke="hsl(var(--fretboard-string))" strokeWidth={0.5} opacity={0.5} />
+          <line key={s} x1={s * stringSpacing} y1={5} x2={s * stringSpacing} y2={5 + numFrets * fretSpacing} stroke="hsl(var(--fretboard-string))" strokeWidth={0.5} opacity={0.5} />
         ))}
         {voicing.barreFrom != null && voicing.barreTo != null && voicing.barreFret != null && (
           <rect
             x={(voicing.barreFrom + 1) * stringSpacing - 2}
-            y={6 + (voicing.barreFret - startFret + 0.3) * fretSpacing}
+            y={5 + (voicing.barreFret - startFret + 0.3) * fretSpacing}
             width={(voicing.barreTo - voicing.barreFrom) * stringSpacing + 4}
             height={fretSpacing * 0.4}
             rx={fretSpacing * 0.2}
@@ -338,68 +513,16 @@ function MiniChordDiagram({ voicing, root }: { voicing: ChordVoicing; root: Note
         )}
         {voicing.frets.map((fret, i) => {
           const x = (i + 1) * stringSpacing;
-          if (fret === -1) return <text key={i} x={x} y={4} fontSize={5} textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="monospace">×</text>;
-          if (fret === 0) return <circle key={i} cx={x} cy={4} r={1.5} fill="none" stroke="hsl(var(--foreground))" strokeWidth={0.5} />;
-          const y = 6 + (fret - startFret + 0.5) * fretSpacing;
+          if (fret === -1) return <text key={i} x={x} y={3} fontSize={5} textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="monospace">×</text>;
+          if (fret === 0) return <circle key={i} cx={x} cy={3} r={1.5} fill="none" stroke="hsl(var(--foreground))" strokeWidth={0.5} />;
+          const y = 5 + (fret - startFret + 0.5) * fretSpacing;
           const note = noteAtFret(i, fret);
           const interval = getExtendedIntervalName(root, note);
           const degColor = DEGREE_COLORS[interval];
-          const fillColor = degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
-          return <circle key={i} cx={x} cy={y} r={3} fill={fillColor} />;
+          const fillColor = showDegrees && degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
+          return <circle key={i} cx={x} cy={y} r={2.5} fill={fillColor} />;
         })}
       </svg>
-    </div>
-  );
-}
-
-function IdentifyPanel({ frets, onUpdate, results }: {
-  frets: (number | -1)[];
-  onUpdate: (stringIdx: number, value: string) => void;
-  results: ReturnType<typeof identifyChord>;
-}) {
-  return (
-    <div>
-      <div className="text-[9px] font-mono text-muted-foreground mb-2">
-        Enter fret numbers for each string. Use <strong className="text-foreground">x</strong> for muted strings.
-      </div>
-
-      <div className="flex gap-1 mb-3">
-        {STRING_NAMES.map((name, i) => (
-          <div key={i} className="flex-1 text-center">
-            <div className="text-[8px] font-mono text-muted-foreground mb-0.5">{name}</div>
-            <input
-              type="text"
-              value={frets[i] === -1 ? 'x' : String(frets[i])}
-              onChange={e => onUpdate(i, e.target.value)}
-              className="w-full bg-muted text-foreground text-center text-[10px] font-mono rounded px-0.5 py-1 border border-border focus:border-primary focus:outline-none"
-              maxLength={2}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Results */}
-      {results.length > 0 ? (
-        <div className="space-y-2">
-          {results.map((r, i) => (
-            <div key={i} className="bg-secondary/50 rounded-lg p-2">
-              <div className="text-xs font-mono font-bold text-foreground">
-                {r.names.join(' / ')}
-              </div>
-              {r.explanations.map((exp, j) => (
-                <div key={j} className="text-[8px] font-mono text-muted-foreground mt-0.5">{exp}</div>
-              ))}
-              <div className="text-[8px] font-mono text-muted-foreground mt-1">
-                Notes: {[...new Set(r.notes)].join(' – ')}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : frets.some(f => f >= 0) ? (
-        <div className="text-[9px] font-mono text-muted-foreground text-center py-2">
-          No matching chord found. Try adding more notes.
-        </div>
-      ) : null}
     </div>
   );
 }

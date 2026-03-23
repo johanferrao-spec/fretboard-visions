@@ -111,7 +111,7 @@ const Index = () => {
               secondaryEnabled={fb.secondaryEnabled}
               activePrimary={fb.activePrimary}
               noteColors={fb.noteColors}
-              onNoteClick={fb.setSelectedNote}
+              onNoteClick={fb.identifyMode ? (note) => {} : fb.setSelectedNote}
               displayMode={fb.displayMode}
               disabledStrings={fb.disabledStrings}
               onToggleString={fb.toggleStringDisabled}
@@ -135,6 +135,9 @@ const Index = () => {
               disabledDegrees={fb.disabledDegrees}
               toggleDegree={fb.toggleDegree}
               setShowFretBox={fb.setShowFretBox}
+              identifyMode={fb.identifyMode}
+              identifyFrets={fb.identifyFrets}
+              setIdentifyFrets={fb.setIdentifyFrets}
             />
           </div>
 
@@ -148,6 +151,11 @@ const Index = () => {
               cagedShape={fb.cagedShape}
               setCagedShape={fb.setCagedShape}
               cagedRoot={fb.primaryScale.root}
+              identifyMode={fb.identifyMode}
+              setIdentifyMode={fb.setIdentifyMode}
+              identifyFrets={fb.identifyFrets}
+              setIdentifyFrets={fb.setIdentifyFrets}
+              degreeColors={fb.degreeColors}
             />
           </div>
         </main>

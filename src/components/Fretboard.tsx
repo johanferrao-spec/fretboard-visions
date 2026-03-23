@@ -38,6 +38,9 @@ interface FretboardProps {
   disabledDegrees: Set<string>;
   toggleDegree: (d: string) => void;
   setShowFretBox: (v: boolean) => void;
+  identifyMode: boolean;
+  identifyFrets: (number | -1)[];
+  setIdentifyFrets: (f: (number | -1)[]) => void;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -67,6 +70,7 @@ export default function Fretboard({
   showFretBox, fretBoxStart, fretBoxSize, setFretBoxStart, setFretBoxSize,
   fretBoxStringStart, fretBoxStringSize, setFretBoxStringStart, setFretBoxStringSize,
   noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
+  identifyMode, identifyFrets, setIdentifyFrets,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -655,21 +659,40 @@ export default function Fretboard({
 
                         {style && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); onNoteClick(note); }}
-                            onMouseDown={(e) => { e.preventDefault(); handleDragStart(stringIdx, fret, note); }}
-                            onMouseEnter={() => { handleDragEnter(stringIdx, fret, note); handleNoteHover(note); }}
-                            onMouseLeave={() => { if (!isDragging) setHoveredDiatonic(null); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (identifyMode) {
+                                const newFrets = [...identifyFrets];
+                                if (newFrets[stringIdx] === fret) {
+                                  newFrets[stringIdx] = -1; // toggle off
+                                } else {
+                                  newFrets[stringIdx] = fret; // set this fret
+                                }
+                                setIdentifyFrets(newFrets);
+                              } else {
+                                onNoteClick(note);
+                              }
+                            }}
+                            onMouseDown={(e) => { if (!identifyMode) { e.preventDefault(); handleDragStart(stringIdx, fret, note); } }}
+                            onMouseEnter={() => { if (!identifyMode) { handleDragEnter(stringIdx, fret, note); handleNoteHover(note); } }}
+                            onMouseLeave={() => { if (!isDragging && !identifyMode) setHoveredDiatonic(null); }}
                             className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold transition-all duration-150 hover:scale-110 active:scale-95 shadow-md cursor-pointer select-none ${
                               style.ring ? 'ring-2' : ''
-                            } ${isVertical ? '-rotate-90' : ''}`}
+                            } ${isVertical ? '-rotate-90' : ''} ${
+                              identifyMode && identifyFrets[stringIdx] === fret ? 'ring-2 ring-primary' : ''
+                            }`}
                             style={{
                               width: noteMarkerSize,
                               height: noteMarkerSize,
-                              backgroundColor: style.greyed ? 'hsl(var(--muted))' : style.backgroundColor,
-                              opacity: style.opacity,
-                              color: style.greyed ? 'hsl(var(--muted-foreground))' : 'hsl(220, 20%, 8%)',
+                              backgroundColor: identifyMode && identifyFrets[stringIdx] === fret
+                                ? 'hsl(var(--primary))' : style.greyed ? 'hsl(var(--muted))' : style.backgroundColor,
+                              opacity: identifyMode && identifyFrets[stringIdx] === fret ? 1 : style.opacity,
+                              color: identifyMode && identifyFrets[stringIdx] === fret
+                                ? 'hsl(var(--primary-foreground))' : style.greyed ? 'hsl(var(--muted-foreground))' : 'hsl(220, 20%, 8%)',
                               fontSize: Math.max(6, noteMarkerSize * 0.35),
-                              ...(style.ring ? { boxShadow: `0 0 0 2px ${style.ringColor}` } : {}),
+                              ...(identifyMode && identifyFrets[stringIdx] === fret
+                                ? { boxShadow: '0 0 8px hsl(var(--primary))' }
+                                : style.ring ? { boxShadow: `0 0 0 2px ${style.ringColor}` } : {}),
                             }}
                           >
                             {label}
