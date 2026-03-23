@@ -11,6 +11,31 @@ export const STANDARD_TUNING = [4, 9, 2, 7, 11, 4]; // E A D G B E
 export const STRING_NAMES = ['E', 'A', 'D', 'G', 'B', 'e'];
 
 // ============================================================
+// ALTERNATE TUNINGS
+// ============================================================
+
+export interface TuningPreset {
+  name: string;
+  notes: number[]; // semitone values like STANDARD_TUNING
+  labels: string[];
+}
+
+export const TUNING_PRESETS: TuningPreset[] = [
+  { name: 'Standard', notes: [4, 9, 2, 7, 11, 4], labels: ['E', 'A', 'D', 'G', 'B', 'e'] },
+  { name: 'Drop D', notes: [2, 9, 2, 7, 11, 4], labels: ['D', 'A', 'D', 'G', 'B', 'e'] },
+  { name: 'Open G', notes: [2, 7, 2, 7, 11, 2], labels: ['D', 'G', 'D', 'G', 'B', 'd'] },
+  { name: 'Open D', notes: [2, 9, 2, 6, 9, 2], labels: ['D', 'A', 'D', 'F#', 'A', 'd'] },
+  { name: 'Open E', notes: [4, 11, 4, 8, 11, 4], labels: ['E', 'B', 'E', 'G#', 'B', 'e'] },
+  { name: 'Open A', notes: [4, 9, 4, 9, 1, 4], labels: ['E', 'A', 'E', 'A', 'C#', 'e'] },
+  { name: 'DADGAD', notes: [2, 9, 2, 7, 9, 2], labels: ['D', 'A', 'D', 'G', 'A', 'd'] },
+  { name: 'Drop C', notes: [0, 7, 0, 5, 9, 2], labels: ['C', 'G', 'C', 'F', 'A', 'd'] },
+  { name: 'Half Step Down', notes: [3, 8, 1, 6, 10, 3], labels: ['E♭', 'A♭', 'D♭', 'G♭', 'B♭', 'e♭'] },
+  { name: 'Full Step Down', notes: [2, 7, 0, 5, 9, 2], labels: ['D', 'G', 'C', 'F', 'A', 'd'] },
+  { name: 'Open C', notes: [0, 7, 0, 7, 0, 4], labels: ['C', 'G', 'C', 'G', 'C', 'e'] },
+  { name: 'Nashville', notes: [4, 9, 2, 7, 11, 4], labels: ['e', 'a', 'd', 'G', 'B', 'e'] },
+];
+
+// ============================================================
 // SCALE FORMULAS + DESCRIPTIONS
 // ============================================================
 
