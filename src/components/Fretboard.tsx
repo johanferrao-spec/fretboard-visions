@@ -30,6 +30,7 @@ interface FretboardProps {
   setFretBoxSize: (v: number) => void;
   noteMarkerSize: number;
   degreeColors: boolean;
+  setDegreeColors: (v: boolean) => void;
   disabledDegrees: Set<string>;
   toggleDegree: (d: string) => void;
   setShowFretBox: (v: boolean) => void;
@@ -60,7 +61,7 @@ export default function Fretboard({
   disabledStrings, onToggleString, secondaryOpacity,
   secondaryColor, primaryColor, activeChord, orientation,
   showFretBox, fretBoxStart, fretBoxSize, setFretBoxStart, setFretBoxSize,
-  noteMarkerSize, degreeColors, disabledDegrees, toggleDegree, setShowFretBox,
+  noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -430,22 +431,28 @@ export default function Fretboard({
           {/* Degrees Active / Disable All toggle */}
           <button
             onClick={() => {
-              const allOn = DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)));
-              if (allOn) {
-                // Disable all
-                DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (!disabledDegrees.has(k)) toggleDegree(k); });
-              } else {
-                // Enable all
+              if (!degreeColors) {
+                // Turn on degree colors and enable all degrees
+                setDegreeColors(true);
                 DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (disabledDegrees.has(k)) toggleDegree(k); });
+              } else {
+                const allOn = DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)));
+                if (allOn) {
+                  // Disable all individual degrees (keeps degreeColors true but no colors show)
+                  DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (!disabledDegrees.has(k)) toggleDegree(k); });
+                } else {
+                  // Enable all individual degrees
+                  DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (disabledDegrees.has(k)) toggleDegree(k); });
+                }
               }
             }}
             className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ml-1 ${
-              DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)))
+              degreeColors && DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)))
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-secondary text-secondary-foreground'
             }`}
           >
-            {DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position))) ? 'Disable All' : 'Degrees Active'}
+            {degreeColors && DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position))) ? 'Disable All' : 'Degrees Active'}
           </button>
           <div className="ml-auto flex items-center gap-2">
             <button
