@@ -687,8 +687,17 @@ export default function Fretboard({
                               }
                             }}
                             onMouseDown={(e) => { if (!identifyMode) { e.preventDefault(); handleDragStart(stringIdx, fret, note); } }}
-                            onMouseEnter={() => { if (!identifyMode) { handleDragEnter(stringIdx, fret, note); handleNoteHover(note); } }}
-                            onMouseLeave={() => { if (!isDragging && !identifyMode) setHoveredDiatonic(null); }}
+                            onMouseEnter={() => {
+                              if (identifyMode) {
+                                setIdentifyHover({ stringIndex: stringIdx, fret });
+                              } else {
+                                handleDragEnter(stringIdx, fret, note); handleNoteHover(note);
+                              }
+                            }}
+                            onMouseLeave={() => {
+                              if (identifyMode) setIdentifyHover(null);
+                              else if (!isDragging) setHoveredDiatonic(null);
+                            }}
                             className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold transition-all duration-150 hover:scale-110 active:scale-95 shadow-md cursor-pointer select-none ${
                               style.ring ? 'ring-2' : ''
                             } ${isVertical ? '-rotate-90' : ''} ${
