@@ -42,8 +42,6 @@ const Index = () => {
         <aside className="lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
           <div className="p-3">
             <ControlPanel
-              maxFrets={fb.maxFrets}
-              setMaxFrets={fb.setMaxFrets}
               primaryScale={fb.primaryScale}
               setPrimaryScale={fb.setPrimaryScale}
               secondaryScale={fb.secondaryScale}
@@ -58,13 +56,6 @@ const Index = () => {
               setSecondaryColor={fb.setSecondaryColor}
               primaryColor={fb.primaryColor}
               setPrimaryColor={fb.setPrimaryColor}
-              displayMode={fb.displayMode}
-              setDisplayMode={fb.setDisplayMode}
-              orientation={fb.orientation}
-              setOrientation={fb.setOrientation}
-              degreeColors={fb.degreeColors}
-              setDegreeColors={fb.setDegreeColors}
-              clearFretboard={fb.clearFretboard}
             />
           </div>
         </aside>
