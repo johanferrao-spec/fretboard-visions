@@ -30,6 +30,7 @@ interface FretboardProps {
   setFretBoxSize: (v: number) => void;
   noteMarkerSize: number;
   degreeColors: boolean;
+  setDegreeColors: (v: boolean) => void;
   disabledDegrees: Set<string>;
   toggleDegree: (d: string) => void;
   setShowFretBox: (v: boolean) => void;
