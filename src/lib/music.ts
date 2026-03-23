@@ -1024,15 +1024,23 @@ export const DEGREE_COLORS: Record<string, string> = {
   '13': '175 75% 50%',   // turquoise
 };
 
-export const DEGREE_LEGEND: { label: string; color: string }[] = [
-  { label: 'R',   color: DEGREE_COLORS['R'] },
-  { label: '2',   color: DEGREE_COLORS['2'] },
-  { label: '3',   color: DEGREE_COLORS['3'] },
-  { label: '4',   color: DEGREE_COLORS['4'] },
-  { label: '5',   color: DEGREE_COLORS['5'] },
-  { label: '6',   color: DEGREE_COLORS['6'] },
-  { label: '7',   color: DEGREE_COLORS['7'] },
+export const DEGREE_LEGEND: { label: string; color: string; position: number }[] = [
+  { label: 'R',   color: DEGREE_COLORS['R'], position: 1 },
+  { label: '2',   color: DEGREE_COLORS['2'], position: 2 },
+  { label: '3',   color: DEGREE_COLORS['3'], position: 3 },
+  { label: '4',   color: DEGREE_COLORS['4'], position: 4 },
+  { label: '5',   color: DEGREE_COLORS['5'], position: 5 },
+  { label: '6',   color: DEGREE_COLORS['6'], position: 6 },
+  { label: '7',   color: DEGREE_COLORS['7'], position: 7 },
 ];
+
+// Map any interval name to its scale position (1-7)
+export const INTERVAL_TO_POSITION: Record<string, number> = {
+  'R': 1, '♭2': 2, '2': 2, '♭3': 3, '3': 3,
+  '4': 4, '♭5': 5, '5': 5, '♭6': 6, '6': 6,
+  '♭7': 7, '7': 7, '9': 2, '♭9': 2, '11': 4,
+  '♭13': 6, '13': 6,
+};
 
 // Chord categories for NoteInfoPanel
 export const CHORD_CATEGORIES: { label: string; types: string[] }[] = [

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   noteAtFret, isNoteInSelection, getIntervalName, getExtendedIntervalName, getDiatonicChord,
-  NoteName, STRING_NAMES, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND,
+  NoteName, STRING_NAMES, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND, INTERVAL_TO_POSITION,
   getVoicingsForChord, getArpeggioSequence, getDiatonicArpeggioType, getMidiNote, findNotePositions,
   type ChordVoicing,
 } from '@/lib/music';
@@ -157,7 +157,8 @@ export default function Fretboard({
 
   function getDegreeColor(root: NoteName, note: NoteName): string | null {
     const interval = getIntervalName(root, note);
-    if (disabledDegrees.has(interval)) return null;
+    const position = INTERVAL_TO_POSITION[interval];
+    if (position !== undefined && disabledDegrees.has(String(position))) return null;
     const degColor = DEGREE_COLORS[interval];
     if (degColor) return `hsl(${degColor})`;
     return null;
@@ -412,11 +413,12 @@ export default function Fretboard({
         <div className={`flex items-center gap-1 mb-2 flex-wrap ${isVertical ? '-rotate-90' : ''}`}>
           <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Key:</span>
           {DEGREE_LEGEND.map(d => {
-            const isOff = disabledDegrees.has(d.label);
+            const posKey = String(d.position);
+            const isOff = disabledDegrees.has(posKey);
             return (
               <button
                 key={d.label}
-                onClick={() => toggleDegree(d.label)}
+                onClick={() => toggleDegree(posKey)}
                 className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${isOff ? 'opacity-30' : 'opacity-100'}`}
                 title={`Toggle ${d.label}`}
               >
@@ -425,19 +427,25 @@ export default function Fretboard({
               </button>
             );
           })}
-          {/* Disable All button */}
+          {/* Degrees Active / Disable All toggle */}
           <button
             onClick={() => {
-              const allOn = DEGREE_LEGEND.every(d => !disabledDegrees.has(d.label));
+              const allOn = DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)));
               if (allOn) {
-                DEGREE_LEGEND.forEach(d => { if (!disabledDegrees.has(d.label)) toggleDegree(d.label); });
+                // Disable all
+                DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (!disabledDegrees.has(k)) toggleDegree(k); });
               } else {
-                DEGREE_LEGEND.forEach(d => { if (disabledDegrees.has(d.label)) toggleDegree(d.label); });
+                // Enable all
+                DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (disabledDegrees.has(k)) toggleDegree(k); });
               }
             }}
-            className="px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-muted text-muted-foreground hover:bg-muted/80 transition-colors ml-1"
+            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ml-1 ${
+              DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)))
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-secondary-foreground'
+            }`}
           >
-            {DEGREE_LEGEND.every(d => !disabledDegrees.has(d.label)) ? 'Disable All' : 'Enable All'}
+            {DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position))) ? 'Disable All' : 'Degrees Active'}
           </button>
           <div className="ml-auto flex items-center gap-2">
             <button
@@ -511,61 +519,46 @@ export default function Fretboard({
             </div>
           )}
 
-          {/* Drag arpeggio lines overlay — with glow circles */}
+          {/* Drag arpeggio lines overlay */}
           {allPaths.map((path, pathIdx) => {
             const pts = getPathLinePoints(path);
             if (pts.length < 2) return null;
+            const totalH = 6 * stringH;
             return (
               <svg
                 key={pathIdx}
                 className="absolute inset-0 pointer-events-none z-30"
                 style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
-                viewBox={`0 0 100 100`}
+                viewBox={`0 0 100 ${totalH}`}
                 preserveAspectRatio="none"
               >
-                <defs>
-                  <filter id={`glow-${pathIdx}`}>
-                    <feGaussianBlur stdDeviation="1" result="coloredBlur" />
-                    <feMerge>
-                      <feMergeNode in="coloredBlur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
                 {pts.map((pt, i, arr) => {
                   if (i === 0) return null;
                   const prev = arr[i - 1];
                   return (
                     <line
                       key={i}
-                      x1={prev.x} y1={prev.y}
-                      x2={pt.x} y2={pt.y}
-                      stroke="hsl(130, 70%, 50%)"
-                      strokeWidth={0.5}
+                      x1={prev.x} y1={prev.y * totalH / 100}
+                      x2={pt.x} y2={pt.y * totalH / 100}
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
                       strokeLinecap="round"
-                      opacity={0.8}
-                      filter={`url(#glow-${pathIdx})`}
+                      opacity={0.7}
+                      vectorEffect="non-scaling-stroke"
                     />
                   );
                 })}
                 {pts.map((pt, i) => (
-                  <g key={`dot-${i}`}>
-                    <circle
-                      cx={pt.x} cy={pt.y}
-                      r={1.5}
-                      fill="none"
-                      stroke="hsl(130, 70%, 50%)"
-                      strokeWidth={0.3}
-                      opacity={0.6}
-                      filter={`url(#glow-${pathIdx})`}
-                    />
-                    <circle
-                      cx={pt.x} cy={pt.y}
-                      r={0.6}
-                      fill="hsl(130, 70%, 50%)"
-                      opacity={0.9}
-                    />
-                  </g>
+                  <circle
+                    key={`dot-${i}`}
+                    cx={pt.x} cy={pt.y * totalH / 100}
+                    r={4}
+                    fill="none"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={1.5}
+                    opacity={0.8}
+                    vectorEffect="non-scaling-stroke"
+                  />
                 ))}
               </svg>
             );
