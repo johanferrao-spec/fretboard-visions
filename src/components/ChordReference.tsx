@@ -189,6 +189,7 @@ export default function ChordReference({
           activeChord={activeChord}
           handleSelectVoicing={handleSelectVoicing}
           degreeColors={degreeColors}
+          tuning={tuning}
         />
       )}
     </div>
