@@ -228,6 +228,7 @@ function ChordLibraryPanel({
   activeChord: ChordSelection | null;
   handleSelectVoicing: (idx: number) => void;
   degreeColors: boolean;
+  tuning: number[];
 }) {
   const VOICINGS_PER_PAGE = 4;
 
