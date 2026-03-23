@@ -716,13 +716,28 @@ export default function Fretboard({
                         {/* In identify mode, always render a clickable/hoverable target */}
                         {identifyMode && !style && fret > 0 && (
                           <button
-                            onClick={(e) => {
+                            onMouseDown={(e) => {
                               e.stopPropagation();
+                              e.preventDefault();
+                              setIdentifyDrag({ startString: stringIdx, fret });
                               const newFrets = [...identifyFrets];
                               newFrets[stringIdx] = fret;
                               setIdentifyFrets(newFrets);
                             }}
-                            onMouseEnter={() => setIdentifyHover({ stringIndex: stringIdx, fret })}
+                            onMouseEnter={() => {
+                              setIdentifyHover({ stringIndex: stringIdx, fret });
+                              if (identifyDrag && identifyDrag.fret === fret) {
+                                // Barre drag: fill all strings between start and current
+                                const newFrets = [...identifyFrets];
+                                const minS = Math.min(identifyDrag.startString, stringIdx);
+                                const maxS = Math.max(identifyDrag.startString, stringIdx);
+                                for (let s = minS; s <= maxS; s++) {
+                                  newFrets[s] = fret;
+                                }
+                                setIdentifyFrets(newFrets);
+                              }
+                            }}
+                            onMouseUp={() => setIdentifyDrag(null)}
                             onMouseLeave={() => setIdentifyHover(null)}
                             className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold cursor-pointer select-none opacity-0 hover:opacity-50 transition-opacity ${isVertical ? '-rotate-90' : ''}`}
                             style={{
@@ -753,14 +768,31 @@ export default function Fretboard({
                                 onNoteClick(note);
                               }
                             }}
-                            onMouseDown={(e) => { if (!identifyMode) { e.preventDefault(); handleDragStart(stringIdx, fret, note); } }}
+                            onMouseDown={(e) => {
+                              if (identifyMode) {
+                                e.preventDefault();
+                                setIdentifyDrag({ startString: stringIdx, fret });
+                              } else {
+                                e.preventDefault(); handleDragStart(stringIdx, fret, note);
+                              }
+                            }}
                             onMouseEnter={() => {
                               if (identifyMode) {
                                 setIdentifyHover({ stringIndex: stringIdx, fret });
+                                if (identifyDrag && identifyDrag.fret === fret) {
+                                  const newFrets = [...identifyFrets];
+                                  const minS = Math.min(identifyDrag.startString, stringIdx);
+                                  const maxS = Math.max(identifyDrag.startString, stringIdx);
+                                  for (let s = minS; s <= maxS; s++) {
+                                    newFrets[s] = fret;
+                                  }
+                                  setIdentifyFrets(newFrets);
+                                }
                               } else {
                                 handleDragEnter(stringIdx, fret, note); handleNoteHover(note);
                               }
                             }}
+                            onMouseUp={() => { if (identifyMode) setIdentifyDrag(null); }}
                             onMouseLeave={() => {
                               if (identifyMode) setIdentifyHover(null);
                               else if (!isDragging) setHoveredDiatonic(null);
