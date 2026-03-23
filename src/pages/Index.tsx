@@ -80,15 +80,7 @@ const Index = () => {
               {fb.displayMode === 'notes' ? '♪ Notes' : fb.displayMode === 'degrees' ? '° Degrees' : '✋ Fingers'}
             </button>
 
-            {/* Degrees active toggle */}
-            <button
-              onClick={() => fb.setDegreeColors(!fb.degreeColors)}
-              className={`px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider transition-colors ${
-                fb.degreeColors ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
-              }`}
-            >
-              Degrees {fb.degreeColors ? 'Active' : 'Off'}
-            </button>
+            {/* Degrees active toggle removed — now lives in fretboard key legend */}
 
             {/* Fret count */}
             <div className="flex items-center gap-1 ml-auto">

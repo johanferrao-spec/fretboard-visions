@@ -519,61 +519,46 @@ export default function Fretboard({
             </div>
           )}
 
-          {/* Drag arpeggio lines overlay — with glow circles */}
+          {/* Drag arpeggio lines overlay */}
           {allPaths.map((path, pathIdx) => {
             const pts = getPathLinePoints(path);
             if (pts.length < 2) return null;
+            const totalH = 6 * stringH;
             return (
               <svg
                 key={pathIdx}
                 className="absolute inset-0 pointer-events-none z-30"
                 style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
-                viewBox={`0 0 100 100`}
+                viewBox={`0 0 100 ${totalH}`}
                 preserveAspectRatio="none"
               >
-                <defs>
-                  <filter id={`glow-${pathIdx}`}>
-                    <feGaussianBlur stdDeviation="1" result="coloredBlur" />
-                    <feMerge>
-                      <feMergeNode in="coloredBlur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
                 {pts.map((pt, i, arr) => {
                   if (i === 0) return null;
                   const prev = arr[i - 1];
                   return (
                     <line
                       key={i}
-                      x1={prev.x} y1={prev.y}
-                      x2={pt.x} y2={pt.y}
-                      stroke="hsl(130, 70%, 50%)"
-                      strokeWidth={0.5}
+                      x1={prev.x} y1={prev.y * totalH / 100}
+                      x2={pt.x} y2={pt.y * totalH / 100}
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
                       strokeLinecap="round"
-                      opacity={0.8}
-                      filter={`url(#glow-${pathIdx})`}
+                      opacity={0.7}
+                      vectorEffect="non-scaling-stroke"
                     />
                   );
                 })}
                 {pts.map((pt, i) => (
-                  <g key={`dot-${i}`}>
-                    <circle
-                      cx={pt.x} cy={pt.y}
-                      r={1.5}
-                      fill="none"
-                      stroke="hsl(130, 70%, 50%)"
-                      strokeWidth={0.3}
-                      opacity={0.6}
-                      filter={`url(#glow-${pathIdx})`}
-                    />
-                    <circle
-                      cx={pt.x} cy={pt.y}
-                      r={0.6}
-                      fill="hsl(130, 70%, 50%)"
-                      opacity={0.9}
-                    />
-                  </g>
+                  <circle
+                    key={`dot-${i}`}
+                    cx={pt.x} cy={pt.y * totalH / 100}
+                    r={4}
+                    fill="none"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={1.5}
+                    opacity={0.8}
+                    vectorEffect="non-scaling-stroke"
+                  />
                 ))}
               </svg>
             );
