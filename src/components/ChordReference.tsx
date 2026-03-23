@@ -172,6 +172,8 @@ export default function ChordReference({
             }
           }}
           currentRoot={currentIdentifyRoot}
+          tuningLabels={tuningLabels}
+          tuning={tuning}
         />
       ) : (
         <ChordLibraryPanel
