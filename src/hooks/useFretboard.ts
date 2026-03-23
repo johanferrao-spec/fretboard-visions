@@ -109,6 +109,8 @@ export function useFretboard() {
     showFretBox, setShowFretBox,
     fretBoxStart, setFretBoxStart,
     fretBoxSize, setFretBoxSize,
+    fretBoxStringStart, setFretBoxStringStart,
+    fretBoxStringSize, setFretBoxStringSize,
     noteMarkerSize, setNoteMarkerSize,
     degreeColors, setDegreeColors,
     disabledDegrees, toggleDegree,
