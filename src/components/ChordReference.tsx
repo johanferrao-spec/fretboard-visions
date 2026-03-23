@@ -100,6 +100,10 @@ export default function ChordReference({
     if (tab === 'caged') setShowCAGED(true);
     if (tab === 'identify') {
       setIdentifyMode(true);
+      // Clear fretboard when entering What's This mode
+      setActiveChord(null);
+      setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
+      setIdentifyViewRoot(null);
     } else {
       setIdentifyMode(false);
     }
@@ -201,6 +205,12 @@ function ChordLibraryPanel({
 }) {
   const VOICINGS_PER_PAGE = 4;
 
+  // Split types into 2 sub-columns
+  const splitIntoColumns = (types: string[]) => {
+    const mid = Math.ceil(types.length / 2);
+    return [types.slice(0, mid), types.slice(mid)];
+  };
+
   return (
     <>
       {/* Root selector */}
@@ -209,75 +219,84 @@ function ChordLibraryPanel({
           <button
             key={n}
             onClick={() => setSelectedRoot(n)}
-            className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-colors ${
+            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
               n === selectedRoot ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
             }`}
           >{n}</button>
         ))}
       </div>
 
-      {/* Main layout: chord columns + type + diagrams all in one row */}
-      <div className="flex gap-1">
-        {/* 3 chord quality columns — narrow, 2-column layout */}
-        <div className="flex gap-px shrink-0" style={{ width: '45%' }}>
-          {CHORD_COLUMNS.map((col, ci) => (
-            <div key={col.label} className={`flex-1 min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/30' : ''} px-0.5`}>
-              <div className="text-[7px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-0.5 truncate">{col.label}</div>
-              <div className="space-y-px">
-                {col.types.map(ct => {
-                  if (!CHORD_FORMULAS[ct]) return null;
-                  const isSelected = selectedChord === ct;
-                  return (
-                    <button
-                      key={ct}
-                      onClick={() => handleSelectChord(ct)}
-                      className={`w-full text-left px-0.5 py-px rounded text-[7px] font-mono transition-colors truncate leading-tight ${
-                        isSelected ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50'
-                      }`}
-                      title={ct}
-                    >{ct}</button>
-                  );
-                })}
+      {/* Main layout: chord columns + type + diagrams */}
+      <div className="flex gap-1.5">
+        {/* Chord quality columns with cell boxes — 2 sub-columns each for major/minor */}
+        <div className="flex gap-px shrink-0" style={{ width: '48%' }}>
+          {CHORD_COLUMNS.map((col, ci) => {
+            const [col1, col2] = splitIntoColumns(col.types);
+            return (
+              <div key={col.label} className={`flex-1 min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5`}>
+                <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">{col.label}</div>
+                <div className="flex gap-px">
+                  {[col1, col2].map((types, sci) => (
+                    <div key={sci} className="flex-1 space-y-px">
+                      {types.map(ct => {
+                        if (!CHORD_FORMULAS[ct]) return null;
+                        const isSelected = selectedChord === ct;
+                        return (
+                          <button
+                            key={ct}
+                            onClick={() => handleSelectChord(ct)}
+                            className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
+                              isSelected
+                                ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]'
+                                : 'border-border/30 text-foreground/80 hover:bg-muted/50 hover:border-border/60'
+                            }`}
+                            title={ct}
+                          >{ct}</button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Voicing type selector */}
-        <div className="w-10 shrink-0">
-          <div className="text-[6px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-0.5">Type</div>
-          <div className="space-y-px">
+        {/* Voicing type selector — bigger */}
+        <div className="w-14 shrink-0">
+          <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">Type</div>
+          <div className="space-y-0.5">
             {(['full', 'shell', 'drop2', 'drop3', 'triads'] as VoicingTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => handleVoicingTabChange(tab)}
-                className={`w-full px-0.5 py-px rounded text-[6px] font-mono uppercase tracking-wider transition-colors leading-tight ${
-                  voicingTab === tab ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted/30'
+                className={`w-full px-1 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors leading-tight ${
+                  voicingTab === tab ? 'bg-accent text-accent-foreground font-bold' : 'text-muted-foreground hover:bg-muted/30'
                 }`}
-              >{tab === 'drop2' ? 'D2' : tab === 'drop3' ? 'D3' : tab.charAt(0).toUpperCase() + tab.slice(1, 4)}</button>
+              >{tab === 'drop2' ? 'Drop 2' : tab === 'drop3' ? 'Drop 3' : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
             ))}
           </div>
-          <div className="text-[5px] font-mono text-muted-foreground mt-1 text-center leading-tight">
-            {voicingTab === 'shell' && 'R,3,7'}
-            {voicingTab === 'drop2' && '2nd ↓8va'}
-            {voicingTab === 'drop3' && '3rd ↓8va'}
-            {voicingTab === 'triads' && '3 adj str'}
+          <div className="text-[7px] font-mono text-muted-foreground mt-1.5 text-center leading-tight">
+            {voicingTab === 'shell' && 'R, 3, 7'}
+            {voicingTab === 'drop2' && '2nd voice ↓8va'}
+            {voicingTab === 'drop3' && '3rd voice ↓8va'}
+            {voicingTab === 'triads' && '3 adjacent strings'}
           </div>
         </div>
 
-        {/* Diagrams panel — right side, always visible */}
+        {/* Diagrams panel */}
         <div className="flex-1 min-w-0">
           {selectedChord ? (
-            <div className="bg-secondary/20 rounded p-1">
+            <div className="bg-secondary/20 rounded p-1.5">
               <div className="flex items-center justify-between mb-1">
-                <div className="text-[8px] font-mono font-bold text-foreground truncate">{selectedRoot} {selectedChord}</div>
+                <div className="text-[10px] font-mono font-bold text-foreground truncate">{selectedRoot} {selectedChord}</div>
                 {totalPages > 1 && (
                   <div className="flex items-center gap-1 shrink-0">
                     <button onClick={() => setVoicingPage(Math.max(0, voicingPage - 1))} disabled={voicingPage === 0}
-                      className="px-1 py-px rounded text-[8px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">◀</button>
-                    <span className="text-[7px] font-mono text-muted-foreground">{voicingPage + 1}/{totalPages}</span>
+                      className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">◀</button>
+                    <span className="text-[8px] font-mono text-muted-foreground">{voicingPage + 1}/{totalPages}</span>
                     <button onClick={() => setVoicingPage(Math.min(totalPages - 1, voicingPage + 1))} disabled={voicingPage >= totalPages - 1}
-                      className="px-1 py-px rounded text-[8px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">▶</button>
+                      className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">▶</button>
                   </div>
                 )}
               </div>
@@ -291,11 +310,11 @@ function ChordLibraryPanel({
                         key={i}
                         onClick={() => handleSelectVoicing(i)}
                         className={`rounded p-0.5 transition-all border ${
-                          isActive ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-muted/50'
+                          isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
                         }`}
                       >
                         <MiniChordDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} />
-                        <div className="text-[6px] font-mono text-muted-foreground text-center">
+                        <div className="text-[7px] font-mono text-muted-foreground text-center">
                           {v.frets.map(f => f === -1 ? 'x' : f).join('')}
                         </div>
                       </button>
@@ -303,14 +322,14 @@ function ChordLibraryPanel({
                   })}
                 </div>
               ) : (
-                <div className="text-[7px] font-mono text-muted-foreground text-center py-2">No voicings</div>
+                <div className="text-[8px] font-mono text-muted-foreground text-center py-2">No voicings</div>
               )}
-              <div className="text-[6px] font-mono text-muted-foreground mt-1 text-center">
+              <div className="text-[8px] font-mono text-muted-foreground mt-1 text-center">
                 {getChordStructureDescription(selectedChord, voicingTab)}
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-[8px] font-mono text-muted-foreground">
+            <div className="flex items-center justify-center h-full text-[9px] font-mono text-muted-foreground">
               ← Select a chord
             </div>
           )}
