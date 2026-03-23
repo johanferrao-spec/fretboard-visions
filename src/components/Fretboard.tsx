@@ -28,6 +28,10 @@ interface FretboardProps {
   fretBoxSize: number;
   setFretBoxStart: (v: number) => void;
   setFretBoxSize: (v: number) => void;
+  fretBoxStringStart: number;
+  fretBoxStringSize: number;
+  setFretBoxStringStart: (v: number) => void;
+  setFretBoxStringSize: (v: number) => void;
   noteMarkerSize: number;
   degreeColors: boolean;
   setDegreeColors: (v: boolean) => void;
