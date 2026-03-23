@@ -271,8 +271,8 @@ function ChordLibraryPanel({
               <button
                 key={tab}
                 onClick={() => handleVoicingTabChange(tab)}
-                className={`w-full px-1 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors leading-tight ${
-                  voicingTab === tab ? 'bg-accent text-accent-foreground font-bold' : 'text-muted-foreground hover:bg-muted/30'
+                className={`w-full px-1 py-0.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-colors leading-tight ${
+                  voicingTab === tab ? 'bg-accent text-accent-foreground font-bold border-accent' : 'text-muted-foreground border-border/40 hover:bg-muted/30'
                 }`}
               >{tab === 'drop2' ? 'Drop 2' : tab === 'drop3' ? 'Drop 3' : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
             ))}
