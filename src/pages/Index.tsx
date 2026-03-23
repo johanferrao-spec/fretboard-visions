@@ -127,6 +127,7 @@ const Index = () => {
               setFretBoxSize={fb.setFretBoxSize}
               noteMarkerSize={fb.noteMarkerSize}
               degreeColors={fb.degreeColors}
+              setDegreeColors={fb.setDegreeColors}
               disabledDegrees={fb.disabledDegrees}
               toggleDegree={fb.toggleDegree}
               setShowFretBox={fb.setShowFretBox}
