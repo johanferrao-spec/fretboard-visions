@@ -157,7 +157,8 @@ export default function Fretboard({
 
   function getDegreeColor(root: NoteName, note: NoteName): string | null {
     const interval = getIntervalName(root, note);
-    if (disabledDegrees.has(interval)) return null;
+    const position = INTERVAL_TO_POSITION[interval];
+    if (position !== undefined && disabledDegrees.has(String(position))) return null;
     const degColor = DEGREE_COLORS[interval];
     if (degColor) return `hsl(${degColor})`;
     return null;
