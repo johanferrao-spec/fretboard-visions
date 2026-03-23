@@ -41,6 +41,7 @@ export default function ChordReference({
   cagedShape, setCagedShape, cagedRoot,
   identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets,
   degreeColors, identifyRoot, setIdentifyRoot,
+  tuning, tuningLabels,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
