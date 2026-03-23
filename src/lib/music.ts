@@ -1002,38 +1002,36 @@ export function getMidiNote(stringIndex: number, fret: number): number {
 // DEGREE COLORS
 // ============================================================
 
+// Position-based degree colors:
+// 1st (Root) = green, 2nd = grey, 3rd = red, 4th = pink, 5th = blue, 6th = turquoise, 7th = orange
 export const DEGREE_COLORS: Record<string, string> = {
-  'R':  '130 70% 45%',
-  '♭2': '20 60% 50%',
-  '2':  '0 0% 65%',
-  '♭3': '350 70% 50%',
-  '3':  '0 85% 55%',
-  '4':  '330 75% 60%',
-  '♭5': '200 60% 50%',
-  '5':  '215 85% 55%',
-  '♭6': '175 60% 45%',
-  '6':  '175 75% 50%',
-  '♭7': '25 85% 55%',
-  '7':  '30 90% 55%',
-  '9':  '0 0% 65%',
-  '♭9': '20 60% 50%',
-  '11': '330 75% 60%',
-  '♭13':'175 60% 45%',
-  '13': '175 75% 50%',
+  'R':  '130 70% 45%',   // green
+  '♭2': '0 0% 65%',      // grey (chromatic 2nd variant)
+  '2':  '0 0% 65%',      // grey
+  '♭3': '0 85% 55%',     // red (minor 3rd = same color as 3rd position)
+  '3':  '0 85% 55%',     // red
+  '4':  '330 75% 60%',   // pink
+  '♭5': '215 85% 55%',   // blue (chromatic 5th variant)
+  '5':  '215 85% 55%',   // blue
+  '♭6': '175 75% 50%',   // turquoise (chromatic 6th variant)
+  '6':  '175 75% 50%',   // turquoise
+  '♭7': '25 85% 55%',    // orange (minor 7th = same color as 7th position)
+  '7':  '25 85% 55%',    // orange
+  '9':  '0 0% 65%',      // grey (= 2nd)
+  '♭9': '0 0% 65%',      // grey
+  '11': '330 75% 60%',   // pink (= 4th)
+  '♭13':'175 75% 50%',   // turquoise (= 6th)
+  '13': '175 75% 50%',   // turquoise
 };
 
 export const DEGREE_LEGEND: { label: string; color: string }[] = [
   { label: 'R',   color: DEGREE_COLORS['R'] },
-  { label: '♭3',  color: DEGREE_COLORS['♭3'] },
+  { label: '2',   color: DEGREE_COLORS['2'] },
   { label: '3',   color: DEGREE_COLORS['3'] },
   { label: '4',   color: DEGREE_COLORS['4'] },
-  { label: '♭5',  color: DEGREE_COLORS['♭5'] },
   { label: '5',   color: DEGREE_COLORS['5'] },
-  { label: '♭7',  color: DEGREE_COLORS['♭7'] },
+  { label: '6',   color: DEGREE_COLORS['6'] },
   { label: '7',   color: DEGREE_COLORS['7'] },
-  { label: '9',   color: DEGREE_COLORS['9'] },
-  { label: '11',  color: DEGREE_COLORS['11'] },
-  { label: '13',  color: DEGREE_COLORS['13'] },
 ];
 
 // Chord categories for NoteInfoPanel
