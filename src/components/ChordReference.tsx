@@ -105,6 +105,7 @@ export default function ChordReference({
       setActiveChord(null);
       setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
       setIdentifyRoot(null);
+      setIdentifyViewName(null);
     } else {
       setIdentifyMode(false);
     }
