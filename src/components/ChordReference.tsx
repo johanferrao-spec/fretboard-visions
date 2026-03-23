@@ -100,6 +100,10 @@ export default function ChordReference({
     if (tab === 'caged') setShowCAGED(true);
     if (tab === 'identify') {
       setIdentifyMode(true);
+      // Clear fretboard when entering What's This mode
+      setActiveChord(null);
+      setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
+      setIdentifyViewRoot(null);
     } else {
       setIdentifyMode(false);
     }
