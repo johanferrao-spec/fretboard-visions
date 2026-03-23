@@ -1,5 +1,5 @@
 import { NOTE_NAMES, SCALE_FORMULAS, ARPEGGIO_FORMULAS, SCALE_DESCRIPTIONS, NoteName } from '@/lib/music';
-import type { ScaleSelection, ScaleMode, DisplayMode, Orientation } from '@/hooks/useFretboard';
+import type { ScaleSelection } from '@/hooks/useFretboard';
 
 interface ControlPanelProps {
   primaryScale: ScaleSelection;
@@ -16,15 +16,6 @@ interface ControlPanelProps {
   setSecondaryColor: (v: string) => void;
   primaryColor: string;
   setPrimaryColor: (v: string) => void;
-  displayMode: DisplayMode;
-  setDisplayMode: (v: DisplayMode) => void;
-  maxFrets: number;
-  setMaxFrets: (v: number) => void;
-  orientation: Orientation;
-  setOrientation: (v: Orientation) => void;
-  degreeColors: boolean;
-  setDegreeColors: (v: boolean) => void;
-  clearFretboard: () => void;
 }
 
 const scaleNames = Object.keys(SCALE_FORMULAS);
@@ -38,11 +29,6 @@ export default function ControlPanel({
   secondaryOpacity, setSecondaryOpacity,
   secondaryColor, setSecondaryColor,
   primaryColor, setPrimaryColor,
-  displayMode, setDisplayMode,
-  maxFrets, setMaxFrets,
-  orientation, setOrientation,
-  degreeColors, setDegreeColors,
-  clearFretboard,
 }: ControlPanelProps) {
   return (
     <div className="space-y-4">
