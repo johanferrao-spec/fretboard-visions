@@ -96,7 +96,10 @@ export function useFretboard() {
     setShowFretBox(false);
     setShowCAGED(false);
     setDisabledDegrees(new Set());
-    // Note: does NOT reset scale/arpeggio selection
+    setIdentifyMode(false);
+    setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
+    setIdentifyRoot(null);
+    setNoteMarkerSize(20);
   }, []);
 
   // When enabling dual scale, turn off degree colors by default
