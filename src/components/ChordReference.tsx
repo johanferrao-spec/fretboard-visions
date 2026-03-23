@@ -423,9 +423,9 @@ function IdentifyPanel({
 
       {/* Current selection + buttons in one row */}
       <div className="flex items-center gap-1 mb-2 flex-wrap">
-        {STRING_NAMES.map((name, i) => {
+        {tuningLabels.map((name, i) => {
           const fret = frets[i];
-          const note = fret >= 0 ? noteAtFret(i, fret) : null;
+          const note = fret >= 0 ? noteAtFret(i, fret, tuning) : null;
           // Determine degree color if a chord interpretation is selected
           let cellBg = fret >= 0 ? 'hsl(var(--primary) / 0.2)' : 'hsl(var(--destructive) / 0.15)';
           let cellText = fret >= 0 ? 'hsl(var(--primary))' : 'hsl(var(--destructive))';
