@@ -20,6 +20,8 @@ interface ChordReferenceProps {
   identifyFrets: (number | -1)[];
   setIdentifyFrets: (f: (number | -1)[]) => void;
   degreeColors: boolean;
+  identifyRoot: NoteName | null;
+  setIdentifyRoot: (v: NoteName | null) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
