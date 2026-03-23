@@ -670,6 +670,30 @@ export default function Fretboard({
                         {fret > 0 && <div className="absolute left-0 top-0 bottom-0 bg-fretboard-fret" style={{ width: 2, opacity: 0.6 }} />}
                         {fret === 0 && <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-fretboard-nut" />}
 
+                        {/* In identify mode, always render a clickable/hoverable target */}
+                        {identifyMode && !style && fret > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newFrets = [...identifyFrets];
+                              newFrets[stringIdx] = fret;
+                              setIdentifyFrets(newFrets);
+                            }}
+                            onMouseEnter={() => setIdentifyHover({ stringIndex: stringIdx, fret })}
+                            onMouseLeave={() => setIdentifyHover(null)}
+                            className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold cursor-pointer select-none opacity-0 hover:opacity-40 transition-opacity ${isVertical ? '-rotate-90' : ''}`}
+                            style={{
+                              width: noteMarkerSize,
+                              height: noteMarkerSize,
+                              backgroundColor: 'hsl(var(--muted-foreground))',
+                              color: 'hsl(var(--muted-foreground))',
+                              fontSize: Math.max(6, noteMarkerSize * 0.35),
+                            }}
+                          >
+                            {note}
+                          </button>
+                        )}
+
                         {style && (
                           <button
                             onClick={(e) => {
@@ -677,9 +701,9 @@ export default function Fretboard({
                               if (identifyMode) {
                                 const newFrets = [...identifyFrets];
                                 if (newFrets[stringIdx] === fret) {
-                                  newFrets[stringIdx] = -1; // toggle off
+                                  newFrets[stringIdx] = -1;
                                 } else {
-                                  newFrets[stringIdx] = fret; // set this fret
+                                  newFrets[stringIdx] = fret;
                                 }
                                 setIdentifyFrets(newFrets);
                               } else {
