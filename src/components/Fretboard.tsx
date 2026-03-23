@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   noteAtFret, isNoteInSelection, getIntervalName, getExtendedIntervalName, getDiatonicChord,
-  NoteName, STRING_NAMES, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND, INTERVAL_TO_POSITION,
+  NoteName, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND, INTERVAL_TO_POSITION,
   getVoicingsForChord, getArpeggioSequence, getDiatonicArpeggioType, getMidiNote, findNotePositions,
   type ChordVoicing,
 } from '@/lib/music';
