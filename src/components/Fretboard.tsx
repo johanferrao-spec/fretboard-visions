@@ -41,6 +41,7 @@ interface FretboardProps {
   identifyMode: boolean;
   identifyFrets: (number | -1)[];
   setIdentifyFrets: (f: (number | -1)[]) => void;
+  identifyRoot: NoteName | null;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -70,7 +71,7 @@ export default function Fretboard({
   showFretBox, fretBoxStart, fretBoxSize, setFretBoxStart, setFretBoxSize,
   fretBoxStringStart, fretBoxStringSize, setFretBoxStringStart, setFretBoxStringSize,
   noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
-  identifyMode, identifyFrets, setIdentifyFrets,
+  identifyMode, identifyFrets, setIdentifyFrets, identifyRoot,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -179,11 +180,16 @@ export default function Fretboard({
     // In identify mode, only show notes that have been clicked or hovered
     if (identifyMode) {
       if (identifyFrets[stringIndex] === fret) {
-        return { backgroundColor: 'hsl(var(--primary))', opacity: 1, ring: false, ringColor: '', greyed: false };
+        let bg = 'hsl(var(--primary))';
+        if (degreeColors && identifyRoot) {
+          const dc = getDegreeColor(identifyRoot, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
       }
       // Show greyed-out preview on hover
       if (identifyHover && identifyHover.stringIndex === stringIndex && identifyHover.fret === fret) {
-        return { backgroundColor: 'hsl(var(--muted-foreground))', opacity: 0.35, ring: false, ringColor: '', greyed: true };
+        return { backgroundColor: 'hsl(var(--muted-foreground))', opacity: 0.5, ring: false, ringColor: '', greyed: true };
       }
       return null;
     }
@@ -681,7 +687,7 @@ export default function Fretboard({
                             }}
                             onMouseEnter={() => setIdentifyHover({ stringIndex: stringIdx, fret })}
                             onMouseLeave={() => setIdentifyHover(null)}
-                            className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold cursor-pointer select-none opacity-0 hover:opacity-40 transition-opacity ${isVertical ? '-rotate-90' : ''}`}
+                            className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold cursor-pointer select-none opacity-0 hover:opacity-50 transition-opacity ${isVertical ? '-rotate-90' : ''}`}
                             style={{
                               width: noteMarkerSize,
                               height: noteMarkerSize,

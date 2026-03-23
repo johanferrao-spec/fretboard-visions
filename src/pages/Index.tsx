@@ -138,6 +138,7 @@ const Index = () => {
               identifyMode={fb.identifyMode}
               identifyFrets={fb.identifyFrets}
               setIdentifyFrets={fb.setIdentifyFrets}
+              identifyRoot={fb.identifyRoot}
             />
           </div>
 
@@ -156,6 +157,8 @@ const Index = () => {
               identifyFrets={fb.identifyFrets}
               setIdentifyFrets={fb.setIdentifyFrets}
               degreeColors={fb.degreeColors}
+              identifyRoot={fb.identifyRoot}
+              setIdentifyRoot={fb.setIdentifyRoot}
             />
           </div>
         </main>
