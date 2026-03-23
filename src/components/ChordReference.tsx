@@ -54,8 +54,12 @@ export default function ChordReference({
 
   const currentVoicings = useMemo(() => {
     if (!selectedChord) return [];
-    return getVoicingsForChord(selectedRoot, selectedChord, voicingTab);
-  }, [selectedRoot, selectedChord, voicingTab]);
+    const all = getVoicingsForChord(selectedRoot, selectedChord, voicingTab);
+    const isStandard = tuning.every((n, i) => n === STANDARD_TUNING[i]);
+    if (isStandard) return all;
+    // Filter voicings playable in this tuning
+    return all.filter(v => isVoicingPlayableInTuning(v, selectedRoot, selectedChord, tuning));
+  }, [selectedRoot, selectedChord, voicingTab, tuning]);
 
   const totalPages = Math.ceil(currentVoicings.length / VOICINGS_PER_PAGE);
   const pagedVoicings = currentVoicings.slice(voicingPage * VOICINGS_PER_PAGE, (voicingPage + 1) * VOICINGS_PER_PAGE);
