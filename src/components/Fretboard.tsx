@@ -366,7 +366,13 @@ export default function Fretboard({
       const dPct = dx / pixPerPercent;
       const avgFretWidth = 100 / (maxFrets + 1);
       const dFrets = Math.round(dPct / avgFretWidth);
-      const { startFret, startSize } = boxDragStartRef.current;
+      const { startFret, startSize, startStrStart, startStrSize } = boxDragStartRef.current;
+
+      // Vertical: compute string row delta
+      const dy = e.clientY - boxDragStartRef.current.mouseY;
+      const stringH = rect.height / 6;
+      const dStrings = Math.round(dy / stringH);
+
       if (boxDragging === 'move') {
         setFretBoxStart(Math.max(1, Math.min(maxFrets - startSize + 1, startFret + dFrets)));
       } else if (boxDragging === 'left') {
@@ -376,13 +382,23 @@ export default function Fretboard({
       } else if (boxDragging === 'right') {
         const newSize = Math.max(3, Math.min(12, startSize + dFrets));
         if (startFret + newSize - 1 <= maxFrets) setFretBoxSize(newSize);
+      } else if (boxDragging === 'bottom') {
+        const newStrSize = Math.max(2, Math.min(6, startStrSize + dStrings));
+        if (startStrStart + newStrSize <= 6) setFretBoxStringSize(newStrSize);
+      } else if (boxDragging === 'corner') {
+        // Horizontal
+        const newSize = Math.max(3, Math.min(12, startSize + dFrets));
+        if (startFret + newSize - 1 <= maxFrets) setFretBoxSize(newSize);
+        // Vertical
+        const newStrSize = Math.max(2, Math.min(6, startStrSize + dStrings));
+        if (startStrStart + newStrSize <= 6) setFretBoxStringSize(newStrSize);
       }
     };
     const handleMouseUp = () => setBoxDragging(null);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
-  }, [boxDragging, maxFrets, setFretBoxStart, setFretBoxSize]);
+  }, [boxDragging, maxFrets, setFretBoxStart, setFretBoxSize, setFretBoxStringStart, setFretBoxStringSize]);
 
   const allPaths = [...persistedPaths, ...(isDragging && dragPath.length >= 2 ? [dragPath] : [])];
 
