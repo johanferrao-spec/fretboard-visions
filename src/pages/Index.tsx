@@ -197,6 +197,8 @@ const Index = () => {
               degreeColors={fb.degreeColors}
               identifyRoot={fb.identifyRoot}
               setIdentifyRoot={fb.setIdentifyRoot}
+              tuning={fb.tuning}
+              tuningLabels={fb.tuningLabels}
             />
           </div>
         </main>
