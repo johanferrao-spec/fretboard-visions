@@ -1046,6 +1046,43 @@ export const INTERVAL_TO_POSITION: Record<string, number> = {
 // CHORD IDENTIFICATION from fret input
 // ============================================================
 
+function formatChordSymbol(root: NoteName, chordName: string, bassNote?: NoteName): string {
+  const symbols: Record<string, string> = {
+    'Major': '',
+    'Minor': 'm',
+    'Diminished': 'dim',
+    'Augmented': 'aug',
+    'Sus2': 'sus2',
+    'Sus4': 'sus4',
+    'Major 7': 'maj7',
+    'Minor 7': 'm7',
+    'Dominant 7': '7',
+    'Dim 7': 'dim7',
+    'Half-Dim 7': 'm7♭5',
+    'Min/Maj 7': 'mMaj7',
+    'Aug 7': 'aug7',
+    'Add9': 'add9',
+    'Major 9': 'maj9',
+    'Minor 9': 'm9',
+    'Dominant 9': '9',
+    'Major 6': '6',
+    'Minor 6': 'm6',
+    '7sus4': '7sus4',
+    '7#9': '7#9',
+    '7♭9': '7♭9',
+    '7#5': '7#5',
+    '7♭5': '7♭5',
+    '11': '11',
+    'Minor 11': 'm11',
+    '13': '13',
+    'Minor 13': 'm13',
+    'Power (5)': '5',
+  };
+
+  const base = `${root}${symbols[chordName] ?? ` ${chordName}`}`;
+  return bassNote && bassNote !== root ? `${base}/${bassNote}` : base;
+}
+
 export function identifyChord(frets: (number | -1)[]): { names: string[]; explanations: string[]; bassNote: NoteName; notes: NoteName[]; extensions: { frets: number[]; note: NoteName }[] }[] {
   const playedNotes: NoteName[] = [];
   const playedMidi: number[] = [];
@@ -1074,12 +1111,11 @@ export function identifyChord(frets: (number | -1)[]): { names: string[]; explan
       // Check that key intervals are present (at least root + one other)
       const hasEnough = intervals.size >= 2 && intervals.has(0);
       if (allMatch && hasEnough && formulaIntervals.size >= intervals.size) {
-        const names = [`${root} ${chordName}`];
+        const names = [formatChordSymbol(root, chordName, bassNote !== root ? bassNote : undefined)];
         const explanations: string[] = [];
         
         // Check for slash chord
         if (bassNote !== root) {
-          names[0] = `${root} ${chordName}/${bassNote}`;
           explanations.push(`Bass note ${bassNote} is not the root — this is a slash chord.`);
         }
         

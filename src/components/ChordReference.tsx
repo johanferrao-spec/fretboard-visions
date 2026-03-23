@@ -187,6 +187,14 @@ export default function ChordReference({
   );
 }
 
+function formatCompactTab(frets: number[]): string {
+  return frets.map(fret => {
+    if (fret === -1) return 'X';
+    if (fret === 0) return '0';
+    return fret.toString(36).toUpperCase();
+  }).join('').slice(0, 6);
+}
+
 // ============================================================
 // CHORD LIBRARY PANEL — compact 3-column layout with inline diagrams
 // ============================================================
@@ -217,9 +225,7 @@ function ChordLibraryPanel({
   const [libCopied, setLibCopied] = useState(false);
 
   const handleLibCopy = (v: ChordVoicing) => {
-    const tabStr = v.frets.map(f => f === -1 ? 'x' : String(f)).join('');
-    const formatted = STRING_NAMES.map((n, i) => `${n}|${v.frets[i] === -1 ? 'x' : v.frets[i]}`).join('\n');
-    navigator.clipboard.writeText(formatted);
+    navigator.clipboard.writeText(formatCompactTab(v.frets));
     setLibCopied(true);
     setTimeout(() => setLibCopied(false), 1500);
   };
@@ -336,7 +342,7 @@ function ChordLibraryPanel({
                         <MiniChordDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} />
                         <div className="flex items-center justify-center gap-0.5">
                           <span className="text-[7px] font-mono text-muted-foreground">
-                            {v.frets.map(f => f === -1 ? 'x' : f).join('')}
+                            {formatCompactTab(v.frets)}
                           </span>
                           {isActive && (
                             <button
@@ -383,12 +389,11 @@ function IdentifyPanel({
   setViewRoot: (v: string | null) => void;
   currentRoot: NoteName | null;
 }) {
-  const tabStr = frets.map(f => f === -1 ? 'x' : String(f)).join('');
+  const tabStr = formatCompactTab(frets);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    const formatted = STRING_NAMES.map((n, i) => `${n}|${frets[i] === -1 ? 'x' : frets[i]}`).join('\n');
-    navigator.clipboard.writeText(formatted);
+    navigator.clipboard.writeText(tabStr);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -411,14 +416,18 @@ function IdentifyPanel({
             <div key={i} className="flex-1 text-center">
               <div className="text-[8px] font-mono text-muted-foreground mb-0.5">{name}</div>
               <button
-                onClick={() => { const nf = [...frets]; nf[i] = -1; setFrets(nf); }}
+                onClick={() => {
+                  const nf = [...frets];
+                  nf[i] = fret === -1 ? 0 : -1;
+                  setFrets(nf);
+                }}
                 className={`w-full rounded text-[10px] font-mono py-0.5 transition-colors ${
                   fret >= 0
                     ? 'bg-primary/20 text-primary border border-primary/30'
-                    : 'bg-muted/30 text-muted-foreground border border-transparent'
+                    : 'bg-muted/50 text-destructive border border-destructive/40'
                 }`}
               >
-                {fret === -1 ? '×' : `${note} (${fret})`}
+                {fret === -1 ? 'X' : `${note} (${fret})`}
               </button>
             </div>
           );
@@ -434,26 +443,27 @@ function IdentifyPanel({
         {frets.some(f => f >= 0) && (
           <button
             onClick={handleCopy}
+            title="Copy tab"
             className="flex-1 py-0.5 rounded text-[9px] font-mono text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
-          >{copied ? '✓ Copied' : `Copy Tab (${tabStr})`}</button>
+          >{copied ? 'COPIED' : tabStr}</button>
         )}
       </div>
 
       {/* Results — cell-based layout with info panel */}
       {results.length > 0 ? (
-        <div className="flex gap-2">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(15rem,18rem)] md:items-start">
           {/* Chord name cells */}
-          <div className="space-y-1 shrink-0" style={{ minWidth: '40%' }}>
+          <div className="min-w-0">
             <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Matches</div>
-            {results.map((r, i) => (
-              <div key={i} className="space-y-0.5">
+            <div className="flex flex-wrap gap-1">
+              {results.map((r, i) => (
                 {r.names.map((name, ni) => {
                   const isActive = viewRoot === name;
                   return (
                     <button
-                      key={ni}
+                      key={`${i}-${ni}`}
                       onClick={() => setViewRoot(isActive ? null : name)}
-                      className={`w-full text-left px-2 py-1 rounded border text-[11px] font-mono font-bold transition-all ${
+                      className={`inline-flex w-fit max-w-full items-center rounded border px-2 py-1 text-[11px] font-mono font-bold transition-all ${
                         isActive
                           ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]'
                           : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
@@ -463,8 +473,8 @@ function IdentifyPanel({
                     </button>
                   );
                 })}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Info panel for selected chord */}
@@ -478,7 +488,7 @@ function IdentifyPanel({
                   {STRING_NAMES.map((_, si) => {
                     if (frets[si] < 0) return <div key={si} className="flex-1" />;
                     const note = noteAtFret(si, frets[si]);
-                    const interval = getExtendedIntervalName(currentRoot, note);
+                    const interval = getIntervalName(currentRoot, note);
                     const degColor = DEGREE_COLORS[interval];
                     return (
                       <div key={si} className="flex-1 text-center">
@@ -587,7 +597,7 @@ function MiniChordDiagram({ voicing, root, showDegrees = false }: { voicing: Cho
           if (fret === 0) return <circle key={i} cx={x} cy={3} r={1.5} fill="none" stroke="hsl(var(--foreground))" strokeWidth={0.5} />;
           const y = 5 + (fret - startFret + 0.5) * fretSpacing;
           const note = noteAtFret(i, fret);
-          const interval = getExtendedIntervalName(root, note);
+          const interval = showDegrees ? getIntervalName(root, note) : getExtendedIntervalName(root, note);
           const degColor = DEGREE_COLORS[interval];
           const fillColor = showDegrees && degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
           return <circle key={i} cx={x} cy={y} r={2.5} fill={fillColor} />;
