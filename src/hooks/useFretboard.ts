@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { NoteName, NOTE_NAMES } from '@/lib/music';
+import { NoteName, NOTE_NAMES, STANDARD_TUNING, TUNING_PRESETS, type TuningPreset } from '@/lib/music';
 
 export type ScaleMode = 'scale' | 'arpeggio';
 export type DisplayMode = 'notes' | 'degrees' | 'fingers';
