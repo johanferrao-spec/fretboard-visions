@@ -175,6 +175,8 @@ const Index = () => {
               identifyFrets={fb.identifyFrets}
               setIdentifyFrets={fb.setIdentifyFrets}
               identifyRoot={fb.identifyRoot}
+              tuning={fb.tuning}
+              tuningLabels={fb.tuningLabels}
             />
           </div>
 
