@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import {
-  NOTE_NAMES, NoteName, CHORD_FORMULAS, STRING_NAMES, STANDARD_TUNING,
+  NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
+  isVoicingPlayableInTuning,
   type ChordVoicing,
 } from '@/lib/music';
 import type { ChordSelection } from '@/hooks/useFretboard';
