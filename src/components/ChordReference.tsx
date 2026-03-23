@@ -214,6 +214,16 @@ function ChordLibraryPanel({
 }) {
   const VOICINGS_PER_PAGE = 4;
 
+  const [libCopied, setLibCopied] = useState(false);
+
+  const handleLibCopy = (v: ChordVoicing) => {
+    const tabStr = v.frets.map(f => f === -1 ? 'x' : String(f)).join('');
+    const formatted = STRING_NAMES.map((n, i) => `${n}|${v.frets[i] === -1 ? 'x' : v.frets[i]}`).join('\n');
+    navigator.clipboard.writeText(formatted);
+    setLibCopied(true);
+    setTimeout(() => setLibCopied(false), 1500);
+  };
+
   // Split types into 2 sub-columns
   const splitIntoColumns = (types: string[]) => {
     const mid = Math.ceil(types.length / 2);
