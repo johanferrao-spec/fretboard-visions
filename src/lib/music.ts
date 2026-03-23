@@ -1042,6 +1042,100 @@ export const INTERVAL_TO_POSITION: Record<string, number> = {
   '♭13': 6, '13': 6,
 };
 
+// ============================================================
+// CHORD IDENTIFICATION from fret input
+// ============================================================
+
+export function identifyChord(frets: (number | -1)[]): { names: string[]; explanations: string[]; bassNote: NoteName; notes: NoteName[]; extensions: { frets: number[]; note: NoteName }[] }[] {
+  const playedNotes: NoteName[] = [];
+  const playedMidi: number[] = [];
+  for (let i = 0; i < 6; i++) {
+    if (frets[i] >= 0) {
+      playedNotes.push(noteAtFret(i, frets[i]));
+      playedMidi.push(getMidiNote(i, frets[i]));
+    }
+  }
+  if (playedNotes.length < 2) return [];
+
+  const uniquePCs = [...new Set(playedNotes.map(n => NOTE_NAMES.indexOf(n)))];
+  const bassNote = playedNotes[0];
+  const results: { names: string[]; explanations: string[]; bassNote: NoteName; notes: NoteName[]; extensions: { frets: number[]; note: NoteName }[] }[] = [];
+
+  // Try each unique pitch class as potential root
+  for (const rootPC of uniquePCs) {
+    const root = NOTE_NAMES[rootPC];
+    const intervals = new Set(uniquePCs.map(pc => (pc - rootPC + 12) % 12));
+    
+    // Match against chord formulas
+    for (const [chordName, formula] of Object.entries(CHORD_FORMULAS)) {
+      const formulaIntervals = new Set(formula.map(i => i % 12));
+      // Check if played notes are a subset of (or equal to) the formula
+      const allMatch = [...intervals].every(i => formulaIntervals.has(i));
+      // Check that key intervals are present (at least root + one other)
+      const hasEnough = intervals.size >= 2 && intervals.has(0);
+      if (allMatch && hasEnough && formulaIntervals.size >= intervals.size) {
+        const names = [`${root} ${chordName}`];
+        const explanations: string[] = [];
+        
+        // Check for slash chord
+        if (bassNote !== root) {
+          names[0] = `${root} ${chordName}/${bassNote}`;
+          explanations.push(`Bass note ${bassNote} is not the root — this is a slash chord.`);
+        }
+        
+        // Find missing formula notes that could extend the chord
+        const extensions: { frets: number[]; note: NoteName }[] = [];
+        for (const fi of formulaIntervals) {
+          if (!intervals.has(fi)) {
+            const missingNote = NOTE_NAMES[(rootPC + fi) % 12];
+            // Find where this note could be played on muted strings
+            const extFrets: number[] = [];
+            for (let s = 0; s < 6; s++) {
+              if (frets[s] === -1) {
+                // Find nearest fret for this note
+                for (let f = 0; f <= 12; f++) {
+                  if (noteAtFret(s, f) === missingNote) { extFrets.push(f); break; }
+                }
+              }
+            }
+            if (extFrets.length > 0) {
+              extensions.push({ frets: extFrets, note: missingNote });
+            }
+          }
+        }
+        
+        results.push({ names, explanations, bassNote, notes: playedNotes, extensions });
+      }
+    }
+  }
+
+  // Also check for enharmonic equivalents (e.g., G6 = Em7)
+  // Find pairs that share the same pitch class set
+  const seen = new Set<string>();
+  const deduped: typeof results = [];
+  for (const r of results) {
+    const key = r.names[0];
+    if (!seen.has(key)) {
+      seen.add(key);
+      // Find other names for same pitch set
+      for (const r2 of results) {
+        if (r2 !== r && !r.names.includes(r2.names[0])) {
+          const pcs1 = new Set(r.notes.map(n => NOTE_NAMES.indexOf(n)));
+          const pcs2 = new Set(r2.notes.map(n => NOTE_NAMES.indexOf(n)));
+          if (pcs1.size === pcs2.size && [...pcs1].every(p => pcs2.has(p))) {
+            r.names.push(r2.names[0]);
+            r.explanations.push(`Also known as ${r2.names[0]} — same notes, different root.`);
+            seen.add(r2.names[0]);
+          }
+        }
+      }
+      deduped.push(r);
+    }
+  }
+
+  return deduped;
+}
+
 // Chord categories for NoteInfoPanel
 export const CHORD_CATEGORIES: { label: string; types: string[] }[] = [
   { label: 'Triads', types: ['Major', 'Minor', 'Diminished', 'Augmented', 'Sus2', 'Sus4'] },

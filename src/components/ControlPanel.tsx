@@ -226,10 +226,12 @@ function ModeSelector({
                         setOpenCategory(cat.label);
                       }
                     }}
-                    className={`w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all hover:brightness-110 ${
-                      cat.isModesGroup
-                        ? 'bg-accent/60 text-accent-foreground hover:bg-accent/80'
-                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    className={`w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all ${
+                      cat.scales?.includes(value.scale)
+                        ? 'bg-primary/20 text-primary border border-primary/60 shadow-[0_0_8px_hsl(var(--primary)/0.3)]'
+                        : cat.isModesGroup
+                          ? 'bg-accent/40 text-foreground/80 hover:bg-accent/60 border border-transparent'
+                          : 'bg-muted text-foreground/80 hover:bg-muted/80 border border-transparent'
                     }`}
                   >
                     {cat.label} {!isDirect && '→'}
@@ -251,10 +253,10 @@ function ModeSelector({
                   <button
                     key={s}
                     onClick={() => handleSelectScale(s)}
-                    className={`w-full text-left px-2 py-1 rounded text-[10px] font-mono transition-colors ${
+                    className={`w-full text-left px-2 py-1 rounded text-[10px] font-mono transition-all border ${
                       value.scale === s
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                        ? 'bg-primary/20 text-primary border-primary/60 shadow-[0_0_8px_hsl(var(--primary)/0.3)] font-bold'
+                        : 'bg-muted/50 text-foreground/80 hover:bg-muted hover:text-foreground border-transparent'
                     }`}
                   >
                     {s}
