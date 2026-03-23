@@ -121,6 +121,7 @@ export function useFretboard() {
     cagedShape, setCagedShape,
     identifyMode, setIdentifyMode,
     identifyFrets, setIdentifyFrets,
+    identifyRoot, setIdentifyRoot,
     clearFretboard,
   };
 }
