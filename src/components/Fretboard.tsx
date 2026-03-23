@@ -38,6 +38,9 @@ interface FretboardProps {
   disabledDegrees: Set<string>;
   toggleDegree: (d: string) => void;
   setShowFretBox: (v: boolean) => void;
+  identifyMode: boolean;
+  identifyFrets: (number | -1)[];
+  setIdentifyFrets: (f: (number | -1)[]) => void;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
