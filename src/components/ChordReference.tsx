@@ -456,8 +456,8 @@ function IdentifyPanel({
           <div className="min-w-0">
             <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Matches</div>
             <div className="flex flex-wrap gap-1">
-              {results.map((r, i) => (
-                {r.names.map((name, ni) => {
+              {results.flatMap((r, i) =>
+                r.names.map((name, ni) => {
                   const isActive = viewRoot === name;
                   return (
                     <button
@@ -472,8 +472,8 @@ function IdentifyPanel({
                       {name}
                     </button>
                   );
-                })}
-              ))}
+                })
+              )}
             </div>
           </div>
 
