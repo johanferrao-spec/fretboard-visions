@@ -1,4 +1,5 @@
-import { NOTE_NAMES, SCALE_FORMULAS, ARPEGGIO_FORMULAS, SCALE_DESCRIPTIONS, NoteName } from '@/lib/music';
+import { useState } from 'react';
+import { NOTE_NAMES, ARPEGGIO_FORMULAS, SCALE_DESCRIPTIONS, NoteName } from '@/lib/music';
 import type { ScaleSelection } from '@/hooks/useFretboard';
 
 interface ControlPanelProps {
@@ -18,8 +19,42 @@ interface ControlPanelProps {
   setPrimaryColor: (v: string) => void;
 }
 
-const scaleNames = Object.keys(SCALE_FORMULAS);
 const arpeggioNames = Object.keys(ARPEGGIO_FORMULAS);
+
+// Scale categories with sub-pages
+interface ScaleCategory {
+  label: string;
+  scales?: string[]; // direct select (no sub-page)
+  isModesGroup?: boolean; // different color for mode groups
+}
+
+const SCALE_CATEGORIES: ScaleCategory[] = [
+  { label: 'Major', scales: ['Major (Ionian)'] },
+  { label: 'Minor', scales: ['Natural Minor (Aeolian)', 'Harmonic Minor', 'Melodic Minor'] },
+  {
+    label: 'Pentatonics',
+    scales: ['Pentatonic Major', 'Pentatonic Minor', 'Blues', 'Blues Major', 'Hirajoshi', 'In Sen', 'Kumoi'],
+  },
+  {
+    label: 'Standard Modes',
+    scales: ['Major (Ionian)', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Natural Minor (Aeolian)', 'Locrian'],
+    isModesGroup: true,
+  },
+  {
+    label: 'Harmonic Minor Modes',
+    scales: ['Harmonic Minor', 'Locrian ♮6', 'Ionian #5', 'Dorian #4', 'Phrygian Dominant', 'Lydian #2', 'Superlocrian ♭♭7'],
+    isModesGroup: true,
+  },
+  {
+    label: 'Melodic Minor Modes',
+    scales: ['Melodic Minor', 'Dorian ♭2', 'Lydian Augmented', 'Lydian Dominant', 'Mixolydian ♭6', 'Locrian ♮2', 'Superlocrian (Altered)'],
+    isModesGroup: true,
+  },
+  {
+    label: 'Exotic',
+    scales: ['Hungarian Minor', 'Neapolitan Minor', 'Neapolitan Major', 'Double Harmonic Major', 'Enigmatic', 'Whole Tone', 'Diminished (HW)', 'Diminished (WH)', 'Chromatic', 'Bebop Dominant', 'Bebop Major'],
+  },
+];
 
 export default function ControlPanel({
   primaryScale, setPrimaryScale,
@@ -32,7 +67,6 @@ export default function ControlPanel({
 }: ControlPanelProps) {
   return (
     <div className="space-y-4">
-      {/* Primary Scale/Arpeggio */}
       <ModeSelector
         label="Primary"
         value={primaryScale}
@@ -42,7 +76,7 @@ export default function ControlPanel({
         onColorChange={setPrimaryColor}
       />
 
-      {/* Secondary Toggle */}
+      {/* Dual Scale Toggle */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => setSecondaryEnabled(!secondaryEnabled)}
@@ -107,8 +141,13 @@ function ModeSelector({
   color: string;
   onColorChange: (c: string) => void;
 }) {
-  const names = value.mode === 'scale' ? scaleNames : arpeggioNames;
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
   const description = value.mode === 'scale' ? SCALE_DESCRIPTIONS[value.scale] : undefined;
+
+  const handleSelectScale = (scaleName: string) => {
+    onChange({ ...value, mode: 'scale', scale: scaleName });
+    setOpenCategory(null);
+  };
 
   return (
     <div className={`p-3 rounded-lg border transition-colors ${active ? 'border-primary bg-secondary/50' : 'border-border'}`}>
@@ -130,21 +169,23 @@ function ModeSelector({
         </div>
       </div>
 
+      {/* Scale / Arpeggio toggle */}
       <div className="flex gap-1 mb-2">
         <button
-          onClick={() => onChange({ ...value, mode: 'scale', scale: scaleNames[0] })}
+          onClick={() => { onChange({ ...value, mode: 'scale', scale: 'Major (Ionian)' }); setOpenCategory(null); }}
           className={`flex-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
             value.mode === 'scale' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
           }`}
         >Scale</button>
         <button
-          onClick={() => onChange({ ...value, mode: 'arpeggio', scale: arpeggioNames[0] })}
+          onClick={() => { onChange({ ...value, mode: 'arpeggio', scale: arpeggioNames[0] }); setOpenCategory(null); }}
           className={`flex-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
             value.mode === 'arpeggio' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
           }`}
         >Arpeggio</button>
       </div>
 
+      {/* Root note */}
       <select
         value={value.root}
         onChange={e => onChange({ ...value, root: e.target.value as NoteName })}
@@ -153,13 +194,77 @@ function ModeSelector({
         {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
       </select>
 
-      <select
-        value={value.scale}
-        onChange={e => onChange({ ...value, scale: e.target.value })}
-        className="w-full bg-muted text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono"
-      >
-        {names.map(s => <option key={s} value={s}>{s}</option>)}
-      </select>
+      {/* Scale categories or arpeggio dropdown */}
+      {value.mode === 'arpeggio' ? (
+        <select
+          value={value.scale}
+          onChange={e => onChange({ ...value, scale: e.target.value })}
+          className="w-full bg-muted text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono"
+        >
+          {arpeggioNames.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      ) : (
+        <div className="space-y-1">
+          {/* Current selection display */}
+          <div className="text-[10px] font-mono text-foreground bg-muted/50 rounded px-2 py-1 mb-1">
+            ♪ {value.scale}
+          </div>
+
+          {openCategory === null ? (
+            /* Category buttons */
+            <div className="grid grid-cols-1 gap-1">
+              {SCALE_CATEGORIES.map(cat => {
+                // Major and Minor with single scale → direct select
+                const isDirect = cat.label === 'Major';
+                return (
+                  <button
+                    key={cat.label}
+                    onClick={() => {
+                      if (isDirect && cat.scales) {
+                        handleSelectScale(cat.scales[0]);
+                      } else {
+                        setOpenCategory(cat.label);
+                      }
+                    }}
+                    className={`w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all hover:brightness-110 ${
+                      cat.isModesGroup
+                        ? 'bg-accent/60 text-accent-foreground hover:bg-accent/80'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {cat.label} {!isDirect && '→'}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            /* Sub-page: show scales in selected category */
+            <div className="animate-fade-in">
+              <button
+                onClick={() => setOpenCategory(null)}
+                className="text-[9px] font-mono text-muted-foreground hover:text-foreground mb-1 flex items-center gap-1 transition-colors"
+              >
+                ← Back
+              </button>
+              <div className="grid grid-cols-1 gap-0.5">
+                {SCALE_CATEGORIES.find(c => c.label === openCategory)?.scales?.map(s => (
+                  <button
+                    key={s}
+                    onClick={() => handleSelectScale(s)}
+                    className={`w-full text-left px-2 py-1 rounded text-[10px] font-mono transition-colors ${
+                      value.scale === s
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Scale description */}
       {description && (
