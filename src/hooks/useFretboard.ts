@@ -55,6 +55,17 @@ export function useFretboard() {
   const [identifyMode, setIdentifyMode] = useState(false);
   const [identifyFrets, setIdentifyFrets] = useState<(number | -1)[]>([-1, -1, -1, -1, -1, -1]);
   const [identifyRoot, setIdentifyRoot] = useState<NoteName | null>(null);
+  const [tuning, setTuningState] = useState<number[]>(STANDARD_TUNING);
+  const [tuningName, setTuningName] = useState('Standard');
+  const [tuningLabels, setTuningLabels] = useState<string[]>(['E', 'A', 'D', 'G', 'B', 'e']);
+  const [customTunings, setCustomTunings] = useState<TuningPreset[]>([]);
+
+  const setTuning = useCallback((preset: TuningPreset) => {
+    setTuningState(preset.notes);
+    setTuningName(preset.name);
+    setTuningLabels(preset.labels);
+    setActiveChord(null);
+  }, []);
 
   const updateNoteColor = useCallback((note: NoteName, color: string) => {
     setNoteColors(prev => ({ ...prev, [note]: color }));
