@@ -534,16 +534,20 @@ export default function Fretboard({
           {/* Position box overlay */}
           {showFretBox && (
             <div
-              className="absolute top-0 bottom-0 border-2 border-accent/70 bg-accent/10 rounded-md z-20 transition-[left,width] duration-100"
+              className="absolute border-2 border-accent/70 bg-accent/10 rounded-md z-20 transition-[left,width,top,height] duration-100"
               style={{
                 left: `calc(28px + (100% - 28px) * ${cumLeft[fretBoxStart] || 0} / 100)`,
                 width: `calc((100% - 28px) * ${(cumLeft[fretBoxEnd + 1] || cumLeft[maxFrets] || 100) - (cumLeft[fretBoxStart] || 0)} / 100)`,
+                top: `${(fretBoxStringStart / 6) * 100}%`,
+                height: `${(fretBoxStringSize / 6) * 100}%`,
                 cursor: boxDragging === 'move' ? 'grabbing' : 'grab',
               }}
               onMouseDown={e => handleBoxMouseDown(e, 'move')}
             >
               <div className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-accent/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'left')} />
               <div className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-accent/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'right')} />
+              <div className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-accent/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'bottom')} />
+              <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize hover:bg-accent/40 z-30" onMouseDown={e => handleBoxMouseDown(e, 'corner')} />
             </div>
           )}
 
