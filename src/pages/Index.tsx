@@ -42,8 +42,6 @@ const Index = () => {
         <aside className="lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
           <div className="p-3">
             <ControlPanel
-              maxFrets={fb.maxFrets}
-              setMaxFrets={fb.setMaxFrets}
               primaryScale={fb.primaryScale}
               setPrimaryScale={fb.setPrimaryScale}
               secondaryScale={fb.secondaryScale}
@@ -58,19 +56,60 @@ const Index = () => {
               setSecondaryColor={fb.setSecondaryColor}
               primaryColor={fb.primaryColor}
               setPrimaryColor={fb.setPrimaryColor}
-              displayMode={fb.displayMode}
-              setDisplayMode={fb.setDisplayMode}
-              orientation={fb.orientation}
-              setOrientation={fb.setOrientation}
-              degreeColors={fb.degreeColors}
-              setDegreeColors={fb.setDegreeColors}
-              clearFretboard={fb.clearFretboard}
             />
           </div>
         </aside>
 
         {/* Main area */}
         <main className={`flex-1 flex ${isVertical ? 'flex-row' : 'flex-col'} min-w-0 overflow-auto`}>
+          {/* Toolbar above fretboard */}
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-border flex-wrap shrink-0">
+            {/* Orientation toggle */}
+            <button
+              onClick={() => fb.setOrientation(fb.orientation === 'horizontal' ? 'vertical' : 'horizontal')}
+              className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+            >
+              {fb.orientation === 'horizontal' ? '⬇ Vertical' : '➡ Horizontal'}
+            </button>
+
+            {/* Display mode toggle */}
+            <button
+              onClick={() => fb.setDisplayMode(fb.displayMode === 'notes' ? 'degrees' : fb.displayMode === 'degrees' ? 'fingers' : 'notes')}
+              className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+            >
+              {fb.displayMode === 'notes' ? '♪ Notes' : fb.displayMode === 'degrees' ? '° Degrees' : '✋ Fingers'}
+            </button>
+
+            {/* Degrees active toggle */}
+            <button
+              onClick={() => fb.setDegreeColors(!fb.degreeColors)}
+              className={`px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                fb.degreeColors ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+              }`}
+            >
+              Degrees {fb.degreeColors ? 'Active' : 'Off'}
+            </button>
+
+            {/* Fret count */}
+            <div className="flex items-center gap-1 ml-auto">
+              <span className="text-[9px] font-mono text-muted-foreground uppercase">Frets:</span>
+              <input
+                type="range" min={12} max={24} value={fb.maxFrets}
+                onChange={e => fb.setMaxFrets(Number(e.target.value))}
+                className="w-20 accent-primary"
+              />
+              <span className="text-[10px] font-mono text-muted-foreground w-5">{fb.maxFrets}</span>
+            </div>
+
+            {/* Reset */}
+            <button
+              onClick={fb.clearFretboard}
+              className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
+            >
+              Reset
+            </button>
+          </div>
+
           {/* Fretboard */}
           <div className={`${isVertical ? 'flex-1' : ''} p-4 flex items-center justify-center`}>
             <Fretboard

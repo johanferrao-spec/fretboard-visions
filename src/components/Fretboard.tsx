@@ -410,7 +410,7 @@ export default function Fretboard({
       >
         {/* Degree color key + toggles + position box toggle */}
         <div className={`flex items-center gap-1 mb-2 flex-wrap ${isVertical ? '-rotate-90' : ''}`}>
-          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Degrees:</span>
+          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Key:</span>
           {DEGREE_LEGEND.map(d => {
             const isOff = disabledDegrees.has(d.label);
             return (
@@ -425,6 +425,20 @@ export default function Fretboard({
               </button>
             );
           })}
+          {/* Disable All button */}
+          <button
+            onClick={() => {
+              const allOn = DEGREE_LEGEND.every(d => !disabledDegrees.has(d.label));
+              if (allOn) {
+                DEGREE_LEGEND.forEach(d => { if (!disabledDegrees.has(d.label)) toggleDegree(d.label); });
+              } else {
+                DEGREE_LEGEND.forEach(d => { if (disabledDegrees.has(d.label)) toggleDegree(d.label); });
+              }
+            }}
+            className="px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-muted text-muted-foreground hover:bg-muted/80 transition-colors ml-1"
+          >
+            {DEGREE_LEGEND.every(d => !disabledDegrees.has(d.label)) ? 'Disable All' : 'Enable All'}
+          </button>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setShowFretBox(!showFretBox)}

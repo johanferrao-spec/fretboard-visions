@@ -1,5 +1,5 @@
 import { NOTE_NAMES, SCALE_FORMULAS, ARPEGGIO_FORMULAS, SCALE_DESCRIPTIONS, NoteName } from '@/lib/music';
-import type { ScaleSelection, ScaleMode, DisplayMode, Orientation } from '@/hooks/useFretboard';
+import type { ScaleSelection } from '@/hooks/useFretboard';
 
 interface ControlPanelProps {
   primaryScale: ScaleSelection;
@@ -16,15 +16,6 @@ interface ControlPanelProps {
   setSecondaryColor: (v: string) => void;
   primaryColor: string;
   setPrimaryColor: (v: string) => void;
-  displayMode: DisplayMode;
-  setDisplayMode: (v: DisplayMode) => void;
-  maxFrets: number;
-  setMaxFrets: (v: number) => void;
-  orientation: Orientation;
-  setOrientation: (v: Orientation) => void;
-  degreeColors: boolean;
-  setDegreeColors: (v: boolean) => void;
-  clearFretboard: () => void;
 }
 
 const scaleNames = Object.keys(SCALE_FORMULAS);
@@ -38,81 +29,9 @@ export default function ControlPanel({
   secondaryOpacity, setSecondaryOpacity,
   secondaryColor, setSecondaryColor,
   primaryColor, setPrimaryColor,
-  displayMode, setDisplayMode,
-  maxFrets, setMaxFrets,
-  orientation, setOrientation,
-  degreeColors, setDegreeColors,
-  clearFretboard,
 }: ControlPanelProps) {
   return (
     <div className="space-y-4">
-      {/* Clear button */}
-      <button
-        onClick={clearFretboard}
-        className="w-full px-3 py-2 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors text-xs font-mono uppercase tracking-wider font-semibold"
-      >
-        Clear Fretboard
-      </button>
-
-      {/* Fret count */}
-      <div>
-        <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-          Frets: {maxFrets}
-        </label>
-        <input
-          type="range" min={12} max={24} value={maxFrets}
-          onChange={e => setMaxFrets(Number(e.target.value))}
-          className="w-full mt-1 accent-primary"
-        />
-      </div>
-
-      {/* Orientation toggle */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setOrientation('horizontal')}
-          className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
-            orientation === 'horizontal' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
-          }`}
-        >Horizontal</button>
-        <button
-          onClick={() => setOrientation('vertical')}
-          className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
-            orientation === 'vertical' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
-          }`}
-        >Vertical</button>
-      </div>
-
-      {/* Display mode toggle */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setDisplayMode('notes')}
-          className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
-            displayMode === 'notes' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
-          }`}
-        >Note Names</button>
-        <button
-          onClick={() => setDisplayMode('degrees')}
-          className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
-            displayMode === 'degrees' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
-          }`}
-        >Scale Degrees</button>
-      </div>
-
-      {/* Degree colors toggle */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => setDegreeColors(!degreeColors)}
-          className={`relative w-11 h-6 rounded-full transition-colors ${
-            degreeColors ? 'bg-primary' : 'bg-secondary'
-          }`}
-        >
-          <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-foreground transition-transform ${
-            degreeColors ? 'translate-x-5' : ''
-          }`} />
-        </button>
-        <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Degree Colors</span>
-      </div>
-
       {/* Primary Scale/Arpeggio */}
       <ModeSelector
         label="Primary"
