@@ -28,6 +28,10 @@ interface FretboardProps {
   fretBoxSize: number;
   setFretBoxStart: (v: number) => void;
   setFretBoxSize: (v: number) => void;
+  fretBoxStringStart: number;
+  fretBoxStringSize: number;
+  setFretBoxStringStart: (v: number) => void;
+  setFretBoxStringSize: (v: number) => void;
   noteMarkerSize: number;
   degreeColors: boolean;
   setDegreeColors: (v: boolean) => void;
@@ -61,6 +65,7 @@ export default function Fretboard({
   disabledStrings, onToggleString, secondaryOpacity,
   secondaryColor, primaryColor, activeChord, orientation,
   showFretBox, fretBoxStart, fretBoxSize, setFretBoxStart, setFretBoxSize,
+  fretBoxStringStart, fretBoxStringSize, setFretBoxStringStart, setFretBoxStringSize,
   noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
@@ -77,8 +82,8 @@ export default function Fretboard({
   const fretboardRef = useRef<HTMLDivElement>(null);
 
   // Position box drag state
-  const [boxDragging, setBoxDragging] = useState<'move' | 'left' | 'right' | null>(null);
-  const boxDragStartRef = useRef<{ mouseX: number; startFret: number; startSize: number }>({ mouseX: 0, startFret: 0, startSize: 0 });
+  const [boxDragging, setBoxDragging] = useState<'move' | 'left' | 'right' | 'bottom' | 'corner' | null>(null);
+  const boxDragStartRef = useRef<{ mouseX: number; mouseY: number; startFret: number; startSize: number; startStrStart: number; startStrSize: number }>({ mouseX: 0, mouseY: 0, startFret: 0, startSize: 0, startStrStart: 0, startStrSize: 0 });
 
   const cumLeft: number[] = [];
   let acc = 0;
@@ -227,9 +232,12 @@ export default function Fretboard({
       }
     }
 
-    // Position box: grey out notes outside
+    // Position box: grey out notes outside (horizontal + vertical)
     if (showFretBox && fret > 0) {
-      if (fret < fretBoxStart || fret > fretBoxEnd) {
+      const row = stringOrder.indexOf(stringIndex);
+      const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
+      const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
+      if (outsideH || outsideV) {
         greyed = true; opacity = 0.15;
       }
     }
@@ -342,12 +350,12 @@ export default function Fretboard({
   const glowStrings = getOpenStringGlow();
 
   // Position box drag handlers
-  const handleBoxMouseDown = useCallback((e: React.MouseEvent, mode: 'move' | 'left' | 'right') => {
+  const handleBoxMouseDown = useCallback((e: React.MouseEvent, mode: 'move' | 'left' | 'right' | 'bottom' | 'corner') => {
     e.preventDefault();
     e.stopPropagation();
     setBoxDragging(mode);
-    boxDragStartRef.current = { mouseX: e.clientX, startFret: fretBoxStart, startSize: fretBoxSize };
-  }, [fretBoxStart, fretBoxSize]);
+    boxDragStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, startFret: fretBoxStart, startSize: fretBoxSize, startStrStart: fretBoxStringStart, startStrSize: fretBoxStringSize };
+  }, [fretBoxStart, fretBoxSize, fretBoxStringStart, fretBoxStringSize]);
 
   useEffect(() => {
     if (!boxDragging) return;
@@ -361,7 +369,13 @@ export default function Fretboard({
       const dPct = dx / pixPerPercent;
       const avgFretWidth = 100 / (maxFrets + 1);
       const dFrets = Math.round(dPct / avgFretWidth);
-      const { startFret, startSize } = boxDragStartRef.current;
+      const { startFret, startSize, startStrStart, startStrSize } = boxDragStartRef.current;
+
+      // Vertical: compute string row delta
+      const dy = e.clientY - boxDragStartRef.current.mouseY;
+      const stringH = rect.height / 6;
+      const dStrings = Math.round(dy / stringH);
+
       if (boxDragging === 'move') {
         setFretBoxStart(Math.max(1, Math.min(maxFrets - startSize + 1, startFret + dFrets)));
       } else if (boxDragging === 'left') {
@@ -371,13 +385,23 @@ export default function Fretboard({
       } else if (boxDragging === 'right') {
         const newSize = Math.max(3, Math.min(12, startSize + dFrets));
         if (startFret + newSize - 1 <= maxFrets) setFretBoxSize(newSize);
+      } else if (boxDragging === 'bottom') {
+        const newStrSize = Math.max(2, Math.min(6, startStrSize + dStrings));
+        if (startStrStart + newStrSize <= 6) setFretBoxStringSize(newStrSize);
+      } else if (boxDragging === 'corner') {
+        // Horizontal
+        const newSize = Math.max(3, Math.min(12, startSize + dFrets));
+        if (startFret + newSize - 1 <= maxFrets) setFretBoxSize(newSize);
+        // Vertical
+        const newStrSize = Math.max(2, Math.min(6, startStrSize + dStrings));
+        if (startStrStart + newStrSize <= 6) setFretBoxStringSize(newStrSize);
       }
     };
     const handleMouseUp = () => setBoxDragging(null);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
-  }, [boxDragging, maxFrets, setFretBoxStart, setFretBoxSize]);
+  }, [boxDragging, maxFrets, setFretBoxStart, setFretBoxSize, setFretBoxStringStart, setFretBoxStringSize]);
 
   const allPaths = [...persistedPaths, ...(isDragging && dragPath.length >= 2 ? [dragPath] : [])];
 
@@ -513,16 +537,20 @@ export default function Fretboard({
           {/* Position box overlay */}
           {showFretBox && (
             <div
-              className="absolute top-0 bottom-0 border-2 border-accent/70 bg-accent/10 rounded-md z-20 transition-[left,width] duration-100"
+              className="absolute border-2 border-accent/70 bg-accent/10 rounded-md z-20 transition-[left,width,top,height] duration-100"
               style={{
                 left: `calc(28px + (100% - 28px) * ${cumLeft[fretBoxStart] || 0} / 100)`,
                 width: `calc((100% - 28px) * ${(cumLeft[fretBoxEnd + 1] || cumLeft[maxFrets] || 100) - (cumLeft[fretBoxStart] || 0)} / 100)`,
+                top: `${(fretBoxStringStart / 6) * 100}%`,
+                height: `${(fretBoxStringSize / 6) * 100}%`,
                 cursor: boxDragging === 'move' ? 'grabbing' : 'grab',
               }}
               onMouseDown={e => handleBoxMouseDown(e, 'move')}
             >
               <div className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-accent/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'left')} />
               <div className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-accent/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'right')} />
+              <div className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-accent/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'bottom')} />
+              <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize hover:bg-accent/40 z-30" onMouseDown={e => handleBoxMouseDown(e, 'corner')} />
             </div>
           )}
 
