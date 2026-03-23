@@ -687,7 +687,7 @@ export default function Fretboard({
                             }}
                             onMouseEnter={() => setIdentifyHover({ stringIndex: stringIdx, fret })}
                             onMouseLeave={() => setIdentifyHover(null)}
-                            className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold cursor-pointer select-none opacity-0 hover:opacity-40 transition-opacity ${isVertical ? '-rotate-90' : ''}`}
+                            className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold cursor-pointer select-none opacity-0 hover:opacity-50 transition-opacity ${isVertical ? '-rotate-90' : ''}`}
                             style={{
                               width: noteMarkerSize,
                               height: noteMarkerSize,
