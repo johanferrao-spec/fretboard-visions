@@ -452,7 +452,7 @@ export default function Fretboard({
   return (
     <div
       className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}
-      onMouseUp={handleDragEnd}
+      onMouseUp={() => { handleDragEnd(); setIdentifyDrag(null); }}
       onDoubleClick={handleDoubleClick}
     >
       <div
