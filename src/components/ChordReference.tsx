@@ -391,7 +391,7 @@ function ChordLibraryPanel({
 // ============================================================
 
 function IdentifyPanel({
-  frets, setFrets, results, degreeColors, viewRoot, setViewRoot, currentRoot,
+  frets, setFrets, results, degreeColors, viewRoot, setViewRoot, currentRoot, tuningLabels, tuning,
 }: {
   frets: (number | -1)[];
   setFrets: (f: (number | -1)[]) => void;
@@ -400,6 +400,8 @@ function IdentifyPanel({
   viewRoot: string | null;
   setViewRoot: (v: string | null) => void;
   currentRoot: NoteName | null;
+  tuningLabels: string[];
+  tuning: number[];
 }) {
   const tabStr = formatCompactTab(frets);
   const [copied, setCopied] = useState(false);
