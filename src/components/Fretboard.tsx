@@ -413,11 +413,12 @@ export default function Fretboard({
         <div className={`flex items-center gap-1 mb-2 flex-wrap ${isVertical ? '-rotate-90' : ''}`}>
           <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Key:</span>
           {DEGREE_LEGEND.map(d => {
-            const isOff = disabledDegrees.has(d.label);
+            const posKey = String(d.position);
+            const isOff = disabledDegrees.has(posKey);
             return (
               <button
                 key={d.label}
-                onClick={() => toggleDegree(d.label)}
+                onClick={() => toggleDegree(posKey)}
                 className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${isOff ? 'opacity-30' : 'opacity-100'}`}
                 title={`Toggle ${d.label}`}
               >
@@ -426,19 +427,25 @@ export default function Fretboard({
               </button>
             );
           })}
-          {/* Disable All button */}
+          {/* Degrees Active / Disable All toggle */}
           <button
             onClick={() => {
-              const allOn = DEGREE_LEGEND.every(d => !disabledDegrees.has(d.label));
+              const allOn = DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)));
               if (allOn) {
-                DEGREE_LEGEND.forEach(d => { if (!disabledDegrees.has(d.label)) toggleDegree(d.label); });
+                // Disable all
+                DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (!disabledDegrees.has(k)) toggleDegree(k); });
               } else {
-                DEGREE_LEGEND.forEach(d => { if (disabledDegrees.has(d.label)) toggleDegree(d.label); });
+                // Enable all
+                DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (disabledDegrees.has(k)) toggleDegree(k); });
               }
             }}
-            className="px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-muted text-muted-foreground hover:bg-muted/80 transition-colors ml-1"
+            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ml-1 ${
+              DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)))
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-secondary-foreground'
+            }`}
           >
-            {DEGREE_LEGEND.every(d => !disabledDegrees.has(d.label)) ? 'Disable All' : 'Enable All'}
+            {DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position))) ? 'Disable All' : 'Degrees Active'}
           </button>
           <div className="ml-auto flex items-center gap-2">
             <button
