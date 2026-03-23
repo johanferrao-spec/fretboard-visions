@@ -180,11 +180,16 @@ export default function Fretboard({
     // In identify mode, only show notes that have been clicked or hovered
     if (identifyMode) {
       if (identifyFrets[stringIndex] === fret) {
-        return { backgroundColor: 'hsl(var(--primary))', opacity: 1, ring: false, ringColor: '', greyed: false };
+        let bg = 'hsl(var(--primary))';
+        if (degreeColors && identifyRoot) {
+          const dc = getDegreeColor(identifyRoot, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
       }
       // Show greyed-out preview on hover
       if (identifyHover && identifyHover.stringIndex === stringIndex && identifyHover.fret === fret) {
-        return { backgroundColor: 'hsl(var(--muted-foreground))', opacity: 0.35, ring: false, ringColor: '', greyed: true };
+        return { backgroundColor: 'hsl(var(--muted-foreground))', opacity: 0.5, ring: false, ringColor: '', greyed: true };
       }
       return null;
     }
