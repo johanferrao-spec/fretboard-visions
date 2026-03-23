@@ -41,6 +41,7 @@ interface FretboardProps {
   identifyMode: boolean;
   identifyFrets: (number | -1)[];
   setIdentifyFrets: (f: (number | -1)[]) => void;
+  identifyRoot: NoteName | null;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
