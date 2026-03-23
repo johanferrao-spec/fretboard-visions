@@ -231,13 +231,14 @@ function ChordLibraryPanel({
         {/* Chord quality columns with cell boxes — 2 sub-columns each for major/minor */}
         <div className="flex gap-px shrink-0" style={{ width: '48%' }}>
           {CHORD_COLUMNS.map((col, ci) => {
-            const [col1, col2] = splitIntoColumns(col.types);
+            const isSus = col.label === 'Sus';
+            const [col1, col2] = isSus ? [col.types, []] : splitIntoColumns(col.types);
             return (
               <div key={col.label} className={`flex-1 min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5`}>
                 <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">{col.label}</div>
-                <div className="flex gap-px">
-                  {[col1, col2].map((types, sci) => (
-                    <div key={sci} className="flex-1 space-y-px">
+                <div className={`flex gap-px ${isSus ? 'justify-center' : ''}`}>
+                  {[col1, ...(col2.length > 0 ? [col2] : [])].map((types, sci) => (
+                    <div key={sci} className={`${isSus ? 'w-full' : 'flex-1'} space-y-px`}>
                       {types.map(ct => {
                         if (!CHORD_FORMULAS[ct]) return null;
                         const isSelected = selectedChord === ct;
@@ -248,7 +249,7 @@ function ChordLibraryPanel({
                             className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
                               isSelected
                                 ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]'
-                                : 'border-border/30 text-foreground/80 hover:bg-muted/50 hover:border-border/60'
+                                : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
                             }`}
                             title={ct}
                           >{ct}</button>
