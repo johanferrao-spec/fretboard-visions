@@ -659,10 +659,23 @@ export default function Fretboard({
 
                         {style && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); onNoteClick(note); }}
-                            onMouseDown={(e) => { e.preventDefault(); handleDragStart(stringIdx, fret, note); }}
-                            onMouseEnter={() => { handleDragEnter(stringIdx, fret, note); handleNoteHover(note); }}
-                            onMouseLeave={() => { if (!isDragging) setHoveredDiatonic(null); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (identifyMode) {
+                                const newFrets = [...identifyFrets];
+                                if (newFrets[stringIdx] === fret) {
+                                  newFrets[stringIdx] = -1; // toggle off
+                                } else {
+                                  newFrets[stringIdx] = fret; // set this fret
+                                }
+                                setIdentifyFrets(newFrets);
+                              } else {
+                                onNoteClick(note);
+                              }
+                            }}
+                            onMouseDown={(e) => { if (!identifyMode) { e.preventDefault(); handleDragStart(stringIdx, fret, note); } }}
+                            onMouseEnter={() => { if (!identifyMode) { handleDragEnter(stringIdx, fret, note); handleNoteHover(note); } }}
+                            onMouseLeave={() => { if (!isDragging && !identifyMode) setHoveredDiatonic(null); }}
                             className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold transition-all duration-150 hover:scale-110 active:scale-95 shadow-md cursor-pointer select-none ${
                               style.ring ? 'ring-2' : ''
                             } ${isVertical ? '-rotate-90' : ''}`}
