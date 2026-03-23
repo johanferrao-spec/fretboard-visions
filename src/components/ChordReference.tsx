@@ -112,11 +112,10 @@ export default function ChordReference({
 
   // Get the selected interpretation root for scale degree display
   const currentIdentifyRoot = useMemo(() => {
-    if (!identifyViewRoot || identifiedChords.length === 0) return null;
-    // Parse root from name like "C Major" or "Em7/G"
-    const match = identifyViewRoot.match(/^([A-G]#?)/);
+    if (!identifyRoot || identifiedChords.length === 0) return null;
+    const match = (identifyRoot as string).match(/^([A-G]#?)/);
     return match ? match[1] as NoteName : null;
-  }, [identifyViewRoot, identifiedChords]);
+  }, [identifyRoot, identifiedChords]);
 
   return (
     <div className="p-2">
