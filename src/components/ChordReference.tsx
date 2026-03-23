@@ -44,7 +44,7 @@ export default function ChordReference({
   const [voicingTab, setVoicingTab] = useState<VoicingTab>('full');
   const [activeTab, setActiveTab] = useState<MainTab>('chords');
   const [voicingPage, setVoicingPage] = useState(0);
-  // identifyViewRoot now comes from props as identifyRoot/setIdentifyRoot
+  const [identifyViewName, setIdentifyViewName] = useState<string | null>(null);
 
   const VOICINGS_PER_PAGE = 4;
 
