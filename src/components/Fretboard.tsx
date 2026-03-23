@@ -429,6 +429,7 @@ export default function Fretboard({
   const allPaths = [...persistedPaths, ...(isDragging && dragPath.length >= 2 ? [dragPath] : [])];
 
   const getChordLabel = (note: NoteName, fret: number, stringIndex: number): string => {
+    if (identifyMode && identifyRoot && displayMode === 'degrees') return getIntervalName(identifyRoot, note);
     if (activeChord && displayMode !== 'notes') return getExtendedIntervalName(activeChord.root, note);
     if (displayMode === 'degrees') {
       const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
@@ -736,15 +737,15 @@ export default function Fretboard({
                             style={{
                               width: noteMarkerSize,
                               height: noteMarkerSize,
-                              backgroundColor: identifyMode && identifyFrets[stringIdx] === fret
-                                ? 'hsl(var(--primary))' : style.greyed ? 'hsl(var(--muted))' : style.backgroundColor,
-                              opacity: identifyMode && identifyFrets[stringIdx] === fret ? 1 : style.opacity,
-                              color: identifyMode && identifyFrets[stringIdx] === fret
-                                ? 'hsl(var(--primary-foreground))' : style.greyed ? 'hsl(var(--muted-foreground))' : 'hsl(220, 20%, 8%)',
+                              backgroundColor: style.greyed ? 'hsl(var(--muted))' : style.backgroundColor,
+                              opacity: style.opacity,
+                              color: style.greyed
+                                ? 'hsl(var(--muted-foreground))'
+                                : identifyMode && identifyFrets[stringIdx] === fret && !(degreeColors && identifyRoot)
+                                  ? 'hsl(var(--primary-foreground))'
+                                  : 'hsl(220, 20%, 8%)',
                               fontSize: Math.max(6, noteMarkerSize * 0.35),
-                              ...(identifyMode && identifyFrets[stringIdx] === fret
-                                ? { boxShadow: '0 0 8px hsl(var(--primary))' }
-                                : style.ring ? { boxShadow: `0 0 0 2px ${style.ringColor}` } : {}),
+                              ...(style.ring ? { boxShadow: `0 0 0 2px ${style.ringColor}` } : {}),
                             }}
                           >
                             {label}
