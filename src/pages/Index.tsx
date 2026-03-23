@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useFretboard } from '@/hooks/useFretboard';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import Fretboard from '@/components/Fretboard';
@@ -5,6 +6,7 @@ import ControlPanel from '@/components/ControlPanel';
 import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import type { NoteName } from '@/lib/music';
+import { TUNING_PRESETS, NOTE_NAMES, type TuningPreset } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
