@@ -54,6 +54,7 @@ export function useFretboard() {
   const [cagedShape, setCagedShape] = useState<string>('E');
   const [identifyMode, setIdentifyMode] = useState(false);
   const [identifyFrets, setIdentifyFrets] = useState<(number | -1)[]>([-1, -1, -1, -1, -1, -1]);
+  const [identifyRoot, setIdentifyRoot] = useState<NoteName | null>(null);
 
   const updateNoteColor = useCallback((note: NoteName, color: string) => {
     setNoteColors(prev => ({ ...prev, [note]: color }));
