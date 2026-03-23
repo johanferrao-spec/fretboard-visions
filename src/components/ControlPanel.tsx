@@ -253,10 +253,10 @@ function ModeSelector({
                   <button
                     key={s}
                     onClick={() => handleSelectScale(s)}
-                    className={`w-full text-left px-2 py-1 rounded text-[10px] font-mono transition-colors ${
+                    className={`w-full text-left px-2 py-1 rounded text-[10px] font-mono transition-all border ${
                       value.scale === s
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                        ? 'bg-primary/20 text-primary border-primary/60 shadow-[0_0_8px_hsl(var(--primary)/0.3)] font-bold'
+                        : 'bg-muted/50 text-foreground/80 hover:bg-muted hover:text-foreground border-transparent'
                     }`}
                   >
                     {s}
