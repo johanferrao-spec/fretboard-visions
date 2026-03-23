@@ -77,6 +77,7 @@ export default function Fretboard({
   const widths = fretWidths(maxFrets);
   const [hoveredDiatonic, setHoveredDiatonic] = useState<{ notes: NoteName[]; name: string; root: NoteName } | null>(null);
   const [identifyHover, setIdentifyHover] = useState<{ stringIndex: number; fret: number } | null>(null);
+  const [identifyDrag, setIdentifyDrag] = useState<{ startString: number; fret: number } | null>(null);
 
   // Guided drag arpeggio state
   const [isDragging, setIsDragging] = useState(false);
@@ -95,14 +96,14 @@ export default function Fretboard({
   let acc = 0;
   for (const w of widths) { cumLeft.push(acc); acc += w; }
 
-  // Get chord voicing notes
-  const chordVoicing = activeChord
+  // Get chord voicing data (including barre info)
+  const chordVoicingData = activeChord
     ? (() => {
         const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
-        const v = voicings[activeChord.voicingIndex];
-        return v ? v.frets : null;
+        return voicings[activeChord.voicingIndex] || null;
       })()
     : null;
+  const chordVoicing = chordVoicingData ? chordVoicingData.frets : null;
 
   const chordNoteSet = new Set<string>();
   if (chordVoicing) {
@@ -451,7 +452,7 @@ export default function Fretboard({
   return (
     <div
       className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}
-      onMouseUp={handleDragEnd}
+      onMouseUp={() => { handleDragEnd(); setIdentifyDrag(null); }}
       onDoubleClick={handleDoubleClick}
     >
       <div
@@ -578,7 +579,33 @@ export default function Fretboard({
             </div>
           )}
 
-          {/* Drag arpeggio lines overlay */}
+          {/* Barre chord overlay for chord library */}
+          {chordVoicingData && chordVoicingData.barreFrom != null && chordVoicingData.barreTo != null && chordVoicingData.barreFret != null && (
+            (() => {
+              const bf = chordVoicingData.barreFret!;
+              const fromRow = stringOrder.indexOf(chordVoicingData.barreFrom!);
+              const toRow = stringOrder.indexOf(chordVoicingData.barreTo!);
+              const topRow = Math.min(fromRow, toRow);
+              const bottomRow = Math.max(fromRow, toRow);
+              const barreLeft = cumLeft[bf] || 0;
+              const barreWidth = widths[bf] || 0;
+              return (
+                <div
+                  className="absolute z-15 pointer-events-none rounded-full"
+                  style={{
+                    left: `calc(28px + (100% - 28px) * ${barreLeft + barreWidth * 0.3} / 100)`,
+                    width: `calc((100% - 28px) * ${barreWidth * 0.4} / 100)`,
+                    top: `${(topRow * stringH + stringH * 0.3) / (6 * stringH) * 100}%`,
+                    height: `${((bottomRow - topRow) * stringH + stringH * 0.4) / (6 * stringH) * 100}%`,
+                    backgroundColor: 'hsl(var(--foreground))',
+                    opacity: 0.35,
+                    borderRadius: 6,
+                  }}
+                />
+              );
+            })()
+          )}
+
           {allPaths.map((path, pathIdx) => {
             const pts = getPathLinePoints(path);
             if (pts.length < 2) return null;
@@ -689,13 +716,28 @@ export default function Fretboard({
                         {/* In identify mode, always render a clickable/hoverable target */}
                         {identifyMode && !style && fret > 0 && (
                           <button
-                            onClick={(e) => {
+                            onMouseDown={(e) => {
                               e.stopPropagation();
+                              e.preventDefault();
+                              setIdentifyDrag({ startString: stringIdx, fret });
                               const newFrets = [...identifyFrets];
                               newFrets[stringIdx] = fret;
                               setIdentifyFrets(newFrets);
                             }}
-                            onMouseEnter={() => setIdentifyHover({ stringIndex: stringIdx, fret })}
+                            onMouseEnter={() => {
+                              setIdentifyHover({ stringIndex: stringIdx, fret });
+                              if (identifyDrag && identifyDrag.fret === fret) {
+                                // Barre drag: fill all strings between start and current
+                                const newFrets = [...identifyFrets];
+                                const minS = Math.min(identifyDrag.startString, stringIdx);
+                                const maxS = Math.max(identifyDrag.startString, stringIdx);
+                                for (let s = minS; s <= maxS; s++) {
+                                  newFrets[s] = fret;
+                                }
+                                setIdentifyFrets(newFrets);
+                              }
+                            }}
+                            onMouseUp={() => setIdentifyDrag(null)}
                             onMouseLeave={() => setIdentifyHover(null)}
                             className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold cursor-pointer select-none opacity-0 hover:opacity-50 transition-opacity ${isVertical ? '-rotate-90' : ''}`}
                             style={{
@@ -726,14 +768,31 @@ export default function Fretboard({
                                 onNoteClick(note);
                               }
                             }}
-                            onMouseDown={(e) => { if (!identifyMode) { e.preventDefault(); handleDragStart(stringIdx, fret, note); } }}
+                            onMouseDown={(e) => {
+                              if (identifyMode) {
+                                e.preventDefault();
+                                setIdentifyDrag({ startString: stringIdx, fret });
+                              } else {
+                                e.preventDefault(); handleDragStart(stringIdx, fret, note);
+                              }
+                            }}
                             onMouseEnter={() => {
                               if (identifyMode) {
                                 setIdentifyHover({ stringIndex: stringIdx, fret });
+                                if (identifyDrag && identifyDrag.fret === fret) {
+                                  const newFrets = [...identifyFrets];
+                                  const minS = Math.min(identifyDrag.startString, stringIdx);
+                                  const maxS = Math.max(identifyDrag.startString, stringIdx);
+                                  for (let s = minS; s <= maxS; s++) {
+                                    newFrets[s] = fret;
+                                  }
+                                  setIdentifyFrets(newFrets);
+                                }
                               } else {
                                 handleDragEnter(stringIdx, fret, note); handleNoteHover(note);
                               }
                             }}
+                            onMouseUp={() => { if (identifyMode) setIdentifyDrag(null); }}
                             onMouseLeave={() => {
                               if (identifyMode) setIdentifyHover(null);
                               else if (!isDragging) setHoveredDiatonic(null);

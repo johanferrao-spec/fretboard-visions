@@ -413,9 +413,9 @@ function IdentifyPanel({
           const fret = frets[i];
           const note = fret >= 0 ? noteAtFret(i, fret) : null;
           // Determine degree color if a chord interpretation is selected
-          let cellBg = fret >= 0 ? 'hsl(var(--primary) / 0.2)' : 'hsl(var(--muted) / 0.5)';
+          let cellBg = fret >= 0 ? 'hsl(var(--primary) / 0.2)' : 'hsl(var(--destructive) / 0.15)';
           let cellText = fret >= 0 ? 'hsl(var(--primary))' : 'hsl(var(--destructive))';
-          let cellBorder = fret >= 0 ? 'hsl(var(--primary) / 0.3)' : 'hsl(var(--destructive) / 0.4)';
+          let cellBorder = fret >= 0 ? 'hsl(var(--primary) / 0.3)' : 'hsl(var(--destructive) / 0.5)';
           if (fret >= 0 && note && currentRoot && degreeColors) {
             const interval = getIntervalName(currentRoot, note);
             const degColor = DEGREE_COLORS[interval];
@@ -433,11 +433,14 @@ function IdentifyPanel({
                 nf[i] = fret === -1 ? 0 : -1;
                 setFrets(nf);
               }}
-              className="rounded text-[9px] font-mono px-1.5 py-0.5 transition-colors border"
+              className="rounded text-[11px] font-mono font-bold transition-colors border flex items-center justify-center"
               style={{
+                width: 32,
+                height: 28,
                 backgroundColor: cellBg,
                 color: cellText,
                 borderColor: cellBorder,
+                borderWidth: fret === -1 ? 2 : 1,
               }}
             >
               {fret === -1 ? 'X' : `${note}${fret}`}
@@ -446,13 +449,13 @@ function IdentifyPanel({
         })}
         <button
           onClick={() => { setFrets([-1, -1, -1, -1, -1, -1]); setViewRoot(null); }}
-          className="px-2 py-0.5 rounded text-[9px] font-mono text-muted-foreground bg-muted/30 hover:bg-muted/50 transition-colors"
+          className="px-2 py-1 rounded text-[9px] font-mono text-muted-foreground bg-muted/30 hover:bg-muted/50 transition-colors"
         >Clear</button>
         {frets.some(f => f >= 0) && (
           <button
             onClick={handleCopy}
             title="Copy tab"
-            className="px-2 py-0.5 rounded text-[9px] font-mono text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+            className="px-2 py-1 rounded text-[9px] font-mono text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
           >{copied ? '✓' : tabStr}</button>
         )}
       </div>
@@ -513,7 +516,16 @@ function IdentifyPanel({
                 </div>
               )}
 
-              {selectedResult.explanations.map((exp, j) => (
+              {/* Chord-specific description */}
+              {(() => {
+                const match = viewRoot?.match(/^([A-G]#?)(.*?)(?:\/.*)?$/);
+                const suffix = match ? match[2] : '';
+                const desc = getChordTypeDescription(suffix);
+                return desc ? (
+                  <div className="text-[10px] font-mono text-foreground/80 mt-1 leading-relaxed">{desc}</div>
+                ) : null;
+              })()}
+              {selectedResult.explanations.length > 0 && selectedResult.explanations.map((exp, j) => (
                 <div key={j} className="text-[10px] font-mono text-muted-foreground mt-0.5 leading-relaxed">{exp}</div>
               ))}
               <div className="text-[10px] font-mono text-muted-foreground mt-2">
@@ -560,6 +572,41 @@ function getChordStructureDescription(chordType: string, source: string): string
     'Power (5)': 'R-5',
   };
   return descriptions[chordType] || chordType;
+}
+
+function getChordTypeDescription(suffix: string): string {
+  const descriptions: Record<string, string> = {
+    '': 'Major triad — the bright, stable foundation of Western harmony. Built from root, major 3rd, and perfect 5th.',
+    'm': 'Minor triad — darker, more melancholic than major. Uses a flatted 3rd for a sad or introspective quality.',
+    'dim': 'Diminished triad — tense and unstable, with a flatted 3rd and flatted 5th. Wants to resolve.',
+    'aug': 'Augmented triad — mysterious and unresolved, with a raised 5th creating a symmetrical structure.',
+    'sus2': 'Suspended 2nd — the 3rd is replaced by a 2nd, creating an open, ambiguous sound. Neither major nor minor.',
+    'sus4': 'Suspended 4th — the 3rd is replaced by a 4th, creating tension that wants to resolve to major or minor.',
+    'maj7': 'Major 7th — lush and jazzy, adding the major 7th to a major triad. Common in jazz, R&B, and bossa nova.',
+    'm7': 'Minor 7th — smooth and mellow, combining minor triad with a flatted 7th. Essential jazz voicing.',
+    '7': 'Dominant 7th — bluesy tension from the flatted 7th over a major triad. Drives resolution to the tonic.',
+    'dim7': 'Diminished 7th — maximally tense with stacked minor 3rds. Symmetrical — only 3 unique transpositions exist.',
+    'm7♭5': 'Half-diminished 7th — a diminished triad with a minor 7th. The ii chord in minor key ii-V-i progressions.',
+    'mMaj7': 'Minor-major 7th — haunting combination of minor triad with major 7th. Used in film noir and dramatic passages.',
+    'aug7': 'Augmented 7th — dominant 7th with raised 5th. Creates strong altered dominant tension.',
+    'add9': 'Add 9 — a triad with an added 9th (no 7th). Bright, shimmering sound popular in pop and rock.',
+    'maj9': 'Major 9th — extends major 7th with the 9th. Very lush, sophisticated jazz harmony.',
+    'm9': 'Minor 9th — minor 7th extended with the 9th. Smooth, neo-soul quality.',
+    '9': 'Dominant 9th — dominant 7th with added 9th. Funky, soulful sound essential in R&B and funk.',
+    '6': 'Major 6th — major triad with added 6th. Warm, vintage sound used in swing jazz and country.',
+    'm6': 'Minor 6th — minor triad with major 6th. Bittersweet quality, used in jazz and bossa nova.',
+    '7sus4': 'Dominant 7th sus4 — suspended 4th with a flatted 7th. Creates floating, unresolved tension.',
+    '7#9': 'The "Hendrix chord" — dominant 7th with a sharp 9th. Gritty, bluesy, psychedelic rock staple.',
+    '7♭9': 'Dominant 7th flat 9 — dark altered dominant used in jazz. Strong pull toward minor resolution.',
+    '7#5': 'Dominant 7th sharp 5 — altered dominant with augmented 5th. Tense, wants to resolve.',
+    '7♭5': 'Dominant 7th flat 5 — tritone substitution chord. The ♭5 creates maximum harmonic tension.',
+    '11': 'Dominant 11th — stacked extensions creating a thick, modern sound. Often voiced without the 3rd.',
+    'm11': 'Minor 11th — rich minor extension. The 11th adds openness to the minor 7th foundation.',
+    '13': 'Dominant 13th — full extended dominant. The 13th adds color while maintaining dominant function.',
+    'm13': 'Minor 13th — lush minor extension with the major 6th/13th on top. Complex, sophisticated.',
+    '5': 'Power chord — just root and 5th. Neither major nor minor. The backbone of rock and metal.',
+  };
+  return descriptions[suffix] || '';
 }
 
 function MiniChordDiagram({ voicing, root, showDegrees = false }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean }) {
