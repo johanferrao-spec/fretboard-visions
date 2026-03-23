@@ -125,6 +125,10 @@ const Index = () => {
               fretBoxSize={fb.fretBoxSize}
               setFretBoxStart={fb.setFretBoxStart}
               setFretBoxSize={fb.setFretBoxSize}
+              fretBoxStringStart={fb.fretBoxStringStart}
+              fretBoxStringSize={fb.fretBoxStringSize}
+              setFretBoxStringStart={fb.setFretBoxStringStart}
+              setFretBoxStringSize={fb.setFretBoxStringSize}
               noteMarkerSize={fb.noteMarkerSize}
               degreeColors={fb.degreeColors}
               setDegreeColors={fb.setDegreeColors}
