@@ -873,9 +873,26 @@ export function getCAGEDPositions(root: NoteName): { shape: CAGEDShape; startFre
 // UTILITY FUNCTIONS
 // ============================================================
 
-export function noteAtFret(stringIndex: number, fret: number): NoteName {
-  const openNote = STANDARD_TUNING[stringIndex];
+export function noteAtFret(stringIndex: number, fret: number, tuning: number[] = STANDARD_TUNING): NoteName {
+  const openNote = tuning[stringIndex];
   return NOTE_NAMES[(openNote + fret) % 12];
+}
+
+/** Check if a chord voicing is playable in a given tuning by verifying notes match expected chord tones */
+export function isVoicingPlayableInTuning(voicing: ChordVoicing, root: NoteName, chordType: string, tuning: number[]): boolean {
+  const formula = CHORD_FORMULAS[chordType];
+  if (!formula) return false;
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  const chordTones = new Set(formula.map(i => (rootIdx + i) % 12));
+  
+  for (let s = 0; s < 6; s++) {
+    const f = voicing.frets[s];
+    if (f >= 0) {
+      const notePC = (tuning[s] + f) % 12;
+      if (!chordTones.has(notePC)) return false;
+    }
+  }
+  return true;
 }
 
 export function getScaleNotes(root: NoteName, scaleName: string): NoteName[] {

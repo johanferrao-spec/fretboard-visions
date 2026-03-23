@@ -136,6 +136,8 @@ export function useFretboard() {
     identifyMode, setIdentifyMode,
     identifyFrets, setIdentifyFrets,
     identifyRoot, setIdentifyRoot,
+    tuning, tuningName, tuningLabels, setTuning,
+    customTunings, setCustomTunings,
     clearFretboard,
   };
 }
