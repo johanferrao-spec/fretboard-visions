@@ -85,7 +85,38 @@ const Index = () => {
               {fb.displayMode === 'notes' ? '♪ Notes' : fb.displayMode === 'degrees' ? '° Degrees' : '✋ Fingers'}
             </button>
 
-            {/* Degrees active toggle removed — now lives in fretboard key legend */}
+            {/* Tuning dropdown */}
+            <div className="relative">
+              <select
+                value={fb.tuningName}
+                onChange={e => {
+                  const name = e.target.value;
+                  if (name === '__custom__') {
+                    setShowCustomTuning(true);
+                    return;
+                  }
+                  const allTunings = [...TUNING_PRESETS, ...fb.customTunings];
+                  const preset = allTunings.find(t => t.name === name);
+                  if (preset) fb.setTuning(preset);
+                }}
+                className="bg-secondary text-secondary-foreground text-[10px] font-mono uppercase tracking-wider rounded-md px-2 py-1 border border-border"
+              >
+                {[...TUNING_PRESETS, ...fb.customTunings].map(t => (
+                  <option key={t.name} value={t.name}>{t.name}</option>
+                ))}
+                <option value="__custom__">+ Custom...</option>
+              </select>
+            </div>
+
+            {/* Marker size slider */}
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground uppercase">Size:</span>
+              <input
+                type="range" min={12} max={32} value={fb.noteMarkerSize}
+                onChange={e => fb.setNoteMarkerSize(Number(e.target.value))}
+                className="w-16 accent-primary"
+              />
+            </div>
 
             {/* Fret count */}
             <div className="flex items-center gap-1 ml-auto">
