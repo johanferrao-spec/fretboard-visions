@@ -175,6 +175,19 @@ export default function Fretboard({
   }
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
+    // In identify mode, only show notes that have been clicked
+    if (identifyMode) {
+      if (identifyFrets[stringIndex] === fret) {
+        let bg = pColor;
+        if (degreeColors) {
+          const dc = getDegreeColor(primaryScale.root, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: 'hsl(var(--primary))', opacity: 1, ring: false, ringColor: '', greyed: false };
+      }
+      return null;
+    }
+
     if (activeChord) {
       if (!chordNoteSet.has(`${stringIndex}-${fret}`)) return null;
       let bg = pColor;
