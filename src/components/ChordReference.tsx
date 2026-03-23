@@ -23,6 +23,8 @@ interface ChordReferenceProps {
   degreeColors: boolean;
   identifyRoot: NoteName | null;
   setIdentifyRoot: (v: NoteName | null) => void;
+  tuning: number[];
+  tuningLabels: string[];
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
