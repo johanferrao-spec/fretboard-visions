@@ -678,15 +678,21 @@ export default function Fretboard({
                             onMouseLeave={() => { if (!isDragging && !identifyMode) setHoveredDiatonic(null); }}
                             className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold transition-all duration-150 hover:scale-110 active:scale-95 shadow-md cursor-pointer select-none ${
                               style.ring ? 'ring-2' : ''
-                            } ${isVertical ? '-rotate-90' : ''}`}
+                            } ${isVertical ? '-rotate-90' : ''} ${
+                              identifyMode && identifyFrets[stringIdx] === fret ? 'ring-2 ring-primary' : ''
+                            }`}
                             style={{
                               width: noteMarkerSize,
                               height: noteMarkerSize,
-                              backgroundColor: style.greyed ? 'hsl(var(--muted))' : style.backgroundColor,
-                              opacity: style.opacity,
-                              color: style.greyed ? 'hsl(var(--muted-foreground))' : 'hsl(220, 20%, 8%)',
+                              backgroundColor: identifyMode && identifyFrets[stringIdx] === fret
+                                ? 'hsl(var(--primary))' : style.greyed ? 'hsl(var(--muted))' : style.backgroundColor,
+                              opacity: identifyMode && identifyFrets[stringIdx] === fret ? 1 : style.opacity,
+                              color: identifyMode && identifyFrets[stringIdx] === fret
+                                ? 'hsl(var(--primary-foreground))' : style.greyed ? 'hsl(var(--muted-foreground))' : 'hsl(220, 20%, 8%)',
                               fontSize: Math.max(6, noteMarkerSize * 0.35),
-                              ...(style.ring ? { boxShadow: `0 0 0 2px ${style.ringColor}` } : {}),
+                              ...(identifyMode && identifyFrets[stringIdx] === fret
+                                ? { boxShadow: '0 0 8px hsl(var(--primary))' }
+                                : style.ring ? { boxShadow: `0 0 0 2px ${style.ringColor}` } : {}),
                             }}
                           >
                             {label}
