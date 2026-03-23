@@ -334,8 +334,17 @@ function ChordLibraryPanel({
                         }`}
                       >
                         <MiniChordDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} />
-                        <div className="text-[7px] font-mono text-muted-foreground text-center">
-                          {v.frets.map(f => f === -1 ? 'x' : f).join('')}
+                        <div className="flex items-center justify-center gap-0.5">
+                          <span className="text-[7px] font-mono text-muted-foreground">
+                            {v.frets.map(f => f === -1 ? 'x' : f).join('')}
+                          </span>
+                          {isActive && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleLibCopy(v); }}
+                              className="text-[7px] font-mono text-primary hover:text-primary/80 transition-colors"
+                              title="Copy tab"
+                            >{libCopied ? '✓' : '⎘'}</button>
+                          )}
                         </div>
                       </button>
                     );
