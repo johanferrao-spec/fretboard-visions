@@ -579,7 +579,33 @@ export default function Fretboard({
             </div>
           )}
 
-          {/* Drag arpeggio lines overlay */}
+          {/* Barre chord overlay for chord library */}
+          {chordVoicingData && chordVoicingData.barreFrom != null && chordVoicingData.barreTo != null && chordVoicingData.barreFret != null && (
+            (() => {
+              const bf = chordVoicingData.barreFret!;
+              const fromRow = stringOrder.indexOf(chordVoicingData.barreFrom!);
+              const toRow = stringOrder.indexOf(chordVoicingData.barreTo!);
+              const topRow = Math.min(fromRow, toRow);
+              const bottomRow = Math.max(fromRow, toRow);
+              const barreLeft = cumLeft[bf] || 0;
+              const barreWidth = widths[bf] || 0;
+              return (
+                <div
+                  className="absolute z-15 pointer-events-none rounded-full"
+                  style={{
+                    left: `calc(28px + (100% - 28px) * ${barreLeft + barreWidth * 0.3} / 100)`,
+                    width: `calc((100% - 28px) * ${barreWidth * 0.4} / 100)`,
+                    top: `${(topRow * stringH + stringH * 0.3) / (6 * stringH) * 100}%`,
+                    height: `${((bottomRow - topRow) * stringH + stringH * 0.4) / (6 * stringH) * 100}%`,
+                    backgroundColor: 'hsl(var(--foreground))',
+                    opacity: 0.35,
+                    borderRadius: 6,
+                  }}
+                />
+              );
+            })()
+          )}
+
           {allPaths.map((path, pathIdx) => {
             const pts = getPathLinePoints(path);
             if (pts.length < 2) return null;
