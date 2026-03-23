@@ -95,14 +95,14 @@ export default function Fretboard({
   let acc = 0;
   for (const w of widths) { cumLeft.push(acc); acc += w; }
 
-  // Get chord voicing notes
-  const chordVoicing = activeChord
+  // Get chord voicing data (including barre info)
+  const chordVoicingData = activeChord
     ? (() => {
         const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
-        const v = voicings[activeChord.voicingIndex];
-        return v ? v.frets : null;
+        return voicings[activeChord.voicingIndex] || null;
       })()
     : null;
+  const chordVoicing = chordVoicingData ? chordVoicingData.frets : null;
 
   const chordNoteSet = new Set<string>();
   if (chordVoicing) {
