@@ -52,7 +52,7 @@ export default function ChordReference({
   identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets,
   degreeColors, identifyRoot, setIdentifyRoot,
   tuning, tuningLabels,
-  timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale,
+  timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, keyMode,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
