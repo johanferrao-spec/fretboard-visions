@@ -37,6 +37,7 @@ const Index = () => {
 
   const handlePlay = () => {
     timeline.setIsPlaying(true);
+    midi.setVolume(volume);
     midi.play(
       timeline.chords,
       timeline.measures,
@@ -45,6 +46,11 @@ const Index = () => {
       (beat) => timeline.setCurrentBeat(beat),
       () => timeline.setIsPlaying(false),
     );
+  };
+
+  const handleVolumeChange = (v: number) => {
+    setVolume(v);
+    midi.setVolume(v);
   };
 
   const handleStop = () => {
