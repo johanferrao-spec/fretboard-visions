@@ -168,7 +168,7 @@ export default function SongTimeline({
 
   // Get color for a chord based on its degree in the key
   const getChordColor = (chord: TimelineChord): string => {
-    const degree = getChordDegree(timelineKey, chord.root, chord.chordType);
+    const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
     if (degree >= 0) return SCALE_DEGREE_COLORS[degree];
     return '220, 15%, 50%';
   };
