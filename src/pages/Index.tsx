@@ -45,10 +45,7 @@ const Index = () => {
       timeline.bpm,
       timeline.genre,
       (beat) => timeline.setCurrentBeat(beat),
-      () => {
-        // Loop: restart from beginning
-        handlePlay();
-      },
+      () => timeline.setIsPlaying(false),
     );
   };
 
