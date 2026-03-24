@@ -189,6 +189,33 @@ export default function SongTimeline({
           {isPlaying ? <Square size={14} /> : <Play size={14} />}
         </button>
 
+        {/* Volume slider — grows taller with volume, green→red, glowing */}
+        <div className="flex items-center gap-1" title={`Volume: ${Math.round(volume * 100)}%`}>
+          <span className="text-[9px] font-mono text-muted-foreground">🔊</span>
+          <div className="relative flex items-end" style={{ width: 48 }}>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={volume * 100}
+              onChange={e => onVolumeChange(Number(e.target.value) / 100)}
+              className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
+              style={{ height: 24 }}
+            />
+            <div
+              className="rounded-sm transition-all duration-150"
+              style={{
+                width: '100%',
+                height: Math.max(4, 4 + volume * 18),
+                background: `linear-gradient(90deg, hsl(120, 70%, 45%) 0%, hsl(${60 - volume * 60}, ${70 + volume * 20}%, ${45 + volume * 10}%) ${volume * 100}%, hsl(220, 10%, 25%) ${volume * 100}%)`,
+                boxShadow: volume > 0.7
+                  ? `0 0 ${6 + (volume - 0.7) * 30}px hsl(${Math.max(0, 30 - volume * 40)}, 80%, 50%, ${0.3 + volume * 0.4})`
+                  : `0 0 4px hsl(120, 70%, 45%, ${volume * 0.4})`,
+              }}
+            />
+          </div>
+        </div>
+
         <div className="flex items-center gap-1">
           <Music size={12} className="text-muted-foreground" />
           <span className="text-[10px] font-mono text-muted-foreground uppercase">BPM</span>
@@ -196,7 +223,7 @@ export default function SongTimeline({
             type="number"
             value={bpm}
             onChange={e => setBpm(Math.max(40, Math.min(300, Number(e.target.value))))}
-            className="w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
+            className="w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
           />
         </div>
 
@@ -205,7 +232,7 @@ export default function SongTimeline({
           <select
             value={timelineKey}
             onChange={e => setTimelineKey(e.target.value as NoteName)}
-            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border border-border appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
+            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
           >
             {NOTE_NAMES.map(n => <option key={n} value={n}>{n} Major</option>)}
           </select>
@@ -216,7 +243,7 @@ export default function SongTimeline({
           <select
             value={genre}
             onChange={e => setGenre(e.target.value as Genre)}
-            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border border-border appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
+            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
           >
             <option value="Rock">Rock</option>
             <option value="Pop">Pop</option>
@@ -243,7 +270,7 @@ export default function SongTimeline({
             type="number"
             value={measures}
             onChange={e => setMeasures(Math.max(1, Math.min(32, Number(e.target.value))))}
-            className="w-10 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
+            className="w-10 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
           />
         </div>
 
