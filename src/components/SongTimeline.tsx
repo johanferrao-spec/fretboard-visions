@@ -403,7 +403,7 @@ export default function SongTimeline({
                   e.stopPropagation();
                   onRemoveChord(chord.id);
                 }}
-                title={`${chord.root} ${chord.chordType}${isDiatonic ? ` (${ROMAN_NUMERALS[degree]})` : ' — outside key'} — click for variations, double-click to remove`}
+                title={`${chord.root} ${chord.chordType}${isDiatonic ? ` (${currentNumerals[degree]})` : ' — outside key'} — click for variations, double-click to remove`}
               >
                 <span
                   className="text-[10px] font-mono font-bold px-1.5 truncate"
