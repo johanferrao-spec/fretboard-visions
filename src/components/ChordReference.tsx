@@ -41,6 +41,10 @@ interface ChordReferenceProps {
   keyMode: KeyMode;
   onSeekToChord?: (beat: number) => void;
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
+  arpOverlayOpacity: number;
+  setArpOverlayOpacity: (v: number) => void;
+  arpPathVisible: boolean;
+  setArpPathVisible: (v: boolean) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
