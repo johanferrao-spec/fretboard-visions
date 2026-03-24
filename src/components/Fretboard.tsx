@@ -603,7 +603,7 @@ export default function Fretboard({
                 showFretBox ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
               }`}
             >
-              Box {showFretBox ? 'ON' : 'OFF'}
+              Position focus: {showFretBox ? 'on' : 'off'}
             </button>
           </div>
         </div>
