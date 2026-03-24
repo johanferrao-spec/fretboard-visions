@@ -137,8 +137,8 @@ export default function SongTimeline({
     setVariationPopup({
       chordId: chord.id,
       degree,
-      x: blockRect.left + blockRect.width / 2 - gridRect.left,
-      y: blockRect.top - gridRect.top,
+      x: blockRect.left + blockRect.width / 2,
+      y: blockRect.top,
     });
   }, [timelineKey]);
 
