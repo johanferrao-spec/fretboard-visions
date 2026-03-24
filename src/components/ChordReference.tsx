@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
@@ -11,6 +11,9 @@ import {
 } from '@/lib/music';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
+
+// Natural notes starting from E
+const NATURAL_NOTES: NoteName[] = ['E', 'F', 'G', 'A', 'B', 'C', 'D'];
 
 interface ChordReferenceProps {
   activeChord: ChordSelection | null;
@@ -56,6 +59,102 @@ const CHORD_COLUMNS: { label: string; types: string[] }[] = [
   { label: 'Sus', types: ['Sus2', 'Sus4', '7sus4', 'Power (5)'] },
 ];
 
+// ============================================================
+// ROOT SELECTOR with drag-to-flat/sharp
+// ============================================================
+
+function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteName; setSelectedRoot: (n: NoteName) => void }) {
+  const [baseNote, setBaseNote] = useState<NoteName>(() => {
+    // Find the closest natural note
+    if (NATURAL_NOTES.includes(selectedRoot)) return selectedRoot;
+    const idx = NOTE_NAMES.indexOf(selectedRoot);
+    const flatBase = NOTE_NAMES[(idx + 1) % 12];
+    if (NATURAL_NOTES.includes(flatBase as NoteName)) return flatBase as NoteName;
+    return 'E';
+  });
+  const [accidental, setAccidental] = useState<'natural' | 'sharp' | 'flat'>(() => {
+    if (NATURAL_NOTES.includes(selectedRoot)) return 'natural';
+    const idx = NOTE_NAMES.indexOf(selectedRoot);
+    // Check if selectedRoot is a sharp of some natural note
+    for (const n of NATURAL_NOTES) {
+      const ni = NOTE_NAMES.indexOf(n);
+      if ((ni + 1) % 12 === idx) return 'sharp';
+    }
+    return 'flat';
+  });
+  const dragRef = useRef<{ startX: number; active: boolean } | null>(null);
+
+  const handleNoteClick = (n: NoteName) => {
+    setBaseNote(n);
+    setAccidental('natural');
+    setSelectedRoot(n);
+  };
+
+  const resolveNote = useCallback((base: NoteName, acc: 'natural' | 'sharp' | 'flat'): NoteName => {
+    const idx = NOTE_NAMES.indexOf(base);
+    if (acc === 'sharp') return NOTE_NAMES[(idx + 1) % 12];
+    if (acc === 'flat') return NOTE_NAMES[(idx + 11) % 12];
+    return base;
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    dragRef.current = { startX: e.clientX, active: true };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current?.active) return;
+    const dx = e.clientX - dragRef.current.startX;
+    let newAcc: 'natural' | 'sharp' | 'flat' = 'natural';
+    if (dx > 20) newAcc = 'sharp';
+    else if (dx < -20) newAcc = 'flat';
+    if (newAcc !== accidental) {
+      setAccidental(newAcc);
+      setSelectedRoot(resolveNote(baseNote, newAcc));
+    }
+  };
+
+  const handlePointerUp = () => {
+    dragRef.current = null;
+  };
+
+  return (
+    <div className="mb-2">
+      <div className="flex flex-wrap gap-0.5 items-end">
+        {NATURAL_NOTES.map(n => {
+          const isBase = n === baseNote;
+          return (
+            <div key={n} className="flex flex-col items-center">
+              <button
+                onClick={() => handleNoteClick(n)}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
+                  isBase ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
+                }`}
+              >{n}</button>
+              {isBase && (
+                <div
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  className="mt-0.5 w-10 h-4 rounded border border-border/60 bg-muted/40 flex items-center justify-center cursor-ew-resize select-none touch-none"
+                >
+                  <span className={`text-[8px] font-mono font-bold transition-colors ${
+                    accidental !== 'natural' ? 'text-primary' : 'text-muted-foreground/50'
+                  }`}>
+                    {accidental === 'flat' ? '♭' : accidental === 'sharp' ? '♯' : '—'}
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <span className="text-[7px] font-mono text-muted-foreground/60 ml-1 self-center leading-tight">
+          ← drag ♭ / ♯ →
+        </span>
+      </div>
+    </div>
+  );
+}
 export default function ChordReference({
   activeChord, setActiveChord, showCAGED, setShowCAGED,
   cagedShape, setCagedShape, cagedRoot,
@@ -282,18 +381,7 @@ function ChordLibraryPanel({
 
   return (
     <>
-      {/* Root selector */}
-      <div className="flex flex-wrap gap-0.5 mb-2">
-        {NOTE_NAMES.map(n => (
-          <button
-            key={n}
-            onClick={() => setSelectedRoot(n)}
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
-              n === selectedRoot ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
-            }`}
-          >{n}</button>
-        ))}
-      </div>
+      <RootSelector selectedRoot={selectedRoot} setSelectedRoot={setSelectedRoot} />
 
       {/* Main layout */}
       <div className="flex gap-1.5">
@@ -527,6 +615,24 @@ function PlayingChangesPanel({
     if (!currentChord) return -1;
     return sorted.findIndex(c => c.id === currentChord.id);
   }, [sorted, currentChord]);
+
+  // Arrow key navigation through chords
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (sorted.length === 0 || !onSeekToChord) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const nextIdx = currentIdx < 0 ? 0 : (currentIdx + 1) % sorted.length;
+        onSeekToChord(sorted[nextIdx].startBeat);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prevIdx = currentIdx <= 0 ? sorted.length - 1 : currentIdx - 1;
+        onSeekToChord(sorted[prevIdx].startBeat);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [sorted, currentIdx, onSeekToChord]);
 
   // Next chord wraps around to first chord
   const nextChord = useMemo(() => {
@@ -930,18 +1036,7 @@ function ArpeggioPositionsPanel({
 
   return (
     <>
-      {/* Root selector */}
-      <div className="flex flex-wrap gap-0.5 mb-2">
-        {NOTE_NAMES.map(n => (
-          <button
-            key={n}
-            onClick={() => handleRootChange(n)}
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
-              n === selectedRoot ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
-            }`}
-          >{n}</button>
-        ))}
-      </div>
+      <RootSelector selectedRoot={selectedRoot} setSelectedRoot={(n) => handleRootChange(n)} />
 
       {/* Main layout */}
       <div className="flex gap-1.5">
