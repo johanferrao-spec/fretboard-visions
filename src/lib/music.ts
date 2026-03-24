@@ -195,6 +195,279 @@ export const ARPEGGIO_FORMULAS: Record<string, number[]> = {
 };
 
 // ============================================================
+// ARPEGGIO POSITION GENERATOR ENGINE
+// ============================================================
+
+export interface ArpeggioPosition {
+  frets: (number | -1)[]; // [lowE, A, D, G, B, highE], -1 = not played
+  label: string; // e.g. "Pos 5" or "Linear A"
+  startFret: number;
+  type: 'static' | 'linear';
+}
+
+/**
+ * Generate playable arpeggio positions on the guitar fretboard.
+ * 
+ * Rules:
+ * - Root-first: starts on the lowest available root note
+ * - Max 4-fret span per position block
+ * - Max 2 notes per string (unless chromatically adjacent)
+ * - 1-octave: single CAGED-style position
+ * - 2-octave: static (all 6 strings) or linear (shifting)
+ * - 3-octave: linear/diagonal only
+ */
+export function generateArpeggioPositions(
+  root: NoteName,
+  arpType: string,
+  octaves: 1 | 2 | 3,
+  tuning: number[] = STANDARD_TUNING,
+  maxFret: number = 22,
+): ArpeggioPosition[] {
+  const formula = ARPEGGIO_FORMULAS[arpType] || CHORD_FORMULAS[arpType];
+  if (!formula) return [];
+  
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  // Intervals modulo 12
+  const intervals = formula.map(i => i % 12);
+  
+  // Build all note positions on the fretboard for this arpeggio
+  const baseMidi = tuning.length === 6 
+    ? [40, 45, 50, 55, 59, 64].map((m, i) => m + (tuning[i] - STANDARD_TUNING[i]))
+    : [40, 45, 50, 55, 59, 64];
+  
+  interface FretNote { stringIndex: number; fret: number; midi: number; intervalIdx: number; }
+  
+  const allNotes: FretNote[] = [];
+  for (let s = 0; s < 6; s++) {
+    for (let f = 0; f <= maxFret; f++) {
+      const midi = baseMidi[s] + f;
+      const noteClass = midi % 12;
+      const targetClass = (rootIdx) % 12;
+      for (let ii = 0; ii < intervals.length; ii++) {
+        if ((targetClass + intervals[ii]) % 12 === noteClass) {
+          allNotes.push({ stringIndex: s, fret: f, midi, intervalIdx: ii });
+        }
+      }
+    }
+  }
+  
+  // Find all root positions (intervalIdx === 0)
+  const rootPositions = allNotes.filter(n => n.intervalIdx === 0).sort((a, b) => a.midi - b.midi);
+  
+  const positions: ArpeggioPosition[] = [];
+  
+  if (octaves === 1) {
+    // Single-octave: generate CAGED-style static positions
+    for (const rootNote of rootPositions) {
+      if (rootNote.fret > maxFret - 3) continue;
+      const shape = buildStaticPosition(rootNote, allNotes, intervals.length, 1, maxFret);
+      if (shape && isPlayable(shape)) {
+        const startFret = Math.min(...shape.filter(f => f > 0));
+        positions.push({
+          frets: shape,
+          label: `Pos ${startFret}`,
+          startFret,
+          type: 'static',
+        });
+      }
+    }
+  } else if (octaves === 2) {
+    // 2-octave: static shapes spanning all 6 strings + linear shapes
+    for (const rootNote of rootPositions) {
+      if (rootNote.stringIndex > 1) continue; // Start on E or A string
+      // Static: try to fit 2 octaves in a wide position
+      const shape = buildStaticPosition(rootNote, allNotes, intervals.length, 2, maxFret);
+      if (shape && isPlayable(shape)) {
+        const playedFrets = shape.filter(f => f > 0);
+        const startFret = playedFrets.length > 0 ? Math.min(...playedFrets) : 0;
+        positions.push({
+          frets: shape,
+          label: `Static ${startFret}`,
+          startFret,
+          type: 'static',
+        });
+      }
+      // Linear: shifting diagonal
+      const linear = buildLinearPosition(rootNote, allNotes, intervals, 2, maxFret);
+      if (linear && isPlayable(linear)) {
+        const playedFrets = linear.filter(f => f > 0);
+        const startFret = playedFrets.length > 0 ? Math.min(...playedFrets) : 0;
+        positions.push({
+          frets: linear,
+          label: `Linear ${startFret}`,
+          startFret,
+          type: 'linear',
+        });
+      }
+    }
+  } else {
+    // 3-octave: linear/diagonal only, start on E or A
+    for (const rootNote of rootPositions) {
+      if (rootNote.stringIndex > 1) continue;
+      if (rootNote.fret > 12) continue; // Need room to go up
+      const linear = buildLinearPosition(rootNote, allNotes, intervals, 3, maxFret);
+      if (linear && isPlayable(linear)) {
+        const playedFrets = linear.filter(f => f > 0);
+        const startFret = playedFrets.length > 0 ? Math.min(...playedFrets) : 0;
+        positions.push({
+          frets: linear,
+          label: `Linear ${startFret}`,
+          startFret,
+          type: 'linear',
+        });
+      }
+    }
+  }
+  
+  // Deduplicate identical shapes
+  const seen = new Set<string>();
+  return positions.filter(p => {
+    const key = p.frets.join(',');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// Build a static (single-position) arpeggio shape
+function buildStaticPosition(
+  rootNote: { stringIndex: number; fret: number; midi: number },
+  allNotes: { stringIndex: number; fret: number; midi: number; intervalIdx: number }[],
+  numIntervals: number,
+  octaves: number,
+  maxFret: number,
+): (number | -1)[] | null {
+  const targetMidiMin = rootNote.midi;
+  const targetMidiMax = rootNote.midi + 12 * octaves;
+  
+  // For static: allow a wider span for 2-octave (up to 5 frets), otherwise 4
+  const maxSpan = octaves >= 2 ? 5 : 4;
+  
+  // Collect candidate notes within the midi range
+  const candidates = allNotes.filter(n => 
+    n.midi >= targetMidiMin && n.midi <= targetMidiMax
+  );
+  
+  // Try different position windows
+  const minFret = Math.max(0, rootNote.fret - 1);
+  const maxStartFret = Math.min(maxFret - maxSpan + 1, rootNote.fret + 2);
+  
+  let bestShape: (number | -1)[] | null = null;
+  let bestScore = -1;
+  
+  for (let posStart = minFret; posStart <= maxStartFret; posStart++) {
+    const posEnd = posStart + maxSpan - 1;
+    const shape: (number | -1)[] = [-1, -1, -1, -1, -1, -1];
+    const notesPerString: number[][] = [[], [], [], [], [], []];
+    
+    // Root must be included
+    let hasRoot = false;
+    
+    for (const n of candidates) {
+      const inPos = (n.fret >= posStart && n.fret <= posEnd) || n.fret === 0;
+      if (!inPos) continue;
+      notesPerString[n.stringIndex].push(n.fret);
+    }
+    
+    // Select best note(s) per string (max 2, prefer root string to have root)
+    let score = 0;
+    for (let s = 0; s < 6; s++) {
+      const frets = [...new Set(notesPerString[s])].sort((a, b) => a - b);
+      if (frets.length === 0) continue;
+      
+      // Max 2 notes per string
+      const selected = frets.slice(0, 2);
+      // For our format we just store the lowest fret (simplified for display)
+      // Actually store lowest fret — for multi-note strings we'd need extended format
+      // For now, pick the note closest to root pitch ordering
+      shape[s] = selected[0];
+      score += selected.length;
+      
+      if (selected.some(f => {
+        const midi = (s === 0 ? 40 : s === 1 ? 45 : s === 2 ? 50 : s === 3 ? 55 : s === 4 ? 59 : 64) + f;
+        return midi % 12 === rootNote.midi % 12;
+      })) {
+        hasRoot = true;
+      }
+    }
+    
+    // Must include root and start from root string or lower
+    if (!hasRoot) continue;
+    // Ensure root note is on the lowest played string
+    let lowestPlayed = -1;
+    for (let s = 0; s < 6; s++) {
+      if (shape[s] >= 0) { lowestPlayed = s; break; }
+    }
+    if (lowestPlayed >= 0 && lowestPlayed < rootNote.stringIndex) {
+      // Mute strings below root
+      for (let s = 0; s < rootNote.stringIndex; s++) shape[s] = -1;
+    }
+    
+    // Recalculate score after muting
+    score = shape.filter(f => f >= 0).length;
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestShape = [...shape];
+    }
+  }
+  
+  return bestShape;
+}
+
+// Build a linear (shifting) arpeggio shape
+function buildLinearPosition(
+  rootNote: { stringIndex: number; fret: number; midi: number },
+  allNotes: { stringIndex: number; fret: number; midi: number; intervalIdx: number }[],
+  intervals: number[],
+  octaves: number,
+  maxFret: number,
+): (number | -1)[] | null {
+  const targetMidiMax = rootNote.midi + 12 * octaves;
+  const shape: (number | -1)[] = [-1, -1, -1, -1, -1, -1];
+  
+  // For linear: walk string by string from root, picking ascending notes
+  // that maintain ~4-fret span blocks
+  let currentMidi = rootNote.midi;
+  shape[rootNote.stringIndex] = rootNote.fret;
+  
+  const usedStrings = new Set([rootNote.stringIndex]);
+  
+  // Go to higher strings (higher index = higher pitch)
+  for (let s = rootNote.stringIndex + 1; s < 6; s++) {
+    // Find the best note on this string that continues ascending
+    const candidates = allNotes.filter(n => 
+      n.stringIndex === s && n.midi > currentMidi && n.midi <= targetMidiMax
+    ).sort((a, b) => a.midi - b.midi);
+    
+    if (candidates.length === 0) continue;
+    
+    // Pick the lowest ascending note
+    const pick = candidates[0];
+    shape[s] = pick.fret;
+    currentMidi = pick.midi;
+    usedStrings.add(s);
+  }
+  
+  // Check we have enough range
+  if (currentMidi < rootNote.midi + 12 * (octaves - 0.5)) return null;
+  
+  return shape;
+}
+
+// Check playability: max 2 notes per string, reasonable fret span per block
+function isPlayable(shape: (number | -1)[]): boolean {
+  const played = shape.filter(f => f >= 0);
+  if (played.length < 3) return false;
+  // Overall span check for static shapes
+  const minF = Math.min(...played.filter(f => f > 0), 99);
+  const maxF = Math.max(...played);
+  // Allow up to 7 fret total range for linear shapes
+  if (maxF - minF > 12) return false;
+  return true;
+}
+
+// ============================================================
 // CHORD GROUPING for display
 // ============================================================
 

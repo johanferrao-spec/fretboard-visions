@@ -5,8 +5,9 @@ import {
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
   isVoicingPlayableInTuning, getTensionSuggestions, getChordTones,
   analyzeProgression,
-  SCALE_FORMULAS, ARPEGGIO_FORMULAS,
+  SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
+  type ArpeggioPosition,
 } from '@/lib/music';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
@@ -36,6 +37,7 @@ interface ChordReferenceProps {
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   keyMode: KeyMode;
   onSeekToChord?: (beat: number) => void;
+  onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
@@ -61,7 +63,7 @@ export default function ChordReference({
   degreeColors, identifyRoot, setIdentifyRoot,
   tuning, tuningLabels,
   timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, keyMode,
-  onSeekToChord,
+  onSeekToChord, onSetArpeggioPosition,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
@@ -183,7 +185,7 @@ export default function ChordReference({
           onSeekToChord={onSeekToChord}
         />
       ) : activeTab === 'arpeggios' ? (
-        <ArpeggioPositionsPanel onApplyScale={onApplyScale} />
+        <ArpeggioPositionsPanel onApplyScale={onApplyScale} tuning={tuning} onSetArpeggioPosition={onSetArpeggioPosition} />
       ) : activeTab === 'caged' ? (
         <CAGEDPanel positions={cagedPositions} cagedShape={cagedShape} setCagedShape={setCagedShape} root={cagedRoot} />
       ) : activeTab === 'identify' ? (
@@ -835,27 +837,58 @@ function MiniChordDiagram({ voicing, root, showDegrees = false }: { voicing: Cho
 
 function ArpeggioPositionsPanel({
   onApplyScale,
+  tuning,
+  onSetArpeggioPosition,
 }: {
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
+  tuning: number[];
+  onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
 }) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
   const [selectedArp, setSelectedArp] = useState<string | null>(null);
   const [octaveRange, setOctaveRange] = useState<OctaveRange>(1);
+  const [selectedPosIdx, setSelectedPosIdx] = useState(0);
+
+  const generatedPositions = useMemo(() => {
+    if (!selectedArp) return [];
+    return generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
+  }, [selectedRoot, selectedArp, octaveRange, tuning]);
 
   const handleSelectArp = (arpType: string) => {
     if (selectedArp === arpType) {
       setSelectedArp(null);
+      onSetArpeggioPosition?.(null);
     } else {
       setSelectedArp(arpType);
+      setSelectedPosIdx(0);
       onApplyScale(selectedRoot, arpType, 'arpeggio');
+      const positions = generateArpeggioPositions(selectedRoot, arpType, octaveRange, tuning);
+      if (positions.length > 0) onSetArpeggioPosition?.(positions[0]);
     }
   };
 
   const handleRootChange = (n: NoteName) => {
     setSelectedRoot(n);
+    setSelectedPosIdx(0);
     if (selectedArp) {
       onApplyScale(n, selectedArp, 'arpeggio');
+      const positions = generateArpeggioPositions(n, selectedArp, octaveRange, tuning);
+      onSetArpeggioPosition?.(positions.length > 0 ? positions[0] : null);
     }
+  };
+
+  const handleOctaveChange = (oct: OctaveRange) => {
+    setOctaveRange(oct);
+    setSelectedPosIdx(0);
+    if (selectedArp) {
+      const positions = generateArpeggioPositions(selectedRoot, selectedArp, oct, tuning);
+      onSetArpeggioPosition?.(positions.length > 0 ? positions[0] : null);
+    }
+  };
+
+  const handleSelectPosition = (idx: number) => {
+    setSelectedPosIdx(idx);
+    if (generatedPositions[idx]) onSetArpeggioPosition?.(generatedPositions[idx]);
   };
 
   const splitIntoColumns = (types: string[]) => {
@@ -913,7 +946,7 @@ function ArpeggioPositionsPanel({
       {/* Main layout */}
       <div className="flex gap-1.5">
         {/* Arpeggio columns */}
-        <div className="flex gap-px shrink-0" style={{ width: '52%' }}>
+        <div className="flex gap-px shrink-0" style={{ width: '44%' }}>
           {ARPEGGIO_COLUMNS.map((col, ci) => {
             const isSus = col.label === 'Sus';
             const [col1, col2] = isSus ? [col.types, []] : splitIntoColumns(col.types);
@@ -953,7 +986,7 @@ function ArpeggioPositionsPanel({
             {([1, 2, 3] as OctaveRange[]).map(oct => (
               <button
                 key={oct}
-                onClick={() => setOctaveRange(oct)}
+                onClick={() => handleOctaveChange(oct)}
                 className={`w-full px-1 py-0.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-colors leading-tight ${
                   octaveRange === oct ? 'bg-accent text-accent-foreground font-bold border-accent' : 'text-muted-foreground border-border/40 hover:bg-muted/30'
                 }`}
@@ -961,13 +994,13 @@ function ArpeggioPositionsPanel({
             ))}
           </div>
           <div className="text-[7px] font-mono text-muted-foreground mt-1.5 text-center leading-tight">
-            {octaveRange === 1 && '1 octave span'}
-            {octaveRange === 2 && '2 octave span'}
-            {octaveRange === 3 && '3 octave span'}
+            {octaveRange === 1 && '4-fret span'}
+            {octaveRange === 2 && 'Static + Linear'}
+            {octaveRange === 3 && 'Full neck'}
           </div>
         </div>
 
-        {/* Info panel */}
+        {/* Info + positions panel */}
         <div className="flex-1 min-w-0">
           {selectedArp ? (
             <div className="bg-secondary/20 rounded p-1.5">
@@ -975,54 +1008,96 @@ function ArpeggioPositionsPanel({
               <div className="text-[9px] font-mono text-muted-foreground leading-relaxed mb-2">
                 {getArpDescription(selectedArp)}
               </div>
-              {/* Show arpeggio notes */}
-              <div className="mb-1">
-                <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-0.5">Notes</div>
-                <div className="flex gap-1 flex-wrap">
-                  {(() => {
-                    const formula = ARPEGGIO_FORMULAS[selectedArp];
-                    if (!formula) return null;
-                    const rootIdx = NOTE_NAMES.indexOf(selectedRoot);
-                    const notes = formula.map(interval => NOTE_NAMES[(rootIdx + (interval % 12)) % 12]);
-                    // For multi-octave, repeat
-                    const displayed: string[] = [];
-                    for (let oct = 0; oct < octaveRange; oct++) {
-                      for (const n of notes) {
-                        if (oct === 0 || n !== notes[0] || oct < octaveRange) {
-                          displayed.push(oct > 0 ? `${n}′${'′'.repeat(oct - 1)}` : n);
-                        }
-                      }
-                    }
-                    // Add final root
-                    if (octaveRange > 0) {
-                      displayed.push(`${notes[0]}${'′'.repeat(octaveRange)}`);
-                    }
-                    return displayed.map((n, i) => (
-                      <div
-                        key={i}
-                        className="w-6 h-6 rounded-md flex items-center justify-center text-[8px] font-mono font-bold"
-                        style={{
-                          backgroundColor: 'hsl(var(--primary) / 0.2)',
-                          color: 'hsl(var(--primary))',
-                          border: '1px solid hsl(var(--primary) / 0.4)',
-                        }}
-                      >{n}</div>
-                    ));
-                  })()}
+              
+              {generatedPositions.length > 0 ? (
+                <div>
+                  <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-1">
+                    {generatedPositions.length} Position{generatedPositions.length !== 1 ? 's' : ''}
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 max-h-48 overflow-y-auto">
+                    {generatedPositions.map((pos, i) => {
+                      const isActive = selectedPosIdx === i;
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => handleSelectPosition(i)}
+                          className={`rounded p-0.5 transition-all border ${
+                            isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
+                          }`}
+                        >
+                          <MiniArpDiagram position={pos} root={selectedRoot} />
+                          <div className="flex items-center justify-center gap-0.5">
+                            <span className="text-[7px] font-mono text-muted-foreground">{pos.label}</span>
+                            <span className="text-[6px] font-mono text-muted-foreground/60">{pos.type === 'linear' ? '↗' : '▪'}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-              <div className="text-[8px] font-mono text-muted-foreground mt-1">
-                {octaveRange === 1 ? 'Single octave — 1 position' : octaveRange === 2 ? 'Double octave — spans 2 positions' : 'Triple octave — full neck coverage'}
+              ) : (
+                <div className="text-[8px] font-mono text-muted-foreground text-center py-2">
+                  No positions found for this range
+                </div>
+              )}
+
+              <div className="text-[7px] font-mono text-muted-foreground mt-1.5 leading-tight">
+                {octaveRange === 1 && '4-fret span • Root-first • Single position'}
+                {octaveRange === 2 && 'Static (all strings) + Linear (shifting)'}
+                {octaveRange === 3 && 'Diagonal shapes • E/A string start'}
               </div>
             </div>
           ) : (
             <div className="text-[9px] font-mono text-muted-foreground text-center py-4 leading-relaxed">
-              Select an arpeggio type to see its notes and apply it to the fretboard.
+              Select an arpeggio to generate playable positions.
+              <br /><br />
+              <span className="text-[8px]">• Root-first voicings<br />• Max 4-fret span<br />• Human-playable shapes</span>
             </div>
           )}
         </div>
       </div>
     </>
+  );
+}
+
+// Mini arpeggio position diagram
+function MiniArpDiagram({ position, root }: { position: ArpeggioPosition; root: NoteName }) {
+  const played = position.frets.filter(f => f >= 0);
+  if (played.length === 0) return null;
+  const minFret = Math.min(...played.filter(f => f > 0), 99);
+  const maxFret = Math.max(...played, (minFret === 99 ? 0 : minFret) + 4);
+  const startFret = Math.max(0, minFret === 99 ? 0 : minFret);
+  const numFrets = Math.max(4, maxFret - startFret + 1);
+  const w = 50;
+  const h = 40;
+  const stringSpacing = w / 7;
+  const fretSpacing = (h - 5) / numFrets;
+
+  return (
+    <div className="flex justify-center">
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        {Array.from({ length: numFrets + 1 }, (_, i) => (
+          <line key={i} x1={stringSpacing} y1={5 + i * fretSpacing} x2={stringSpacing * 6} y2={5 + i * fretSpacing} stroke="hsl(var(--border))" strokeWidth={0.5} />
+        ))}
+        {[1, 2, 3, 4, 5, 6].map(s => (
+          <line key={s} x1={s * stringSpacing} y1={5} x2={s * stringSpacing} y2={5 + numFrets * fretSpacing} stroke="hsl(var(--fretboard-string))" strokeWidth={0.5} opacity={0.5} />
+        ))}
+        {startFret > 0 && (
+          <text x={1} y={5 + fretSpacing * 0.6} fontSize={4} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+        )}
+        {position.frets.map((fret, i) => {
+          const x = (i + 1) * stringSpacing;
+          if (fret === -1) return <text key={i} x={x} y={3} fontSize={5} textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="monospace">×</text>;
+          if (fret === 0) return <circle key={i} cx={x} cy={3} r={1.5} fill="none" stroke="hsl(var(--foreground))" strokeWidth={0.5} />;
+          const y = 5 + (fret - startFret + 0.5) * fretSpacing;
+          const note = noteAtFret(i, fret);
+          const interval = getIntervalName(root, note);
+          const degColor = DEGREE_COLORS[interval];
+          const fillColor = degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
+          return <circle key={i} cx={x} cy={y} r={2.5} fill={fillColor} />;
+        })}
+      </svg>
+    </div>
   );
 }
 

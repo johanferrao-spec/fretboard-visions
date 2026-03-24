@@ -9,7 +9,7 @@ import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import type { NoteName } from '@/lib/music';
-import { TUNING_PRESETS, NOTE_NAMES, getChordTones, type TuningPreset, type KeyMode } from '@/lib/music';
+import { TUNING_PRESETS, NOTE_NAMES, getChordTones, type TuningPreset, type KeyMode, type ArpeggioPosition } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
@@ -226,6 +226,7 @@ const Index = () => {
               tuning={fb.tuning}
               tuningLabels={fb.tuningLabels}
               playingChordTones={playingChordTones}
+              arpeggioPosition={fb.arpeggioPosition}
             />
           </div>
 
@@ -257,7 +258,8 @@ const Index = () => {
                 fb.setPrimaryScale({ mode, root, scale });
                 fb.setActiveChord(null);
               }}
-              onSeekToChord={(beat) => handleSeek(beat)}
+               onSeekToChord={(beat) => handleSeek(beat)}
+               onSetArpeggioPosition={fb.setArpeggioPosition}
             />
           </div>
         </main>

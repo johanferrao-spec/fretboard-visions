@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { NoteName, NOTE_NAMES, STANDARD_TUNING, TUNING_PRESETS, type TuningPreset } from '@/lib/music';
+import { NoteName, NOTE_NAMES, STANDARD_TUNING, TUNING_PRESETS, type TuningPreset, type ArpeggioPosition } from '@/lib/music';
 
 export type ScaleMode = 'scale' | 'arpeggio';
 export type DisplayMode = 'notes' | 'degrees' | 'fingers';
@@ -59,6 +59,7 @@ export function useFretboard() {
   const [tuningName, setTuningName] = useState('Standard');
   const [tuningLabels, setTuningLabels] = useState<string[]>(['E', 'A', 'D', 'G', 'B', 'e']);
   const [customTunings, setCustomTunings] = useState<TuningPreset[]>([]);
+  const [arpeggioPosition, setArpeggioPosition] = useState<ArpeggioPosition | null>(null);
 
   const setTuning = useCallback((preset: TuningPreset) => {
     setTuningState(preset.notes);
@@ -100,6 +101,7 @@ export function useFretboard() {
     setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
     setIdentifyRoot(null);
     setNoteMarkerSize(20);
+    setArpeggioPosition(null);
   }, []);
 
   // When enabling dual scale, turn off degree colors by default
@@ -138,6 +140,7 @@ export function useFretboard() {
     identifyRoot, setIdentifyRoot,
     tuning, tuningName, tuningLabels, setTuning,
     customTunings, setCustomTunings,
+    arpeggioPosition, setArpeggioPosition,
     clearFretboard,
   };
 }

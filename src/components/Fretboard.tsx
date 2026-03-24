@@ -3,7 +3,7 @@ import {
   noteAtFret, isNoteInSelection, getIntervalName, getExtendedIntervalName, getDiatonicChord,
   NoteName, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND, INTERVAL_TO_POSITION,
   getVoicingsForChord, getArpeggioSequence, getDiatonicArpeggioType, getMidiNote, findNotePositions,
-  type ChordVoicing,
+  type ChordVoicing, type ArpeggioPosition,
 } from '@/lib/music';
 import type { ScaleSelection, ChordSelection, DisplayMode, Orientation } from '@/hooks/useFretboard';
 
@@ -44,7 +44,8 @@ interface FretboardProps {
   identifyRoot: NoteName | null;
   tuning: number[];
   tuningLabels: string[];
-  playingChordTones?: Set<number>; // note indices (0-11) to highlight during playback
+  playingChordTones?: Set<number>;
+  arpeggioPosition?: ArpeggioPosition | null;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -75,7 +76,7 @@ export default function Fretboard({
   fretBoxStringStart, fretBoxStringSize, setFretBoxStringStart, setFretBoxStringSize,
   noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
   identifyMode, identifyFrets, setIdentifyFrets, identifyRoot,
-  tuning, tuningLabels, playingChordTones,
+  tuning, tuningLabels, playingChordTones, arpeggioPosition,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -115,6 +116,17 @@ export default function Fretboard({
       if (fret >= 0) chordNoteSet.add(`${si}-${fret}`);
     });
   }
+
+  // Arpeggio position note set
+  const arpPositionSet = useMemo(() => {
+    const set = new Set<string>();
+    if (arpeggioPosition) {
+      arpeggioPosition.frets.forEach((fret, si) => {
+        if (fret >= 0) set.add(`${si}-${fret}`);
+      });
+    }
+    return set;
+  }, [arpeggioPosition]);
 
   const pColor = primaryColor || 'hsl(var(--primary))';
   const sColor = secondaryColor || 'hsl(200, 80%, 60%)';
@@ -199,7 +211,35 @@ export default function Fretboard({
       return null;
     }
 
-    if (activeChord) {
+    // Arpeggio position mode: highlight specific fret positions
+    if (arpeggioPosition && arpPositionSet.size > 0 && !activeChord) {
+      const key = `${stringIndex}-${fret}`;
+      if (arpPositionSet.has(key)) {
+        let bg = pColor;
+        if (degreeColors) {
+          // Use arpeggio root for degree colors
+          const arpRoot = (() => {
+            // Find root from the position (first played note that matches root interval)
+            for (let s = 0; s < 6; s++) {
+              if (arpeggioPosition.frets[s] >= 0) {
+                return noteAtFret(s, arpeggioPosition.frets[s], tuning);
+              }
+            }
+            return primaryScale.root;
+          })();
+          const dc = getDegreeColor(arpRoot, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
+      }
+      // Show scale notes dimmed
+      const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
+      if (inPrimary) {
+        return { backgroundColor: pColor, opacity: 0.15, ring: false, ringColor: '', greyed: true };
+      }
+      return null;
+    }
+
       if (!chordNoteSet.has(`${stringIndex}-${fret}`)) return null;
       let bg = pColor;
       if (degreeColors) {
