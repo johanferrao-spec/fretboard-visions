@@ -643,7 +643,7 @@ export default function Fretboard({
             return (
               <svg
                 key={pathIdx}
-                className="absolute inset-0 pointer-events-none z-30"
+                className="absolute inset-0 pointer-events-none z-[5]"
                 style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
                 viewBox={`0 0 100 ${totalH}`}
                 preserveAspectRatio="none"
