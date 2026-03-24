@@ -211,7 +211,35 @@ export default function Fretboard({
       return null;
     }
 
-    if (activeChord) {
+    // Arpeggio position mode: highlight specific fret positions
+    if (arpeggioPosition && arpPositionSet.size > 0 && !activeChord) {
+      const key = `${stringIndex}-${fret}`;
+      if (arpPositionSet.has(key)) {
+        let bg = pColor;
+        if (degreeColors) {
+          // Use arpeggio root for degree colors
+          const arpRoot = (() => {
+            // Find root from the position (first played note that matches root interval)
+            for (let s = 0; s < 6; s++) {
+              if (arpeggioPosition.frets[s] >= 0) {
+                return noteAtFret(s, arpeggioPosition.frets[s], tuning);
+              }
+            }
+            return primaryScale.root;
+          })();
+          const dc = getDegreeColor(arpRoot, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
+      }
+      // Show scale notes dimmed
+      const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
+      if (inPrimary) {
+        return { backgroundColor: pColor, opacity: 0.15, ring: false, ringColor: '', greyed: true };
+      }
+      return null;
+    }
+
       if (!chordNoteSet.has(`${stringIndex}-${fret}`)) return null;
       let bg = pColor;
       if (degreeColors) {
