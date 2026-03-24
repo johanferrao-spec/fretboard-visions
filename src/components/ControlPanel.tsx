@@ -22,11 +22,10 @@ interface ControlPanelProps {
 
 const arpeggioNames = Object.keys(ARPEGGIO_FORMULAS);
 
-// Scale categories with sub-pages
 interface ScaleCategory {
   label: string;
-  scales?: string[]; // direct select (no sub-page)
-  isModesGroup?: boolean; // different color for mode groups
+  scales?: string[];
+  isModesGroup?: boolean;
 }
 
 const SCALE_CATEGORIES: ScaleCategory[] = [
@@ -104,6 +103,7 @@ export default function ControlPanel({
             color={secondaryColor}
             onColorChange={setSecondaryColor}
             condensed={false}
+            hideDescription
           />
           <div>
             <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
@@ -115,20 +115,13 @@ export default function ControlPanel({
               className="w-full mt-1 accent-primary"
             />
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActivePrimary(true)}
-              className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
-                activePrimary ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
-              }`}
-            >Primary Active</button>
-            <button
-              onClick={() => setActivePrimary(false)}
-              className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors ${
-                !activePrimary ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
-              }`}
-            >Secondary Active</button>
-          </div>
+          {/* Single toggle button for active layer */}
+          <button
+            onClick={() => setActivePrimary(!activePrimary)}
+            className="w-full px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors bg-secondary text-secondary-foreground hover:bg-muted"
+          >
+            Active: {activePrimary ? 'Primary' : 'Secondary'}
+          </button>
         </>
       )}
     </div>
@@ -136,7 +129,7 @@ export default function ControlPanel({
 }
 
 function ModeSelector({
-  label, value, onChange, active, color, onColorChange, condensed,
+  label, value, onChange, active, color, onColorChange, condensed, hideDescription,
 }: {
   label: string;
   value: ScaleSelection;
@@ -145,9 +138,10 @@ function ModeSelector({
   color: string;
   onColorChange: (c: string) => void;
   condensed: boolean;
+  hideDescription?: boolean;
 }) {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
-  const description = value.mode === 'scale' ? SCALE_DESCRIPTIONS[value.scale] : undefined;
+  const description = !hideDescription && value.mode === 'scale' ? SCALE_DESCRIPTIONS[value.scale] : undefined;
 
   const handleSelectScale = (scaleName: string) => {
     onChange({ ...value, mode: 'scale', scale: scaleName });
@@ -222,7 +216,7 @@ function ModeSelector({
       <select
         value={value.root}
         onChange={e => onChange({ ...value, root: e.target.value as NoteName })}
-        className="w-full bg-muted text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono mb-2"
+        className="w-full bg-muted text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono mb-2 appearance-none"
       >
         {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
       </select>
@@ -237,14 +231,13 @@ function ModeSelector({
         <select
           value={value.scale}
           onChange={e => onChange({ ...value, scale: e.target.value })}
-          className="w-full bg-muted text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono"
+          className="w-full bg-muted text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono appearance-none"
         >
           {arpeggioNames.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       ) : (
         <div className="space-y-1">
           {openCategory === null ? (
-            /* Category buttons — never highlight folders */
             <div className="grid grid-cols-1 gap-1">
               {SCALE_CATEGORIES.map(cat => {
                 const isDirect = cat.label === 'Major';
@@ -260,7 +253,7 @@ function ModeSelector({
                     }}
                     className={`w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all border border-transparent ${
                       cat.isModesGroup
-                        ? 'bg-accent/20 text-foreground/60 hover:bg-accent/35'
+                        ? 'bg-accent/15 text-foreground/50 hover:bg-accent/30'
                         : 'bg-muted text-foreground/80 hover:bg-muted/80'
                     }`}
                   >
@@ -270,7 +263,6 @@ function ModeSelector({
               })}
             </div>
           ) : (
-            /* Sub-page: show scales in selected category */
             <div className="animate-fade-in">
               <button
                 onClick={() => setOpenCategory(null)}
@@ -298,7 +290,7 @@ function ModeSelector({
         </div>
       )}
 
-      {/* Scale description */}
+      {/* Scale description — hidden in dual mode */}
       {description && (
         <div className="mt-2 text-[9px] font-mono text-muted-foreground leading-relaxed bg-muted/50 rounded p-2">
           {description}
