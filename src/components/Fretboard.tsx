@@ -643,7 +643,7 @@ export default function Fretboard({
             return (
               <svg
                 key={pathIdx}
-                className="absolute inset-0 pointer-events-none z-30"
+                className="absolute inset-0 pointer-events-none z-[5]"
                 style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
                 viewBox={`0 0 100 ${totalH}`}
                 preserveAspectRatio="none"
@@ -657,7 +657,7 @@ export default function Fretboard({
                       x1={prev.x} y1={prev.y * totalH / 100}
                       x2={pt.x} y2={pt.y * totalH / 100}
                       stroke="hsl(280, 70%, 60%)"
-                      strokeWidth={4}
+                      strokeWidth={6}
                       strokeLinecap="round"
                       opacity={0.7}
                       vectorEffect="non-scaling-stroke"
