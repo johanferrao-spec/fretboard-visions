@@ -37,6 +37,7 @@ interface ChordReferenceProps {
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   keyMode: KeyMode;
   onSeekToChord?: (beat: number) => void;
+  onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
