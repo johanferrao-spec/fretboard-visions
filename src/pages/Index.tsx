@@ -250,6 +250,7 @@ const Index = () => {
         onResizeChord={timeline.resizeChord}
         onRemoveChord={timeline.removeChord}
         onClearTimeline={timeline.clearTimeline}
+        onTrimOverlaps={timeline.trimOverlaps}
       />
 
       <NoteInfoPanel

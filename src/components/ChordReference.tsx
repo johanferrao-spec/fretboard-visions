@@ -493,11 +493,33 @@ function IdentifyPanel({
                     <button
                       key={`${i}-${ni}`}
                       onClick={() => setViewRoot(isActive ? null : name)}
-                      className={`inline-flex w-fit max-w-full items-center rounded border px-2 py-1 text-[11px] font-mono font-bold transition-all ${
+                      draggable
+                      onDragStart={(e) => {
+                        const match = name.match(/^([A-G]#?)(.*?)(?:\/.*)?$/);
+                        if (match) {
+                          const root = match[1];
+                          const suffix = match[2];
+                          // Map suffix to chord type
+                          const typeMap: Record<string, string> = {
+                            '': 'Major', 'm': 'Minor', 'dim': 'Diminished', 'aug': 'Augmented',
+                            'maj7': 'Major 7', 'm7': 'Minor 7', '7': 'Dominant 7',
+                            'dim7': 'Dim 7', 'm7♭5': 'Half-Dim 7', 'sus2': 'Sus2', 'sus4': 'Sus4',
+                            'add9': 'Add9', 'mMaj7': 'Min/Maj 7', 'aug7': 'Aug 7',
+                            'maj9': 'Major 9', 'm9': 'Minor 9', '9': 'Dominant 9',
+                            '6': 'Major 6', 'm6': 'Minor 6', '7sus4': '7sus4',
+                            '7#9': '7#9', '7♭9': '7♭9',
+                          };
+                          const chordType = typeMap[suffix] || 'Major';
+                          e.dataTransfer.setData('application/chord', JSON.stringify({ root, chordType }));
+                          e.dataTransfer.effectAllowed = 'copy';
+                        }
+                      }}
+                      className={`inline-flex w-fit max-w-full items-center rounded border px-2 py-1 text-[11px] font-mono font-bold transition-all cursor-grab ${
                         isActive
                           ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]'
                           : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
                       }`}
+                      title="Click to view details, drag to timeline"
                     >
                       {name}
                     </button>
