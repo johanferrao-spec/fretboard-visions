@@ -844,7 +844,7 @@ function ArpeggioPositionsPanel({
   tuning: number[];
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
 }) {
-  const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
+  const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedArp, setSelectedArp] = useState<string | null>(null);
   const [octaveRange, setOctaveRange] = useState<OctaveRange>(1);
   const [selectedPosIdx, setSelectedPosIdx] = useState(0);
