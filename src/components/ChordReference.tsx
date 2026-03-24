@@ -182,6 +182,8 @@ export default function ChordReference({
           onApplyScale={onApplyScale}
           onSeekToChord={onSeekToChord}
         />
+      ) : activeTab === 'arpeggios' ? (
+        <ArpeggioPositionsPanel onApplyScale={onApplyScale} />
       ) : activeTab === 'caged' ? (
         <CAGEDPanel positions={cagedPositions} cagedShape={cagedShape} setCagedShape={setCagedShape} root={cagedRoot} />
       ) : activeTab === 'identify' ? (
@@ -204,7 +206,7 @@ export default function ChordReference({
           tuningLabels={tuningLabels}
           tuning={tuning}
         />
-      ) : (
+      ) : activeTab === 'chords' ? (
         <ChordLibraryPanel
           selectedRoot={selectedRoot}
           setSelectedRoot={(n) => { setSelectedRoot(n); setSelectedChord(null); setActiveChord(null); setVoicingPage(0); }}
