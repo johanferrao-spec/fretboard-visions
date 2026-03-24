@@ -1238,13 +1238,16 @@ export const SCALE_DEGREE_COLORS = [
   '30, 90%, 55%',    // VII - orange
 ];
 
-export const ROMAN_NUMERALS = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+export const ROMAN_NUMERALS_MAJOR = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+export const ROMAN_NUMERALS_MINOR = ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'];
+export const ROMAN_NUMERALS = ROMAN_NUMERALS_MAJOR; // backward compat
 
 // Major scale intervals for building diatonic chords
 const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
+const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10];
 
 // Diatonic chord qualities in a major key
-const DIATONIC_QUALITIES: { type: string; symbol: string }[] = [
+const DIATONIC_QUALITIES_MAJOR: { type: string; symbol: string }[] = [
   { type: 'Major', symbol: '' },
   { type: 'Minor', symbol: 'm' },
   { type: 'Minor', symbol: 'm' },
@@ -1253,6 +1256,20 @@ const DIATONIC_QUALITIES: { type: string; symbol: string }[] = [
   { type: 'Minor', symbol: 'm' },
   { type: 'Diminished', symbol: '°' },
 ];
+
+const DIATONIC_QUALITIES_MINOR: { type: string; symbol: string }[] = [
+  { type: 'Minor', symbol: 'm' },
+  { type: 'Diminished', symbol: '°' },
+  { type: 'Major', symbol: '' },
+  { type: 'Minor', symbol: 'm' },
+  { type: 'Minor', symbol: 'm' },
+  { type: 'Major', symbol: '' },
+  { type: 'Major', symbol: '' },
+];
+
+const DIATONIC_QUALITIES = DIATONIC_QUALITIES_MAJOR; // backward compat
+
+export type KeyMode = 'major' | 'minor';
 
 export interface DiatonicChord {
   degree: number; // 0-6
