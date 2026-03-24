@@ -1505,19 +1505,3 @@ export function getChordTones(root: NoteName, chordType: string): number[] {
   const rootIdx = NOTE_NAMES.indexOf(root);
   return formula.map(interval => (rootIdx + (interval % 12)) % 12);
 }
-  const interval = (rootIndex - keyIndex + 12) % 12;
-  
-  for (let d = 0; d < MAJOR_SCALE.length; d++) {
-    if (MAJOR_SCALE[d] === interval) {
-      const expected = DIATONIC_QUALITIES[d];
-      // Check if quality matches (loose — Major includes dom7, etc.)
-      if (expected.type === chordType) return d;
-      if (expected.type === 'Major' && ['Major 7', 'Dominant 7', 'Add9', 'Sus2', 'Sus4', 'Major 6', 'Major 9', 'Dominant 9', '7sus4'].includes(chordType)) return d;
-      if (expected.type === 'Minor' && ['Minor 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'].includes(chordType)) return d;
-      if (expected.type === 'Diminished' && ['Dim 7', 'Half-Dim 7'].includes(chordType)) return d;
-      // Return degree even if quality doesn't match perfectly but root does
-      return d;
-    }
-  }
-  return -1;
-}
