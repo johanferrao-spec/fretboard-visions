@@ -455,14 +455,15 @@ function IdentifyPanel({
         <div className="space-y-1">
           <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Possible chords:</div>
           {results.map((r, i) => {
-            const isViewed = viewRoot === r.name;
+              const displayName = r.names?.[0] || '?';
+              const isViewed = viewRoot === displayName;
             return (
               <button
                 key={i}
-                onClick={() => setViewRoot(isViewed ? null : r.name)}
+                onClick={() => setViewRoot(isViewed ? null : displayName)}
                 draggable
                 onDragStart={(e) => {
-                  const match = r.name.match(/^([A-G]#?)\s*(.*)/);
+                  const match = displayName.match(/^([A-G]#?)\s*(.*)/);
                   if (match) {
                     e.dataTransfer.setData('application/chord', JSON.stringify({ root: match[1], chordType: match[2] || 'Major' }));
                     e.dataTransfer.effectAllowed = 'copy';
@@ -474,7 +475,7 @@ function IdentifyPanel({
                     : 'bg-muted/40 border-border/30 text-foreground/80 hover:bg-muted/60'
                 }`}
               >
-                <div className="font-bold">{r.name}</div>
+                <div className="font-bold">{displayName}</div>
                 {r.notes && <div className="text-[8px] text-muted-foreground">{r.notes.join(' — ')}</div>}
               </button>
             );
