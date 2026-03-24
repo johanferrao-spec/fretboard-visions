@@ -232,7 +232,7 @@ export default function Fretboard({
           const dc = getDegreeColor(arpRoot, note);
           if (dc) bg = dc;
         }
-        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
+        return { backgroundColor: bg, opacity: arpOverlayOpacity, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
       }
       // Show scale notes dimmed
       const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
