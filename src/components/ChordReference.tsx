@@ -224,7 +224,7 @@ export default function ChordReference({
           degreeColors={degreeColors}
           tuning={tuning}
         />
-      )}
+      ) : null}
     </div>
   );
 }
