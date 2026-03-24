@@ -829,6 +829,203 @@ function MiniChordDiagram({ voicing, root, showDegrees = false }: { voicing: Cho
   );
 }
 
+// ============================================================
+// ARPEGGIO POSITIONS PANEL
+// ============================================================
+
+function ArpeggioPositionsPanel({
+  onApplyScale,
+}: {
+  onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
+}) {
+  const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
+  const [selectedArp, setSelectedArp] = useState<string | null>(null);
+  const [octaveRange, setOctaveRange] = useState<OctaveRange>(1);
+
+  const handleSelectArp = (arpType: string) => {
+    if (selectedArp === arpType) {
+      setSelectedArp(null);
+    } else {
+      setSelectedArp(arpType);
+      onApplyScale(selectedRoot, arpType, 'arpeggio');
+    }
+  };
+
+  const handleRootChange = (n: NoteName) => {
+    setSelectedRoot(n);
+    if (selectedArp) {
+      onApplyScale(n, selectedArp, 'arpeggio');
+    }
+  };
+
+  const splitIntoColumns = (types: string[]) => {
+    const mid = Math.ceil(types.length / 2);
+    return [types.slice(0, mid), types.slice(mid)];
+  };
+
+  const getArpDescription = (arpType: string): string => {
+    const descs: Record<string, string> = {
+      'Major': 'R-3-5 — bright, stable triad',
+      'Minor': 'R-♭3-5 — dark, melancholic triad',
+      'Diminished': 'R-♭3-♭5 — tense, unstable',
+      'Augmented': 'R-3-#5 — symmetric, unresolved',
+      'Sus2': 'R-2-5 — open, ambiguous',
+      'Sus4': 'R-4-5 — suspended tension',
+      'Major 7': 'R-3-5-7 — lush, jazzy',
+      'Minor 7': 'R-♭3-5-♭7 — smooth, mellow',
+      'Dominant 7': 'R-3-5-♭7 — bluesy tension',
+      'Dim 7': 'R-♭3-♭5-♭♭7 — maximally tense',
+      'Half-Dim 7': 'R-♭3-♭5-♭7 — minor ii-V-i',
+      'Min/Maj 7': 'R-♭3-5-7 — haunting, dramatic',
+      'Aug 7': 'R-3-#5-♭7 — altered dominant',
+      'Major 9': 'R-3-5-7-9 — sophisticated jazz',
+      'Minor 9': 'R-♭3-5-♭7-9 — neo-soul smooth',
+      'Dominant 9': 'R-3-5-♭7-9 — funky, soulful',
+      'Major 6': 'R-3-5-6 — warm, vintage',
+      'Minor 6': 'R-♭3-5-6 — bittersweet',
+      '7sus4': 'R-4-5-♭7 — floating, unresolved',
+      'Add9': 'R-3-5-9 — bright shimmer',
+      '7#9': 'R-3-5-♭7-#9 — Hendrix chord',
+      '7♭9': 'R-3-5-♭7-♭9 — dark altered dom',
+      '11': 'R-3-5-♭7-11 — thick, modern',
+      'Minor 11': 'R-♭3-5-♭7-11 — open minor',
+      '13': 'R-3-5-♭7-13 — full dominant',
+      'Minor 13': 'R-♭3-5-♭7-13 — lush minor',
+    };
+    return descs[arpType] || arpType;
+  };
+
+  return (
+    <>
+      {/* Root selector */}
+      <div className="flex flex-wrap gap-0.5 mb-2">
+        {NOTE_NAMES.map(n => (
+          <button
+            key={n}
+            onClick={() => handleRootChange(n)}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
+              n === selectedRoot ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
+            }`}
+          >{n}</button>
+        ))}
+      </div>
+
+      {/* Main layout */}
+      <div className="flex gap-1.5">
+        {/* Arpeggio columns */}
+        <div className="flex gap-px shrink-0" style={{ width: '52%' }}>
+          {ARPEGGIO_COLUMNS.map((col, ci) => {
+            const isSus = col.label === 'Sus';
+            const [col1, col2] = isSus ? [col.types, []] : splitIntoColumns(col.types);
+            return (
+              <div key={col.label} className={`flex-1 min-w-0 ${ci < ARPEGGIO_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5`}>
+                <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">{col.label}</div>
+                <div className={`flex gap-px ${isSus ? 'justify-center' : ''}`}>
+                  {[col1, ...(col2.length > 0 ? [col2] : [])].map((types, sci) => (
+                    <div key={sci} className={`${isSus ? 'w-full' : 'flex-1'} space-y-px`}>
+                      {types.map(ct => {
+                        if (!ARPEGGIO_FORMULAS[ct]) return null;
+                        const isSelected = selectedArp === ct;
+                        return (
+                          <button
+                            key={ct}
+                            onClick={() => handleSelectArp(ct)}
+                            className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
+                              isSelected
+                                ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]'
+                                : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
+                            }`}
+                          >{ct}</button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Octave range selector */}
+        <div className="w-14 shrink-0">
+          <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">Octaves</div>
+          <div className="space-y-0.5">
+            {([1, 2, 3] as OctaveRange[]).map(oct => (
+              <button
+                key={oct}
+                onClick={() => setOctaveRange(oct)}
+                className={`w-full px-1 py-0.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-colors leading-tight ${
+                  octaveRange === oct ? 'bg-accent text-accent-foreground font-bold border-accent' : 'text-muted-foreground border-border/40 hover:bg-muted/30'
+                }`}
+              >{oct === 1 ? 'Single' : oct === 2 ? 'Double' : 'Triple'}</button>
+            ))}
+          </div>
+          <div className="text-[7px] font-mono text-muted-foreground mt-1.5 text-center leading-tight">
+            {octaveRange === 1 && '1 octave span'}
+            {octaveRange === 2 && '2 octave span'}
+            {octaveRange === 3 && '3 octave span'}
+          </div>
+        </div>
+
+        {/* Info panel */}
+        <div className="flex-1 min-w-0">
+          {selectedArp ? (
+            <div className="bg-secondary/20 rounded p-1.5">
+              <div className="text-[10px] font-mono font-bold text-foreground mb-1">{selectedRoot} {selectedArp}</div>
+              <div className="text-[9px] font-mono text-muted-foreground leading-relaxed mb-2">
+                {getArpDescription(selectedArp)}
+              </div>
+              {/* Show arpeggio notes */}
+              <div className="mb-1">
+                <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-0.5">Notes</div>
+                <div className="flex gap-1 flex-wrap">
+                  {(() => {
+                    const formula = ARPEGGIO_FORMULAS[selectedArp];
+                    if (!formula) return null;
+                    const rootIdx = NOTE_NAMES.indexOf(selectedRoot);
+                    const notes = formula.map(interval => NOTE_NAMES[(rootIdx + (interval % 12)) % 12]);
+                    // For multi-octave, repeat
+                    const displayed: string[] = [];
+                    for (let oct = 0; oct < octaveRange; oct++) {
+                      for (const n of notes) {
+                        if (oct === 0 || n !== notes[0] || oct < octaveRange) {
+                          displayed.push(oct > 0 ? `${n}′${'′'.repeat(oct - 1)}` : n);
+                        }
+                      }
+                    }
+                    // Add final root
+                    if (octaveRange > 0) {
+                      displayed.push(`${notes[0]}${'′'.repeat(octaveRange)}`);
+                    }
+                    return displayed.map((n, i) => (
+                      <div
+                        key={i}
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-[8px] font-mono font-bold"
+                        style={{
+                          backgroundColor: 'hsl(var(--primary) / 0.2)',
+                          color: 'hsl(var(--primary))',
+                          border: '1px solid hsl(var(--primary) / 0.4)',
+                        }}
+                      >{n}</div>
+                    ));
+                  })()}
+                </div>
+              </div>
+              <div className="text-[8px] font-mono text-muted-foreground mt-1">
+                {octaveRange === 1 ? 'Single octave — 1 position' : octaveRange === 2 ? 'Double octave — spans 2 positions' : 'Triple octave — full neck coverage'}
+              </div>
+            </div>
+          ) : (
+            <div className="text-[9px] font-mono text-muted-foreground text-center py-4 leading-relaxed">
+              Select an arpeggio type to see its notes and apply it to the fretboard.
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function CAGEDPanel({
   positions, cagedShape, setCagedShape, root,
 }: {
