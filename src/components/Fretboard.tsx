@@ -219,11 +219,10 @@ export default function Fretboard({
         if (degreeColors) {
           // Use arpeggio root for degree colors
           const arpRoot = (() => {
-            // Find root from the position (first played note that matches root interval)
-            for (let s = 0; s < 6; s++) {
-              if (arpeggioPosition.frets[s] >= 0) {
-                return noteAtFret(s, arpeggioPosition.frets[s], tuning);
-              }
+            // Find root from the position (first/lowest note)
+            if (arpeggioPosition.notes && arpeggioPosition.notes.length > 0) {
+              const lowest = arpeggioPosition.notes[0];
+              return noteAtFret(lowest.stringIndex, lowest.fret, tuning);
             }
             return primaryScale.root;
           })();
