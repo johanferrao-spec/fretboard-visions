@@ -243,7 +243,7 @@ export default function Fretboard({
 
     let opacity = 1;
     let ring = false;
-    const ringColor = sColor;
+    let ringColor = sColor;
     let greyed = false;
 
     if (inPrimary && inSecondary) {
