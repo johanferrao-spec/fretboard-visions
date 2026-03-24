@@ -120,9 +120,9 @@ export default function Fretboard({
   // Arpeggio position note set
   const arpPositionSet = useMemo(() => {
     const set = new Set<string>();
-    if (arpeggioPosition) {
-      arpeggioPosition.frets.forEach((fret, si) => {
-        if (fret >= 0) set.add(`${si}-${fret}`);
+    if (arpeggioPosition && arpeggioPosition.notes) {
+      arpeggioPosition.notes.forEach(n => {
+        set.add(`${n.stringIndex}-${n.fret}`);
       });
     }
     return set;
