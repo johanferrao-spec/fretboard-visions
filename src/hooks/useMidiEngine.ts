@@ -122,7 +122,6 @@ export function useMidiEngine() {
     }).toDestination();
 
     hihatRef.current = new Tone.MetalSynth({
-      frequency: 400,
       envelope: { attack: 0.001, decay: 0.05, release: 0.01 },
       harmonicity: 5.1,
       modulationIndex: 32,
@@ -132,7 +131,6 @@ export function useMidiEngine() {
     }).toDestination();
 
     rideRef.current = new Tone.MetalSynth({
-      frequency: 300,
       envelope: { attack: 0.001, decay: 0.12, release: 0.05 },
       harmonicity: 5.1,
       modulationIndex: 16,
