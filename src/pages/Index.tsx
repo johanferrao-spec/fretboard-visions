@@ -226,6 +226,7 @@ const Index = () => {
               tuning={fb.tuning}
               tuningLabels={fb.tuningLabels}
               playingChordTones={playingChordTones}
+              arpeggioPosition={fb.arpeggioPosition}
             />
           </div>
 
