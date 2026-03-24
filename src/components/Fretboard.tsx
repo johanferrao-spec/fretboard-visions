@@ -257,6 +257,14 @@ export default function Fretboard({
       opacity = activePrimary ? secondaryOpacity : 1;
     }
 
+    // Arpeggio path notes: show ring in purple like dual-scale mode
+    const noteKey = `${stringIndex}-${fret}`;
+    if (pathNoteSet.has(noteKey)) {
+      ring = true;
+      ringColor = 'hsl(280, 70%, 60%)';
+      opacity = 1;
+    }
+
     // Diatonic hover
     if (hoveredDiatonic && hoveredDiatonic.notes.length > 0) {
       if (!hoveredDiatonic.notes.includes(note)) {
