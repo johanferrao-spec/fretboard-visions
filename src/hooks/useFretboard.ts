@@ -140,6 +140,8 @@ export function useFretboard() {
     identifyRoot, setIdentifyRoot,
     tuning, tuningName, tuningLabels, setTuning,
     customTunings, setCustomTunings,
+    arpeggioPosition, setArpeggioPosition,
     clearFretboard,
+  };
   };
 }
