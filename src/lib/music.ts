@@ -1505,8 +1505,6 @@ export function getChordTones(root: NoteName, chordType: string): number[] {
   const rootIdx = NOTE_NAMES.indexOf(root);
   return formula.map(interval => (rootIdx + (interval % 12)) % 12);
 }
-  const keyIndex = NOTE_NAMES.indexOf(key);
-  const rootIndex = NOTE_NAMES.indexOf(chordRoot);
   const interval = (rootIndex - keyIndex + 12) % 12;
   
   for (let d = 0; d < MAJOR_SCALE.length; d++) {
