@@ -222,7 +222,7 @@ function ModeSelector({
       </select>
 
       {/* Selected scale display — glowing */}
-      <div className="text-[10px] font-mono text-primary font-bold bg-primary/10 rounded px-2 py-1 mb-2 border border-primary/40 shadow-[0_0_10px_hsl(var(--primary)/0.25)]">
+      <div className="text-[10px] font-mono font-bold rounded px-2 py-1 mb-2 border" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 12px hsl(270, 80%, 65%, 0.4), 0 0 24px hsl(270, 80%, 65%, 0.15)' }}>
         ♪ {value.mode === 'arpeggio' ? value.scale : value.scale}
       </div>
 
