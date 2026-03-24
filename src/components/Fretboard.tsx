@@ -219,12 +219,14 @@ export default function Fretboard({
     // Arpeggio position mode: highlight specific fret positions
     if (arpeggioPosition && arpPositionSet.size > 0 && !activeChord) {
       const key = `${stringIndex}-${fret}`;
-      if (arpPositionSet.has(key)) {
+      const isInPosition = arpPositionSet.has(key);
+      const isChordTone = arpChordToneNames.has(note);
+
+      if (isInPosition) {
+        // Selected position notes always full opacity
         let bg = pColor;
         if (degreeColors) {
-          // Use arpeggio root for degree colors
           const arpRoot = (() => {
-            // Find root from the position (first/lowest note)
             if (arpeggioPosition.notes && arpeggioPosition.notes.length > 0) {
               const lowest = arpeggioPosition.notes[0];
               return noteAtFret(lowest.stringIndex, lowest.fret, tuning);
@@ -234,7 +236,23 @@ export default function Fretboard({
           const dc = getDegreeColor(arpRoot, note);
           if (dc) bg = dc;
         }
-        return { backgroundColor: bg, opacity: arpOverlayOpacity, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
+      }
+      // All other instances of arpeggio chord tones across fretboard
+      if (isChordTone && arpOverlayOpacity > 0 && fret > 0) {
+        let bg = pColor;
+        if (degreeColors) {
+          const arpRoot = (() => {
+            if (arpeggioPosition.notes && arpeggioPosition.notes.length > 0) {
+              const lowest = arpeggioPosition.notes[0];
+              return noteAtFret(lowest.stringIndex, lowest.fret, tuning);
+            }
+            return primaryScale.root;
+          })();
+          const dc = getDegreeColor(arpRoot, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: bg, opacity: arpOverlayOpacity, ring: false, ringColor: '', greyed: false };
       }
       // Show scale notes dimmed
       const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
