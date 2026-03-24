@@ -59,7 +59,105 @@ const CHORD_COLUMNS: { label: string; types: string[] }[] = [
   { label: 'Sus', types: ['Sus2', 'Sus4', '7sus4', 'Power (5)'] },
 ];
 
-export default function ChordReference({
+// ============================================================
+// ROOT SELECTOR with drag-to-flat/sharp
+// ============================================================
+
+function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteName; setSelectedRoot: (n: NoteName) => void }) {
+  const [accidental, setAccidental] = useState<'natural' | 'sharp' | 'flat'>('natural');
+  const dragRef = useRef<{ startX: number; active: boolean } | null>(null);
+
+  const resolvedRoot = useMemo((): NoteName => {
+    const idx = NOTE_NAMES.indexOf(selectedRoot);
+    if (accidental === 'sharp') {
+      const sharpIdx = (idx + 1) % 12;
+      return NOTE_NAMES[sharpIdx];
+    }
+    if (accidental === 'flat') {
+      const flatIdx = (idx + 11) % 12;
+      return NOTE_NAMES[flatIdx];
+    }
+    return selectedRoot;
+  }, [selectedRoot, accidental]);
+
+  // When natural note changes, reset accidental
+  const handleNoteClick = (n: NoteName) => {
+    setAccidental('natural');
+    setSelectedRoot(n);
+  };
+
+  useEffect(() => {
+    setSelectedRoot(resolvedRoot);
+  }, [resolvedRoot]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    dragRef.current = { startX: e.clientX, active: true };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current?.active) return;
+    const dx = e.clientX - dragRef.current.startX;
+    if (Math.abs(dx) > 20) {
+      if (dx > 0) setAccidental('sharp');
+      else setAccidental('flat');
+    } else {
+      setAccidental('natural');
+    }
+  };
+
+  const handlePointerUp = () => {
+    dragRef.current = null;
+  };
+
+  // Find which natural note is the base of the current resolved root
+  const baseNatural = useMemo(() => {
+    if (NATURAL_NOTES.includes(resolvedRoot)) return resolvedRoot;
+    // Find the natural note that was selected
+    return NATURAL_NOTES.find(n => {
+      const idx = NOTE_NAMES.indexOf(n);
+      return NOTE_NAMES[(idx + 1) % 12] === resolvedRoot || NOTE_NAMES[(idx + 11) % 12] === resolvedRoot;
+    }) || 'E';
+  }, [resolvedRoot]);
+
+  return (
+    <div className="mb-2">
+      <div className="flex flex-wrap gap-0.5 items-end">
+        {NATURAL_NOTES.map(n => {
+          const isBase = n === baseNatural;
+          return (
+            <div key={n} className="flex flex-col items-center">
+              <button
+                onClick={() => handleNoteClick(n)}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
+                  isBase ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
+                }`}
+              >{n}</button>
+              {isBase && (
+                <div
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  className="mt-0.5 w-10 h-4 rounded border border-border/60 bg-muted/40 flex items-center justify-center cursor-ew-resize select-none touch-none"
+                >
+                  <span className={`text-[8px] font-mono font-bold transition-colors ${
+                    accidental === 'flat' ? 'text-primary' : accidental === 'sharp' ? 'text-primary' : 'text-muted-foreground/50'
+                  }`}>
+                    {accidental === 'flat' ? '♭' : accidental === 'sharp' ? '♯' : '—'}
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <span className="text-[7px] font-mono text-muted-foreground/60 ml-1 self-center leading-tight">
+          ← drag ♭ / ♯ →
+        </span>
+      </div>
+    </div>
+  );
+}
+
   activeChord, setActiveChord, showCAGED, setShowCAGED,
   cagedShape, setCagedShape, cagedRoot,
   identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets,
