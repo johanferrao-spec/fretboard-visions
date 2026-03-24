@@ -17,6 +17,7 @@ interface ControlPanelProps {
   setSecondaryColor: (v: string) => void;
   primaryColor: string;
   setPrimaryColor: (v: string) => void;
+  condensed?: boolean;
 }
 
 const arpeggioNames = Object.keys(ARPEGGIO_FORMULAS);
