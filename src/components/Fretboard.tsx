@@ -368,7 +368,7 @@ export default function Fretboard({
     const glowSet = new Set<number>();
     for (const si of stringOrder) {
       if (disabledStrings.has(si)) continue;
-      const note = noteAtFret(si, 0);
+      const note = noteAtFret(si, 0, tuning);
       const style = getNoteStyle(note, si, 0);
       if (style && !style.greyed) glowSet.add(si);
     }
