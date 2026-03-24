@@ -60,12 +60,11 @@ const CHORD_COLUMNS: { label: string; types: string[] }[] = [
 ];
 
 // ============================================================
-// ROOT SELECTOR with drag-to-flat/sharp
+// ROOT SELECTOR with clickable ♭/♯ buttons
 // ============================================================
 
 function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteName; setSelectedRoot: (n: NoteName) => void }) {
   const [baseNote, setBaseNote] = useState<NoteName>(() => {
-    // Find the closest natural note
     if (NATURAL_NOTES.includes(selectedRoot)) return selectedRoot;
     const idx = NOTE_NAMES.indexOf(selectedRoot);
     const flatBase = NOTE_NAMES[(idx + 1) % 12];
@@ -75,20 +74,12 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
   const [accidental, setAccidental] = useState<'natural' | 'sharp' | 'flat'>(() => {
     if (NATURAL_NOTES.includes(selectedRoot)) return 'natural';
     const idx = NOTE_NAMES.indexOf(selectedRoot);
-    // Check if selectedRoot is a sharp of some natural note
     for (const n of NATURAL_NOTES) {
       const ni = NOTE_NAMES.indexOf(n);
       if ((ni + 1) % 12 === idx) return 'sharp';
     }
     return 'flat';
   });
-  const dragRef = useRef<{ startX: number; active: boolean } | null>(null);
-
-  const handleNoteClick = (n: NoteName) => {
-    setBaseNote(n);
-    setAccidental('natural');
-    setSelectedRoot(n);
-  };
 
   const resolveNote = useCallback((base: NoteName, acc: 'natural' | 'sharp' | 'flat'): NoteName => {
     const idx = NOTE_NAMES.indexOf(base);
@@ -97,25 +88,16 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
     return base;
   }, []);
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    dragRef.current = { startX: e.clientX, active: true };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  const handleNoteClick = (n: NoteName) => {
+    setBaseNote(n);
+    setAccidental('natural');
+    setSelectedRoot(n);
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!dragRef.current?.active) return;
-    const dx = e.clientX - dragRef.current.startX;
-    let newAcc: 'natural' | 'sharp' | 'flat' = 'natural';
-    if (dx > 20) newAcc = 'sharp';
-    else if (dx < -20) newAcc = 'flat';
-    if (newAcc !== accidental) {
-      setAccidental(newAcc);
-      setSelectedRoot(resolveNote(baseNote, newAcc));
-    }
-  };
-
-  const handlePointerUp = () => {
-    dragRef.current = null;
+  const handleAccidental = (acc: 'sharp' | 'flat') => {
+    const newAcc = accidental === acc ? 'natural' : acc;
+    setAccidental(newAcc);
+    setSelectedRoot(resolveNote(baseNote, newAcc));
   };
 
   return (
@@ -132,25 +114,28 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
                 }`}
               >{n}</button>
               {isBase && (
-                <div
-                  onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  className="mt-0.5 w-10 h-4 rounded border border-border/60 bg-muted/40 flex items-center justify-center cursor-ew-resize select-none touch-none"
-                >
-                  <span className={`text-[8px] font-mono font-bold transition-colors ${
-                    accidental !== 'natural' ? 'text-primary' : 'text-muted-foreground/50'
-                  }`}>
-                    {accidental === 'flat' ? '♭' : accidental === 'sharp' ? '♯' : '—'}
-                  </span>
+                <div className="mt-0.5 flex gap-px">
+                  <button
+                    onClick={() => handleAccidental('flat')}
+                    className={`w-5 h-4 rounded-l border text-[9px] font-mono font-bold transition-colors ${
+                      accidental === 'flat'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >♭</button>
+                  <button
+                    onClick={() => handleAccidental('sharp')}
+                    className={`w-5 h-4 rounded-r border border-l-0 text-[9px] font-mono font-bold transition-colors ${
+                      accidental === 'sharp'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >♯</button>
                 </div>
               )}
             </div>
           );
         })}
-        <span className="text-[7px] font-mono text-muted-foreground/60 ml-1 self-center leading-tight">
-          ← drag ♭ / ♯ →
-        </span>
       </div>
     </div>
   );
