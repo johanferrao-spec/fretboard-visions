@@ -152,6 +152,7 @@ export default function ChordReference({
   tuning, tuningLabels,
   timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, keyMode,
   onSeekToChord, onSetArpeggioPosition,
+  arpOverlayOpacity, setArpOverlayOpacity, arpPathVisible, setArpPathVisible,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
