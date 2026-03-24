@@ -225,6 +225,14 @@ const Index = () => {
               setIdentifyRoot={fb.setIdentifyRoot}
               tuning={fb.tuning}
               tuningLabels={fb.tuningLabels}
+              timelineChords={timeline.chords}
+              currentBeat={timeline.currentBeat}
+              isPlaying={timeline.isPlaying}
+              timelineKey={timelineKey}
+              onApplyScale={(root, scale, mode) => {
+                fb.setPrimaryScale({ mode, root, scale });
+                fb.setActiveChord(null);
+              }}
             />
           </div>
         </main>

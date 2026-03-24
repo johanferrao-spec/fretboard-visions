@@ -603,6 +603,153 @@ function IdentifyPanel({
 }
 
 // ============================================================
+// PLAYING CHANGES PANEL — reactive to timeline playback
+// ============================================================
+
+function PlayingChangesPanel({
+  chords, currentBeat, isPlaying, timelineKey, onApplyScale,
+}: {
+  chords: TimelineChord[];
+  currentBeat: number;
+  isPlaying: boolean;
+  timelineKey: NoteName;
+  onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
+}) {
+  // Find the chord currently playing at currentBeat
+  const currentChord = useMemo(() => {
+    return chords.find(c => currentBeat >= c.startBeat && currentBeat < c.startBeat + c.duration) || null;
+  }, [chords, currentBeat]);
+
+  // Next chord in sequence
+  const nextChord = useMemo(() => {
+    if (!currentChord) return chords.length > 0 ? chords.sort((a, b) => a.startBeat - b.startBeat)[0] : null;
+    const sorted = [...chords].sort((a, b) => a.startBeat - b.startBeat);
+    const idx = sorted.findIndex(c => c.id === currentChord.id);
+    return idx >= 0 && idx < sorted.length - 1 ? sorted[idx + 1] : null;
+  }, [chords, currentChord]);
+
+  const suggestions = useMemo(() => {
+    if (!currentChord) return [];
+    return getTensionSuggestions(timelineKey, currentChord.root, currentChord.chordType);
+  }, [currentChord, timelineKey]);
+
+  const chordTones = useMemo(() => {
+    if (!currentChord) return [];
+    return getChordTones(currentChord.root, currentChord.chordType);
+  }, [currentChord]);
+
+  const tensionColors: Record<string, string> = {
+    consonant: '120, 70%, 40%',
+    mild: '45, 80%, 50%',
+    strong: '0, 75%, 55%',
+  };
+
+  const formatChordLabel = (c: TimelineChord) => {
+    const suffix = c.chordType === 'Major' ? '' : c.chordType === 'Minor' ? 'm' : ` ${c.chordType}`;
+    return `${c.root}${suffix}`;
+  };
+
+  if (chords.length === 0) {
+    return (
+      <div className="text-[10px] font-mono text-muted-foreground text-center py-6">
+        Add chords to the timeline to see playing changes.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Current chord display */}
+      <div className="mb-3">
+        <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">
+          {isPlaying ? 'Now Playing' : 'Current Chord'}
+        </div>
+        {currentChord ? (
+          <div className="text-lg font-mono font-bold text-foreground">
+            {formatChordLabel(currentChord)}
+            <span className="text-[10px] text-muted-foreground ml-2 font-normal">
+              in {timelineKey} Major
+            </span>
+          </div>
+        ) : (
+          <div className="text-sm font-mono text-muted-foreground italic">
+            {isPlaying ? 'Rest / No chord' : 'Press play or click a chord'}
+          </div>
+        )}
+        {nextChord && (
+          <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+            Next → <span className="text-foreground font-bold">{formatChordLabel(nextChord)}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Chord tones */}
+      {currentChord && chordTones.length > 0 && (
+        <div className="mb-3">
+          <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Chord Tones</div>
+          <div className="flex gap-1">
+            {chordTones.map((noteIdx, i) => (
+              <div
+                key={i}
+                className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-mono font-bold"
+                style={{
+                  backgroundColor: 'hsl(var(--primary) / 0.2)',
+                  color: 'hsl(var(--primary))',
+                  border: '1px solid hsl(var(--primary) / 0.4)',
+                }}
+              >
+                {NOTE_NAMES[noteIdx]}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tension suggestions */}
+      {suggestions.length > 0 && (
+        <div>
+          <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">
+            Scales & Arpeggios
+          </div>
+          <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => onApplyScale(s.root, s.name, s.type)}
+                className="w-full text-left px-2 py-1.5 rounded text-[10px] font-mono transition-all border hover:brightness-110"
+                style={{
+                  backgroundColor: `hsl(${tensionColors[s.tension]} / 0.1)`,
+                  borderColor: `hsl(${tensionColors[s.tension]} / 0.3)`,
+                }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: `hsl(${tensionColors[s.tension]})` }}
+                  />
+                  <span className="font-bold text-foreground">
+                    {s.root} {s.name}
+                  </span>
+                  <span className="text-[8px] px-1 py-0.5 rounded ml-auto shrink-0" style={{
+                    backgroundColor: `hsl(${tensionColors[s.tension]} / 0.2)`,
+                    color: `hsl(${tensionColors[s.tension]})`,
+                  }}>
+                    {s.type === 'arpeggio' ? 'ARP' : 'SCALE'}
+                  </span>
+                </div>
+                <div className="text-[8px] text-muted-foreground mt-0.5 leading-tight pl-3">
+                  {s.description}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // HELPERS
 // ============================================================
 
