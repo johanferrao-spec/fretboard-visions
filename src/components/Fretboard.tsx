@@ -500,6 +500,23 @@ export default function Fretboard({
 
   const allPaths = [...persistedPaths, ...(isDragging && dragPath.length >= 2 ? [dragPath] : [])];
 
+  // Build arpeggio position path points
+  const arpPositionPath = useMemo(() => {
+    if (!arpeggioPosition || arpPositionSet.size === 0) return [];
+    const points: { x: number; y: number }[] = [];
+    // Walk strings low to high (string order: 5,4,3,2,1,0 = low E to high E)
+    for (const si of stringOrder) {
+      const fret = arpeggioPosition.frets[si];
+      if (fret >= 0) {
+        const row = stringOrder.indexOf(si);
+        const x = cumLeft[fret] + widths[fret] / 2;
+        const y = (row * stringH + stringH / 2) / (6 * stringH) * 100;
+        points.push({ x, y });
+      }
+    }
+    return points;
+  }, [arpeggioPosition, arpPositionSet, stringOrder, cumLeft, widths, stringH]);
+
   const getChordLabel = (note: NoteName, fret: number, stringIndex: number): string => {
     if (identifyMode && identifyRoot && displayMode === 'degrees') return getIntervalName(identifyRoot, note);
     if (activeChord && displayMode !== 'notes') return getExtendedIntervalName(activeChord.root, note);

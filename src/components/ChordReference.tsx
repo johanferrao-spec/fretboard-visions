@@ -65,7 +65,7 @@ export default function ChordReference({
   timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, keyMode,
   onSeekToChord, onSetArpeggioPosition,
 }: ChordReferenceProps) {
-  const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
+  const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
   const [voicingTab, setVoicingTab] = useState<VoicingTab>('full');
   const [activeTab, setActiveTab] = useState<MainTab>('chords');
