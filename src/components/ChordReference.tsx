@@ -1042,7 +1042,33 @@ function ArpeggioPositionsPanel({
 
   return (
     <>
-      <RootSelector selectedRoot={selectedRoot} setSelectedRoot={(n) => handleRootChange(n)} />
+      <div className="flex items-start gap-2 mb-2">
+        <div className="flex-1 min-w-0">
+          <RootSelector selectedRoot={selectedRoot} setSelectedRoot={(n) => handleRootChange(n)} />
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-[7px] font-mono text-muted-foreground uppercase">Overlay</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={arpOverlayOpacity * 100}
+              onChange={(e) => setArpOverlayOpacity(Number(e.target.value) / 100)}
+              className="w-14 h-1 accent-primary"
+            />
+          </div>
+          <button
+            onClick={() => setArpPathVisible(!arpPathVisible)}
+            className={`px-1.5 py-0.5 rounded text-[8px] font-mono transition-colors ${
+              arpPathVisible
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+            title="Toggle path visibility"
+          >Path</button>
+        </div>
+      </div>
 
       {/* Main layout */}
       <div className="flex gap-1.5">
