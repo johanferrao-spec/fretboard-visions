@@ -296,6 +296,7 @@ export function useMidiEngine() {
     Tone.getTransport().stop();
     Tone.getTransport().cancel();
     Tone.getTransport().position = 0;
+    Tone.getTransport().loop = false;
   }, []);
 
   const dispose = useCallback(() => {
