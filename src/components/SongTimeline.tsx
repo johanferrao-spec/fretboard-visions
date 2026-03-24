@@ -122,7 +122,7 @@ export default function SongTimeline({
 
   const handleGridDoubleClick = useCallback((e: React.MouseEvent) => {
     const beat = getBeatFromX(e.clientX);
-    onAddChord('C', 'Major', beat, snap === '1/4' ? 2 : snap === '1/8' ? 1 : 0.5);
+    onAddChord('C', 'Major', beat, 4);
     setTimeout(() => onTrimOverlaps(), 0);
   }, [getBeatFromX, onAddChord, snap, onTrimOverlaps]);
 
