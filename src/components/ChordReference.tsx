@@ -133,12 +133,12 @@ export default function ChordReference({
         {([
           { key: 'chords' as MainTab, label: 'Chord Library' },
           { key: 'caged' as MainTab, label: 'CAGED' },
-          { key: 'identify' as MainTab, label: "What's This" },
+          { key: 'identify' as MainTab, label: "What's This?", icon: '?' },
         ]).map(tab => (
           <button
             key={tab.key}
             onClick={() => handleTabSwitch(tab.key)}
-            className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+            className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors flex items-center gap-0.5 ${
               activeTab === tab.key ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
             }`}
           >
