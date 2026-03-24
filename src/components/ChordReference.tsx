@@ -138,11 +138,12 @@ export default function ChordReference({
   return (
     <div className="p-2">
       {/* Tab switcher */}
-      <div className="flex gap-1 mb-2">
+      <div className="flex gap-1 mb-2 flex-wrap">
         {([
           { key: 'chords' as MainTab, label: 'Chord Library' },
           { key: 'caged' as MainTab, label: 'CAGED' },
-          { key: 'identify' as MainTab, label: "What's This?", icon: '?' },
+          { key: 'identify' as MainTab, label: "What's This?" },
+          { key: 'changes' as MainTab, label: 'Playing Changes' },
         ]).map(tab => (
           <button
             key={tab.key}
