@@ -60,6 +60,13 @@ const Index = () => {
     midi.stop();
   };
 
+  const handleSeek = (beat: number) => {
+    timeline.setCurrentBeat(beat);
+    if (timeline.isPlaying) {
+      handleStop();
+    }
+  };
+
   const isVertical = fb.orientation === 'vertical';
 
   // Compute playing chord tones for reactive fretboard
@@ -250,6 +257,7 @@ const Index = () => {
                 fb.setPrimaryScale({ mode, root, scale });
                 fb.setActiveChord(null);
               }}
+              onSeekToChord={(beat) => handleSeek(beat)}
             />
           </div>
         </main>
@@ -284,6 +292,7 @@ const Index = () => {
         setTimelineKey={setTimelineKey}
         keyMode={keyMode}
         setKeyMode={setKeyMode}
+        onSeek={handleSeek}
       />
 
       <NoteInfoPanel

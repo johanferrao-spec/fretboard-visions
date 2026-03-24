@@ -1388,6 +1388,22 @@ export function getChordVariations(key: NoteName, degree: number, keyMode: KeyMo
     borrowed.push({ type: 'Major', label: `${root}`, from: 'Borrowed from parallel major context' });
     borrowed.push({ type: 'Dominant 7', label: `${root}7`, from: 'Secondary dominant (V7/ii)' });
   }
+  // Minor key: v → V major (borrowed from harmonic minor)
+  if (keyMode === 'minor' && quality.type === 'Minor' && degree === 4) {
+    borrowed.push({ type: 'Major', label: `${root}`, from: 'Harmonic minor — raised 7th creates major V' });
+    borrowed.push({ type: 'Dominant 7', label: `${root}7`, from: 'Harmonic minor — V7 with leading tone' });
+    borrowed.push({ type: 'Dominant 9', label: `${root}9`, from: 'Harmonic minor — V9' });
+    borrowed.push({ type: '7#9', label: `${root}7#9`, from: 'Blues/Hendrix chord over minor V' });
+  }
+  // Minor key: III → III+ augmented (from harmonic minor)
+  if (keyMode === 'minor' && quality.type === 'Major' && degree === 2) {
+    borrowed.push({ type: 'Augmented', label: `${root}+`, from: 'Harmonic minor — augmented III' });
+  }
+  // Minor key: iv → IV major (borrowed from Dorian)
+  if (keyMode === 'minor' && quality.type === 'Minor' && degree === 3) {
+    borrowed.push({ type: 'Major', label: `${root}`, from: 'Dorian mode — major IV in minor key' });
+    borrowed.push({ type: 'Dominant 7', label: `${root}7`, from: 'Dorian mode — IV7' });
+  }
   // bVII chord (borrowed from Mixolydian)
   if (degree === 6) {
     const bVIIRoot = NOTE_NAMES[(keyIndex + 10) % 12];
@@ -1487,8 +1503,8 @@ export function analyzeProgression(key: NoteName, keyMode: KeyMode, chords: { ro
       };
       explanation = functions[degree] || '';
     } else {
-      // Non-diatonic analysis
-      const nextChord = idx < chords.length - 1 ? chords[idx + 1] : null;
+      // Non-diatonic analysis — wrap around to first chord for looping
+      const nextChord = idx < chords.length - 1 ? chords[idx + 1] : (chords.length > 1 ? chords[0] : null);
       const nextDegree = nextChord ? getChordDegree(key, nextChord.root, nextChord.chordType, keyMode) : -1;
       const nextRootIdx = nextChord ? NOTE_NAMES.indexOf(nextChord.root) : -1;
       
@@ -1520,6 +1536,13 @@ export function analyzeProgression(key: NoteName, keyMode: KeyMode, chords: { ro
       }
       
       if (!explanation) {
+        // Check for harmonic minor V (major V chord in minor key)
+        if (keyMode === 'minor' && interval === 7 && ['Major', 'Major 7', 'Dominant 7', 'Dominant 9', '7#9', '7♭9'].includes(chord.chordType)) {
+          explanation = `Harmonic minor V — borrowed from harmonic minor. The raised 7th degree creates a leading tone, giving the V chord dominant function for a stronger resolution to i.`;
+        }
+      }
+      
+      if (!explanation) {
         // Check for borrowed chord (modal interchange)
         const parallelScale = keyMode === 'major' ? MINOR_SCALE : MAJOR_SCALE;
         const parallelQualities = keyMode === 'major' ? DIATONIC_QUALITIES_MINOR : DIATONIC_QUALITIES_MAJOR;
@@ -1535,6 +1558,11 @@ export function analyzeProgression(key: NoteName, keyMode: KeyMode, chords: { ro
             }
           }
         }
+      }
+      
+      // Dorian IV in minor key
+      if (!explanation && keyMode === 'minor' && interval === 5 && ['Major', 'Major 7', 'Dominant 7'].includes(chord.chordType)) {
+        explanation = `Borrowed from Dorian mode — major IV chord in minor key. Adds brightness and is characteristic of folk, rock, and modal jazz.`;
       }
       
       if (!explanation) {

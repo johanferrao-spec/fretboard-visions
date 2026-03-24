@@ -283,17 +283,10 @@ export function useMidiEngine() {
       }
     }, '16n');
 
-    // Stop at end
-    const endMeasure = measures;
-    const endTimeStr = `${endMeasure}:0:0`;
-    Tone.getTransport().schedule(() => {
-      Tone.getTransport().stop();
-      Tone.getTransport().position = 0;
-      Tone.getDraw().schedule(() => {
-        onStop();
-        onBeatUpdate(0);
-      }, Tone.now());
-    }, endTimeStr);
+    // Loop: set transport to loop
+    Tone.getTransport().loop = true;
+    Tone.getTransport().loopStart = 0;
+    Tone.getTransport().loopEnd = `${measures}:0:0`;
 
     Tone.getTransport().position = 0;
     Tone.getTransport().start();
@@ -303,6 +296,7 @@ export function useMidiEngine() {
     Tone.getTransport().stop();
     Tone.getTransport().cancel();
     Tone.getTransport().position = 0;
+    Tone.getTransport().loop = false;
   }, []);
 
   const dispose = useCallback(() => {

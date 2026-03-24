@@ -36,6 +36,7 @@ interface SongTimelineProps {
   setTimelineKey: (k: NoteName) => void;
   keyMode: KeyMode;
   setKeyMode: (m: KeyMode) => void;
+  onSeek?: (beat: number) => void;
 }
 
 export default function SongTimeline({
@@ -44,11 +45,12 @@ export default function SongTimeline({
   isPlaying, currentBeat, panelHeight, setPanelHeight,
   onPlay, onStop, onAddChord, onMoveChord, onResizeChord, onRemoveChord, onClearTimeline, onTrimOverlaps,
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
+  onSeek,
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragChord, setDragChord] = useState<string | null>(null);
   const [resizeChord, setResizeChord] = useState<string | null>(null);
-  // Variation popup state — now triggered by clicking a chord block
+  const [playheadDragging, setPlayheadDragging] = useState(false);
   const [variationPopup, setVariationPopup] = useState<{
     chordId: string;
     degree: number;
@@ -69,6 +71,14 @@ export default function SongTimeline({
     const rawBeat = (x / rect.width) * totalBeats;
     return Math.max(0, Math.min(totalBeats - snapGrid, Math.round(rawBeat / snapGrid) * snapGrid));
   }, [totalBeats, snapGrid]);
+
+  const getRawBeatFromX = useCallback((clientX: number): number => {
+    if (!gridRef.current) return 0;
+    const rect = gridRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const rawBeat = (x / rect.width) * totalBeats;
+    return Math.max(0, Math.min(totalBeats, rawBeat));
+  }, [totalBeats]);
 
   // Drag move
   useEffect(() => {
@@ -96,19 +106,30 @@ export default function SongTimeline({
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [resizeChord, chords, getBeatFromX, onResizeChord, snapGrid, onTrimOverlaps]);
 
+  // Playhead drag
+  useEffect(() => {
+    if (!playheadDragging) return;
+    const onMove = (e: MouseEvent) => {
+      const beat = getRawBeatFromX(e.clientX);
+      onSeek?.(beat);
+    };
+    const onUp = () => setPlayheadDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [playheadDragging, getRawBeatFromX, onSeek]);
+
   // Handle drop from chord library, diatonic buttons, or identify tab
   const handleGridDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const beat = getBeatFromX(e.clientX);
-    const dur = 4; // default 1 bar = 4 beats
+    const dur = 4;
 
-    // Check for diatonic degree drop
     const degreeData = e.dataTransfer.getData('application/diatonic-degree');
     if (degreeData) {
       const { degree } = JSON.parse(degreeData);
       const dc = diatonicChords[degree];
       onAddChord(dc.root, dc.type, beat, dur);
-      // Trim after adding
       setTimeout(() => onTrimOverlaps(), 0);
       return;
     }
@@ -133,11 +154,20 @@ export default function SongTimeline({
     setTimeout(() => onTrimOverlaps(), 0);
   }, [getBeatFromX, onAddChord, snap, onTrimOverlaps]);
 
-  // Click a chord block to show variation popup
+  // Click a chord block to seek playhead there and pause
   const handleChordClick = useCallback((chord: TimelineChord, e: React.MouseEvent) => {
     e.stopPropagation();
+    // Seek to this chord's start beat and pause
+    if (isPlaying) onStop();
+    onSeek?.(chord.startBeat);
+  }, [isPlaying, onStop, onSeek]);
+
+  // Right-click for variations
+  const handleChordContextMenu = useCallback((chord: TimelineChord, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
-    if (degree < 0) return; // no variations for non-diatonic
+    if (degree < 0) return;
     const gridRect = gridRef.current?.getBoundingClientRect();
     if (!gridRect) return;
     const blockRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -147,7 +177,7 @@ export default function SongTimeline({
       x: blockRect.left + blockRect.width / 2,
       y: blockRect.top,
     });
-  }, [timelineKey]);
+  }, [timelineKey, keyMode]);
 
   const handleSelectVariation = useCallback((v: ChordVariation) => {
     if (!variationPopup) return;
@@ -166,11 +196,23 @@ export default function SongTimeline({
 
   const playheadPct = (currentBeat / totalBeats) * 100;
 
+  // Click on measure bar area to seek
+  const handleMeasureBarClick = useCallback((e: React.MouseEvent) => {
+    const beat = getRawBeatFromX(e.clientX);
+    if (isPlaying) onStop();
+    onSeek?.(beat);
+  }, [getRawBeatFromX, isPlaying, onStop, onSeek]);
+
   // Get color for a chord based on its degree in the key
   const getChordColor = (chord: TimelineChord): string => {
     const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
     if (degree >= 0) return SCALE_DEGREE_COLORS[degree];
     return '220, 15%, 50%';
+  };
+
+  const isBorrowed = (chord: TimelineChord): boolean => {
+    const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
+    return degree < 0;
   };
 
   return (
@@ -288,7 +330,7 @@ export default function SongTimeline({
           />
         </div>
 
-        {/* Diatonic chord buttons — block colored cells with soft edges, black text */}
+        {/* Diatonic chord buttons */}
         <div className="flex items-center gap-1 ml-1">
           {diatonicChords.map((dc, i) => (
             <button
@@ -321,8 +363,18 @@ export default function SongTimeline({
 
       {/* Timeline grid */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {/* Measure labels */}
-        <div className="flex items-center">
+        {/* Measure labels — clickable to place playhead */}
+        <div
+          className="flex items-center cursor-pointer select-none"
+          onMouseDown={(e) => {
+            // Use gridRef position mapping
+            if (!gridRef.current) return;
+            const beat = getRawBeatFromX(e.clientX);
+            if (isPlaying) onStop();
+            onSeek?.(beat);
+            setPlayheadDragging(true);
+          }}
+        >
           <div className="w-0" />
           {Array.from({ length: measures }, (_, m) => (
             <div key={m} className="flex-1 text-center border-l border-border/50 first:border-l-0">
@@ -372,21 +424,48 @@ export default function SongTimeline({
             );
           })}
 
-          {/* Playhead */}
-          {isPlaying && (
+          {/* Playhead — always visible, draggable */}
+          <div
+            className="absolute top-0 bottom-0 z-30 cursor-ew-resize group"
+            style={{
+              left: `${playheadPct}%`,
+              transform: 'translateX(-6px)',
+              width: 12,
+            }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setPlayheadDragging(true);
+            }}
+          >
+            {/* Playhead line */}
             <div
-              className="absolute top-0 bottom-0 w-0.5 bg-primary z-30 pointer-events-none"
-              style={{ left: `${playheadPct}%`, boxShadow: '0 0 8px hsl(var(--primary)), 0 0 16px hsl(var(--primary))' }}
+              className="absolute left-1/2 top-0 bottom-0 w-0.5 -translate-x-1/2"
+              style={{
+                backgroundColor: 'hsl(var(--primary))',
+                boxShadow: '0 0 8px hsl(var(--primary)), 0 0 16px hsl(var(--primary))',
+              }}
             />
-          )}
+            {/* Playhead handle triangle */}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 -top-1 w-0 h-0"
+              style={{
+                borderLeft: '5px solid transparent',
+                borderRight: '5px solid transparent',
+                borderTop: '6px solid hsl(var(--primary))',
+                filter: 'drop-shadow(0 0 4px hsl(var(--primary)))',
+              }}
+            />
+          </div>
 
-          {/* Chord blocks — solid block color */}
+          {/* Chord blocks */}
           {chords.map(chord => {
             const leftPct = (chord.startBeat / totalBeats) * 100;
             const widthPct = (chord.duration / totalBeats) * 100;
             const color = getChordColor(chord);
             const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
             const isDiatonic = degree >= 0;
+            const borrowed = isBorrowed(chord);
 
             return (
               <div
@@ -396,9 +475,16 @@ export default function SongTimeline({
                   left: `${leftPct}%`,
                   width: `${widthPct}%`,
                   height: 'calc(100% - 16px)',
-                  backgroundColor: isDiatonic ? `hsl(${color})` : `hsl(${color} / 0.3)`,
-                  border: isDiatonic ? 'none' : '1px dashed hsl(var(--border))',
+                  backgroundColor: borrowed
+                    ? 'hsl(50, 90%, 55%)'
+                    : isDiatonic ? `hsl(${color})` : `hsl(${color} / 0.3)`,
+                  border: borrowed
+                    ? '1px solid hsl(50, 90%, 65%)'
+                    : isDiatonic ? 'none' : '1px dashed hsl(var(--border))',
                   minWidth: 20,
+                  ...(borrowed ? {
+                    boxShadow: '0 0 8px hsl(50, 90%, 55%, 0.6), 0 0 16px hsl(50, 90%, 55%, 0.3)',
+                  } : {}),
                 }}
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -410,15 +496,16 @@ export default function SongTimeline({
                   }
                 }}
                 onClick={(e) => handleChordClick(chord, e)}
+                onContextMenu={(e) => handleChordContextMenu(chord, e)}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   onRemoveChord(chord.id);
                 }}
-                title={`${chord.root} ${chord.chordType}${isDiatonic ? ` (${currentNumerals[degree]})` : ' — outside key'} — click for variations, double-click to remove`}
+                title={`${chord.root} ${chord.chordType}${isDiatonic ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed chord' : ' — outside key'} — click to seek, right-click for variations, double-click to remove`}
               >
                 <span
                   className="text-[10px] font-mono font-bold px-1.5 truncate"
-                  style={{ color: isDiatonic ? '#000' : `hsl(${color})` }}
+                  style={{ color: borrowed ? '#000' : isDiatonic ? '#000' : `hsl(${color})` }}
                 >
                   {chord.root}{chord.chordType === 'Major' ? '' : chord.chordType === 'Minor' ? 'm' : ` ${chord.chordType}`}
                 </span>
@@ -459,13 +546,20 @@ export default function SongTimeline({
                       className={`w-full text-left px-2 py-1 rounded text-[10px] font-mono transition-all border ${
                         v.isDiatonic
                           ? 'bg-muted/50 border-transparent hover:bg-muted text-foreground'
-                          : 'bg-destructive/5 border-destructive/20 hover:bg-destructive/10 text-foreground'
+                          : 'border-transparent hover:brightness-110 text-foreground'
                       }`}
+                      style={!v.isDiatonic ? {
+                        backgroundColor: 'hsl(50, 90%, 55%, 0.15)',
+                        borderColor: 'hsl(50, 90%, 55%, 0.3)',
+                      } : {}}
                     >
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold">{v.label}</span>
                         {!v.isDiatonic && (
-                          <span className="text-[8px] px-1 py-0.5 rounded bg-destructive/20 text-destructive font-bold">BORROWED</span>
+                          <span className="text-[8px] px-1 py-0.5 rounded font-bold"
+                            style={{ backgroundColor: 'hsl(50, 90%, 55%, 0.3)', color: 'hsl(50, 70%, 35%)' }}>
+                            BORROWED
+                          </span>
                         )}
                       </div>
                       {v.borrowedFrom && (

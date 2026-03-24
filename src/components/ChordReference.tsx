@@ -35,6 +35,7 @@ interface ChordReferenceProps {
   timelineKey: NoteName;
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   keyMode: KeyMode;
+  onSeekToChord?: (beat: number) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
@@ -53,6 +54,7 @@ export default function ChordReference({
   degreeColors, identifyRoot, setIdentifyRoot,
   tuning, tuningLabels,
   timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, keyMode,
+  onSeekToChord,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
@@ -68,7 +70,6 @@ export default function ChordReference({
     const all = getVoicingsForChord(selectedRoot, selectedChord, voicingTab);
     const isStandard = tuning.every((n, i) => n === STANDARD_TUNING[i]);
     if (isStandard) return all;
-    // Filter voicings playable in this tuning
     return all.filter(v => isVoicingPlayableInTuning(v, selectedRoot, selectedChord, tuning));
   }, [selectedRoot, selectedChord, voicingTab, tuning]);
 
@@ -109,7 +110,6 @@ export default function ChordReference({
 
   const cagedPositions = useMemo(() => getCAGEDPositions(cagedRoot), [cagedRoot]);
 
-  // Chord identification from fretboard clicks
   const identifiedChords = useMemo(() => {
     const hasInput = identifyFrets.some(f => f >= 0);
     if (!hasInput) return [];
@@ -130,7 +130,6 @@ export default function ChordReference({
     }
   };
 
-  // Get the selected interpretation root for scale degree display
   const currentIdentifyRoot = useMemo(() => {
     if (!identifyViewName || identifiedChords.length === 0) return null;
     const match = identifyViewName.match(/^([A-G]#?)/);
@@ -173,6 +172,7 @@ export default function ChordReference({
           timelineKey={timelineKey}
           keyMode={keyMode}
           onApplyScale={onApplyScale}
+          onSeekToChord={onSeekToChord}
         />
       ) : activeTab === 'caged' ? (
         <CAGEDPanel positions={cagedPositions} cagedShape={cagedShape} setCagedShape={setCagedShape} root={cagedRoot} />
@@ -228,7 +228,7 @@ function formatCompactTab(frets: number[]): string {
 }
 
 // ============================================================
-// CHORD LIBRARY PANEL — compact 3-column layout with inline diagrams
+// CHORD LIBRARY PANEL
 // ============================================================
 
 function ChordLibraryPanel({
@@ -263,7 +263,6 @@ function ChordLibraryPanel({
     setTimeout(() => setLibCopied(false), 1500);
   };
 
-  // Split types into 2 sub-columns
   const splitIntoColumns = (types: string[]) => {
     const mid = Math.ceil(types.length / 2);
     return [types.slice(0, mid), types.slice(mid)];
@@ -284,9 +283,8 @@ function ChordLibraryPanel({
         ))}
       </div>
 
-      {/* Main layout: chord columns + type + diagrams */}
+      {/* Main layout */}
       <div className="flex gap-1.5">
-        {/* Chord quality columns with cell boxes — 2 sub-columns each for major/minor */}
         <div className="flex gap-px shrink-0" style={{ width: '48%' }}>
           {CHORD_COLUMNS.map((col, ci) => {
             const isSus = col.label === 'Sus';
@@ -326,7 +324,6 @@ function ChordLibraryPanel({
           })}
         </div>
 
-        {/* Voicing type selector — bigger */}
         <div className="w-14 shrink-0">
           <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">Type</div>
           <div className="space-y-0.5">
@@ -348,7 +345,6 @@ function ChordLibraryPanel({
           </div>
         </div>
 
-        {/* Diagrams panel */}
         <div className="flex-1 min-w-0">
           {selectedChord ? (
             <div className="bg-secondary/20 rounded p-1.5">
@@ -402,8 +398,8 @@ function ChordLibraryPanel({
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-[9px] font-mono text-muted-foreground">
-              ← Select a chord
+            <div className="text-[9px] font-mono text-muted-foreground text-center py-4 leading-relaxed">
+              Select a chord type to see voicing diagrams. Drag any chord to the timeline.
             </div>
           )}
         </div>
@@ -413,7 +409,7 @@ function ChordLibraryPanel({
 }
 
 // ============================================================
-// WHAT'S THIS PANEL — fretboard-click based identification
+// IDENTIFY PANEL
 // ============================================================
 
 function IdentifyPanel({
@@ -424,177 +420,66 @@ function IdentifyPanel({
   results: ReturnType<typeof identifyChord>;
   degreeColors: boolean;
   viewRoot: string | null;
-  setViewRoot: (v: string | null) => void;
+  setViewRoot: (name: string | null) => void;
   currentRoot: NoteName | null;
   tuningLabels: string[];
   tuning: number[];
 }) {
-  const tabStr = formatCompactTab(frets);
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(tabStr);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  // Find the selected result
-  const selectedResult = results.find(r => r.names.includes(viewRoot || ''));
-
   return (
     <div>
-      <div className="text-[10px] font-mono text-muted-foreground mb-2">
-        Click notes on the fretboard to identify a chord.
+      <div className="text-[9px] font-mono text-muted-foreground mb-2 leading-relaxed">
+        Click notes on the fretboard to identify a chord. Drag across a fret for barre chords.
       </div>
-
-      {/* Current selection + buttons in one row */}
-      <div className="flex items-center gap-1 mb-2 flex-wrap">
-        {tuningLabels.map((name, i) => {
-          const fret = frets[i];
-          const note = fret >= 0 ? noteAtFret(i, fret, tuning) : null;
-          // Determine degree color if a chord interpretation is selected
-          let cellBg = fret >= 0 ? 'hsl(var(--primary) / 0.2)' : 'hsl(var(--destructive) / 0.15)';
-          let cellText = fret >= 0 ? 'hsl(var(--primary))' : 'hsl(var(--destructive))';
-          let cellBorder = fret >= 0 ? 'hsl(var(--primary) / 0.3)' : 'hsl(var(--destructive) / 0.5)';
-          if (fret >= 0 && note && currentRoot && degreeColors) {
-            const interval = getIntervalName(currentRoot, note);
-            const degColor = DEGREE_COLORS[interval];
-            if (degColor) {
-              cellBg = `hsl(${degColor} / 0.25)`;
-              cellText = `hsl(${degColor})`;
-              cellBorder = `hsl(${degColor} / 0.5)`;
-            }
-          }
-          return (
-            <button
-              key={i}
-              onClick={() => {
-                const nf = [...frets];
-                nf[i] = fret === -1 ? 0 : -1;
-                setFrets(nf);
+      {/* Manual fret input */}
+      <div className="flex gap-1 mb-2">
+        {frets.map((f, i) => (
+          <div key={i} className="flex flex-col items-center gap-0.5">
+            <span className="text-[8px] font-mono text-muted-foreground">{tuningLabels[i]}</span>
+            <input
+              type="text"
+              value={f === -1 ? 'X' : f.toString()}
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                const newFrets = [...frets];
+                if (val === '' || val.toLowerCase() === 'x') newFrets[i] = -1;
+                else if (!isNaN(Number(val))) newFrets[i] = Math.max(0, Math.min(24, Number(val)));
+                setFrets(newFrets);
               }}
-              className="rounded text-[11px] font-mono font-bold transition-colors border flex items-center justify-center"
-              style={{
-                width: 32,
-                height: 28,
-                backgroundColor: cellBg,
-                color: cellText,
-                borderColor: cellBorder,
-                borderWidth: fret === -1 ? 2 : 1,
-              }}
-            >
-              {fret === -1 ? 'X' : `${note}${fret}`}
-            </button>
-          );
-        })}
-        <button
-          onClick={() => { setFrets([-1, -1, -1, -1, -1, -1]); setViewRoot(null); }}
-          className="px-2 py-1 rounded text-[9px] font-mono text-muted-foreground bg-muted/30 hover:bg-muted/50 transition-colors"
-        >Clear</button>
-        {frets.some(f => f >= 0) && (
-          <button
-            onClick={handleCopy}
-            title="Copy tab"
-            className="px-2 py-1 rounded text-[9px] font-mono text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
-          >{copied ? '✓' : tabStr}</button>
-        )}
-      </div>
-
-      {/* Results — cell-based layout with info panel */}
-      {results.length > 0 ? (
-        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(15rem,18rem)] md:items-start">
-          {/* Chord name cells */}
-          <div className="min-w-0">
-            <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Matches</div>
-            <div className="flex flex-wrap gap-1">
-              {results.flatMap((r, i) =>
-                r.names.map((name, ni) => {
-                  const isActive = viewRoot === name;
-                  return (
-                    <button
-                      key={`${i}-${ni}`}
-                      onClick={() => setViewRoot(isActive ? null : name)}
-                      draggable
-                      onDragStart={(e) => {
-                        const match = name.match(/^([A-G]#?)(.*?)(?:\/.*)?$/);
-                        if (match) {
-                          const root = match[1];
-                          const suffix = match[2];
-                          // Map suffix to chord type
-                          const typeMap: Record<string, string> = {
-                            '': 'Major', 'm': 'Minor', 'dim': 'Diminished', 'aug': 'Augmented',
-                            'maj7': 'Major 7', 'm7': 'Minor 7', '7': 'Dominant 7',
-                            'dim7': 'Dim 7', 'm7♭5': 'Half-Dim 7', 'sus2': 'Sus2', 'sus4': 'Sus4',
-                            'add9': 'Add9', 'mMaj7': 'Min/Maj 7', 'aug7': 'Aug 7',
-                            'maj9': 'Major 9', 'm9': 'Minor 9', '9': 'Dominant 9',
-                            '6': 'Major 6', 'm6': 'Minor 6', '7sus4': '7sus4',
-                            '7#9': '7#9', '7♭9': '7♭9',
-                          };
-                          const chordType = typeMap[suffix] || 'Major';
-                          e.dataTransfer.setData('application/chord', JSON.stringify({ root, chordType }));
-                          e.dataTransfer.effectAllowed = 'copy';
-                        }
-                      }}
-                      className={`inline-flex w-fit max-w-full items-center rounded border px-2 py-1 text-[11px] font-mono font-bold transition-all cursor-grab ${
-                        isActive
-                          ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]'
-                          : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
-                      }`}
-                      title="Click to view details, drag to timeline"
-                    >
-                      {name}
-                    </button>
-                  );
-                })
-              )}
-            </div>
+              className="w-7 h-6 text-center text-[10px] font-mono rounded border border-border bg-muted text-foreground"
+            />
           </div>
-
-          {/* Info panel for selected chord */}
-          {selectedResult && viewRoot && (
-            <div className="flex-1 min-w-0 bg-secondary/40 rounded-lg p-2">
-              <div className="text-sm font-mono font-bold text-foreground mb-1.5">{viewRoot}</div>
-              
-              {/* Scale degrees on mini diagram */}
-              {currentRoot && degreeColors && (
-                <div className="flex gap-1 mb-2">
-                  {tuningLabels.map((_, si) => {
-                    if (frets[si] < 0) return <div key={si} className="flex-1" />;
-                    const note = noteAtFret(si, frets[si], tuning);
-                    const interval = getIntervalName(currentRoot, note);
-                    const degColor = DEGREE_COLORS[interval];
-                    return (
-                      <div key={si} className="flex-1 text-center">
-                        <div
-                          className="w-5 h-5 rounded-full mx-auto flex items-center justify-center text-[8px] font-mono font-bold"
-                          style={{
-                            backgroundColor: degColor ? `hsl(${degColor})` : 'hsl(var(--muted))',
-                            color: 'hsl(220, 20%, 8%)',
-                          }}
-                        >{interval}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Chord-specific description */}
-              {(() => {
-                const match = viewRoot?.match(/^([A-G]#?)(.*?)(?:\/.*)?$/);
-                const suffix = match ? match[2] : '';
-                const desc = getChordTypeDescription(suffix);
-                return desc ? (
-                  <div className="text-[10px] font-mono text-foreground/80 mt-1 leading-relaxed">{desc}</div>
-                ) : null;
-              })()}
-              {selectedResult.explanations.length > 0 && selectedResult.explanations.map((exp, j) => (
-                <div key={j} className="text-[10px] font-mono text-muted-foreground mt-0.5 leading-relaxed">{exp}</div>
-              ))}
-              <div className="text-[10px] font-mono text-muted-foreground mt-2">
-                <span className="text-foreground/70">Notes:</span> {[...new Set(selectedResult.notes)].join(' – ')}
-              </div>
-            </div>
-          )}
+        ))}
+      </div>
+      {/* Results */}
+      {results.length > 0 ? (
+        <div className="space-y-1">
+          <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Possible chords:</div>
+          {results.map((r, i) => {
+              const displayName = r.names?.[0] || '?';
+              const isViewed = viewRoot === displayName;
+            return (
+              <button
+                key={i}
+                onClick={() => setViewRoot(isViewed ? null : displayName)}
+                draggable
+                onDragStart={(e) => {
+                  const match = displayName.match(/^([A-G]#?)\s*(.*)/);
+                  if (match) {
+                    e.dataTransfer.setData('application/chord', JSON.stringify({ root: match[1], chordType: match[2] || 'Major' }));
+                    e.dataTransfer.effectAllowed = 'copy';
+                  }
+                }}
+                className={`w-full text-left px-2 py-1.5 rounded text-[10px] font-mono transition-all border ${
+                  isViewed
+                    ? 'bg-primary/15 border-primary/40 text-foreground'
+                    : 'bg-muted/40 border-border/30 text-foreground/80 hover:bg-muted/60'
+                }`}
+              >
+                <div className="font-bold">{displayName}</div>
+                {r.notes && <div className="text-[8px] text-muted-foreground">{r.notes.join(' — ')}</div>}
+              </button>
+            );
+          })}
         </div>
       ) : frets.some(f => f >= 0) ? (
         <div className="text-[10px] font-mono text-muted-foreground text-center py-2">
@@ -606,11 +491,11 @@ function IdentifyPanel({
 }
 
 // ============================================================
-// PLAYING CHANGES PANEL — reactive to timeline playback
+// PLAYING CHANGES PANEL
 // ============================================================
 
 function PlayingChangesPanel({
-  chords, currentBeat, isPlaying, timelineKey, keyMode, onApplyScale,
+  chords, currentBeat, isPlaying, timelineKey, keyMode, onApplyScale, onSeekToChord,
 }: {
   chords: TimelineChord[];
   currentBeat: number;
@@ -618,6 +503,7 @@ function PlayingChangesPanel({
   timelineKey: NoteName;
   keyMode: KeyMode;
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
+  onSeekToChord?: (beat: number) => void;
 }) {
   const sorted = useMemo(() => [...chords].sort((a, b) => a.startBeat - b.startBeat), [chords]);
 
@@ -629,6 +515,13 @@ function PlayingChangesPanel({
     if (!currentChord) return -1;
     return sorted.findIndex(c => c.id === currentChord.id);
   }, [sorted, currentChord]);
+
+  // Next chord wraps around to first chord
+  const nextChord = useMemo(() => {
+    if (sorted.length === 0) return null;
+    if (currentIdx < 0) return sorted[0] || null;
+    return sorted[(currentIdx + 1) % sorted.length] || null;
+  }, [sorted, currentIdx]);
 
   const analysis = useMemo(() => {
     if (sorted.length === 0) return [];
@@ -672,22 +565,29 @@ function PlayingChangesPanel({
         {sorted.map((chord, i) => {
           const a = analysis[i];
           const isCurrent = currentIdx === i;
+          const borrowed = a && !a.isDiatonic;
           return (
-            <div
+            <button
               key={chord.id}
-              className={`px-1.5 py-1 rounded text-[10px] font-mono transition-all border ${
+              onClick={() => onSeekToChord?.(chord.startBeat)}
+              className={`w-full text-left px-1.5 py-1 rounded text-[10px] font-mono transition-all border cursor-pointer ${
                 isCurrent
                   ? 'bg-primary/20 border-primary/50 text-foreground font-bold'
-                  : 'border-transparent text-muted-foreground'
+                  : 'border-transparent text-muted-foreground hover:bg-muted/30'
               }`}
+              style={borrowed ? {
+                backgroundColor: isCurrent ? 'hsl(50, 90%, 55%, 0.2)' : 'hsl(50, 90%, 55%, 0.08)',
+                borderColor: isCurrent ? 'hsl(50, 90%, 55%, 0.5)' : 'transparent',
+                boxShadow: isCurrent ? '0 0 6px hsl(50, 90%, 55%, 0.3)' : 'none',
+              } : {}}
             >
               <div className="flex items-center gap-1">
-                <span className={`font-bold ${!a?.isDiatonic ? 'text-destructive' : ''}`}>
+                <span className={`font-bold ${borrowed ? 'text-yellow-400' : ''}`}>
                   {a?.roman || '?'}
                 </span>
                 <span className="text-[8px] truncate">{formatChordLabel(chord)}</span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -701,6 +601,11 @@ function PlayingChangesPanel({
               <span className="text-[10px] text-muted-foreground ml-2 font-normal">
                 {analysis[currentIdx]?.roman} in {timelineKey} {keyMode}
               </span>
+              {nextChord && (
+                <span className="text-[9px] text-muted-foreground ml-2 font-normal">
+                  → {formatChordLabel(nextChord)}
+                </span>
+              )}
             </div>
 
             {/* Analysis explanation */}
@@ -708,10 +613,19 @@ function PlayingChangesPanel({
               <div className={`text-[10px] font-mono leading-relaxed p-2 rounded mb-2 border ${
                 analysis[currentIdx].isDiatonic
                   ? 'bg-muted/30 border-border/30 text-foreground/80'
-                  : 'bg-destructive/5 border-destructive/20 text-foreground/80'
-              }`}>
+                  : ''
+              }`}
+                style={!analysis[currentIdx].isDiatonic ? {
+                  backgroundColor: 'hsl(50, 90%, 55%, 0.08)',
+                  borderColor: 'hsl(50, 90%, 55%, 0.3)',
+                  color: 'hsl(var(--foreground) / 0.8)',
+                } : {}}
+              >
                 {!analysis[currentIdx].isDiatonic && (
-                  <span className="text-[8px] px-1 py-0.5 rounded bg-destructive/20 text-destructive font-bold mr-1">NON-DIATONIC</span>
+                  <span className="text-[8px] px-1 py-0.5 rounded font-bold mr-1"
+                    style={{ backgroundColor: 'hsl(50, 90%, 55%, 0.3)', color: 'hsl(50, 70%, 35%)' }}>
+                    NON-DIATONIC
+                  </span>
                 )}
                 {analysis[currentIdx].explanation}
                 {analysis[currentIdx].passingChordSuggestion && (
@@ -778,7 +692,7 @@ function PlayingChangesPanel({
           </>
         ) : (
           <div className="text-[10px] font-mono text-muted-foreground italic py-4">
-            {isPlaying ? 'Rest — no chord playing' : 'Press play or select a chord'}
+            {isPlaying ? 'Rest — no chord playing' : 'Press play or click a chord to see analysis'}
           </div>
         )}
       </div>

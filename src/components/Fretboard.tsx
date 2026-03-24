@@ -243,7 +243,7 @@ export default function Fretboard({
 
     let opacity = 1;
     let ring = false;
-    const ringColor = sColor;
+    let ringColor = sColor;
     let greyed = false;
 
     if (inPrimary && inSecondary) {
@@ -255,6 +255,14 @@ export default function Fretboard({
     } else if (inSecondary && !inPrimary) {
       bg = sColor;
       opacity = activePrimary ? secondaryOpacity : 1;
+    }
+
+    // Arpeggio path notes: show ring in purple like dual-scale mode
+    const noteKey = `${stringIndex}-${fret}`;
+    if (pathNoteSet.has(noteKey)) {
+      ring = true;
+      ringColor = 'hsl(280, 70%, 60%)';
+      opacity = 1;
     }
 
     // Diatonic hover
@@ -648,26 +656,14 @@ export default function Fretboard({
                       key={i}
                       x1={prev.x} y1={prev.y * totalH / 100}
                       x2={pt.x} y2={pt.y * totalH / 100}
-                      stroke="hsl(var(--foreground))"
-                      strokeWidth={3}
+                      stroke="hsl(280, 70%, 60%)"
+                      strokeWidth={4}
                       strokeLinecap="round"
-                      opacity={0.6}
+                      opacity={0.7}
                       vectorEffect="non-scaling-stroke"
                     />
                   );
                 })}
-                {pts.map((pt, i) => (
-                  <circle
-                    key={`ring-${i}`}
-                    cx={pt.x} cy={pt.y * totalH / 100}
-                    r={noteMarkerSize * 0.4}
-                    fill="none"
-                    stroke="hsl(var(--foreground))"
-                    strokeWidth={1.5}
-                    opacity={0.7}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                ))}
               </svg>
             );
           })}
