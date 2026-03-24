@@ -39,7 +39,14 @@ interface ChordReferenceProps {
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
-type MainTab = 'chords' | 'caged' | 'identify' | 'changes';
+type MainTab = 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes';
+type OctaveRange = 1 | 2 | 3;
+
+const ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
+  { label: 'Major', types: ['Major', 'Major 7', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', 'Major 9', 'Dominant 9', 'Major 6', '7#9', '7♭9', '11', '13'] },
+  { label: 'Minor', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'] },
+  { label: 'Sus', types: ['Sus2', 'Sus4', '7sus4'] },
+];
 
 const CHORD_COLUMNS: { label: string; types: string[] }[] = [
   { label: 'Major', types: ['Major', 'Major 7', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', 'Major 9', 'Dominant 9', 'Major 6', '7#9', '7♭9', '7#5', '7♭5', '11', '13'] },
