@@ -1503,8 +1503,8 @@ export function analyzeProgression(key: NoteName, keyMode: KeyMode, chords: { ro
       };
       explanation = functions[degree] || '';
     } else {
-      // Non-diatonic analysis
-      const nextChord = idx < chords.length - 1 ? chords[idx + 1] : null;
+      // Non-diatonic analysis — wrap around to first chord for looping
+      const nextChord = idx < chords.length - 1 ? chords[idx + 1] : (chords.length > 1 ? chords[0] : null);
       const nextDegree = nextChord ? getChordDegree(key, nextChord.root, nextChord.chordType, keyMode) : -1;
       const nextRootIdx = nextChord ? NOTE_NAMES.indexOf(nextChord.root) : -1;
       
