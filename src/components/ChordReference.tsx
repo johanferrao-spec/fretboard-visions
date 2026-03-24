@@ -163,7 +163,15 @@ export default function ChordReference({
         )}
       </div>
 
-      {activeTab === 'caged' ? (
+      {activeTab === 'changes' ? (
+        <PlayingChangesPanel
+          chords={timelineChords}
+          currentBeat={currentBeat}
+          isPlaying={isPlaying}
+          timelineKey={timelineKey}
+          onApplyScale={onApplyScale}
+        />
+      ) : activeTab === 'caged' ? (
         <CAGEDPanel positions={cagedPositions} cagedShape={cagedShape} setCagedShape={setCagedShape} root={cagedRoot} />
       ) : activeTab === 'identify' ? (
         <IdentifyPanel
