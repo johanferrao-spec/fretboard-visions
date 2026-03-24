@@ -1388,6 +1388,22 @@ export function getChordVariations(key: NoteName, degree: number, keyMode: KeyMo
     borrowed.push({ type: 'Major', label: `${root}`, from: 'Borrowed from parallel major context' });
     borrowed.push({ type: 'Dominant 7', label: `${root}7`, from: 'Secondary dominant (V7/ii)' });
   }
+  // Minor key: v → V major (borrowed from harmonic minor)
+  if (keyMode === 'minor' && quality.type === 'Minor' && degree === 4) {
+    borrowed.push({ type: 'Major', label: `${root}`, from: 'Harmonic minor — raised 7th creates major V' });
+    borrowed.push({ type: 'Dominant 7', label: `${root}7`, from: 'Harmonic minor — V7 with leading tone' });
+    borrowed.push({ type: 'Dominant 9', label: `${root}9`, from: 'Harmonic minor — V9' });
+    borrowed.push({ type: '7#9', label: `${root}7#9`, from: 'Blues/Hendrix chord over minor V' });
+  }
+  // Minor key: III → III+ augmented (from harmonic minor)
+  if (keyMode === 'minor' && quality.type === 'Major' && degree === 2) {
+    borrowed.push({ type: 'Augmented', label: `${root}+`, from: 'Harmonic minor — augmented III' });
+  }
+  // Minor key: iv → IV major (borrowed from Dorian)
+  if (keyMode === 'minor' && quality.type === 'Minor' && degree === 3) {
+    borrowed.push({ type: 'Major', label: `${root}`, from: 'Dorian mode — major IV in minor key' });
+    borrowed.push({ type: 'Dominant 7', label: `${root}7`, from: 'Dorian mode — IV7' });
+  }
   // bVII chord (borrowed from Mixolydian)
   if (degree === 6) {
     const bVIIRoot = NOTE_NAMES[(keyIndex + 10) % 12];
