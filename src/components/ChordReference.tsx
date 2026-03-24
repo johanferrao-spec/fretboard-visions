@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import {
-  NOTE_NAMES, NoteName, CHORD_FORMULAS, STRING_NAMES, STANDARD_TUNING,
+  NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
+  isVoicingPlayableInTuning,
   type ChordVoicing,
 } from '@/lib/music';
 import type { ChordSelection } from '@/hooks/useFretboard';
@@ -22,6 +23,8 @@ interface ChordReferenceProps {
   degreeColors: boolean;
   identifyRoot: NoteName | null;
   setIdentifyRoot: (v: NoteName | null) => void;
+  tuning: number[];
+  tuningLabels: string[];
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
@@ -38,6 +41,7 @@ export default function ChordReference({
   cagedShape, setCagedShape, cagedRoot,
   identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets,
   degreeColors, identifyRoot, setIdentifyRoot,
+  tuning, tuningLabels,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
@@ -50,8 +54,12 @@ export default function ChordReference({
 
   const currentVoicings = useMemo(() => {
     if (!selectedChord) return [];
-    return getVoicingsForChord(selectedRoot, selectedChord, voicingTab);
-  }, [selectedRoot, selectedChord, voicingTab]);
+    const all = getVoicingsForChord(selectedRoot, selectedChord, voicingTab);
+    const isStandard = tuning.every((n, i) => n === STANDARD_TUNING[i]);
+    if (isStandard) return all;
+    // Filter voicings playable in this tuning
+    return all.filter(v => isVoicingPlayableInTuning(v, selectedRoot, selectedChord, tuning));
+  }, [selectedRoot, selectedChord, voicingTab, tuning]);
 
   const totalPages = Math.ceil(currentVoicings.length / VOICINGS_PER_PAGE);
   const pagedVoicings = currentVoicings.slice(voicingPage * VOICINGS_PER_PAGE, (voicingPage + 1) * VOICINGS_PER_PAGE);
@@ -164,6 +172,8 @@ export default function ChordReference({
             }
           }}
           currentRoot={currentIdentifyRoot}
+          tuningLabels={tuningLabels}
+          tuning={tuning}
         />
       ) : (
         <ChordLibraryPanel
@@ -181,6 +191,7 @@ export default function ChordReference({
           activeChord={activeChord}
           handleSelectVoicing={handleSelectVoicing}
           degreeColors={degreeColors}
+          tuning={tuning}
         />
       )}
     </div>
@@ -219,6 +230,7 @@ function ChordLibraryPanel({
   activeChord: ChordSelection | null;
   handleSelectVoicing: (idx: number) => void;
   degreeColors: boolean;
+  tuning: number[];
 }) {
   const VOICINGS_PER_PAGE = 4;
 
@@ -379,7 +391,7 @@ function ChordLibraryPanel({
 // ============================================================
 
 function IdentifyPanel({
-  frets, setFrets, results, degreeColors, viewRoot, setViewRoot, currentRoot,
+  frets, setFrets, results, degreeColors, viewRoot, setViewRoot, currentRoot, tuningLabels, tuning,
 }: {
   frets: (number | -1)[];
   setFrets: (f: (number | -1)[]) => void;
@@ -388,6 +400,8 @@ function IdentifyPanel({
   viewRoot: string | null;
   setViewRoot: (v: string | null) => void;
   currentRoot: NoteName | null;
+  tuningLabels: string[];
+  tuning: number[];
 }) {
   const tabStr = formatCompactTab(frets);
   const [copied, setCopied] = useState(false);
@@ -409,9 +423,9 @@ function IdentifyPanel({
 
       {/* Current selection + buttons in one row */}
       <div className="flex items-center gap-1 mb-2 flex-wrap">
-        {STRING_NAMES.map((name, i) => {
+        {tuningLabels.map((name, i) => {
           const fret = frets[i];
-          const note = fret >= 0 ? noteAtFret(i, fret) : null;
+          const note = fret >= 0 ? noteAtFret(i, fret, tuning) : null;
           // Determine degree color if a chord interpretation is selected
           let cellBg = fret >= 0 ? 'hsl(var(--primary) / 0.2)' : 'hsl(var(--destructive) / 0.15)';
           let cellText = fret >= 0 ? 'hsl(var(--primary))' : 'hsl(var(--destructive))';
@@ -496,9 +510,9 @@ function IdentifyPanel({
               {/* Scale degrees on mini diagram */}
               {currentRoot && degreeColors && (
                 <div className="flex gap-1 mb-2">
-                  {STRING_NAMES.map((_, si) => {
+                  {tuningLabels.map((_, si) => {
                     if (frets[si] < 0) return <div key={si} className="flex-1" />;
-                    const note = noteAtFret(si, frets[si]);
+                    const note = noteAtFret(si, frets[si], tuning);
                     const interval = getIntervalName(currentRoot, note);
                     const degColor = DEGREE_COLORS[interval];
                     return (

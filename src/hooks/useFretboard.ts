@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { NoteName, NOTE_NAMES } from '@/lib/music';
+import { NoteName, NOTE_NAMES, STANDARD_TUNING, TUNING_PRESETS, type TuningPreset } from '@/lib/music';
 
 export type ScaleMode = 'scale' | 'arpeggio';
 export type DisplayMode = 'notes' | 'degrees' | 'fingers';
@@ -55,6 +55,17 @@ export function useFretboard() {
   const [identifyMode, setIdentifyMode] = useState(false);
   const [identifyFrets, setIdentifyFrets] = useState<(number | -1)[]>([-1, -1, -1, -1, -1, -1]);
   const [identifyRoot, setIdentifyRoot] = useState<NoteName | null>(null);
+  const [tuning, setTuningState] = useState<number[]>(STANDARD_TUNING);
+  const [tuningName, setTuningName] = useState('Standard');
+  const [tuningLabels, setTuningLabels] = useState<string[]>(['E', 'A', 'D', 'G', 'B', 'e']);
+  const [customTunings, setCustomTunings] = useState<TuningPreset[]>([]);
+
+  const setTuning = useCallback((preset: TuningPreset) => {
+    setTuningState(preset.notes);
+    setTuningName(preset.name);
+    setTuningLabels(preset.labels);
+    setActiveChord(null);
+  }, []);
 
   const updateNoteColor = useCallback((note: NoteName, color: string) => {
     setNoteColors(prev => ({ ...prev, [note]: color }));
@@ -85,7 +96,10 @@ export function useFretboard() {
     setShowFretBox(false);
     setShowCAGED(false);
     setDisabledDegrees(new Set());
-    // Note: does NOT reset scale/arpeggio selection
+    setIdentifyMode(false);
+    setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
+    setIdentifyRoot(null);
+    setNoteMarkerSize(20);
   }, []);
 
   // When enabling dual scale, turn off degree colors by default
@@ -122,6 +136,8 @@ export function useFretboard() {
     identifyMode, setIdentifyMode,
     identifyFrets, setIdentifyFrets,
     identifyRoot, setIdentifyRoot,
+    tuning, tuningName, tuningLabels, setTuning,
+    customTunings, setCustomTunings,
     clearFretboard,
   };
 }

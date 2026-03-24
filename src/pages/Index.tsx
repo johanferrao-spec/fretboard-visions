@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useFretboard } from '@/hooks/useFretboard';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import Fretboard from '@/components/Fretboard';
@@ -5,9 +6,13 @@ import ControlPanel from '@/components/ControlPanel';
 import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import type { NoteName } from '@/lib/music';
+import { TUNING_PRESETS, NOTE_NAMES, type TuningPreset } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
+  const [showCustomTuning, setShowCustomTuning] = useState(false);
+  const [customTuningName, setCustomTuningName] = useState('');
+  const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
 
   const handleApplyChord = (chord: ChordSelection) => {
     fb.setActiveChord(chord);
@@ -80,7 +85,38 @@ const Index = () => {
               {fb.displayMode === 'notes' ? '♪ Notes' : fb.displayMode === 'degrees' ? '° Degrees' : '✋ Fingers'}
             </button>
 
-            {/* Degrees active toggle removed — now lives in fretboard key legend */}
+            {/* Tuning dropdown */}
+            <div className="relative">
+              <select
+                value={fb.tuningName}
+                onChange={e => {
+                  const name = e.target.value;
+                  if (name === '__custom__') {
+                    setShowCustomTuning(true);
+                    return;
+                  }
+                  const allTunings = [...TUNING_PRESETS, ...fb.customTunings];
+                  const preset = allTunings.find(t => t.name === name);
+                  if (preset) fb.setTuning(preset);
+                }}
+                className="bg-secondary text-secondary-foreground text-[10px] font-mono uppercase tracking-wider rounded-md px-2 py-1 border border-border"
+              >
+                {[...TUNING_PRESETS, ...fb.customTunings].map(t => (
+                  <option key={t.name} value={t.name}>{t.name}</option>
+                ))}
+                <option value="__custom__">+ Custom...</option>
+              </select>
+            </div>
+
+            {/* Marker size slider */}
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground uppercase">Size:</span>
+              <input
+                type="range" min={12} max={32} value={fb.noteMarkerSize}
+                onChange={e => fb.setNoteMarkerSize(Number(e.target.value))}
+                className="w-16 accent-primary"
+              />
+            </div>
 
             {/* Fret count */}
             <div className="flex items-center gap-1 ml-auto">
@@ -139,6 +175,8 @@ const Index = () => {
               identifyFrets={fb.identifyFrets}
               setIdentifyFrets={fb.setIdentifyFrets}
               identifyRoot={fb.identifyRoot}
+              tuning={fb.tuning}
+              tuningLabels={fb.tuningLabels}
             />
           </div>
 
@@ -159,6 +197,8 @@ const Index = () => {
               degreeColors={fb.degreeColors}
               identifyRoot={fb.identifyRoot}
               setIdentifyRoot={fb.setIdentifyRoot}
+              tuning={fb.tuning}
+              tuningLabels={fb.tuningLabels}
             />
           </div>
         </main>
@@ -173,6 +213,62 @@ const Index = () => {
         onApplySecondaryArpeggio={handleApplySecondaryArpeggio}
         activeScale={fb.primaryScale}
       />
+
+      {/* Custom tuning dialog */}
+      {showCustomTuning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowCustomTuning(false)}>
+          <div className="bg-card border border-border rounded-lg p-4 shadow-xl w-80" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-mono font-bold text-foreground mb-3">Custom Tuning</h3>
+            <div className="space-y-2 mb-3">
+              <input
+                type="text"
+                placeholder="Tuning name"
+                value={customTuningName}
+                onChange={e => setCustomTuningName(e.target.value)}
+                className="w-full bg-muted text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono"
+              />
+              <div className="grid grid-cols-6 gap-1">
+                {['6th', '5th', '4th', '3rd', '2nd', '1st'].map((label, i) => (
+                  <div key={i} className="text-center">
+                    <div className="text-[8px] font-mono text-muted-foreground mb-0.5">{label}</div>
+                    <select
+                      value={customTuningNotes[i]}
+                      onChange={e => {
+                        const next = [...customTuningNotes];
+                        next[i] = Number(e.target.value);
+                        setCustomTuningNotes(next);
+                      }}
+                      className="w-full bg-muted text-foreground text-[10px] rounded border border-border font-mono px-0.5 py-1"
+                    >
+                      {NOTE_NAMES.map((n, ni) => (
+                        <option key={n} value={ni}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (!customTuningName.trim()) return;
+                  const labels = customTuningNotes.map((n, i) => i === 5 ? NOTE_NAMES[n].toLowerCase() : NOTE_NAMES[n]);
+                  const preset = { name: customTuningName.trim(), notes: [...customTuningNotes], labels };
+                  fb.setCustomTunings([...fb.customTunings, preset]);
+                  fb.setTuning(preset);
+                  setShowCustomTuning(false);
+                  setCustomTuningName('');
+                }}
+                className="flex-1 px-3 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              >Save & Apply</button>
+              <button
+                onClick={() => setShowCustomTuning(false)}
+                className="px-3 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

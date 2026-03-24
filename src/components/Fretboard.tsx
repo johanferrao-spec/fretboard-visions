@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   noteAtFret, isNoteInSelection, getIntervalName, getExtendedIntervalName, getDiatonicChord,
-  NoteName, STRING_NAMES, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND, INTERVAL_TO_POSITION,
+  NoteName, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND, INTERVAL_TO_POSITION,
   getVoicingsForChord, getArpeggioSequence, getDiatonicArpeggioType, getMidiNote, findNotePositions,
   type ChordVoicing,
 } from '@/lib/music';
@@ -42,6 +42,8 @@ interface FretboardProps {
   identifyFrets: (number | -1)[];
   setIdentifyFrets: (f: (number | -1)[]) => void;
   identifyRoot: NoteName | null;
+  tuning: number[];
+  tuningLabels: string[];
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -72,6 +74,7 @@ export default function Fretboard({
   fretBoxStringStart, fretBoxStringSize, setFretBoxStringStart, setFretBoxStringSize,
   noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
   identifyMode, identifyFrets, setIdentifyFrets, identifyRoot,
+  tuning, tuningLabels,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -365,7 +368,7 @@ export default function Fretboard({
     const glowSet = new Set<number>();
     for (const si of stringOrder) {
       if (disabledStrings.has(si)) continue;
-      const note = noteAtFret(si, 0);
+      const note = noteAtFret(si, 0, tuning);
       const style = getNoteStyle(note, si, 0);
       if (style && !style.greyed) glowSet.add(si);
     }
@@ -684,7 +687,7 @@ export default function Fretboard({
                   }}
                   title={identifyMode ? "Click to toggle open string" : "Double-click to toggle string"}
                 >
-                  {identifyMode && identifyFrets[stringIdx] === -1 ? '×' : isChordMuted && !identifyMode ? '×' : STRING_NAMES[stringIdx]}
+                  {identifyMode && identifyFrets[stringIdx] === -1 ? '×' : isChordMuted && !identifyMode ? '×' : tuningLabels[stringIdx]}
                 </button>
 
                 {/* String line */}
@@ -695,7 +698,7 @@ export default function Fretboard({
                 {/* Fret cells */}
                 <div className="flex items-center flex-1">
                   {frets.map(fret => {
-                    const note = noteAtFret(stringIdx, fret);
+                    const note = noteAtFret(stringIdx, fret, tuning);
                     const style = isDisabled ? null : getNoteStyle(note, stringIdx, fret);
                     const label = getChordLabel(note, fret, stringIdx);
                     const isOpenString = fret === 0;
