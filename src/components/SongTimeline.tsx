@@ -434,7 +434,7 @@ export default function SongTimeline({
               <div className="bg-card border border-border rounded-lg shadow-xl p-2 w-56 max-h-48 overflow-y-auto relative">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[10px] font-mono font-bold text-foreground uppercase tracking-wider">
-                    Variations ({ROMAN_NUMERALS[variationPopup.degree]})
+                    Variations ({currentNumerals[variationPopup.degree]})
                   </span>
                   <button onClick={() => setVariationPopup(null)} className="text-muted-foreground hover:text-foreground">
                     <X size={12} />
