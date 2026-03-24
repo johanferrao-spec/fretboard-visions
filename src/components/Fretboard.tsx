@@ -3,7 +3,7 @@ import {
   noteAtFret, isNoteInSelection, getIntervalName, getExtendedIntervalName, getDiatonicChord,
   NoteName, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND, INTERVAL_TO_POSITION,
   getVoicingsForChord, getArpeggioSequence, getDiatonicArpeggioType, getMidiNote, findNotePositions,
-  type ChordVoicing,
+  type ChordVoicing, type ArpeggioPosition,
 } from '@/lib/music';
 import type { ScaleSelection, ChordSelection, DisplayMode, Orientation } from '@/hooks/useFretboard';
 
