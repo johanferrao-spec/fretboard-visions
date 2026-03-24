@@ -296,26 +296,33 @@ export default function SongTimeline({
           onDoubleClick={handleGridDoubleClick}
           onClick={() => setVariationPopup(null)}
         >
-          {/* Grid lines */}
+          {/* Grid lines — beat and measure lines */}
           {Array.from({ length: totalBeats }, (_, i) => {
             const isMeasure = i % 4 === 0;
             return (
               <div
                 key={i}
-                className={`absolute top-0 bottom-0 ${isMeasure ? 'border-l border-border/60' : 'border-l border-border/20'}`}
-                style={{ left: `${(i / totalBeats) * 100}%` }}
+                className="absolute top-0 bottom-0"
+                style={{
+                  left: `${(i / totalBeats) * 100}%`,
+                  borderLeft: isMeasure ? '1.5px solid hsl(220, 15%, 35%)' : '1px solid hsl(220, 15%, 25%)',
+                }}
               />
             );
           })}
 
           {/* Sub-beat lines */}
-          {snap !== '1/4' && Array.from({ length: totalBeats * 2 }, (_, i) => {
-            if (i % 2 === 0) return null;
+          {snap !== '1/4' && Array.from({ length: totalBeats * (snap === '1/16' ? 4 : 2) }, (_, i) => {
+            const divisor = snap === '1/16' ? 4 : 2;
+            if (i % divisor === 0) return null;
             return (
               <div
-                key={`8-${i}`}
-                className="absolute top-0 bottom-0 border-l border-border/10"
-                style={{ left: `${(i / (totalBeats * 2)) * 100}%` }}
+                key={`sub-${i}`}
+                className="absolute top-0 bottom-0"
+                style={{
+                  left: `${(i / (totalBeats * divisor)) * 100}%`,
+                  borderLeft: '1px dashed hsl(220, 15%, 20%)',
+                }}
               />
             );
           })}
