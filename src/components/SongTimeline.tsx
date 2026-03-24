@@ -275,9 +275,9 @@ export default function SongTimeline({
       </div>
 
       {/* Timeline grid */}
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {/* Measure labels */}
-        <div className="flex items-center" style={{ minWidth: `${measures * 200}px` }}>
+        <div className="flex items-center">
           <div className="w-0" />
           {Array.from({ length: measures }, (_, m) => (
             <div key={m} className="flex-1 text-center border-l border-border/50 first:border-l-0">
@@ -290,7 +290,7 @@ export default function SongTimeline({
         <div
           ref={gridRef}
           className="relative flex-1 bg-secondary/20 border-t border-border/30"
-          style={{ minWidth: `${measures * 200}px`, height: `calc(100% - 24px)` }}
+          style={{ height: `calc(100% - 24px)` }}
           onDrop={handleGridDrop}
           onDragOver={handleGridDragOver}
           onDoubleClick={handleGridDoubleClick}
