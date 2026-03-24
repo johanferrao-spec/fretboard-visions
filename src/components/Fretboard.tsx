@@ -648,26 +648,14 @@ export default function Fretboard({
                       key={i}
                       x1={prev.x} y1={prev.y * totalH / 100}
                       x2={pt.x} y2={pt.y * totalH / 100}
-                      stroke="hsl(var(--foreground))"
-                      strokeWidth={3}
+                      stroke="hsl(280, 70%, 60%)"
+                      strokeWidth={4}
                       strokeLinecap="round"
-                      opacity={0.6}
+                      opacity={0.7}
                       vectorEffect="non-scaling-stroke"
                     />
                   );
                 })}
-                {pts.map((pt, i) => (
-                  <circle
-                    key={`ring-${i}`}
-                    cx={pt.x} cy={pt.y * totalH / 100}
-                    r={noteMarkerSize * 0.4}
-                    fill="none"
-                    stroke="hsl(var(--foreground))"
-                    strokeWidth={1.5}
-                    opacity={0.7}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                ))}
               </svg>
             );
           })}
