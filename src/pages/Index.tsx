@@ -245,6 +245,7 @@ const Index = () => {
               currentBeat={timeline.currentBeat}
               isPlaying={timeline.isPlaying}
               timelineKey={timelineKey}
+              keyMode={keyMode}
               onApplyScale={(root, scale, mode) => {
                 fb.setPrimaryScale({ mode, root, scale });
                 fb.setActiveChord(null);
