@@ -33,6 +33,24 @@ const Index = () => {
     fb.setSecondaryScale({ mode: 'arpeggio', root, scale: arpeggioName });
   };
 
+  const handlePlay = () => {
+    timeline.setIsPlaying(true);
+    midi.play(
+      timeline.chords,
+      timeline.measures,
+      timeline.bpm,
+      timeline.genre,
+      (beat) => timeline.setCurrentBeat(beat),
+      () => timeline.setIsPlaying(false),
+    );
+  };
+
+  const handleStop = () => {
+    timeline.setIsPlaying(false);
+    timeline.setCurrentBeat(0);
+    midi.stop();
+  };
+
   const isVertical = fb.orientation === 'vertical';
 
   return (
