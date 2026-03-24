@@ -274,7 +274,15 @@ export default function ChordReference({
           onSeekToChord={onSeekToChord}
         />
       ) : activeTab === 'arpeggios' ? (
-        <ArpeggioPositionsPanel onApplyScale={onApplyScale} tuning={tuning} onSetArpeggioPosition={onSetArpeggioPosition} />
+        <ArpeggioPositionsPanel
+          onApplyScale={onApplyScale}
+          tuning={tuning}
+          onSetArpeggioPosition={onSetArpeggioPosition}
+          arpOverlayOpacity={arpOverlayOpacity}
+          setArpOverlayOpacity={setArpOverlayOpacity}
+          arpPathVisible={arpPathVisible}
+          setArpPathVisible={setArpPathVisible}
+        />
       ) : activeTab === 'caged' ? (
         <CAGEDPanel positions={cagedPositions} cagedShape={cagedShape} setCagedShape={setCagedShape} root={cagedRoot} />
       ) : activeTab === 'identify' ? (
