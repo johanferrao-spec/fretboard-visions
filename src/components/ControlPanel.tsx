@@ -231,7 +231,7 @@ function ModeSelector({
         <select
           value={value.scale}
           onChange={e => onChange({ ...value, scale: e.target.value })}
-          className="w-full bg-muted text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono appearance-none"
+          className="w-full text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
         >
           {arpeggioNames.map(s => <option key={s} value={s}>{s}</option>)}
         </select>

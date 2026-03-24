@@ -239,7 +239,7 @@ export default function SongTimeline({
             type="number"
             value={measures}
             onChange={e => setMeasures(Math.max(1, Math.min(32, Number(e.target.value))))}
-            className="w-10 bg-secondary text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center"
+            className="w-10 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
           />
         </div>
 

@@ -36,6 +36,9 @@
 
     --radius: 0.75rem;
 
+    --scale-glow: 270 80% 65%;
+    --dropdown-blue: 210 60% 75%;
+
     --sidebar-background: 220 20% 8%;
     --sidebar-foreground: 40 20% 90%;
     --sidebar-primary: 38 90% 55%;
