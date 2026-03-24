@@ -1279,17 +1279,20 @@ export interface DiatonicChord {
   symbol: string; // e.g. "Em", "G", "F#°"
 }
 
-export function getDiatonicChords(key: NoteName): DiatonicChord[] {
+export function getDiatonicChords(key: NoteName, keyMode: KeyMode = 'major'): DiatonicChord[] {
   const keyIndex = NOTE_NAMES.indexOf(key);
-  return MAJOR_SCALE.map((interval, degree) => {
+  const scale = keyMode === 'minor' ? MINOR_SCALE : MAJOR_SCALE;
+  const qualities = keyMode === 'minor' ? DIATONIC_QUALITIES_MINOR : DIATONIC_QUALITIES_MAJOR;
+  const numerals = keyMode === 'minor' ? ROMAN_NUMERALS_MINOR : ROMAN_NUMERALS_MAJOR;
+  return scale.map((interval, degree) => {
     const rootIndex = (keyIndex + interval) % 12;
     const root = NOTE_NAMES[rootIndex];
-    const quality = DIATONIC_QUALITIES[degree];
+    const quality = qualities[degree];
     return {
       degree,
       root,
       type: quality.type,
-      roman: ROMAN_NUMERALS[degree],
+      roman: numerals[degree],
       symbol: `${root}${quality.symbol}`,
     };
   });
@@ -1303,11 +1306,13 @@ export interface ChordVariation {
   borrowedFrom?: string; // explanation if borrowed
 }
 
-export function getChordVariations(key: NoteName, degree: number): ChordVariation[] {
+export function getChordVariations(key: NoteName, degree: number, keyMode: KeyMode = 'major'): ChordVariation[] {
   const keyIndex = NOTE_NAMES.indexOf(key);
-  const rootInterval = MAJOR_SCALE[degree];
+  const scale = keyMode === 'minor' ? MINOR_SCALE : MAJOR_SCALE;
+  const qualities = keyMode === 'minor' ? DIATONIC_QUALITIES_MINOR : DIATONIC_QUALITIES_MAJOR;
+  const rootInterval = scale[degree];
   const root = NOTE_NAMES[(keyIndex + rootInterval) % 12];
-  const quality = DIATONIC_QUALITIES[degree];
+  const quality = qualities[degree];
   const variations: ChordVariation[] = [];
 
   // Diatonic variations
