@@ -169,7 +169,7 @@ function ModeSelector({
             </div>
           </div>
         </div>
-        <div className="mt-1.5 text-[10px] font-mono text-primary font-bold bg-primary/10 rounded px-2 py-1 border border-primary/40 shadow-[0_0_10px_hsl(var(--primary)/0.25)]">
+      <div className="mt-1.5 text-[10px] font-mono font-bold rounded px-2 py-1 border" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 12px hsl(270, 80%, 65%, 0.4), 0 0 24px hsl(270, 80%, 65%, 0.15)' }}>
           ♪ {value.root} {value.mode === 'arpeggio' ? `${value.scale} (Arp)` : value.scale}
         </div>
       </div>
