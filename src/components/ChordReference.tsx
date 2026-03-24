@@ -383,18 +383,7 @@ function ChordLibraryPanel({
 
   return (
     <>
-      {/* Root selector */}
-      <div className="flex flex-wrap gap-0.5 mb-2">
-        {NOTE_NAMES.map(n => (
-          <button
-            key={n}
-            onClick={() => setSelectedRoot(n)}
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
-              n === selectedRoot ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
-            }`}
-          >{n}</button>
-        ))}
-      </div>
+      <RootSelector selectedRoot={selectedRoot} setSelectedRoot={setSelectedRoot} />
 
       {/* Main layout */}
       <div className="flex gap-1.5">
