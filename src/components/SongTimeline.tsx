@@ -4,8 +4,8 @@ import type { TimelineChord, SnapValue, Genre } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
   NOTE_NAMES, CHORD_FORMULAS, getDiatonicChords, getChordVariations,
-  getChordDegree, SCALE_DEGREE_COLORS, ROMAN_NUMERALS,
-  type ChordVariation,
+  getChordDegree, SCALE_DEGREE_COLORS, ROMAN_NUMERALS, ROMAN_NUMERALS_MINOR,
+  type ChordVariation, type KeyMode,
 } from '@/lib/music';
 
 interface SongTimelineProps {
