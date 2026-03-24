@@ -501,20 +501,23 @@ export default function Fretboard({
 
   // Build arpeggio position path points
   const arpPositionPath = useMemo(() => {
-    if (!arpeggioPosition || arpPositionSet.size === 0) return [];
+    if (!arpeggioPosition || !arpeggioPosition.notes || arpeggioPosition.notes.length < 2) return [];
     const points: { x: number; y: number }[] = [];
-    // Walk strings low to high (string order: 5,4,3,2,1,0 = low E to high E)
-    for (const si of stringOrder) {
-      const fret = arpeggioPosition.frets[si];
-      if (fret >= 0) {
-        const row = stringOrder.indexOf(si);
-        const x = cumLeft[fret] + widths[fret] / 2;
-        const y = (row * stringH + stringH / 2) / (6 * stringH) * 100;
-        points.push({ x, y });
-      }
+    // Sort notes by midi order (low to high): string low to high, then fret
+    const sortedNotes = [...arpeggioPosition.notes].sort((a, b) => {
+      const aMidi = ([40, 45, 50, 55, 59, 64][a.stringIndex] || 40) + a.fret;
+      const bMidi = ([40, 45, 50, 55, 59, 64][b.stringIndex] || 40) + b.fret;
+      return aMidi - bMidi;
+    });
+    for (const n of sortedNotes) {
+      const row = stringOrder.indexOf(n.stringIndex);
+      if (row < 0) continue;
+      const x = cumLeft[n.fret] + widths[n.fret] / 2;
+      const y = (row * stringH + stringH / 2) / (6 * stringH) * 100;
+      points.push({ x, y });
     }
     return points;
-  }, [arpeggioPosition, arpPositionSet, stringOrder, cumLeft, widths, stringH]);
+  }, [arpeggioPosition, stringOrder, cumLeft, widths, stringH]);
 
   const getChordLabel = (note: NoteName, fret: number, stringIndex: number): string => {
     if (identifyMode && identifyRoot && displayMode === 'degrees') return getIntervalName(identifyRoot, note);
