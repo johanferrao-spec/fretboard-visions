@@ -698,7 +698,7 @@ export default function Fretboard({
                 {/* Fret cells */}
                 <div className="flex items-center flex-1">
                   {frets.map(fret => {
-                    const note = noteAtFret(stringIdx, fret);
+                    const note = noteAtFret(stringIdx, fret, tuning);
                     const style = isDisabled ? null : getNoteStyle(note, stringIdx, fret);
                     const label = getChordLabel(note, fret, stringIdx);
                     const isOpenString = fret === 0;
