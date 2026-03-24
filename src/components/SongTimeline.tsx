@@ -34,6 +34,8 @@ interface SongTimelineProps {
   onVolumeChange: (v: number) => void;
   timelineKey: NoteName;
   setTimelineKey: (k: NoteName) => void;
+  keyMode: KeyMode;
+  setKeyMode: (m: KeyMode) => void;
 }
 
 export default function SongTimeline({
