@@ -320,5 +320,17 @@ export function useMidiEngine() {
     return () => { dispose(); };
   }, [dispose]);
 
-  return { play, stop, dispose };
+  const setVolume = useCallback((vol: number) => {
+    // vol: 0-1, map to dB range -40 to 0
+    const db = vol <= 0 ? -Infinity : -40 + vol * 40;
+    volumeRef.current = db;
+    if (synthRef.current) synthRef.current.volume.value = db;
+    if (bassRef.current) bassRef.current.volume.value = db + 4;
+    if (kickRef.current) kickRef.current.volume.value = db + 6;
+    if (snareRef.current) snareRef.current.volume.value = db + 2;
+    if (hihatRef.current) hihatRef.current.volume.value = db - 8;
+    if (rideRef.current) rideRef.current.volume.value = db - 6;
+  }, []);
+
+  return { play, stop, dispose, setVolume };
 }

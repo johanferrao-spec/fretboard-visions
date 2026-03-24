@@ -1389,6 +1389,129 @@ export function getChordDegree(key: NoteName, chordRoot: NoteName, chordType: st
   for (let d = 0; d < MAJOR_SCALE.length; d++) {
     if (MAJOR_SCALE[d] === interval) {
       const expected = DIATONIC_QUALITIES[d];
+      if (expected.type === chordType) return d;
+      if (expected.type === 'Major' && ['Major 7', 'Dominant 7', 'Add9', 'Sus2', 'Sus4', 'Major 6', 'Major 9', 'Dominant 9', '7sus4'].includes(chordType)) return d;
+      if (expected.type === 'Minor' && ['Minor 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'].includes(chordType)) return d;
+      if (expected.type === 'Diminished' && ['Dim 7', 'Half-Dim 7'].includes(chordType)) return d;
+      return d;
+    }
+  }
+  return -1;
+}
+
+// ============================================================
+// TENSION SUGGESTIONS — scales/arpeggios that work over a chord in context
+// ============================================================
+
+export interface TensionSuggestion {
+  name: string;
+  type: 'scale' | 'arpeggio';
+  root: NoteName;
+  description: string;
+  tension: 'consonant' | 'mild' | 'strong';
+}
+
+export function getTensionSuggestions(key: NoteName, chordRoot: NoteName, chordType: string): TensionSuggestion[] {
+  const suggestions: TensionSuggestion[] = [];
+  const degree = getChordDegree(key, chordRoot, chordType);
+  const root = chordRoot;
+
+  // Chord tones arpeggio (always first)
+  suggestions.push({ name: chordType, type: 'arpeggio', root, description: 'Chord tones — safest choice', tension: 'consonant' });
+
+  // Based on chord quality and degree
+  const isMajor = ['Major', 'Major 7', 'Add9', 'Major 9', 'Major 6'].includes(chordType);
+  const isMinor = ['Minor', 'Minor 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'].includes(chordType);
+  const isDom = ['Dominant 7', 'Dominant 9', '7sus4', '7#9', '7♭9', '7#5', '7♭5', '11', '13'].includes(chordType);
+  const isDim = ['Diminished', 'Dim 7', 'Half-Dim 7'].includes(chordType);
+
+  if (isMajor) {
+    if (degree === 0) {
+      suggestions.push({ name: 'Major (Ionian)', type: 'scale', root: key, description: 'Parent scale — natural fit', tension: 'consonant' });
+      suggestions.push({ name: 'Lydian', type: 'scale', root, description: '#4 adds brightness and float', tension: 'mild' });
+      suggestions.push({ name: 'Pentatonic Major', type: 'scale', root, description: 'No avoid notes, always safe', tension: 'consonant' });
+    } else if (degree === 3) {
+      suggestions.push({ name: 'Lydian', type: 'scale', root, description: '#4 avoids the avoid note — preferred over Ionian', tension: 'consonant' });
+      suggestions.push({ name: 'Major (Ionian)', type: 'scale', root, description: 'Natural 4th clashes with 3rd — use carefully', tension: 'mild' });
+      suggestions.push({ name: 'Mixolydian', type: 'scale', root, description: 'Adds ♭7 colour — hint of dominant', tension: 'mild' });
+    } else {
+      suggestions.push({ name: 'Major (Ionian)', type: 'scale', root: key, description: 'Parent scale', tension: 'consonant' });
+      suggestions.push({ name: 'Pentatonic Major', type: 'scale', root, description: 'Safe pentatonic', tension: 'consonant' });
+    }
+  }
+
+  if (isMinor) {
+    if (degree === 1) {
+      suggestions.push({ name: 'Dorian', type: 'scale', root, description: 'Natural choice for ii — bright minor with ♮6', tension: 'consonant' });
+      suggestions.push({ name: 'Pentatonic Minor', type: 'scale', root, description: 'Safe minor pentatonic', tension: 'consonant' });
+      suggestions.push({ name: 'Blues', type: 'scale', root, description: 'Add blue note for grit', tension: 'mild' });
+    } else if (degree === 2) {
+      suggestions.push({ name: 'Phrygian', type: 'scale', root, description: 'Natural iii mode — dark, Spanish flavour', tension: 'consonant' });
+      suggestions.push({ name: 'Natural Minor (Aeolian)', type: 'scale', root, description: 'Standard minor sound', tension: 'mild' });
+    } else if (degree === 5) {
+      suggestions.push({ name: 'Natural Minor (Aeolian)', type: 'scale', root, description: 'Natural vi mode', tension: 'consonant' });
+      suggestions.push({ name: 'Dorian', type: 'scale', root, description: 'Brighter minor with ♮6', tension: 'mild' });
+      suggestions.push({ name: 'Pentatonic Minor', type: 'scale', root, description: 'Always works over minor', tension: 'consonant' });
+    } else {
+      suggestions.push({ name: 'Dorian', type: 'scale', root, description: 'Versatile minor mode', tension: 'consonant' });
+      suggestions.push({ name: 'Pentatonic Minor', type: 'scale', root, description: 'Safe pentatonic', tension: 'consonant' });
+      suggestions.push({ name: 'Melodic Minor', type: 'scale', root, description: 'Jazz minor — smooth ascending sound', tension: 'mild' });
+    }
+    // Arpeggio extensions
+    suggestions.push({ name: 'Minor 7', type: 'arpeggio', root, description: 'Extend to m7 for jazz colour', tension: 'consonant' });
+    suggestions.push({ name: 'Minor 9', type: 'arpeggio', root, description: 'Add 9th for smooth neo-soul flavour', tension: 'mild' });
+  }
+
+  if (isDom) {
+    if (degree === 4) {
+      suggestions.push({ name: 'Mixolydian', type: 'scale', root, description: 'Standard V7 choice — ♭7 matches chord', tension: 'consonant' });
+      suggestions.push({ name: 'Blues', type: 'scale', root, description: 'Blues over dominant — classic sound', tension: 'mild' });
+      suggestions.push({ name: 'Bebop Dominant', type: 'scale', root, description: 'Chromatic passing tone keeps chord tones on beats', tension: 'mild' });
+    } else {
+      suggestions.push({ name: 'Mixolydian', type: 'scale', root, description: 'Standard dominant scale', tension: 'consonant' });
+    }
+    if (['7#9', '7♭9', '7#5', '7♭5'].includes(chordType)) {
+      suggestions.push({ name: 'Superlocrian (Altered)', type: 'scale', root, description: 'THE altered scale — all tensions altered', tension: 'strong' });
+      suggestions.push({ name: 'Diminished (HW)', type: 'scale', root, description: 'Symmetric diminished — works over altered doms', tension: 'strong' });
+      suggestions.push({ name: 'Whole Tone', type: 'scale', root, description: 'Dreamy, floating — all whole steps', tension: 'strong' });
+    }
+    suggestions.push({ name: 'Lydian Dominant', type: 'scale', root, description: '#4 over dominant — Coltrane\'s favourite', tension: 'strong' });
+    suggestions.push({ name: 'Phrygian Dominant', type: 'scale', root, description: '♭2 gives Middle Eastern tension over V', tension: 'strong' });
+    suggestions.push({ name: 'Dominant 7', type: 'arpeggio', root, description: 'Outline the chord tones', tension: 'consonant' });
+  }
+
+  if (isDim) {
+    suggestions.push({ name: 'Locrian', type: 'scale', root, description: 'Natural mode for vii° — darkest diatonic mode', tension: 'consonant' });
+    suggestions.push({ name: 'Locrian ♮2', type: 'scale', root, description: 'Half-dim with natural 2nd — smoother', tension: 'mild' });
+    suggestions.push({ name: 'Diminished (HW)', type: 'scale', root, description: 'Symmetric diminished over dim7', tension: 'mild' });
+    suggestions.push({ name: 'Half-Dim 7', type: 'arpeggio', root, description: 'ø7 arpeggio outlines the chord', tension: 'consonant' });
+  }
+
+  // Non-diatonic chord — general suggestions
+  if (degree < 0) {
+    suggestions.push({ name: 'Pentatonic Minor', type: 'scale', root, description: 'Safe choice for outside chords', tension: 'consonant' });
+    suggestions.push({ name: 'Blues', type: 'scale', root, description: 'Blues always works', tension: 'mild' });
+    if (isMajor) suggestions.push({ name: 'Lydian', type: 'scale', root, description: 'Bright outside colour', tension: 'mild' });
+    if (isDom) suggestions.push({ name: 'Superlocrian (Altered)', type: 'scale', root, description: 'Altered scale for outside dominants', tension: 'strong' });
+  }
+
+  return suggestions;
+}
+
+// Get chord tones (note indices) for a given chord
+export function getChordTones(root: NoteName, chordType: string): number[] {
+  const formula = CHORD_FORMULAS[chordType];
+  if (!formula) return [];
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  return formula.map(interval => (rootIdx + (interval % 12)) % 12);
+}
+  const keyIndex = NOTE_NAMES.indexOf(key);
+  const rootIndex = NOTE_NAMES.indexOf(chordRoot);
+  const interval = (rootIndex - keyIndex + 12) % 12;
+  
+  for (let d = 0; d < MAJOR_SCALE.length; d++) {
+    if (MAJOR_SCALE[d] === interval) {
+      const expected = DIATONIC_QUALITIES[d];
       // Check if quality matches (loose — Major includes dom7, etc.)
       if (expected.type === chordType) return d;
       if (expected.type === 'Major' && ['Major 7', 'Dominant 7', 'Add9', 'Sus2', 'Sus4', 'Major 6', 'Major 9', 'Dominant 9', '7sus4'].includes(chordType)) return d;
