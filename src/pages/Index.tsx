@@ -19,7 +19,7 @@ const Index = () => {
   const [customTuningName, setCustomTuningName] = useState('');
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
   const [volume, setVolume] = useState(0.7);
-  const [timelineKey, setTimelineKey] = useState<NoteName>('C');
+  const [timelineKey, setTimelineKey] = useState<NoteName>('E');
   const [keyMode, setKeyMode] = useState<KeyMode>('major');
 
   const handleApplyChord = (chord: ChordSelection) => {
@@ -82,7 +82,7 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
         <h1 className="text-lg font-display font-bold text-foreground tracking-tight">
-          <span className="text-primary">Fret</span>Flow
+          <span className="text-primary">Maps</span> &amp; <span className="text-primary">Facts</span> for Jazz Cats
         </h1>
         <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
           Guitar Fretboard Visualizer

@@ -240,6 +240,7 @@ export default function Fretboard({
       return null;
     }
 
+    if (activeChord) {
       if (!chordNoteSet.has(`${stringIndex}-${fret}`)) return null;
       let bg = pColor;
       if (degreeColors) {
@@ -499,6 +500,23 @@ export default function Fretboard({
 
   const allPaths = [...persistedPaths, ...(isDragging && dragPath.length >= 2 ? [dragPath] : [])];
 
+  // Build arpeggio position path points
+  const arpPositionPath = useMemo(() => {
+    if (!arpeggioPosition || arpPositionSet.size === 0) return [];
+    const points: { x: number; y: number }[] = [];
+    // Walk strings low to high (string order: 5,4,3,2,1,0 = low E to high E)
+    for (const si of stringOrder) {
+      const fret = arpeggioPosition.frets[si];
+      if (fret >= 0) {
+        const row = stringOrder.indexOf(si);
+        const x = cumLeft[fret] + widths[fret] / 2;
+        const y = (row * stringH + stringH / 2) / (6 * stringH) * 100;
+        points.push({ x, y });
+      }
+    }
+    return points;
+  }, [arpeggioPosition, arpPositionSet, stringOrder, cumLeft, widths, stringH]);
+
   const getChordLabel = (note: NoteName, fret: number, stringIndex: number): string => {
     if (identifyMode && identifyRoot && displayMode === 'degrees') return getIntervalName(identifyRoot, note);
     if (activeChord && displayMode !== 'notes') return getExtendedIntervalName(activeChord.root, note);
@@ -708,7 +726,36 @@ export default function Fretboard({
             );
           })}
 
-          {/* Strings */}
+          {/* Arpeggio position path */}
+          {arpPositionPath.length >= 2 && (() => {
+            const totalH = 6 * stringH;
+            return (
+              <svg
+                className="absolute inset-0 pointer-events-none z-[5]"
+                style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
+                viewBox={`0 0 100 ${totalH}`}
+                preserveAspectRatio="none"
+              >
+                {arpPositionPath.map((pt, i, arr) => {
+                  if (i === 0) return null;
+                  const prev = arr[i - 1];
+                  return (
+                    <line
+                      key={i}
+                      x1={prev.x} y1={prev.y * totalH / 100}
+                      x2={pt.x} y2={pt.y * totalH / 100}
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={6}
+                      strokeLinecap="round"
+                      opacity={0.5}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  );
+                })}
+              </svg>
+            );
+          })()}
+
           {stringOrder.map((stringIdx, row) => {
             const isDisabled = disabledStrings.has(stringIdx);
             const thickness = Math.max(1, 3.5 - stringIdx * 0.5);

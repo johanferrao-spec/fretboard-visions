@@ -29,8 +29,8 @@ NOTE_NAMES.forEach(note => {
 
 export function useFretboard() {
   const [maxFrets, setMaxFrets] = useState(22);
-  const [primaryScale, setPrimaryScale] = useState<ScaleSelection>({ mode: 'scale', root: 'A', scale: 'Natural Minor (Aeolian)' });
-  const [secondaryScale, setSecondaryScale] = useState<ScaleSelection>({ mode: 'scale', root: 'E', scale: 'Superlocrian (Altered)' });
+  const [primaryScale, setPrimaryScale] = useState<ScaleSelection>({ mode: 'scale', root: 'E', scale: 'Natural Minor (Aeolian)' });
+  const [secondaryScale, setSecondaryScale] = useState<ScaleSelection>({ mode: 'scale', root: 'B', scale: 'Superlocrian (Altered)' });
   const [secondaryEnabled, setSecondaryEnabled] = useState(false);
   const [activePrimary, setActivePrimary] = useState(true);
   const [noteColors, setNoteColors] = useState<NoteColors>(DEFAULT_COLORS);
