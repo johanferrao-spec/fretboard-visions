@@ -171,6 +171,7 @@ export default function ChordReference({
           currentBeat={currentBeat}
           isPlaying={isPlaying}
           timelineKey={timelineKey}
+          keyMode={keyMode}
           onApplyScale={onApplyScale}
         />
       ) : activeTab === 'caged' ? (
