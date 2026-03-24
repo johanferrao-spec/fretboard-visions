@@ -13,6 +13,8 @@ import { TUNING_PRESETS, NOTE_NAMES, type TuningPreset } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
+  const timeline = useSongTimeline();
+  const midi = useMidiEngine();
   const [showCustomTuning, setShowCustomTuning] = useState(false);
   const [customTuningName, setCustomTuningName] = useState('');
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
