@@ -64,31 +64,38 @@ const CHORD_COLUMNS: { label: string; types: string[] }[] = [
 // ============================================================
 
 function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteName; setSelectedRoot: (n: NoteName) => void }) {
-  const [accidental, setAccidental] = useState<'natural' | 'sharp' | 'flat'>('natural');
+  const [baseNote, setBaseNote] = useState<NoteName>(() => {
+    // Find the closest natural note
+    if (NATURAL_NOTES.includes(selectedRoot)) return selectedRoot;
+    const idx = NOTE_NAMES.indexOf(selectedRoot);
+    const flatBase = NOTE_NAMES[(idx + 1) % 12];
+    if (NATURAL_NOTES.includes(flatBase as NoteName)) return flatBase as NoteName;
+    return 'E';
+  });
+  const [accidental, setAccidental] = useState<'natural' | 'sharp' | 'flat'>(() => {
+    if (NATURAL_NOTES.includes(selectedRoot)) return 'natural';
+    const idx = NOTE_NAMES.indexOf(selectedRoot);
+    // Check if selectedRoot is a sharp of some natural note
+    for (const n of NATURAL_NOTES) {
+      const ni = NOTE_NAMES.indexOf(n);
+      if ((ni + 1) % 12 === idx) return 'sharp';
+    }
+    return 'flat';
+  });
   const dragRef = useRef<{ startX: number; active: boolean } | null>(null);
 
-  const resolvedRoot = useMemo((): NoteName => {
-    const idx = NOTE_NAMES.indexOf(selectedRoot);
-    if (accidental === 'sharp') {
-      const sharpIdx = (idx + 1) % 12;
-      return NOTE_NAMES[sharpIdx];
-    }
-    if (accidental === 'flat') {
-      const flatIdx = (idx + 11) % 12;
-      return NOTE_NAMES[flatIdx];
-    }
-    return selectedRoot;
-  }, [selectedRoot, accidental]);
-
-  // When natural note changes, reset accidental
   const handleNoteClick = (n: NoteName) => {
+    setBaseNote(n);
     setAccidental('natural');
     setSelectedRoot(n);
   };
 
-  useEffect(() => {
-    setSelectedRoot(resolvedRoot);
-  }, [resolvedRoot]);
+  const resolveNote = useCallback((base: NoteName, acc: 'natural' | 'sharp' | 'flat'): NoteName => {
+    const idx = NOTE_NAMES.indexOf(base);
+    if (acc === 'sharp') return NOTE_NAMES[(idx + 1) % 12];
+    if (acc === 'flat') return NOTE_NAMES[(idx + 11) % 12];
+    return base;
+  }, []);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     dragRef.current = { startX: e.clientX, active: true };
@@ -98,11 +105,12 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!dragRef.current?.active) return;
     const dx = e.clientX - dragRef.current.startX;
-    if (Math.abs(dx) > 20) {
-      if (dx > 0) setAccidental('sharp');
-      else setAccidental('flat');
-    } else {
-      setAccidental('natural');
+    let newAcc: 'natural' | 'sharp' | 'flat' = 'natural';
+    if (dx > 20) newAcc = 'sharp';
+    else if (dx < -20) newAcc = 'flat';
+    if (newAcc !== accidental) {
+      setAccidental(newAcc);
+      setSelectedRoot(resolveNote(baseNote, newAcc));
     }
   };
 
@@ -110,21 +118,11 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
     dragRef.current = null;
   };
 
-  // Find which natural note is the base of the current resolved root
-  const baseNatural = useMemo(() => {
-    if (NATURAL_NOTES.includes(resolvedRoot)) return resolvedRoot;
-    // Find the natural note that was selected
-    return NATURAL_NOTES.find(n => {
-      const idx = NOTE_NAMES.indexOf(n);
-      return NOTE_NAMES[(idx + 1) % 12] === resolvedRoot || NOTE_NAMES[(idx + 11) % 12] === resolvedRoot;
-    }) || 'E';
-  }, [resolvedRoot]);
-
   return (
     <div className="mb-2">
       <div className="flex flex-wrap gap-0.5 items-end">
         {NATURAL_NOTES.map(n => {
-          const isBase = n === baseNatural;
+          const isBase = n === baseNote;
           return (
             <div key={n} className="flex flex-col items-center">
               <button
@@ -141,7 +139,7 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
                   className="mt-0.5 w-10 h-4 rounded border border-border/60 bg-muted/40 flex items-center justify-center cursor-ew-resize select-none touch-none"
                 >
                   <span className={`text-[8px] font-mono font-bold transition-colors ${
-                    accidental === 'flat' ? 'text-primary' : accidental === 'sharp' ? 'text-primary' : 'text-muted-foreground/50'
+                    accidental !== 'natural' ? 'text-primary' : 'text-muted-foreground/50'
                   }`}>
                     {accidental === 'flat' ? '♭' : accidental === 'sharp' ? '♯' : '—'}
                   </span>
