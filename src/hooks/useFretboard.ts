@@ -60,6 +60,8 @@ export function useFretboard() {
   const [tuningLabels, setTuningLabels] = useState<string[]>(['E', 'A', 'D', 'G', 'B', 'e']);
   const [customTunings, setCustomTunings] = useState<TuningPreset[]>([]);
   const [arpeggioPosition, setArpeggioPosition] = useState<ArpeggioPosition | null>(null);
+  const [arpOverlayOpacity, setArpOverlayOpacity] = useState(1);
+  const [arpPathVisible, setArpPathVisible] = useState(true);
 
   const setTuning = useCallback((preset: TuningPreset) => {
     setTuningState(preset.notes);
