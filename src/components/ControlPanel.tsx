@@ -65,6 +65,7 @@ export default function ControlPanel({
   secondaryOpacity, setSecondaryOpacity,
   secondaryColor, setSecondaryColor,
   primaryColor, setPrimaryColor,
+  condensed,
 }: ControlPanelProps) {
   return (
     <div className="space-y-4">
@@ -75,6 +76,7 @@ export default function ControlPanel({
         active={activePrimary}
         color={primaryColor}
         onColorChange={setPrimaryColor}
+        condensed={!!condensed}
       />
 
       {/* Dual Scale Toggle */}
