@@ -44,6 +44,7 @@ interface FretboardProps {
   identifyRoot: NoteName | null;
   tuning: number[];
   tuningLabels: string[];
+  playingChordTones?: Set<number>; // note indices (0-11) to highlight during playback
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
