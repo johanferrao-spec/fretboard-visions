@@ -1536,6 +1536,13 @@ export function analyzeProgression(key: NoteName, keyMode: KeyMode, chords: { ro
       }
       
       if (!explanation) {
+        // Check for harmonic minor V (major V chord in minor key)
+        if (keyMode === 'minor' && interval === 7 && ['Major', 'Major 7', 'Dominant 7', 'Dominant 9', '7#9', '7♭9'].includes(chord.chordType)) {
+          explanation = `Harmonic minor V — borrowed from harmonic minor. The raised 7th degree creates a leading tone, giving the V chord dominant function for a stronger resolution to i.`;
+        }
+      }
+      
+      if (!explanation) {
         // Check for borrowed chord (modal interchange)
         const parallelScale = keyMode === 'major' ? MINOR_SCALE : MAJOR_SCALE;
         const parallelQualities = keyMode === 'major' ? DIATONIC_QUALITIES_MINOR : DIATONIC_QUALITIES_MAJOR;
@@ -1551,6 +1558,11 @@ export function analyzeProgression(key: NoteName, keyMode: KeyMode, chords: { ro
             }
           }
         }
+      }
+      
+      // Dorian IV in minor key
+      if (!explanation && keyMode === 'minor' && interval === 5 && ['Major', 'Major 7', 'Dominant 7'].includes(chord.chordType)) {
+        explanation = `Borrowed from Dorian mode — major IV chord in minor key. Adds brightness and is characteristic of folk, rock, and modal jazz.`;
       }
       
       if (!explanation) {
