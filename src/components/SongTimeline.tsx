@@ -201,7 +201,7 @@ export default function SongTimeline({
           <select
             value={timelineKey}
             onChange={e => setTimelineKey(e.target.value as NoteName)}
-            className="bg-secondary text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border border-border appearance-none"
+            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border border-border appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
           >
             {NOTE_NAMES.map(n => <option key={n} value={n}>{n} Major</option>)}
           </select>
