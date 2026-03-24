@@ -30,6 +30,10 @@ interface SongTimelineProps {
   onRemoveChord: (id: string) => void;
   onClearTimeline: () => void;
   onTrimOverlaps: () => void;
+  volume: number;
+  onVolumeChange: (v: number) => void;
+  timelineKey: NoteName;
+  setTimelineKey: (k: NoteName) => void;
 }
 
 export default function SongTimeline({
