@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
@@ -11,6 +11,9 @@ import {
 } from '@/lib/music';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
+
+// Natural notes starting from E
+const NATURAL_NOTES: NoteName[] = ['E', 'F', 'G', 'A', 'B', 'C', 'D'];
 
 interface ChordReferenceProps {
   activeChord: ChordSelection | null;
