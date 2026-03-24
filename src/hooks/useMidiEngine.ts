@@ -91,6 +91,7 @@ export function useMidiEngine() {
   const rideRef = useRef<Tone.MetalSynth | null>(null);
   const seqRef = useRef<Tone.Part | null>(null);
   const isInitRef = useRef(false);
+  const volumeRef = useRef(-12); // dB
 
   const init = useCallback(async () => {
     if (isInitRef.current) return;
