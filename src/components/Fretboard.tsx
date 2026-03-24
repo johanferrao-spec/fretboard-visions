@@ -209,6 +209,24 @@ export default function Fretboard({
       return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
     }
 
+    // Playing chord tones from timeline — show chord tone notes with a bright highlight
+    if (playingChordTones && playingChordTones.size > 0) {
+      const noteIdx = (['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).indexOf(note);
+      const inChordTones = playingChordTones.has(noteIdx);
+      const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
+      const inSecondary = secondaryEnabled && isNoteInSelection(note, secondaryScale.root, secondaryScale.scale, secondaryScale.mode);
+      
+      if (inChordTones) {
+        return { backgroundColor: 'hsl(130, 70%, 45%)', opacity: 1, ring: true, ringColor: 'hsl(130, 70%, 55%)', greyed: false };
+      }
+      // Dim non-chord-tone scale notes
+      if (inPrimary || inSecondary) {
+        const bg = inPrimary ? pColor : sColor;
+        return { backgroundColor: bg, opacity: 0.2, ring: false, ringColor: '', greyed: true };
+      }
+      return null;
+    }
+
     const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
     const inSecondary = secondaryEnabled && isNoteInSelection(note, secondaryScale.root, secondaryScale.scale, secondaryScale.mode);
     if (!inPrimary && !inSecondary) return null;
