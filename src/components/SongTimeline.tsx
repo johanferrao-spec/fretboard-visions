@@ -212,7 +212,7 @@ export default function SongTimeline({
           <select
             value={genre}
             onChange={e => setGenre(e.target.value as Genre)}
-            className="bg-secondary text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border border-border appearance-none"
+            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border border-border appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
           >
             <option value="Rock">Rock</option>
             <option value="Pop">Pop</option>
