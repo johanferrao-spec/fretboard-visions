@@ -389,7 +389,7 @@ export default function SongTimeline({
           {/* Variation popup — speech bubble style, appears above the chord */}
           {variationPopup && (
             <div
-              className="absolute z-50"
+              className="fixed z-[9999]"
               style={{
                 left: Math.max(8, variationPopup.x - 112),
                 top: Math.max(-200, variationPopup.y - 8),
