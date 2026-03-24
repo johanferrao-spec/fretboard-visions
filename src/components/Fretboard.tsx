@@ -75,7 +75,7 @@ export default function Fretboard({
   fretBoxStringStart, fretBoxStringSize, setFretBoxStringStart, setFretBoxStringSize,
   noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
   identifyMode, identifyFrets, setIdentifyFrets, identifyRoot,
-  tuning, tuningLabels,
+  tuning, tuningLabels, playingChordTones,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
