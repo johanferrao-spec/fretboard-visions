@@ -510,9 +510,9 @@ function IdentifyPanel({
               {/* Scale degrees on mini diagram */}
               {currentRoot && degreeColors && (
                 <div className="flex gap-1 mb-2">
-                  {STRING_NAMES.map((_, si) => {
+                  {tuningLabels.map((_, si) => {
                     if (frets[si] < 0) return <div key={si} className="flex-1" />;
-                    const note = noteAtFret(si, frets[si]);
+                    const note = noteAtFret(si, frets[si], tuning);
                     const interval = getIntervalName(currentRoot, note);
                     const degColor = DEGREE_COLORS[interval];
                     return (
