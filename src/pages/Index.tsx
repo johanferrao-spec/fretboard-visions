@@ -54,7 +54,7 @@ const Index = () => {
   const isVertical = fb.orientation === 'vertical';
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
         <h1 className="text-lg font-display font-bold text-foreground tracking-tight">
