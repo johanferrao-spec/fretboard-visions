@@ -43,7 +43,7 @@ export default function SongTimeline({
   genre, setGenre, snap, setSnap,
   isPlaying, currentBeat, panelHeight, setPanelHeight,
   onPlay, onStop, onAddChord, onMoveChord, onResizeChord, onRemoveChord, onClearTimeline, onTrimOverlaps,
-  volume, onVolumeChange, timelineKey, setTimelineKey,
+  volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragChord, setDragChord] = useState<string | null>(null);
