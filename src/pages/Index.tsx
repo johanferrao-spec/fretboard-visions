@@ -45,7 +45,10 @@ const Index = () => {
       timeline.bpm,
       timeline.genre,
       (beat) => timeline.setCurrentBeat(beat),
-      () => timeline.setIsPlaying(false),
+      () => {
+        // Loop: restart from beginning
+        handlePlay();
+      },
     );
   };
 
@@ -58,6 +61,13 @@ const Index = () => {
     timeline.setIsPlaying(false);
     timeline.setCurrentBeat(0);
     midi.stop();
+  };
+
+  const handleSeek = (beat: number) => {
+    timeline.setCurrentBeat(beat);
+    if (timeline.isPlaying) {
+      handleStop();
+    }
   };
 
   const isVertical = fb.orientation === 'vertical';
