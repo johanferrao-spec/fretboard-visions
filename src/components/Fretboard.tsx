@@ -120,16 +120,18 @@ export default function Fretboard({
     });
   }
 
-  // Arpeggio position note set
-  const arpPositionSet = useMemo(() => {
+  // Arpeggio position note set + all arpeggio chord tone names
+  const { arpPositionSet, arpChordToneNames } = useMemo(() => {
     const set = new Set<string>();
+    const toneNames = new Set<NoteName>();
     if (arpeggioPosition && arpeggioPosition.notes) {
       arpeggioPosition.notes.forEach(n => {
         set.add(`${n.stringIndex}-${n.fret}`);
+        toneNames.add(noteAtFret(n.stringIndex, n.fret, tuning));
       });
     }
-    return set;
-  }, [arpeggioPosition]);
+    return { arpPositionSet: set, arpChordToneNames: toneNames };
+  }, [arpeggioPosition, tuning]);
 
   const pColor = primaryColor || 'hsl(var(--primary))';
   const sColor = secondaryColor || 'hsl(200, 80%, 60%)';
