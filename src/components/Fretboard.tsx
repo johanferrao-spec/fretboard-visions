@@ -657,7 +657,7 @@ export default function Fretboard({
                       x1={prev.x} y1={prev.y * totalH / 100}
                       x2={pt.x} y2={pt.y * totalH / 100}
                       stroke="hsl(280, 70%, 60%)"
-                      strokeWidth={4}
+                      strokeWidth={6}
                       strokeLinecap="round"
                       opacity={0.7}
                       vectorEffect="non-scaling-stroke"
