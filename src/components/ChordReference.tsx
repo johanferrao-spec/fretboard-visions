@@ -1062,16 +1062,24 @@ function ArpeggioPositionsPanel({
 
 // Mini arpeggio position diagram
 function MiniArpDiagram({ position, root }: { position: ArpeggioPosition; root: NoteName }) {
-  const played = position.frets.filter(f => f >= 0);
-  if (played.length === 0) return null;
-  const minFret = Math.min(...played.filter(f => f > 0), 99);
-  const maxFret = Math.max(...played, (minFret === 99 ? 0 : minFret) + 4);
-  const startFret = Math.max(0, minFret === 99 ? 0 : minFret);
+  if (!position.notes || position.notes.length === 0) return null;
+  const playedFrets = position.notes.filter(n => n.fret > 0).map(n => n.fret);
+  const allFrets = position.notes.map(n => n.fret);
+  const minFret = playedFrets.length > 0 ? Math.min(...playedFrets) : 0;
+  const maxFret = Math.max(...allFrets, minFret + 4);
+  const startFret = Math.max(0, minFret);
   const numFrets = Math.max(4, maxFret - startFret + 1);
   const w = 50;
   const h = 40;
   const stringSpacing = w / 7;
   const fretSpacing = (h - 5) / numFrets;
+
+  // Build set of notes per string
+  const notesByString: Map<number, number[]> = new Map();
+  for (const n of position.notes) {
+    if (!notesByString.has(n.stringIndex)) notesByString.set(n.stringIndex, []);
+    notesByString.get(n.stringIndex)!.push(n.fret);
+  }
 
   return (
     <div className="flex justify-center">
@@ -1085,17 +1093,40 @@ function MiniArpDiagram({ position, root }: { position: ArpeggioPosition; root: 
         {startFret > 0 && (
           <text x={1} y={5 + fretSpacing * 0.6} fontSize={4} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
         )}
-        {position.frets.map((fret, i) => {
-          const x = (i + 1) * stringSpacing;
-          if (fret === -1) return <text key={i} x={x} y={3} fontSize={5} textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="monospace">×</text>;
-          if (fret === 0) return <circle key={i} cx={x} cy={3} r={1.5} fill="none" stroke="hsl(var(--foreground))" strokeWidth={0.5} />;
-          const y = 5 + (fret - startFret + 0.5) * fretSpacing;
-          const note = noteAtFret(i, fret);
+        {/* Muted strings */}
+        {[0, 1, 2, 3, 4, 5].map(s => {
+          if (notesByString.has(s)) return null;
+          const x = (s + 1) * stringSpacing;
+          return <text key={`m${s}`} x={x} y={3} fontSize={5} textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="monospace">×</text>;
+        })}
+        {/* Notes */}
+        {position.notes.map((n, i) => {
+          const x = (n.stringIndex + 1) * stringSpacing;
+          if (n.fret === 0) return <circle key={i} cx={x} cy={3} r={1.5} fill="none" stroke="hsl(var(--foreground))" strokeWidth={0.5} />;
+          const y = 5 + (n.fret - startFret + 0.5) * fretSpacing;
+          const note = noteAtFret(n.stringIndex, n.fret);
           const interval = getIntervalName(root, note);
           const degColor = DEGREE_COLORS[interval];
           const fillColor = degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
           return <circle key={i} cx={x} cy={y} r={2.5} fill={fillColor} />;
         })}
+        {/* Path lines */}
+        {(() => {
+          const sorted = [...position.notes].sort((a, b) => {
+            const aMidi = ([40, 45, 50, 55, 59, 64][a.stringIndex] || 40) + a.fret;
+            const bMidi = ([40, 45, 50, 55, 59, 64][b.stringIndex] || 40) + b.fret;
+            return aMidi - bMidi;
+          });
+          return sorted.map((n, i) => {
+            if (i === 0) return null;
+            const prev = sorted[i - 1];
+            const x1 = (prev.stringIndex + 1) * stringSpacing;
+            const y1 = prev.fret === 0 ? 3 : 5 + (prev.fret - startFret + 0.5) * fretSpacing;
+            const x2 = (n.stringIndex + 1) * stringSpacing;
+            const y2 = n.fret === 0 ? 3 : 5 + (n.fret - startFret + 0.5) * fretSpacing;
+            return <line key={`l${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="hsl(var(--primary))" strokeWidth={1} opacity={0.4} />;
+          });
+        })()}
       </svg>
     </div>
   );
