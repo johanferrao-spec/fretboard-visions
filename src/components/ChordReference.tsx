@@ -36,7 +36,7 @@ interface ChordReferenceProps {
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
-type MainTab = 'chords' | 'caged' | 'identify';
+type MainTab = 'chords' | 'caged' | 'identify' | 'changes';
 
 const CHORD_COLUMNS: { label: string; types: string[] }[] = [
   { label: 'Major', types: ['Major', 'Major 7', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', 'Major 9', 'Dominant 9', 'Major 6', '7#9', '7♭9', '7#5', '7♭5', '11', '13'] },
