@@ -157,7 +157,7 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
     </div>
   );
 }
-
+export default function ChordReference({
   activeChord, setActiveChord, showCAGED, setShowCAGED,
   cagedShape, setCagedShape, cagedRoot,
   identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets,
