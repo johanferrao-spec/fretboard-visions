@@ -3,10 +3,12 @@ import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
-  isVoicingPlayableInTuning,
-  type ChordVoicing,
+  isVoicingPlayableInTuning, getTensionSuggestions, getChordTones,
+  SCALE_FORMULAS, ARPEGGIO_FORMULAS,
+  type ChordVoicing, type TensionSuggestion,
 } from '@/lib/music';
 import type { ChordSelection } from '@/hooks/useFretboard';
+import type { TimelineChord } from '@/hooks/useSongTimeline';
 
 interface ChordReferenceProps {
   activeChord: ChordSelection | null;
