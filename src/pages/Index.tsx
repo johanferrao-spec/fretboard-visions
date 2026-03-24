@@ -218,6 +218,7 @@ const Index = () => {
               identifyRoot={fb.identifyRoot}
               tuning={fb.tuning}
               tuningLabels={fb.tuningLabels}
+              playingChordTones={playingChordTones}
             />
           </div>
 
