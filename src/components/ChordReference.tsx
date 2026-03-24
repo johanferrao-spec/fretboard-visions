@@ -5,8 +5,9 @@ import {
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
   isVoicingPlayableInTuning, getTensionSuggestions, getChordTones,
   analyzeProgression,
-  SCALE_FORMULAS, ARPEGGIO_FORMULAS,
+  SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
+  type ArpeggioPosition,
 } from '@/lib/music';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
