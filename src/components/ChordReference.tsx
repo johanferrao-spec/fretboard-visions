@@ -34,6 +34,7 @@ interface ChordReferenceProps {
   isPlaying: boolean;
   timelineKey: NoteName;
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
+  keyMode: KeyMode;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
