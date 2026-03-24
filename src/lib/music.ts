@@ -245,7 +245,7 @@ export function generateArpeggioPositions(
   
   const allNotes: FretNote[] = [];
   for (let s = 0; s < 6; s++) {
-    for (let f = 0; f <= maxFret; f++) {
+    for (let f = 1; f <= maxFret; f++) { // Start from fret 1 — no open strings
       const midi = baseMidi[s] + f;
       const noteClass = midi % 12;
       const targetClass = rootIdx % 12;
