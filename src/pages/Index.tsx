@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import { useFretboard } from '@/hooks/useFretboard';
 import type { ChordSelection } from '@/hooks/useFretboard';
+import { useSongTimeline } from '@/hooks/useSongTimeline';
+import { useMidiEngine } from '@/hooks/useMidiEngine';
 import Fretboard from '@/components/Fretboard';
 import ControlPanel from '@/components/ControlPanel';
 import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
+import SongTimeline from '@/components/SongTimeline';
 import type { NoteName } from '@/lib/music';
 import { TUNING_PRESETS, NOTE_NAMES, type TuningPreset } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
+  const timeline = useSongTimeline();
+  const midi = useMidiEngine();
   const [showCustomTuning, setShowCustomTuning] = useState(false);
   const [customTuningName, setCustomTuningName] = useState('');
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
@@ -26,6 +31,24 @@ const Index = () => {
   const handleApplySecondaryArpeggio = (root: NoteName, arpeggioName: string) => {
     fb.setSecondaryEnabled(true);
     fb.setSecondaryScale({ mode: 'arpeggio', root, scale: arpeggioName });
+  };
+
+  const handlePlay = () => {
+    timeline.setIsPlaying(true);
+    midi.play(
+      timeline.chords,
+      timeline.measures,
+      timeline.bpm,
+      timeline.genre,
+      (beat) => timeline.setCurrentBeat(beat),
+      () => timeline.setIsPlaying(false),
+    );
+  };
+
+  const handleStop = () => {
+    timeline.setIsPlaying(false);
+    timeline.setCurrentBeat(0);
+    midi.stop();
   };
 
   const isVertical = fb.orientation === 'vertical';
@@ -202,6 +225,30 @@ const Index = () => {
             />
           </div>
         </main>
+
+        {/* Song Timeline */}
+        <SongTimeline
+          chords={timeline.chords}
+          measures={timeline.measures}
+          setMeasures={timeline.setMeasures}
+          bpm={timeline.bpm}
+          setBpm={timeline.setBpm}
+          genre={timeline.genre}
+          setGenre={timeline.setGenre}
+          snap={timeline.snap}
+          setSnap={timeline.setSnap}
+          isPlaying={timeline.isPlaying}
+          currentBeat={timeline.currentBeat}
+          panelHeight={timeline.panelHeight}
+          setPanelHeight={timeline.setPanelHeight}
+          onPlay={handlePlay}
+          onStop={handleStop}
+          onAddChord={timeline.addChord}
+          onMoveChord={timeline.moveChord}
+          onResizeChord={timeline.resizeChord}
+          onRemoveChord={timeline.removeChord}
+          onClearTimeline={timeline.clearTimeline}
+        />
       </div>
 
       <NoteInfoPanel
