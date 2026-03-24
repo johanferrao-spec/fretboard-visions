@@ -300,11 +300,27 @@ export function generateArpeggioPositions(
   
   // Deduplicate
   const seen = new Set<string>();
-  return positions.filter(p => {
+  const deduped = positions.filter(p => {
     const key = p.notes.map(n => `${n.stringIndex}-${n.fret}`).sort().join('|');
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
+  });
+  
+  // Sort by lowest root note pitch (closest to nut first)
+  const baseMidiArr = [40, 45, 50, 55, 59, 64].map((m, i) => 
+    m + ((tuning[i] ?? STANDARD_TUNING[i]) - STANDARD_TUNING[i])
+  );
+  return deduped.sort((a, b) => {
+    // Find lowest root note midi in each position
+    const rootIdxA = NOTE_NAMES.indexOf(root);
+    const aRoots = a.notes.filter(n => (baseMidiArr[n.stringIndex] + n.fret) % 12 === rootIdxA % 12);
+    const bRoots = b.notes.filter(n => (baseMidiArr[n.stringIndex] + n.fret) % 12 === rootIdxA % 12);
+    const aLowest = aRoots.length > 0 ? Math.min(...aRoots.map(n => baseMidiArr[n.stringIndex] + n.fret)) : 999;
+    const bLowest = bRoots.length > 0 ? Math.min(...bRoots.map(n => baseMidiArr[n.stringIndex] + n.fret)) : 999;
+    if (aLowest !== bLowest) return aLowest - bLowest;
+    // Tie-break: closest to nut (lowest startFret)
+    return a.startFret - b.startFret;
   });
 }
 

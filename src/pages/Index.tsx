@@ -227,6 +227,8 @@ const Index = () => {
               tuningLabels={fb.tuningLabels}
               playingChordTones={playingChordTones}
               arpeggioPosition={fb.arpeggioPosition}
+              arpOverlayOpacity={fb.arpOverlayOpacity}
+              arpPathVisible={fb.arpPathVisible}
             />
           </div>
 
@@ -260,6 +262,10 @@ const Index = () => {
               }}
                onSeekToChord={(beat) => handleSeek(beat)}
                onSetArpeggioPosition={fb.setArpeggioPosition}
+               arpOverlayOpacity={fb.arpOverlayOpacity}
+               setArpOverlayOpacity={fb.setArpOverlayOpacity}
+               arpPathVisible={fb.arpPathVisible}
+               setArpPathVisible={fb.setArpPathVisible}
             />
           </div>
         </main>

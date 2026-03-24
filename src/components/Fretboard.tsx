@@ -46,6 +46,8 @@ interface FretboardProps {
   tuningLabels: string[];
   playingChordTones?: Set<number>;
   arpeggioPosition?: ArpeggioPosition | null;
+  arpOverlayOpacity?: number;
+  arpPathVisible?: boolean;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -77,6 +79,7 @@ export default function Fretboard({
   noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
   identifyMode, identifyFrets, setIdentifyFrets, identifyRoot,
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
+  arpOverlayOpacity = 1, arpPathVisible = true,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -229,7 +232,7 @@ export default function Fretboard({
           const dc = getDegreeColor(arpRoot, note);
           if (dc) bg = dc;
         }
-        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
+        return { backgroundColor: bg, opacity: arpOverlayOpacity, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
       }
       // Show scale notes dimmed
       const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
@@ -729,7 +732,7 @@ export default function Fretboard({
           })}
 
           {/* Arpeggio position path */}
-          {arpPositionPath.length >= 2 && (() => {
+          {arpPathVisible && arpPositionPath.length >= 2 && (() => {
             const totalH = 6 * stringH;
             return (
               <svg
