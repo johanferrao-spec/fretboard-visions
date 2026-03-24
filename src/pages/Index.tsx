@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useFretboard } from '@/hooks/useFretboard';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import { useSongTimeline } from '@/hooks/useSongTimeline';
@@ -9,7 +9,7 @@ import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import type { NoteName } from '@/lib/music';
-import { TUNING_PRESETS, NOTE_NAMES, type TuningPreset } from '@/lib/music';
+import { TUNING_PRESETS, NOTE_NAMES, getChordTones, type TuningPreset, type KeyMode } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
@@ -20,6 +20,7 @@ const Index = () => {
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
   const [volume, setVolume] = useState(0.7);
   const [timelineKey, setTimelineKey] = useState<NoteName>('C');
+  const [keyMode, setKeyMode] = useState<KeyMode>('major');
 
   const handleApplyChord = (chord: ChordSelection) => {
     fb.setActiveChord(chord);
@@ -60,6 +61,14 @@ const Index = () => {
   };
 
   const isVertical = fb.orientation === 'vertical';
+
+  // Compute playing chord tones for reactive fretboard
+  const playingChordTones = useMemo(() => {
+    if (!timeline.isPlaying && timeline.currentBeat === 0) return undefined;
+    const current = timeline.chords.find(c => timeline.currentBeat >= c.startBeat && timeline.currentBeat < c.startBeat + c.duration);
+    if (!current) return undefined;
+    return new Set(getChordTones(current.root, current.chordType));
+  }, [timeline.isPlaying, timeline.currentBeat, timeline.chords]);
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
@@ -209,6 +218,7 @@ const Index = () => {
               identifyRoot={fb.identifyRoot}
               tuning={fb.tuning}
               tuningLabels={fb.tuningLabels}
+              playingChordTones={playingChordTones}
             />
           </div>
 
@@ -235,6 +245,7 @@ const Index = () => {
               currentBeat={timeline.currentBeat}
               isPlaying={timeline.isPlaying}
               timelineKey={timelineKey}
+              keyMode={keyMode}
               onApplyScale={(root, scale, mode) => {
                 fb.setPrimaryScale({ mode, root, scale });
                 fb.setActiveChord(null);
@@ -271,6 +282,8 @@ const Index = () => {
         onVolumeChange={handleVolumeChange}
         timelineKey={timelineKey}
         setTimelineKey={setTimelineKey}
+        keyMode={keyMode}
+        setKeyMode={setKeyMode}
       />
 
       <NoteInfoPanel

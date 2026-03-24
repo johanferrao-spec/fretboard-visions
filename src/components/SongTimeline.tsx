@@ -4,8 +4,8 @@ import type { TimelineChord, SnapValue, Genre } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
   NOTE_NAMES, CHORD_FORMULAS, getDiatonicChords, getChordVariations,
-  getChordDegree, SCALE_DEGREE_COLORS, ROMAN_NUMERALS,
-  type ChordVariation,
+  getChordDegree, SCALE_DEGREE_COLORS, ROMAN_NUMERALS, ROMAN_NUMERALS_MINOR,
+  type ChordVariation, type KeyMode,
 } from '@/lib/music';
 
 interface SongTimelineProps {
@@ -34,6 +34,8 @@ interface SongTimelineProps {
   onVolumeChange: (v: number) => void;
   timelineKey: NoteName;
   setTimelineKey: (k: NoteName) => void;
+  keyMode: KeyMode;
+  setKeyMode: (m: KeyMode) => void;
 }
 
 export default function SongTimeline({
@@ -41,7 +43,7 @@ export default function SongTimeline({
   genre, setGenre, snap, setSnap,
   isPlaying, currentBeat, panelHeight, setPanelHeight,
   onPlay, onStop, onAddChord, onMoveChord, onResizeChord, onRemoveChord, onClearTimeline, onTrimOverlaps,
-  volume, onVolumeChange, timelineKey, setTimelineKey,
+  volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragChord, setDragChord] = useState<string | null>(null);
@@ -57,7 +59,8 @@ export default function SongTimeline({
   const totalBeats = measures * 4;
   const snapGrid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
 
-  const diatonicChords = useMemo(() => getDiatonicChords(timelineKey), [timelineKey]);
+  const diatonicChords = useMemo(() => getDiatonicChords(timelineKey, keyMode), [timelineKey, keyMode]);
+  const currentNumerals = keyMode === 'minor' ? ROMAN_NUMERALS_MINOR : ROMAN_NUMERALS;
 
   const getBeatFromX = useCallback((clientX: number): number => {
     if (!gridRef.current) return 0;
@@ -133,7 +136,7 @@ export default function SongTimeline({
   // Click a chord block to show variation popup
   const handleChordClick = useCallback((chord: TimelineChord, e: React.MouseEvent) => {
     e.stopPropagation();
-    const degree = getChordDegree(timelineKey, chord.root, chord.chordType);
+    const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
     if (degree < 0) return; // no variations for non-diatonic
     const gridRect = gridRef.current?.getBoundingClientRect();
     if (!gridRect) return;
@@ -158,14 +161,14 @@ export default function SongTimeline({
 
   const variations = useMemo(() => {
     if (!variationPopup) return [];
-    return getChordVariations(timelineKey, variationPopup.degree);
-  }, [variationPopup, timelineKey]);
+    return getChordVariations(timelineKey, variationPopup.degree, keyMode);
+  }, [variationPopup, timelineKey, keyMode]);
 
   const playheadPct = (currentBeat / totalBeats) * 100;
 
   // Get color for a chord based on its degree in the key
   const getChordColor = (chord: TimelineChord): string => {
-    const degree = getChordDegree(timelineKey, chord.root, chord.chordType);
+    const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
     if (degree >= 0) return SCALE_DEGREE_COLORS[degree];
     return '220, 15%, 50%';
   };
@@ -234,8 +237,19 @@ export default function SongTimeline({
             onChange={e => setTimelineKey(e.target.value as NoteName)}
             className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
           >
-            {NOTE_NAMES.map(n => <option key={n} value={n}>{n} Major</option>)}
+            {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
           </select>
+          <div className="flex">
+            {(['major', 'minor'] as KeyMode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => setKeyMode(m)}
+                className={`px-1.5 py-0.5 text-[9px] font-mono uppercase transition-colors ${
+                  keyMode === m ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:bg-muted'
+                } ${m === 'major' ? 'rounded-l' : 'rounded-r'}`}
+              >{m}</button>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center gap-1">
@@ -371,7 +385,7 @@ export default function SongTimeline({
             const leftPct = (chord.startBeat / totalBeats) * 100;
             const widthPct = (chord.duration / totalBeats) * 100;
             const color = getChordColor(chord);
-            const degree = getChordDegree(timelineKey, chord.root, chord.chordType);
+            const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
             const isDiatonic = degree >= 0;
 
             return (
@@ -400,7 +414,7 @@ export default function SongTimeline({
                   e.stopPropagation();
                   onRemoveChord(chord.id);
                 }}
-                title={`${chord.root} ${chord.chordType}${isDiatonic ? ` (${ROMAN_NUMERALS[degree]})` : ' — outside key'} — click for variations, double-click to remove`}
+                title={`${chord.root} ${chord.chordType}${isDiatonic ? ` (${currentNumerals[degree]})` : ' — outside key'} — click for variations, double-click to remove`}
               >
                 <span
                   className="text-[10px] font-mono font-bold px-1.5 truncate"
@@ -431,7 +445,7 @@ export default function SongTimeline({
               <div className="bg-card border border-border rounded-lg shadow-xl p-2 w-56 max-h-48 overflow-y-auto relative">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[10px] font-mono font-bold text-foreground uppercase tracking-wider">
-                    Variations ({ROMAN_NUMERALS[variationPopup.degree]})
+                    Variations ({currentNumerals[variationPopup.degree]})
                   </span>
                   <button onClick={() => setVariationPopup(null)} className="text-muted-foreground hover:text-foreground">
                     <X size={12} />

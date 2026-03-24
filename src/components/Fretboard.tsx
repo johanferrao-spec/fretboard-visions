@@ -44,6 +44,7 @@ interface FretboardProps {
   identifyRoot: NoteName | null;
   tuning: number[];
   tuningLabels: string[];
+  playingChordTones?: Set<number>; // note indices (0-11) to highlight during playback
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -74,7 +75,7 @@ export default function Fretboard({
   fretBoxStringStart, fretBoxStringSize, setFretBoxStringStart, setFretBoxStringSize,
   noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
   identifyMode, identifyFrets, setIdentifyFrets, identifyRoot,
-  tuning, tuningLabels,
+  tuning, tuningLabels, playingChordTones,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -206,6 +207,24 @@ export default function Fretboard({
         if (dc) bg = dc;
       }
       return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
+    }
+
+    // Playing chord tones from timeline — show chord tone notes with a bright highlight
+    if (playingChordTones && playingChordTones.size > 0) {
+      const noteIdx = (['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).indexOf(note);
+      const inChordTones = playingChordTones.has(noteIdx);
+      const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
+      const inSecondary = secondaryEnabled && isNoteInSelection(note, secondaryScale.root, secondaryScale.scale, secondaryScale.mode);
+      
+      if (inChordTones) {
+        return { backgroundColor: 'hsl(130, 70%, 45%)', opacity: 1, ring: true, ringColor: 'hsl(130, 70%, 55%)', greyed: false };
+      }
+      // Dim non-chord-tone scale notes
+      if (inPrimary || inSecondary) {
+        const bg = inPrimary ? pColor : sColor;
+        return { backgroundColor: bg, opacity: 0.2, ring: false, ringColor: '', greyed: true };
+      }
+      return null;
     }
 
     const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
@@ -629,23 +648,23 @@ export default function Fretboard({
                       key={i}
                       x1={prev.x} y1={prev.y * totalH / 100}
                       x2={pt.x} y2={pt.y * totalH / 100}
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
+                      stroke="hsl(var(--foreground))"
+                      strokeWidth={3}
                       strokeLinecap="round"
-                      opacity={0.7}
+                      opacity={0.6}
                       vectorEffect="non-scaling-stroke"
                     />
                   );
                 })}
                 {pts.map((pt, i) => (
                   <circle
-                    key={`dot-${i}`}
+                    key={`ring-${i}`}
                     cx={pt.x} cy={pt.y * totalH / 100}
-                    r={4}
+                    r={noteMarkerSize * 0.4}
                     fill="none"
-                    stroke="hsl(var(--primary))"
+                    stroke="hsl(var(--foreground))"
                     strokeWidth={1.5}
-                    opacity={0.8}
+                    opacity={0.7}
                     vectorEffect="non-scaling-stroke"
                   />
                 ))}
