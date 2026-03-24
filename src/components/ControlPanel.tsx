@@ -169,7 +169,7 @@ function ModeSelector({
             </div>
           </div>
         </div>
-        <div className="mt-1.5 text-[10px] font-mono text-primary font-bold bg-primary/10 rounded px-2 py-1 border border-primary/40 shadow-[0_0_10px_hsl(var(--primary)/0.25)]">
+      <div className="mt-1.5 text-[10px] font-mono font-bold rounded px-2 py-1 border" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 12px hsl(270, 80%, 65%, 0.4), 0 0 24px hsl(270, 80%, 65%, 0.15)' }}>
           ♪ {value.root} {value.mode === 'arpeggio' ? `${value.scale} (Arp)` : value.scale}
         </div>
       </div>
@@ -216,13 +216,13 @@ function ModeSelector({
       <select
         value={value.root}
         onChange={e => onChange({ ...value, root: e.target.value as NoteName })}
-        className="w-full bg-muted text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono mb-2 appearance-none"
+        className="w-full text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono mb-2 appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
       >
         {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
       </select>
 
       {/* Selected scale display — glowing */}
-      <div className="text-[10px] font-mono text-primary font-bold bg-primary/10 rounded px-2 py-1 mb-2 border border-primary/40 shadow-[0_0_10px_hsl(var(--primary)/0.25)]">
+      <div className="text-[10px] font-mono font-bold rounded px-2 py-1 mb-2 border" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 12px hsl(270, 80%, 65%, 0.4), 0 0 24px hsl(270, 80%, 65%, 0.15)' }}>
         ♪ {value.mode === 'arpeggio' ? value.scale : value.scale}
       </div>
 
@@ -231,7 +231,7 @@ function ModeSelector({
         <select
           value={value.scale}
           onChange={e => onChange({ ...value, scale: e.target.value })}
-          className="w-full bg-muted text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono appearance-none"
+          className="w-full text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
         >
           {arpeggioNames.map(s => <option key={s} value={s}>{s}</option>)}
         </select>

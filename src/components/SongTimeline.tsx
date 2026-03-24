@@ -93,7 +93,7 @@ export default function SongTimeline({
   const handleGridDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const beat = getBeatFromX(e.clientX);
-    const dur = snap === '1/4' ? 2 : snap === '1/8' ? 1 : 0.5;
+    const dur = 4; // default 1 bar = 4 beats
 
     // Check for diatonic degree drop
     const degreeData = e.dataTransfer.getData('application/diatonic-degree');
@@ -122,7 +122,7 @@ export default function SongTimeline({
 
   const handleGridDoubleClick = useCallback((e: React.MouseEvent) => {
     const beat = getBeatFromX(e.clientX);
-    onAddChord('C', 'Major', beat, snap === '1/4' ? 2 : snap === '1/8' ? 1 : 0.5);
+    onAddChord('C', 'Major', beat, 4);
     setTimeout(() => onTrimOverlaps(), 0);
   }, [getBeatFromX, onAddChord, snap, onTrimOverlaps]);
 
@@ -137,8 +137,8 @@ export default function SongTimeline({
     setVariationPopup({
       chordId: chord.id,
       degree,
-      x: blockRect.left + blockRect.width / 2 - gridRect.left,
-      y: blockRect.top - gridRect.top,
+      x: blockRect.left + blockRect.width / 2,
+      y: blockRect.top,
     });
   }, [timelineKey]);
 
@@ -192,7 +192,7 @@ export default function SongTimeline({
             type="number"
             value={bpm}
             onChange={e => setBpm(Math.max(40, Math.min(300, Number(e.target.value))))}
-            className="w-12 bg-secondary text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center"
+            className="w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
           />
         </div>
 
@@ -201,7 +201,7 @@ export default function SongTimeline({
           <select
             value={timelineKey}
             onChange={e => setTimelineKey(e.target.value as NoteName)}
-            className="bg-secondary text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border border-border appearance-none"
+            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border border-border appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
           >
             {NOTE_NAMES.map(n => <option key={n} value={n}>{n} Major</option>)}
           </select>
@@ -212,7 +212,7 @@ export default function SongTimeline({
           <select
             value={genre}
             onChange={e => setGenre(e.target.value as Genre)}
-            className="bg-secondary text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border border-border appearance-none"
+            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border border-border appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
           >
             <option value="Rock">Rock</option>
             <option value="Pop">Pop</option>
@@ -239,7 +239,7 @@ export default function SongTimeline({
             type="number"
             value={measures}
             onChange={e => setMeasures(Math.max(1, Math.min(32, Number(e.target.value))))}
-            className="w-10 bg-secondary text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center"
+            className="w-10 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
           />
         </div>
 
@@ -275,9 +275,9 @@ export default function SongTimeline({
       </div>
 
       {/* Timeline grid */}
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {/* Measure labels */}
-        <div className="flex items-center" style={{ minWidth: `${measures * 200}px` }}>
+        <div className="flex items-center">
           <div className="w-0" />
           {Array.from({ length: measures }, (_, m) => (
             <div key={m} className="flex-1 text-center border-l border-border/50 first:border-l-0">
@@ -290,32 +290,39 @@ export default function SongTimeline({
         <div
           ref={gridRef}
           className="relative flex-1 bg-secondary/20 border-t border-border/30"
-          style={{ minWidth: `${measures * 200}px`, height: `calc(100% - 24px)` }}
+          style={{ height: `calc(100% - 24px)` }}
           onDrop={handleGridDrop}
           onDragOver={handleGridDragOver}
           onDoubleClick={handleGridDoubleClick}
           onClick={() => setVariationPopup(null)}
         >
-          {/* Grid lines */}
+          {/* Grid lines — beat and measure lines */}
           {Array.from({ length: totalBeats }, (_, i) => {
             const isMeasure = i % 4 === 0;
             return (
               <div
                 key={i}
-                className={`absolute top-0 bottom-0 ${isMeasure ? 'border-l border-border/60' : 'border-l border-border/20'}`}
-                style={{ left: `${(i / totalBeats) * 100}%` }}
+                className="absolute top-0 bottom-0"
+                style={{
+                  left: `${(i / totalBeats) * 100}%`,
+                  borderLeft: isMeasure ? '1.5px solid hsl(220, 15%, 35%)' : '1px solid hsl(220, 15%, 25%)',
+                }}
               />
             );
           })}
 
           {/* Sub-beat lines */}
-          {snap !== '1/4' && Array.from({ length: totalBeats * 2 }, (_, i) => {
-            if (i % 2 === 0) return null;
+          {snap !== '1/4' && Array.from({ length: totalBeats * (snap === '1/16' ? 4 : 2) }, (_, i) => {
+            const divisor = snap === '1/16' ? 4 : 2;
+            if (i % divisor === 0) return null;
             return (
               <div
-                key={`8-${i}`}
-                className="absolute top-0 bottom-0 border-l border-border/10"
-                style={{ left: `${(i / (totalBeats * 2)) * 100}%` }}
+                key={`sub-${i}`}
+                className="absolute top-0 bottom-0"
+                style={{
+                  left: `${(i / (totalBeats * divisor)) * 100}%`,
+                  borderLeft: '1px dashed hsl(220, 15%, 20%)',
+                }}
               />
             );
           })}
@@ -382,7 +389,7 @@ export default function SongTimeline({
           {/* Variation popup — speech bubble style, appears above the chord */}
           {variationPopup && (
             <div
-              className="absolute z-50"
+              className="fixed z-[9999]"
               style={{
                 left: Math.max(8, variationPopup.x - 112),
                 top: Math.max(-200, variationPopup.y - 8),

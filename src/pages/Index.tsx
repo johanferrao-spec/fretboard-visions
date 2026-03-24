@@ -123,7 +123,7 @@ const Index = () => {
                   const preset = allTunings.find(t => t.name === name);
                   if (preset) fb.setTuning(preset);
                 }}
-                className="bg-secondary text-secondary-foreground text-[10px] font-mono uppercase tracking-wider rounded-md px-2 py-1 border border-border"
+                className="text-secondary-foreground text-[10px] font-mono uppercase tracking-wider rounded-md px-2 py-1 border border-border appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
               >
                 {[...TUNING_PRESETS, ...fb.customTunings].map(t => (
                   <option key={t.name} value={t.name}>{t.name}</option>
