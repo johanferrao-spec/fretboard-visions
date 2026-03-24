@@ -1222,3 +1222,181 @@ export const CHORD_CATEGORIES: { label: string; types: string[] }[] = [
   { label: '6ths', types: ['Major 6', 'Minor 6'] },
   { label: 'Power', types: ['Power (5)'] },
 ];
+
+// ============================================================
+// DIATONIC CHORD SYSTEM
+// ============================================================
+
+// Scale degree colors matching the theory/coloring-system
+export const SCALE_DEGREE_COLORS = [
+  '120, 70%, 45%',   // I   - green
+  '220, 15%, 55%',   // II  - grey
+  '0, 75%, 55%',     // III - red
+  '330, 70%, 60%',   // IV  - pink
+  '210, 85%, 55%',   // V   - blue
+  '175, 65%, 45%',   // VI  - turquoise
+  '30, 90%, 55%',    // VII - orange
+];
+
+export const ROMAN_NUMERALS = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+
+// Major scale intervals for building diatonic chords
+const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
+
+// Diatonic chord qualities in a major key
+const DIATONIC_QUALITIES: { type: string; symbol: string }[] = [
+  { type: 'Major', symbol: '' },
+  { type: 'Minor', symbol: 'm' },
+  { type: 'Minor', symbol: 'm' },
+  { type: 'Major', symbol: '' },
+  { type: 'Major', symbol: '' },
+  { type: 'Minor', symbol: 'm' },
+  { type: 'Diminished', symbol: '°' },
+];
+
+export interface DiatonicChord {
+  degree: number; // 0-6
+  root: NoteName;
+  type: string;
+  roman: string;
+  symbol: string; // e.g. "Em", "G", "F#°"
+}
+
+export function getDiatonicChords(key: NoteName): DiatonicChord[] {
+  const keyIndex = NOTE_NAMES.indexOf(key);
+  return MAJOR_SCALE.map((interval, degree) => {
+    const rootIndex = (keyIndex + interval) % 12;
+    const root = NOTE_NAMES[rootIndex];
+    const quality = DIATONIC_QUALITIES[degree];
+    return {
+      degree,
+      root,
+      type: quality.type,
+      roman: ROMAN_NUMERALS[degree],
+      symbol: `${root}${quality.symbol}`,
+    };
+  });
+}
+
+export interface ChordVariation {
+  root: NoteName;
+  type: string;
+  label: string;
+  isDiatonic: boolean;
+  borrowedFrom?: string; // explanation if borrowed
+}
+
+export function getChordVariations(key: NoteName, degree: number): ChordVariation[] {
+  const keyIndex = NOTE_NAMES.indexOf(key);
+  const rootInterval = MAJOR_SCALE[degree];
+  const root = NOTE_NAMES[(keyIndex + rootInterval) % 12];
+  const quality = DIATONIC_QUALITIES[degree];
+  const variations: ChordVariation[] = [];
+
+  // Diatonic variations
+  const diatonicTypes: { type: string; label: string }[] = [];
+
+  if (quality.type === 'Major') {
+    diatonicTypes.push(
+      { type: 'Major', label: `${root}` },
+      { type: 'Major 7', label: `${root}maj7` },
+      { type: 'Add9', label: `${root}add9` },
+      { type: 'Sus2', label: `${root}sus2` },
+      { type: 'Sus4', label: `${root}sus4` },
+      { type: 'Major 6', label: `${root}6` },
+    );
+    // Dominant for V
+    if (degree === 4) {
+      diatonicTypes.push(
+        { type: 'Dominant 7', label: `${root}7` },
+        { type: 'Dominant 9', label: `${root}9` },
+        { type: '7sus4', label: `${root}7sus4` },
+      );
+    }
+    if (degree === 0) {
+      diatonicTypes.push({ type: 'Major 9', label: `${root}maj9` });
+    }
+  } else if (quality.type === 'Minor') {
+    diatonicTypes.push(
+      { type: 'Minor', label: `${root}m` },
+      { type: 'Minor 7', label: `${root}m7` },
+      { type: 'Minor 9', label: `${root}m9` },
+      { type: 'Minor 6', label: `${root}m6` },
+    );
+  } else if (quality.type === 'Diminished') {
+    diatonicTypes.push(
+      { type: 'Diminished', label: `${root}°` },
+      { type: 'Half-Dim 7', label: `${root}ø7` },
+    );
+  }
+
+  for (const dt of diatonicTypes) {
+    variations.push({ root, type: dt.type, label: dt.label, isDiatonic: true });
+  }
+
+  // Borrowed chords (modal interchange)
+  const borrowed: { type: string; label: string; from: string }[] = [];
+
+  if (quality.type === 'Major' && degree === 3) {
+    // IV → iv minor (borrowed from parallel minor)
+    borrowed.push({ type: 'Minor', label: `${root}m`, from: 'Parallel minor (Aeolian)' });
+    borrowed.push({ type: 'Minor 7', label: `${root}m7`, from: 'Parallel minor (Aeolian)' });
+  }
+  if (quality.type === 'Major' && degree === 0) {
+    // I → i minor is rare but possible
+    borrowed.push({ type: 'Minor', label: `${root}m`, from: 'Parallel minor — dramatic tonal shift' });
+  }
+  if (quality.type === 'Major' && degree === 4) {
+    // V → v minor (borrowed from Mixolydian/Aeolian)
+    borrowed.push({ type: 'Minor', label: `${root}m`, from: 'Parallel minor (Aeolian)' });
+    // V → V7#9 (Hendrix chord)
+    borrowed.push({ type: '7#9', label: `${root}7#9`, from: 'Blues/Hendrix chord — dominant with minor 3rd on top' });
+  }
+  if (quality.type === 'Minor' && degree === 1) {
+    // ii → II major (secondary dominant approach)
+    borrowed.push({ type: 'Major', label: `${root}`, from: 'Secondary dominant (V/V) — used as II' });
+    borrowed.push({ type: 'Dominant 7', label: `${root}7`, from: 'Secondary dominant (V7/V)' });
+  }
+  if (quality.type === 'Minor' && degree === 2) {
+    // iii → III major (borrowed from Mixolydian)
+    borrowed.push({ type: 'Major', label: `${root}`, from: 'Borrowed from Mixolydian mode' });
+  }
+  if (quality.type === 'Minor' && degree === 5) {
+    // vi → VI major (borrowed from Lydian/parallel)
+    borrowed.push({ type: 'Major', label: `${root}`, from: 'Borrowed from parallel major context' });
+    borrowed.push({ type: 'Dominant 7', label: `${root}7`, from: 'Secondary dominant (V7/ii)' });
+  }
+  // bVII chord (borrowed from Mixolydian)
+  if (degree === 6) {
+    const bVIIRoot = NOTE_NAMES[(keyIndex + 10) % 12];
+    borrowed.push({ type: 'Major', label: `${bVIIRoot}`, from: 'Borrowed from Mixolydian — ♭VII' });
+    borrowed.push({ type: 'Dominant 7', label: `${bVIIRoot}7`, from: 'Borrowed from Mixolydian — ♭VII7' });
+  }
+
+  for (const b of borrowed) {
+    variations.push({ root: b.label.match(/^([A-G]#?)/)?.[1] as NoteName || root, type: b.type, label: b.label, isDiatonic: false, borrowedFrom: b.from });
+  }
+
+  return variations;
+}
+
+// Determine the scale degree of a chord in a given key (returns -1 if not diatonic)
+export function getChordDegree(key: NoteName, chordRoot: NoteName, chordType: string): number {
+  const keyIndex = NOTE_NAMES.indexOf(key);
+  const rootIndex = NOTE_NAMES.indexOf(chordRoot);
+  const interval = (rootIndex - keyIndex + 12) % 12;
+  
+  for (let d = 0; d < MAJOR_SCALE.length; d++) {
+    if (MAJOR_SCALE[d] === interval) {
+      const expected = DIATONIC_QUALITIES[d];
+      // Check if quality matches (loose — Major includes dom7, etc.)
+      if (expected.type === chordType) return d;
+      if (expected.type === 'Major' && ['Major 7', 'Dominant 7', 'Add9', 'Sus2', 'Sus4', 'Major 6', 'Major 9', 'Dominant 9', '7sus4'].includes(chordType)) return d;
+      if (expected.type === 'Minor' && ['Minor 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'].includes(chordType)) return d;
+      if (expected.type === 'Diminished' && ['Dim 7', 'Half-Dim 7'].includes(chordType)) return d;
+      // Return degree even if quality doesn't match perfectly but root does
+      return d;
+    }
+  }
+  return -1;
+}
