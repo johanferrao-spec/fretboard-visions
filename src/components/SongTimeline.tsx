@@ -374,7 +374,7 @@ export default function SongTimeline({
             const leftPct = (chord.startBeat / totalBeats) * 100;
             const widthPct = (chord.duration / totalBeats) * 100;
             const color = getChordColor(chord);
-            const degree = getChordDegree(timelineKey, chord.root, chord.chordType);
+            const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
             const isDiatonic = degree >= 0;
 
             return (
