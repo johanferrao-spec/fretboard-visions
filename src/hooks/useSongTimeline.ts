@@ -99,7 +99,7 @@ export function useSongTimeline() {
     isPlaying, setIsPlaying,
     currentBeat, setCurrentBeat,
     panelHeight, setPanelHeight,
-    addChord, moveChord, resizeChord, removeChord, clearTimeline,
+    addChord, moveChord, resizeChord, removeChord, clearTimeline, trimOverlaps,
     snapToBeat,
   };
 }
