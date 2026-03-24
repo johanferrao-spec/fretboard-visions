@@ -63,7 +63,7 @@ export default function ChordReference({
   degreeColors, identifyRoot, setIdentifyRoot,
   tuning, tuningLabels,
   timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, keyMode,
-  onSeekToChord,
+  onSeekToChord, onSetArpeggioPosition,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('C');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
