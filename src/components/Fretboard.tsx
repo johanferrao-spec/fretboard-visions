@@ -726,7 +726,36 @@ export default function Fretboard({
             );
           })}
 
-          {/* Strings */}
+          {/* Arpeggio position path */}
+          {arpPositionPath.length >= 2 && (() => {
+            const totalH = 6 * stringH;
+            return (
+              <svg
+                className="absolute inset-0 pointer-events-none z-[5]"
+                style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
+                viewBox={`0 0 100 ${totalH}`}
+                preserveAspectRatio="none"
+              >
+                {arpPositionPath.map((pt, i, arr) => {
+                  if (i === 0) return null;
+                  const prev = arr[i - 1];
+                  return (
+                    <line
+                      key={i}
+                      x1={prev.x} y1={prev.y * totalH / 100}
+                      x2={pt.x} y2={pt.y * totalH / 100}
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={6}
+                      strokeLinecap="round"
+                      opacity={0.5}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  );
+                })}
+              </svg>
+            );
+          })()}
+
           {stringOrder.map((stringIdx, row) => {
             const isDisabled = disabledStrings.has(stringIdx);
             const thickness = Math.max(1, 3.5 - stringIdx * 0.5);
