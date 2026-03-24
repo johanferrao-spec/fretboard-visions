@@ -17,6 +17,7 @@ interface ControlPanelProps {
   setSecondaryColor: (v: string) => void;
   primaryColor: string;
   setPrimaryColor: (v: string) => void;
+  condensed?: boolean;
 }
 
 const arpeggioNames = Object.keys(ARPEGGIO_FORMULAS);
@@ -64,6 +65,7 @@ export default function ControlPanel({
   secondaryOpacity, setSecondaryOpacity,
   secondaryColor, setSecondaryColor,
   primaryColor, setPrimaryColor,
+  condensed,
 }: ControlPanelProps) {
   return (
     <div className="space-y-4">
@@ -74,6 +76,7 @@ export default function ControlPanel({
         active={activePrimary}
         color={primaryColor}
         onColorChange={setPrimaryColor}
+        condensed={!!condensed}
       />
 
       {/* Dual Scale Toggle */}
@@ -100,6 +103,7 @@ export default function ControlPanel({
             active={!activePrimary}
             color={secondaryColor}
             onColorChange={setSecondaryColor}
+            condensed={false}
           />
           <div>
             <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
@@ -132,7 +136,7 @@ export default function ControlPanel({
 }
 
 function ModeSelector({
-  label, value, onChange, active, color, onColorChange,
+  label, value, onChange, active, color, onColorChange, condensed,
 }: {
   label: string;
   value: ScaleSelection;
@@ -140,6 +144,7 @@ function ModeSelector({
   active: boolean;
   color: string;
   onColorChange: (c: string) => void;
+  condensed: boolean;
 }) {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const description = value.mode === 'scale' ? SCALE_DESCRIPTIONS[value.scale] : undefined;
@@ -148,6 +153,34 @@ function ModeSelector({
     onChange({ ...value, mode: 'scale', scale: scaleName });
     setOpenCategory(null);
   };
+
+  // Condensed mode: just show selected scale/arp compactly
+  if (condensed) {
+    return (
+      <div className={`p-3 rounded-lg border transition-colors ${active ? 'border-primary bg-secondary/50' : 'border-border'}`}>
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">{label}</label>
+          <div className="flex items-center gap-1.5">
+            <div className="relative">
+              <input
+                type="color"
+                value={color || '#e6a817'}
+                onChange={e => onColorChange(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-5 h-5"
+              />
+              <div
+                className="w-5 h-5 rounded-full border border-border cursor-pointer"
+                style={{ backgroundColor: color || 'hsl(var(--primary))' }}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="mt-1.5 text-[10px] font-mono text-primary font-bold bg-primary/10 rounded px-2 py-1 border border-primary/40 shadow-[0_0_10px_hsl(var(--primary)/0.25)]">
+          ♪ {value.root} {value.mode === 'arpeggio' ? `${value.scale} (Arp)` : value.scale}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`p-3 rounded-lg border transition-colors ${active ? 'border-primary bg-secondary/50' : 'border-border'}`}>
@@ -194,6 +227,11 @@ function ModeSelector({
         {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
       </select>
 
+      {/* Selected scale display — glowing */}
+      <div className="text-[10px] font-mono text-primary font-bold bg-primary/10 rounded px-2 py-1 mb-2 border border-primary/40 shadow-[0_0_10px_hsl(var(--primary)/0.25)]">
+        ♪ {value.mode === 'arpeggio' ? value.scale : value.scale}
+      </div>
+
       {/* Scale categories or arpeggio dropdown */}
       {value.mode === 'arpeggio' ? (
         <select
@@ -205,16 +243,10 @@ function ModeSelector({
         </select>
       ) : (
         <div className="space-y-1">
-          {/* Current selection display */}
-          <div className="text-[10px] font-mono text-foreground bg-muted/50 rounded px-2 py-1 mb-1">
-            ♪ {value.scale}
-          </div>
-
           {openCategory === null ? (
-            /* Category buttons */
+            /* Category buttons — never highlight folders */
             <div className="grid grid-cols-1 gap-1">
               {SCALE_CATEGORIES.map(cat => {
-                // Major and Minor with single scale → direct select
                 const isDirect = cat.label === 'Major';
                 return (
                   <button
@@ -226,12 +258,10 @@ function ModeSelector({
                         setOpenCategory(cat.label);
                       }
                     }}
-                    className={`w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all ${
-                      cat.scales?.includes(value.scale)
-                        ? 'bg-primary/20 text-primary border border-primary/60 shadow-[0_0_8px_hsl(var(--primary)/0.3)]'
-                        : cat.isModesGroup
-                          ? 'bg-accent/40 text-foreground/80 hover:bg-accent/60 border border-transparent'
-                          : 'bg-muted text-foreground/80 hover:bg-muted/80 border border-transparent'
+                    className={`w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all border border-transparent ${
+                      cat.isModesGroup
+                        ? 'bg-accent/20 text-foreground/60 hover:bg-accent/35'
+                        : 'bg-muted text-foreground/80 hover:bg-muted/80'
                     }`}
                   >
                     {cat.label} {!isDirect && '→'}

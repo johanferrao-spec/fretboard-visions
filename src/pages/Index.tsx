@@ -84,6 +84,7 @@ const Index = () => {
               setSecondaryColor={fb.setSecondaryColor}
               primaryColor={fb.primaryColor}
               setPrimaryColor={fb.setPrimaryColor}
+              condensed={fb.secondaryEnabled}
             />
           </div>
         </aside>
