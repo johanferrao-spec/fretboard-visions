@@ -258,7 +258,8 @@ const Index = () => {
                 fb.setPrimaryScale({ mode, root, scale });
                 fb.setActiveChord(null);
               }}
-              onSeekToChord={(beat) => handleSeek(beat)}
+               onSeekToChord={(beat) => handleSeek(beat)}
+               onSetArpeggioPosition={fb.setArpeggioPosition}
             />
           </div>
         </main>
