@@ -62,6 +62,14 @@ const Index = () => {
 
   const isVertical = fb.orientation === 'vertical';
 
+  // Compute playing chord tones for reactive fretboard
+  const playingChordTones = useMemo(() => {
+    if (!timeline.isPlaying && timeline.currentBeat === 0) return undefined;
+    const current = timeline.chords.find(c => timeline.currentBeat >= c.startBeat && timeline.currentBeat < c.startBeat + c.duration);
+    if (!current) return undefined;
+    return new Set(getChordTones(current.root, current.chordType));
+  }, [timeline.isPlaying, timeline.currentBeat, timeline.chords]);
+
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
