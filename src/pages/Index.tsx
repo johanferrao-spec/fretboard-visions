@@ -225,6 +225,30 @@ const Index = () => {
             />
           </div>
         </main>
+
+        {/* Song Timeline */}
+        <SongTimeline
+          chords={timeline.chords}
+          measures={timeline.measures}
+          setMeasures={timeline.setMeasures}
+          bpm={timeline.bpm}
+          setBpm={timeline.setBpm}
+          genre={timeline.genre}
+          setGenre={timeline.setGenre}
+          snap={timeline.snap}
+          setSnap={timeline.setSnap}
+          isPlaying={timeline.isPlaying}
+          currentBeat={timeline.currentBeat}
+          panelHeight={timeline.panelHeight}
+          setPanelHeight={timeline.setPanelHeight}
+          onPlay={handlePlay}
+          onStop={handleStop}
+          onAddChord={timeline.addChord}
+          onMoveChord={timeline.moveChord}
+          onResizeChord={timeline.resizeChord}
+          onRemoveChord={timeline.removeChord}
+          onClearTimeline={timeline.clearTimeline}
+        />
       </div>
 
       <NoteInfoPanel
