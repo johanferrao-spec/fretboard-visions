@@ -27,6 +27,12 @@ interface ChordReferenceProps {
   setIdentifyRoot: (v: NoteName | null) => void;
   tuning: number[];
   tuningLabels: string[];
+  // Playing Changes props
+  timelineChords: TimelineChord[];
+  currentBeat: number;
+  isPlaying: boolean;
+  timelineKey: NoteName;
+  onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
