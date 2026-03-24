@@ -240,6 +240,7 @@ export default function Fretboard({
       return null;
     }
 
+    if (activeChord) {
       if (!chordNoteSet.has(`${stringIndex}-${fret}`)) return null;
       let bg = pColor;
       if (degreeColors) {
