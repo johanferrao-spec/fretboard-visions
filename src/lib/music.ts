@@ -1403,14 +1403,16 @@ export function getChordVariations(key: NoteName, degree: number, keyMode: KeyMo
 }
 
 // Determine the scale degree of a chord in a given key (returns -1 if not diatonic)
-export function getChordDegree(key: NoteName, chordRoot: NoteName, chordType: string): number {
+export function getChordDegree(key: NoteName, chordRoot: NoteName, chordType: string, keyMode: KeyMode = 'major'): number {
   const keyIndex = NOTE_NAMES.indexOf(key);
   const rootIndex = NOTE_NAMES.indexOf(chordRoot);
   const interval = (rootIndex - keyIndex + 12) % 12;
+  const scale = keyMode === 'minor' ? MINOR_SCALE : MAJOR_SCALE;
+  const qualities = keyMode === 'minor' ? DIATONIC_QUALITIES_MINOR : DIATONIC_QUALITIES_MAJOR;
   
-  for (let d = 0; d < MAJOR_SCALE.length; d++) {
-    if (MAJOR_SCALE[d] === interval) {
-      const expected = DIATONIC_QUALITIES[d];
+  for (let d = 0; d < scale.length; d++) {
+    if (scale[d] === interval) {
+      const expected = qualities[d];
       if (expected.type === chordType) return d;
       if (expected.type === 'Major' && ['Major 7', 'Dominant 7', 'Add9', 'Sus2', 'Sus4', 'Major 6', 'Major 9', 'Dominant 9', '7sus4'].includes(chordType)) return d;
       if (expected.type === 'Minor' && ['Minor 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'].includes(chordType)) return d;
@@ -1419,6 +1421,148 @@ export function getChordDegree(key: NoteName, chordRoot: NoteName, chordType: st
     }
   }
   return -1;
+}
+
+// ============================================================
+// CHORD PROGRESSION ANALYSIS — explains non-diatonic chords
+// ============================================================
+
+export interface ChordAnalysis {
+  chord: { root: NoteName; chordType: string };
+  roman: string;
+  isDiatonic: boolean;
+  explanation: string;
+  passingChordSuggestion?: string;
+}
+
+export function analyzeProgression(key: NoteName, keyMode: KeyMode, chords: { root: NoteName; chordType: string }[]): ChordAnalysis[] {
+  const keyIndex = NOTE_NAMES.indexOf(key);
+  const scale = keyMode === 'minor' ? MINOR_SCALE : MAJOR_SCALE;
+  const qualities = keyMode === 'minor' ? DIATONIC_QUALITIES_MINOR : DIATONIC_QUALITIES_MAJOR;
+  const numerals = keyMode === 'minor' ? ROMAN_NUMERALS_MINOR : ROMAN_NUMERALS_MAJOR;
+  
+  const formatRoman = (root: NoteName, type: string, degree: number, isDiatonic: boolean): string => {
+    if (isDiatonic && degree >= 0) return numerals[degree];
+    // Non-diatonic: figure out the roman numeral with accidentals
+    const rootIdx = NOTE_NAMES.indexOf(root);
+    const interval = (rootIdx - keyIndex + 12) % 12;
+    // Find closest scale degree
+    const prefixes = ['', '♭II', 'II', '♭III', 'III', 'IV', '♭V', 'V', '♭VI', 'VI', '♭VII', 'VII'];
+    const isMinorChord = ['Minor', 'Minor 7', 'Minor 9', 'Minor 6', 'Minor 11'].includes(type);
+    const isDim = ['Diminished', 'Dim 7', 'Half-Dim 7'].includes(type);
+    let numeral = prefixes[interval] || '?';
+    if (isMinorChord) numeral = numeral.toLowerCase();
+    if (isDim) numeral = numeral.toLowerCase() + '°';
+    return numeral;
+  };
+
+  return chords.map((chord, idx) => {
+    const degree = getChordDegree(key, chord.root, chord.chordType, keyMode);
+    const isDiatonic = degree >= 0;
+    const rootIdx = NOTE_NAMES.indexOf(chord.root);
+    const interval = (rootIdx - keyIndex + 12) % 12;
+    const roman = formatRoman(chord.root, chord.chordType, degree, isDiatonic);
+    
+    let explanation = '';
+    let passingChordSuggestion: string | undefined;
+
+    if (isDiatonic) {
+      // Standard diatonic function
+      const functions: Record<number, string> = keyMode === 'major' ? {
+        0: 'Tonic — home base, resolution point',
+        1: 'Supertonic — pre-dominant, sets up V',
+        2: 'Mediant — connects I and V, ambiguous quality',
+        3: 'Subdominant — creates motion away from tonic',
+        4: 'Dominant — strongest pull back to tonic',
+        5: 'Submediant — relative minor, deceptive resolution target',
+        6: 'Leading tone — diminished, strong pull to I',
+      } : {
+        0: 'Tonic — minor home base, dark resolution',
+        1: 'Supertonic — diminished, unstable, pre-dominant',
+        2: 'Mediant — relative major, bright contrast',
+        3: 'Subdominant — minor subdominant, plaintive quality',
+        4: 'Dominant — minor v, weaker pull than V7',
+        5: 'Submediant — major chord, bright colour in minor',
+        6: 'Subtonic — whole step below tonic, modal quality',
+      };
+      explanation = functions[degree] || '';
+    } else {
+      // Non-diatonic analysis
+      const nextChord = idx < chords.length - 1 ? chords[idx + 1] : null;
+      const nextDegree = nextChord ? getChordDegree(key, nextChord.root, nextChord.chordType, keyMode) : -1;
+      const nextRootIdx = nextChord ? NOTE_NAMES.indexOf(nextChord.root) : -1;
+      
+      const isDom7 = ['Dominant 7', 'Dominant 9', '7#9', '7♭9', '7#5', '7♭5', '13', '11'].includes(chord.chordType);
+      
+      // Check for tritone substitution: dominant chord a tritone from the next chord's V
+      if (isDom7 && nextChord) {
+        const tritoneInterval = (rootIdx - nextRootIdx + 12) % 12;
+        if (tritoneInterval === 1) {
+          // This chord is a half step above the next — tritone sub
+          explanation = `Tritone substitution — replaces V7 of ${nextChord.root}. The ♭5 of the original dominant shares the same tritone interval, creating smooth chromatic voice leading into the resolution.`;
+        } else if ((rootIdx - nextRootIdx + 12) % 12 === 7) {
+          // Secondary dominant (V/next)
+          const nextNumeral = nextDegree >= 0 ? numerals[nextDegree] : nextChord.root;
+          explanation = `Secondary dominant — V7/${nextNumeral}. Temporarily tonicizes ${nextChord.root} by acting as its dominant, creating a momentary key change.`;
+        }
+      }
+      
+      if (!explanation && isDom7) {
+        // Check if it's V7/something
+        for (let d = 0; d < 7; d++) {
+          const targetRoot = NOTE_NAMES[(keyIndex + scale[d]) % 12];
+          const targetRootIdx = NOTE_NAMES.indexOf(targetRoot);
+          if ((rootIdx - targetRootIdx + 12) % 12 === 7) {
+            explanation = `Secondary dominant — V7/${numerals[d]}. Borrows dominant function to temporarily tonicize ${targetRoot}.`;
+            break;
+          }
+        }
+      }
+      
+      if (!explanation) {
+        // Check for borrowed chord (modal interchange)
+        const parallelScale = keyMode === 'major' ? MINOR_SCALE : MAJOR_SCALE;
+        const parallelQualities = keyMode === 'major' ? DIATONIC_QUALITIES_MINOR : DIATONIC_QUALITIES_MAJOR;
+        for (let d = 0; d < parallelScale.length; d++) {
+          if (parallelScale[d] === interval) {
+            const pq = parallelQualities[d];
+            if (pq.type === chord.chordType || 
+                (pq.type === 'Major' && ['Major 7', 'Add9'].includes(chord.chordType)) ||
+                (pq.type === 'Minor' && ['Minor 7', 'Minor 9'].includes(chord.chordType))) {
+              const source = keyMode === 'major' ? 'parallel minor (Aeolian)' : 'parallel major (Ionian)';
+              explanation = `Borrowed chord — from ${source}. Modal interchange adds colour by temporarily shifting the tonal centre.`;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (!explanation) {
+        // Chromatic approach
+        if (nextChord && Math.abs(interval - ((nextRootIdx - keyIndex + 12) % 12)) === 1) {
+          explanation = `Chromatic approach chord — slides by half step into ${nextChord.root}. Creates tension through chromatic voice leading.`;
+        }
+      }
+      
+      if (!explanation) {
+        explanation = `Non-diatonic chord — outside the key of ${key} ${keyMode}. May function as a colour chord or chromatic passing harmony.`;
+      }
+      
+      // Suggest passing chord between this and next
+      if (nextChord && idx < chords.length - 1) {
+        const gap = (nextRootIdx - rootIdx + 12) % 12;
+        if (gap === 2) {
+          const passingRoot = NOTE_NAMES[(rootIdx + 1) % 12];
+          passingChordSuggestion = `Try ${passingRoot}dim7 as a chromatic passing chord`;
+        } else if (gap > 2) {
+          const vOfNext = NOTE_NAMES[(nextRootIdx + 7) % 12];
+          passingChordSuggestion = `Try ${vOfNext}7 as a secondary dominant (V7/${nextChord.root})`;
+        }
+      }
+    }
+
+    return { chord, roman, isDiatonic, explanation, passingChordSuggestion };
+  });
 }
 
 // ============================================================
