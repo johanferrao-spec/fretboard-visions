@@ -93,7 +93,7 @@ export default function SongTimeline({
   const handleGridDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const beat = getBeatFromX(e.clientX);
-    const dur = snap === '1/4' ? 2 : snap === '1/8' ? 1 : 0.5;
+    const dur = 4; // default 1 bar = 4 beats
 
     // Check for diatonic degree drop
     const degreeData = e.dataTransfer.getData('application/diatonic-degree');
