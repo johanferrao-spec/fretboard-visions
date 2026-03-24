@@ -136,7 +136,7 @@ export default function SongTimeline({
   // Click a chord block to show variation popup
   const handleChordClick = useCallback((chord: TimelineChord, e: React.MouseEvent) => {
     e.stopPropagation();
-    const degree = getChordDegree(timelineKey, chord.root, chord.chordType);
+    const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
     if (degree < 0) return; // no variations for non-diatonic
     const gridRect = gridRef.current?.getBoundingClientRect();
     if (!gridRect) return;
