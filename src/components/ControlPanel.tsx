@@ -103,6 +103,7 @@ export default function ControlPanel({
             active={!activePrimary}
             color={secondaryColor}
             onColorChange={setSecondaryColor}
+            condensed={false}
           />
           <div>
             <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
