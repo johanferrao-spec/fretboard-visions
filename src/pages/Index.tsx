@@ -54,7 +54,7 @@ const Index = () => {
   const isVertical = fb.orientation === 'vertical';
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
         <h1 className="text-lg font-display font-bold text-foreground tracking-tight">
@@ -204,7 +204,7 @@ const Index = () => {
           </div>
 
           {/* Chords panel — below (horizontal) or right side (vertical) */}
-          <div className={`border-${isVertical ? 'l' : 't'} border-border shrink-0 ${isVertical ? 'w-72 overflow-y-auto' : ''}`}>
+          <div className={`border-${isVertical ? 'l' : 't'} border-border shrink-0 overflow-y-auto ${isVertical ? 'w-72' : 'max-h-[45vh]'}`}>
             <ChordReference
               activeChord={fb.activeChord}
               setActiveChord={fb.setActiveChord}
@@ -225,31 +225,31 @@ const Index = () => {
             />
           </div>
         </main>
-
-        {/* Song Timeline */}
-        <SongTimeline
-          chords={timeline.chords}
-          measures={timeline.measures}
-          setMeasures={timeline.setMeasures}
-          bpm={timeline.bpm}
-          setBpm={timeline.setBpm}
-          genre={timeline.genre}
-          setGenre={timeline.setGenre}
-          snap={timeline.snap}
-          setSnap={timeline.setSnap}
-          isPlaying={timeline.isPlaying}
-          currentBeat={timeline.currentBeat}
-          panelHeight={timeline.panelHeight}
-          setPanelHeight={timeline.setPanelHeight}
-          onPlay={handlePlay}
-          onStop={handleStop}
-          onAddChord={timeline.addChord}
-          onMoveChord={timeline.moveChord}
-          onResizeChord={timeline.resizeChord}
-          onRemoveChord={timeline.removeChord}
-          onClearTimeline={timeline.clearTimeline}
-        />
       </div>
+
+      {/* Song Timeline — fixed at bottom */}
+      <SongTimeline
+        chords={timeline.chords}
+        measures={timeline.measures}
+        setMeasures={timeline.setMeasures}
+        bpm={timeline.bpm}
+        setBpm={timeline.setBpm}
+        genre={timeline.genre}
+        setGenre={timeline.setGenre}
+        snap={timeline.snap}
+        setSnap={timeline.setSnap}
+        isPlaying={timeline.isPlaying}
+        currentBeat={timeline.currentBeat}
+        panelHeight={timeline.panelHeight}
+        setPanelHeight={timeline.setPanelHeight}
+        onPlay={handlePlay}
+        onStop={handleStop}
+        onAddChord={timeline.addChord}
+        onMoveChord={timeline.moveChord}
+        onResizeChord={timeline.resizeChord}
+        onRemoveChord={timeline.removeChord}
+        onClearTimeline={timeline.clearTimeline}
+      />
 
       <NoteInfoPanel
         note={fb.selectedNote}

@@ -131,18 +131,8 @@ export default function SongTimeline({
   return (
     <div
       className="border-t border-border bg-card flex flex-col shrink-0"
-      style={{ height: panelHeight }}
+      style={{ height: 160 }}
     >
-      {/* Resize handle */}
-      <div
-        className="h-1.5 cursor-ns-resize flex items-center justify-center hover:bg-primary/20 transition-colors"
-        onMouseDown={(e) => {
-          setResizingPanel(true);
-          resizeStartRef.current = { y: e.clientY, height: panelHeight };
-        }}
-      >
-        <div className="w-12 h-0.5 rounded-full bg-muted-foreground/30" />
-      </div>
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0">
