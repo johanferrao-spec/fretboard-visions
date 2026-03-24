@@ -475,6 +475,8 @@ export default function Fretboard({
 
       if (boxDragging === 'move') {
         setFretBoxStart(Math.max(1, Math.min(maxFrets - startSize + 1, startFret + dFrets)));
+        const newStrStart = Math.max(0, Math.min(6 - startStrSize, startStrStart + dStrings));
+        setFretBoxStringStart(newStrStart);
       } else if (boxDragging === 'left') {
         const newStart = Math.max(1, Math.min(startFret + startSize - 3, startFret + dFrets));
         const newSize = startSize - (newStart - startFret);

@@ -1042,25 +1042,28 @@ function ArpeggioPositionsPanel({
 
   return (
     <>
-      <div className="flex items-start gap-2 mb-2">
-        <div className="flex-1 min-w-0">
-          <RootSelector selectedRoot={selectedRoot} setSelectedRoot={(n) => handleRootChange(n)} />
+      <div className="mb-2">
+        <div className="flex items-end gap-2">
+          <div className="flex-1 min-w-0">
+            <RootSelector selectedRoot={selectedRoot} setSelectedRoot={(n) => handleRootChange(n)} />
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
-          <div className="flex flex-col items-center gap-0.5">
-            <span className="text-[7px] font-mono text-muted-foreground uppercase">Overlay</span>
+        <div className="flex items-center gap-3 mt-1.5">
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-[9px] font-mono text-muted-foreground uppercase shrink-0">All Notes</span>
             <input
               type="range"
               min={0}
               max={100}
               value={arpOverlayOpacity * 100}
               onChange={(e) => setArpOverlayOpacity(Number(e.target.value) / 100)}
-              className="w-14 h-1 accent-primary"
+              className="flex-1 h-2 accent-primary"
             />
+            <span className="text-[9px] font-mono text-muted-foreground w-8 text-right">{Math.round(arpOverlayOpacity * 100)}%</span>
           </div>
           <button
             onClick={() => setArpPathVisible(!arpPathVisible)}
-            className={`px-1.5 py-0.5 rounded text-[8px] font-mono transition-colors ${
+            className={`px-3 py-1 rounded text-[10px] font-mono font-bold transition-colors ${
               arpPathVisible
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
