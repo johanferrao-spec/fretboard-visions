@@ -618,6 +618,24 @@ function PlayingChangesPanel({
     return sorted.findIndex(c => c.id === currentChord.id);
   }, [sorted, currentChord]);
 
+  // Arrow key navigation through chords
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (sorted.length === 0 || !onSeekToChord) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const nextIdx = currentIdx < 0 ? 0 : (currentIdx + 1) % sorted.length;
+        onSeekToChord(sorted[nextIdx].startBeat);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prevIdx = currentIdx <= 0 ? sorted.length - 1 : currentIdx - 1;
+        onSeekToChord(sorted[prevIdx].startBeat);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [sorted, currentIdx, onSeekToChord]);
+
   // Next chord wraps around to first chord
   const nextChord = useMemo(() => {
     if (sorted.length === 0) return null;
