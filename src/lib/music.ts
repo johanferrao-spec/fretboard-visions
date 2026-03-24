@@ -356,7 +356,8 @@ function buildStaticNotes(
     const notesPerString: { stringIndex: number; fret: number; midi: number; intervalIdx: number }[][] = [[], [], [], [], [], []];
     
     for (const n of candidates) {
-      const inPos = (n.fret >= posStart && n.fret <= posEnd) || n.fret === 0;
+      if (n.fret === 0) continue; // No open strings in arpeggios
+      const inPos = n.fret >= posStart && n.fret <= posEnd;
       if (!inPos) continue;
       notesPerString[n.stringIndex].push(n);
     }

@@ -582,7 +582,7 @@ export default function SongTimeline({
           {chords.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <span className="text-[11px] font-mono text-muted-foreground/50">
-                Drag chords or roman numerals to the timeline
+                Drag chords to the timeline
               </span>
             </div>
           )}
