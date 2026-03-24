@@ -216,7 +216,7 @@ function ModeSelector({
       <select
         value={value.root}
         onChange={e => onChange({ ...value, root: e.target.value as NoteName })}
-        className="w-full text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono mb-2 appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
+        className="w-full text-foreground text-sm rounded-md px-2 py-1.5 border font-mono mb-2 appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
       >
         {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
       </select>
@@ -231,7 +231,7 @@ function ModeSelector({
         <select
           value={value.scale}
           onChange={e => onChange({ ...value, scale: e.target.value })}
-          className="w-full text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
+          className="w-full text-foreground text-sm rounded-md px-2 py-1.5 border font-mono appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
         >
           {arpeggioNames.map(s => <option key={s} value={s}>{s}</option>)}
         </select>

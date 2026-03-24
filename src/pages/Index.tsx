@@ -18,6 +18,8 @@ const Index = () => {
   const [showCustomTuning, setShowCustomTuning] = useState(false);
   const [customTuningName, setCustomTuningName] = useState('');
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
+  const [volume, setVolume] = useState(0.7);
+  const [timelineKey, setTimelineKey] = useState<NoteName>('C');
 
   const handleApplyChord = (chord: ChordSelection) => {
     fb.setActiveChord(chord);
@@ -35,6 +37,7 @@ const Index = () => {
 
   const handlePlay = () => {
     timeline.setIsPlaying(true);
+    midi.setVolume(volume);
     midi.play(
       timeline.chords,
       timeline.measures,
@@ -43,6 +46,11 @@ const Index = () => {
       (beat) => timeline.setCurrentBeat(beat),
       () => timeline.setIsPlaying(false),
     );
+  };
+
+  const handleVolumeChange = (v: number) => {
+    setVolume(v);
+    midi.setVolume(v);
   };
 
   const handleStop = () => {
@@ -123,7 +131,7 @@ const Index = () => {
                   const preset = allTunings.find(t => t.name === name);
                   if (preset) fb.setTuning(preset);
                 }}
-                className="text-secondary-foreground text-[10px] font-mono uppercase tracking-wider rounded-md px-2 py-1 border border-border appearance-none" style={{ backgroundColor: 'hsl(210, 60%, 75%, 0.15)' }}
+                className="text-secondary-foreground text-[10px] font-mono uppercase tracking-wider rounded-md px-2 py-1 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
               >
                 {[...TUNING_PRESETS, ...fb.customTunings].map(t => (
                   <option key={t.name} value={t.name}>{t.name}</option>
@@ -223,6 +231,14 @@ const Index = () => {
               setIdentifyRoot={fb.setIdentifyRoot}
               tuning={fb.tuning}
               tuningLabels={fb.tuningLabels}
+              timelineChords={timeline.chords}
+              currentBeat={timeline.currentBeat}
+              isPlaying={timeline.isPlaying}
+              timelineKey={timelineKey}
+              onApplyScale={(root, scale, mode) => {
+                fb.setPrimaryScale({ mode, root, scale });
+                fb.setActiveChord(null);
+              }}
             />
           </div>
         </main>
@@ -251,6 +267,10 @@ const Index = () => {
         onRemoveChord={timeline.removeChord}
         onClearTimeline={timeline.clearTimeline}
         onTrimOverlaps={timeline.trimOverlaps}
+        volume={volume}
+        onVolumeChange={handleVolumeChange}
+        timelineKey={timelineKey}
+        setTimelineKey={setTimelineKey}
       />
 
       <NoteInfoPanel
