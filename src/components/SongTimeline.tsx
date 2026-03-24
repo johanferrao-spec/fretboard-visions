@@ -59,7 +59,8 @@ export default function SongTimeline({
   const totalBeats = measures * 4;
   const snapGrid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
 
-  const diatonicChords = useMemo(() => getDiatonicChords(timelineKey), [timelineKey]);
+  const diatonicChords = useMemo(() => getDiatonicChords(timelineKey, keyMode), [timelineKey, keyMode]);
+  const currentNumerals = keyMode === 'minor' ? ROMAN_NUMERALS_MINOR : ROMAN_NUMERALS;
 
   const getBeatFromX = useCallback((clientX: number): number => {
     if (!gridRef.current) return 0;
