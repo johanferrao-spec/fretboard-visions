@@ -117,6 +117,17 @@ export default function Fretboard({
     });
   }
 
+  // Arpeggio position note set
+  const arpPositionSet = useMemo(() => {
+    const set = new Set<string>();
+    if (arpeggioPosition) {
+      arpeggioPosition.frets.forEach((fret, si) => {
+        if (fret >= 0) set.add(`${si}-${fret}`);
+      });
+    }
+    return set;
+  }, [arpeggioPosition]);
+
   const pColor = primaryColor || 'hsl(var(--primary))';
   const sColor = secondaryColor || 'hsl(200, 80%, 60%)';
   const fretBoxEnd = fretBoxStart + fretBoxSize - 1;
