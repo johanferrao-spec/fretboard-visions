@@ -260,6 +260,7 @@ const Index = () => {
                 fb.setPrimaryScale({ mode, root, scale });
                 fb.setActiveChord(null);
               }}
+              onSeekToChord={(beat) => handleSeek(beat)}
             />
           </div>
         </main>
