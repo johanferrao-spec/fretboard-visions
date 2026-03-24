@@ -237,8 +237,19 @@ export default function SongTimeline({
             onChange={e => setTimelineKey(e.target.value as NoteName)}
             className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
           >
-            {NOTE_NAMES.map(n => <option key={n} value={n}>{n} Major</option>)}
+            {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
           </select>
+          <div className="flex">
+            {(['major', 'minor'] as KeyMode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => setKeyMode(m)}
+                className={`px-1.5 py-0.5 text-[9px] font-mono uppercase transition-colors ${
+                  keyMode === m ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:bg-muted'
+                } ${m === 'major' ? 'rounded-l' : 'rounded-r'}`}
+              >{m}</button>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center gap-1">

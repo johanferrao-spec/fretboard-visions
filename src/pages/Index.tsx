@@ -20,6 +20,7 @@ const Index = () => {
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
   const [volume, setVolume] = useState(0.7);
   const [timelineKey, setTimelineKey] = useState<NoteName>('C');
+  const [keyMode, setKeyMode] = useState<KeyMode>('major');
 
   const handleApplyChord = (chord: ChordSelection) => {
     fb.setActiveChord(chord);
