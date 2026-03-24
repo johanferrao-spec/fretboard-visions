@@ -241,11 +241,12 @@ export function useMidiEngine() {
       const beatInt = Math.floor(startBeatInMeasure);
       const timeStr = `${startMeasure}:${beatInt}:${startSixteenth}`;
       const durBeats = chord.duration;
-      const durStr = `${Math.floor(durBeats)}:${Math.floor((durBeats % 1) * 4)}:0`;
+      // Convert duration in beats to seconds for precise timing
+      const durSeconds = (durBeats / bpm) * 60;
 
-      // Chord pad
+      // Chord pad — use exact seconds duration so it stops when the block ends
       Tone.getTransport().schedule((time) => {
-        synthRef.current?.triggerAttackRelease(notes, durStr, time);
+        synthRef.current?.triggerAttackRelease(notes, durSeconds, time);
       }, timeStr);
 
       // Bass follows chord root
