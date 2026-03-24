@@ -610,12 +610,13 @@ function IdentifyPanel({
 // ============================================================
 
 function PlayingChangesPanel({
-  chords, currentBeat, isPlaying, timelineKey, onApplyScale,
+  chords, currentBeat, isPlaying, timelineKey, keyMode, onApplyScale,
 }: {
   chords: TimelineChord[];
   currentBeat: number;
   isPlaying: boolean;
   timelineKey: NoteName;
+  keyMode: KeyMode;
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
 }) {
   // Find the chord currently playing at currentBeat
