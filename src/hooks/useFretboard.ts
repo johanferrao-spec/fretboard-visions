@@ -101,6 +101,7 @@ export function useFretboard() {
     setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
     setIdentifyRoot(null);
     setNoteMarkerSize(20);
+    setArpeggioPosition(null);
   }, []);
 
   // When enabling dual scale, turn off degree colors by default
