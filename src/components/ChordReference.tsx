@@ -149,6 +149,7 @@ export default function ChordReference({
       <div className="flex gap-1 mb-2 flex-wrap">
         {([
           { key: 'chords' as MainTab, label: 'Chord Library' },
+          { key: 'arpeggios' as MainTab, label: 'Arpeggio Positions' },
           { key: 'caged' as MainTab, label: 'CAGED' },
           { key: 'identify' as MainTab, label: "What's This?" },
           { key: 'changes' as MainTab, label: 'Playing Changes' },
