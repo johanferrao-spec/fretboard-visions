@@ -267,6 +267,10 @@ const Index = () => {
         onRemoveChord={timeline.removeChord}
         onClearTimeline={timeline.clearTimeline}
         onTrimOverlaps={timeline.trimOverlaps}
+        volume={volume}
+        onVolumeChange={handleVolumeChange}
+        timelineKey={timelineKey}
+        setTimelineKey={setTimelineKey}
       />
 
       <NoteInfoPanel
