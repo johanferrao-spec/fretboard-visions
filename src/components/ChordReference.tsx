@@ -283,12 +283,17 @@ function ChordLibraryPanel({
                           <button
                             key={ct}
                             onClick={() => handleSelectChord(ct)}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('application/chord', JSON.stringify({ root: selectedRoot, chordType: ct }));
+                              e.dataTransfer.effectAllowed = 'copy';
+                            }}
                             className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
                               isSelected
                                 ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]'
                                 : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
                             }`}
-                            title={ct}
+                            title={`${ct} — drag to timeline`}
                           >{ct}</button>
                         );
                       })}
