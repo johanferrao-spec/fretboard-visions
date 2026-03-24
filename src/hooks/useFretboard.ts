@@ -143,6 +143,8 @@ export function useFretboard() {
     tuning, tuningName, tuningLabels, setTuning,
     customTunings, setCustomTunings,
     arpeggioPosition, setArpeggioPosition,
+    arpOverlayOpacity, setArpOverlayOpacity,
+    arpPathVisible, setArpPathVisible,
     clearFretboard,
   };
 }
