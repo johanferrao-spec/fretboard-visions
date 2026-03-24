@@ -69,6 +69,27 @@ export function useSongTimeline() {
     setCurrentBeat(0);
   }, []);
 
+  // Trim overlapping chords: if one extends over another, trim its duration
+  const trimOverlaps = useCallback(() => {
+    setChords(prev => {
+      const sorted = [...prev].sort((a, b) => a.startBeat - b.startBeat);
+      const result: typeof prev = [];
+      for (const chord of sorted) {
+        const trimmed = { ...chord };
+        // Check if any earlier chord overlaps with this one — trim the earlier one
+        for (const existing of result) {
+          const existingEnd = existing.startBeat + existing.duration;
+          if (existingEnd > trimmed.startBeat) {
+            existing.duration = trimmed.startBeat - existing.startBeat;
+            if (existing.duration <= 0) existing.duration = 0.25; // minimum
+          }
+        }
+        result.push(trimmed);
+      }
+      return result.filter(c => c.duration > 0);
+    });
+  }, []);
+
   return {
     chords, setChords,
     measures, setMeasures,
