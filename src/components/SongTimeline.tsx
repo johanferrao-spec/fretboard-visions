@@ -46,7 +46,6 @@ export default function SongTimeline({
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragChord, setDragChord] = useState<string | null>(null);
   const [resizeChord, setResizeChord] = useState<string | null>(null);
-  const [timelineKey, setTimelineKey] = useState<NoteName>('C');
   // Variation popup state — now triggered by clicking a chord block
   const [variationPopup, setVariationPopup] = useState<{
     chordId: string;
