@@ -282,6 +282,8 @@ const Index = () => {
         onVolumeChange={handleVolumeChange}
         timelineKey={timelineKey}
         setTimelineKey={setTimelineKey}
+        keyMode={keyMode}
+        setKeyMode={setKeyMode}
       />
 
       <NoteInfoPanel
