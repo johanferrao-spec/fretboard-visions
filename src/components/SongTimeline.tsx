@@ -161,8 +161,8 @@ export default function SongTimeline({
 
   const variations = useMemo(() => {
     if (!variationPopup) return [];
-    return getChordVariations(timelineKey, variationPopup.degree);
-  }, [variationPopup, timelineKey]);
+    return getChordVariations(timelineKey, variationPopup.degree, keyMode);
+  }, [variationPopup, timelineKey, keyMode]);
 
   const playheadPct = (currentBeat / totalBeats) * 100;
 
