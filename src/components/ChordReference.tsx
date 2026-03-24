@@ -782,7 +782,6 @@ function PlayingChangesPanel({
           </div>
         )}
       </div>
-      )}
     </div>
   );
 }
