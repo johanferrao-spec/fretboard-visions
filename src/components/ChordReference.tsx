@@ -943,10 +943,18 @@ function ArpeggioPositionsPanel({
   onApplyScale,
   tuning,
   onSetArpeggioPosition,
+  arpOverlayOpacity,
+  setArpOverlayOpacity,
+  arpPathVisible,
+  setArpPathVisible,
 }: {
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   tuning: number[];
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
+  arpOverlayOpacity: number;
+  setArpOverlayOpacity: (v: number) => void;
+  arpPathVisible: boolean;
+  setArpPathVisible: (v: boolean) => void;
 }) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedArp, setSelectedArp] = useState<string | null>(null);
