@@ -280,12 +280,37 @@ export default function Fretboard({
       const inSecondary = secondaryEnabled && isNoteInSelection(note, secondaryScale.root, secondaryScale.scale, secondaryScale.mode);
       
       if (inChordTones) {
-        return { backgroundColor: 'hsl(130, 70%, 45%)', opacity: 1, ring: true, ringColor: 'hsl(130, 70%, 55%)', greyed: false };
+        let bg = 'hsl(130, 70%, 45%)';
+        let opacity = 1;
+        let greyed = false;
+        if (degreeColors) {
+          const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
+          const dc = getDegreeColor(activeRoot, note);
+          if (dc) bg = dc;
+        }
+        // Position box: grey out notes outside
+        if (showFretBox && fret > 0) {
+          const row = stringOrder.indexOf(stringIndex);
+          const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
+          const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
+          if (outsideH || outsideV) {
+            greyed = true; opacity = 0.15;
+          }
+        }
+        return { backgroundColor: bg, opacity, ring: !greyed, ringColor: 'hsl(130, 70%, 55%)', greyed };
       }
       // Dim non-chord-tone scale notes
       if (inPrimary || inSecondary) {
         const bg = inPrimary ? pColor : sColor;
-        return { backgroundColor: bg, opacity: 0.2, ring: false, ringColor: '', greyed: true };
+        let opacity = 0.2;
+        let greyed = true;
+        if (showFretBox && fret > 0) {
+          const row = stringOrder.indexOf(stringIndex);
+          const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
+          const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
+          if (outsideH || outsideV) { opacity = 0.08; }
+        }
+        return { backgroundColor: bg, opacity, ring: false, ringColor: '', greyed };
       }
       return null;
     }
@@ -592,6 +617,15 @@ export default function Fretboard({
               </button>
             );
           })}
+          {/* Position focus toggle — left of Degrees Active */}
+          <button
+            onClick={() => setShowFretBox(!showFretBox)}
+            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
+              showFretBox ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+            }`}
+          >
+            Position focus: {showFretBox ? 'on' : 'off'}
+          </button>
           {/* Degrees Active / Disable All toggle */}
           <button
             onClick={() => {
@@ -618,16 +652,6 @@ export default function Fretboard({
           >
             {degreeColors && DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position))) ? 'Disable All' : 'Degrees Active'}
           </button>
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => setShowFretBox(!showFretBox)}
-              className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
-                showFretBox ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
-              }`}
-            >
-              Position focus: {showFretBox ? 'on' : 'off'}
-            </button>
-          </div>
         </div>
 
         {/* Fret numbers */}

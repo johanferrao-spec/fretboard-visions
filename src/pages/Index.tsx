@@ -179,7 +179,11 @@ const Index = () => {
 
             {/* Reset */}
             <button
-              onClick={fb.clearFretboard}
+              onClick={() => {
+                fb.clearFretboard();
+                // Reinstate the selected scale from left panel by clearing chord/arp overlays
+                fb.setActiveChord(null);
+              }}
               className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
             >
               Reset
@@ -301,6 +305,7 @@ const Index = () => {
         keyMode={keyMode}
         setKeyMode={setKeyMode}
         onSeek={handleSeek}
+        onSetChordBass={timeline.setChordBass}
       />
 
       <NoteInfoPanel

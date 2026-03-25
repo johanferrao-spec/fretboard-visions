@@ -22,6 +22,12 @@ interface ControlPanelProps {
 
 const arpeggioNames = Object.keys(ARPEGGIO_FORMULAS);
 
+const ARPEGGIO_CATEGORIES: { label: string; types: string[] }[] = [
+  { label: 'Major', types: ['Major', 'Major 7', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', 'Major 9', 'Dominant 9', 'Major 6', '7#9', '7♭9', '11', '13'] },
+  { label: 'Minor', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'] },
+  { label: 'Other', types: ['Sus2', 'Sus4', '7sus4'] },
+];
+
 interface ScaleCategory {
   label: string;
   scales?: string[];
@@ -228,13 +234,47 @@ function ModeSelector({
 
       {/* Scale categories or arpeggio dropdown */}
       {value.mode === 'arpeggio' ? (
-        <select
-          value={value.scale}
-          onChange={e => onChange({ ...value, scale: e.target.value })}
-          className="w-full text-foreground text-sm rounded-md px-2 py-1.5 border font-mono appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
-        >
-          {arpeggioNames.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <div className="space-y-1">
+          {openCategory === null ? (
+            <div className="grid grid-cols-1 gap-1">
+              {ARPEGGIO_CATEGORIES.map(cat => (
+                <button
+                  key={cat.label}
+                  onClick={() => setOpenCategory(cat.label)}
+                  className="w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all border border-transparent bg-muted text-foreground/80 hover:bg-muted/80"
+                >
+                  {cat.label} →
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="animate-fade-in">
+              <button
+                onClick={() => setOpenCategory(null)}
+                className="text-[9px] font-mono text-muted-foreground hover:text-foreground mb-1 flex items-center gap-1 transition-colors"
+              >
+                ← Back
+              </button>
+              <div className="grid grid-cols-1 gap-0.5">
+                {ARPEGGIO_CATEGORIES.find(c => c.label === openCategory)?.types
+                  ?.filter(t => ARPEGGIO_FORMULAS[t])
+                  .map(s => (
+                  <button
+                    key={s}
+                    onClick={() => { onChange({ ...value, scale: s }); setOpenCategory(null); }}
+                    className={`w-full text-left px-2 py-1 rounded text-[10px] font-mono transition-all border ${
+                      value.scale === s
+                        ? 'bg-primary/20 text-primary border-primary/60 shadow-[0_0_8px_hsl(var(--primary)/0.3)] font-bold'
+                        : 'bg-muted/50 text-foreground/80 hover:bg-muted hover:text-foreground border-transparent'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
         <div className="space-y-1">
           {openCategory === null ? (

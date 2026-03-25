@@ -243,7 +243,7 @@ export default function ChordReference({
           { key: 'arpeggios' as MainTab, label: 'Arpeggio Positions' },
           { key: 'caged' as MainTab, label: 'CAGED' },
           { key: 'identify' as MainTab, label: "What's This?" },
-          { key: 'changes' as MainTab, label: 'Playing Changes' },
+          { key: 'changes' as MainTab, label: 'Progression Analyser' },
         ]).map(tab => (
           <button
             key={tab.key}
@@ -1043,33 +1043,30 @@ function ArpeggioPositionsPanel({
   return (
     <>
       <div className="mb-2">
-        <div className="flex items-end gap-2">
-          <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <div className="min-w-0">
             <RootSelector selectedRoot={selectedRoot} setSelectedRoot={(n) => handleRootChange(n)} />
           </div>
-        </div>
-        <div className="flex items-center gap-3 mt-1.5">
-          <div className="flex items-center gap-2 flex-1">
-            <span className="text-[9px] font-mono text-muted-foreground uppercase shrink-0">All Notes</span>
+          <div className="flex items-center gap-1 shrink-0 ml-auto">
             <input
               type="range"
               min={0}
               max={100}
               value={arpOverlayOpacity * 100}
               onChange={(e) => setArpOverlayOpacity(Number(e.target.value) / 100)}
-              className="flex-1 h-2 accent-primary"
+              className="w-14 h-1.5 accent-primary"
+              title={`All notes: ${Math.round(arpOverlayOpacity * 100)}%`}
             />
-            <span className="text-[9px] font-mono text-muted-foreground w-8 text-right">{Math.round(arpOverlayOpacity * 100)}%</span>
+            <button
+              onClick={() => setArpPathVisible(!arpPathVisible)}
+              className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold transition-colors ${
+                arpPathVisible
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+              title="Toggle path visibility"
+            >Path</button>
           </div>
-          <button
-            onClick={() => setArpPathVisible(!arpPathVisible)}
-            className={`px-3 py-1 rounded text-[10px] font-mono font-bold transition-colors ${
-              arpPathVisible
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-            title="Toggle path visibility"
-          >Path</button>
         </div>
       </div>
 

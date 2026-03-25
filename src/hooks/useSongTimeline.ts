@@ -12,6 +12,8 @@ export interface TimelineChord {
   startBeat: number;
   /** Duration in beats */
   duration: number;
+  /** Altered bass note (e.g. for C/E slash chord) */
+  bassNote?: NoteName;
 }
 
 export interface SongTimelineState {
@@ -28,7 +30,7 @@ let nextId = 1;
 
 export function useSongTimeline() {
   const [chords, setChords] = useState<TimelineChord[]>([]);
-  const [measures, setMeasures] = useState(8);
+  const [measures, setMeasures] = useState(2);
   const [bpm, setBpm] = useState(120);
   const [genre, setGenre] = useState<Genre>('Rock');
   const [snap, setSnap] = useState<SnapValue>('1/4');
@@ -62,6 +64,10 @@ export function useSongTimeline() {
 
   const removeChord = useCallback((id: string) => {
     setChords(prev => prev.filter(c => c.id !== id));
+  }, []);
+
+  const setChordBass = useCallback((id: string, bassNote: NoteName | undefined) => {
+    setChords(prev => prev.map(c => c.id === id ? { ...c, bassNote } : c));
   }, []);
 
   const clearTimeline = useCallback(() => {
@@ -99,7 +105,7 @@ export function useSongTimeline() {
     isPlaying, setIsPlaying,
     currentBeat, setCurrentBeat,
     panelHeight, setPanelHeight,
-    addChord, moveChord, resizeChord, removeChord, clearTimeline, trimOverlaps,
+    addChord, moveChord, resizeChord, removeChord, setChordBass, clearTimeline, trimOverlaps,
     snapToBeat,
   };
 }

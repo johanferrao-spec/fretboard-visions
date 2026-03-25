@@ -37,6 +37,7 @@ interface SongTimelineProps {
   keyMode: KeyMode;
   setKeyMode: (m: KeyMode) => void;
   onSeek?: (beat: number) => void;
+  onSetChordBass?: (id: string, bassNote: NoteName | undefined) => void;
 }
 
 export default function SongTimeline({
@@ -45,12 +46,15 @@ export default function SongTimeline({
   isPlaying, currentBeat, panelHeight, setPanelHeight,
   onPlay, onStop, onAddChord, onMoveChord, onResizeChord, onRemoveChord, onClearTimeline, onTrimOverlaps,
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
-  onSeek,
+  onSeek, onSetChordBass,
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragChord, setDragChord] = useState<string | null>(null);
   const [resizeChord, setResizeChord] = useState<string | null>(null);
   const [playheadDragging, setPlayheadDragging] = useState(false);
+  const [dragPreview, setDragPreview] = useState<{ beat: number; root: NoteName; chordType: string } | null>(null);
+  const [bpmDragging, setBpmDragging] = useState(false);
+  const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
   const [variationPopup, setVariationPopup] = useState<{
     chordId: string;
     degree: number;
@@ -119,18 +123,50 @@ export default function SongTimeline({
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [playheadDragging, getRawBeatFromX, onSeek]);
 
+  // Spacebar play/pause
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+        e.preventDefault();
+        if (isPlaying) onStop(); else onPlay();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isPlaying, onPlay, onStop]);
+
+  // BPM drag
+  useEffect(() => {
+    if (!bpmDragging) return;
+    const onMove = (e: MouseEvent) => {
+      const dy = bpmDragRef.current.startY - e.clientY;
+      const newBpm = Math.max(40, Math.min(300, bpmDragRef.current.startBpm + Math.round(dy / 2)));
+      setBpm(newBpm);
+    };
+    const onUp = () => setBpmDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [bpmDragging, setBpm]);
+
   // Handle drop from chord library, diatonic buttons, or identify tab
   const handleGridDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    setDragPreview(null);
     const beat = getBeatFromX(e.clientX);
-    const dur = 4;
+    const dur = 2; // half a bar default
 
     const degreeData = e.dataTransfer.getData('application/diatonic-degree');
     if (degreeData) {
       const { degree } = JSON.parse(degreeData);
       const dc = diatonicChords[degree];
+      // Remove any overlapping chords
+      const existingOverlaps = chords.filter(c => {
+        const cEnd = c.startBeat + c.duration;
+        return (beat < cEnd && beat + dur > c.startBeat);
+      });
+      existingOverlaps.forEach(c => onRemoveChord(c.id));
       onAddChord(dc.root, dc.type, beat, dur);
-      setTimeout(() => onTrimOverlaps(), 0);
       return;
     }
 
@@ -138,21 +174,43 @@ export default function SongTimeline({
     if (!data) return;
     try {
       const { root, chordType } = JSON.parse(data);
+      // Remove any overlapping chords
+      const existingOverlaps = chords.filter(c => {
+        const cEnd = c.startBeat + c.duration;
+        return (beat < cEnd && beat + dur > c.startBeat);
+      });
+      existingOverlaps.forEach(c => onRemoveChord(c.id));
       onAddChord(root, chordType, beat, dur);
-      setTimeout(() => onTrimOverlaps(), 0);
     } catch {}
-  }, [getBeatFromX, onAddChord, snap, diatonicChords, onTrimOverlaps]);
+  }, [getBeatFromX, onAddChord, chords, diatonicChords, onRemoveChord]);
 
   const handleGridDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
+    const beat = getBeatFromX(e.clientX);
+    // Try to extract chord info for preview
+    const degreeData = e.dataTransfer.types.includes('application/diatonic-degree');
+    const chordData = e.dataTransfer.types.includes('application/chord');
+    if (degreeData || chordData) {
+      setDragPreview({ beat, root: 'C' as NoteName, chordType: 'Major' });
+    }
+  }, [getBeatFromX]);
+
+  const handleGridDragLeave = useCallback(() => {
+    setDragPreview(null);
   }, []);
 
   const handleGridDoubleClick = useCallback((e: React.MouseEvent) => {
     const beat = getBeatFromX(e.clientX);
-    onAddChord('C', 'Major', beat, 4);
-    setTimeout(() => onTrimOverlaps(), 0);
-  }, [getBeatFromX, onAddChord, snap, onTrimOverlaps]);
+    // Remove any overlapping chords
+    const dur = 2;
+    const existingOverlaps = chords.filter(c => {
+      const cEnd = c.startBeat + c.duration;
+      return (beat < cEnd && beat + dur > c.startBeat);
+    });
+    existingOverlaps.forEach(c => onRemoveChord(c.id));
+    onAddChord('C', 'Major', beat, dur);
+  }, [getBeatFromX, onAddChord, chords, onRemoveChord]);
 
   // Click a chord block to seek playhead there and pause
   const handleChordClick = useCallback((chord: TimelineChord, e: React.MouseEvent) => {
@@ -264,12 +322,37 @@ export default function SongTimeline({
         <div className="flex items-center gap-1">
           <Music size={12} className="text-muted-foreground" />
           <span className="text-[10px] font-mono text-muted-foreground uppercase">BPM</span>
-          <input
-            type="number"
-            value={bpm}
-            onChange={e => setBpm(Math.max(40, Math.min(300, Number(e.target.value))))}
-            className="w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
-          />
+          <div
+            className="w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center select-none cursor-ns-resize"
+            style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
+            title="Drag up/down to change BPM"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setBpmDragging(true);
+              bpmDragRef.current = { startY: e.clientY, startBpm: bpm };
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              const input = document.createElement('input');
+              input.type = 'number';
+              input.value = String(bpm);
+              input.className = 'w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center';
+              input.style.backgroundColor = 'hsl(210, 70%, 80%, 0.2)';
+              const target = e.currentTarget;
+              target.replaceWith(input);
+              input.focus();
+              input.select();
+              const finish = () => {
+                const val = Math.max(40, Math.min(300, Number(input.value) || 120));
+                setBpm(val);
+                input.replaceWith(target);
+              };
+              input.addEventListener('blur', finish);
+              input.addEventListener('keydown', (ke) => { if (ke.key === 'Enter') { ke.preventDefault(); finish(); }});
+            }}
+          >
+            {bpm}
+          </div>
         </div>
 
         <div className="flex items-center gap-1">
@@ -390,6 +473,7 @@ export default function SongTimeline({
           style={{ height: `calc(100% - 24px)` }}
           onDrop={handleGridDrop}
           onDragOver={handleGridDragOver}
+          onDragLeave={handleGridDragLeave}
           onDoubleClick={handleGridDoubleClick}
           onClick={() => setVariationPopup(null)}
         >
@@ -458,6 +542,21 @@ export default function SongTimeline({
             />
           </div>
 
+          {/* Drag preview ghost cell */}
+          {dragPreview && (
+            <div
+              className="absolute top-2 rounded-md pointer-events-none"
+              style={{
+                left: `${(dragPreview.beat / totalBeats) * 100}%`,
+                width: `${(2 / totalBeats) * 100}%`,
+                height: 'calc(100% - 16px)',
+                backgroundColor: 'hsl(var(--primary) / 0.2)',
+                border: '2px dashed hsl(var(--primary) / 0.5)',
+                minWidth: 20,
+              }}
+            />
+          )}
+
           {/* Chord blocks */}
           {chords.map(chord => {
             const leftPct = (chord.startBeat / totalBeats) * 100;
@@ -466,6 +565,8 @@ export default function SongTimeline({
             const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
             const isDiatonic = degree >= 0;
             const borrowed = isBorrowed(chord);
+            const chordLabel = `${chord.root}${chord.chordType === 'Major' ? '' : chord.chordType === 'Minor' ? 'm' : ` ${chord.chordType}`}`;
+            const bassLabel = chord.bassNote ? `/${chord.bassNote}` : '';
 
             return (
               <div
@@ -501,13 +602,13 @@ export default function SongTimeline({
                   e.stopPropagation();
                   onRemoveChord(chord.id);
                 }}
-                title={`${chord.root} ${chord.chordType}${isDiatonic ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed chord' : ' — outside key'} — click to seek, right-click for variations, double-click to remove`}
+                title={`${chordLabel}${bassLabel}${isDiatonic ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed' : ''} — click: seek, right-click: variations/bass, dbl-click: remove`}
               >
                 <span
                   className="text-[10px] font-mono font-bold px-1.5 truncate"
                   style={{ color: borrowed ? '#000' : isDiatonic ? '#000' : `hsl(${color})` }}
                 >
-                  {chord.root}{chord.chordType === 'Major' ? '' : chord.chordType === 'Minor' ? 'm' : ` ${chord.chordType}`}
+                  {chordLabel}{bassLabel && <span className="opacity-70">{bassLabel}</span>}
                 </span>
                 {/* Resize handle */}
                 <div
@@ -569,6 +670,23 @@ export default function SongTimeline({
                       )}
                     </button>
                   ))}
+                </div>
+                {/* Altered bass note selector */}
+                <div className="mt-1.5 pt-1.5 border-t border-border/30">
+                  <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Bass Note</div>
+                  <div className="flex flex-wrap gap-0.5">
+                    <button
+                      onClick={() => { onSetChordBass?.(variationPopup.chordId, undefined); setVariationPopup(null); }}
+                      className="px-1.5 py-0.5 rounded text-[8px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >Root</button>
+                    {NOTE_NAMES.map(n => (
+                      <button
+                        key={n}
+                        onClick={() => { onSetChordBass?.(variationPopup.chordId, n); setVariationPopup(null); }}
+                        className="px-1 py-0.5 rounded text-[8px] font-mono bg-muted/50 text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                      >{n}</button>
+                    ))}
+                  </div>
                 </div>
                 {/* Speech bubble arrow pointing down */}
                 <div
