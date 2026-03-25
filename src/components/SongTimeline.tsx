@@ -321,12 +321,37 @@ export default function SongTimeline({
         <div className="flex items-center gap-1">
           <Music size={12} className="text-muted-foreground" />
           <span className="text-[10px] font-mono text-muted-foreground uppercase">BPM</span>
-          <input
-            type="number"
-            value={bpm}
-            onChange={e => setBpm(Math.max(40, Math.min(300, Number(e.target.value))))}
-            className="w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
-          />
+          <div
+            className="w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center select-none cursor-ns-resize"
+            style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
+            title="Drag up/down to change BPM"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setBpmDragging(true);
+              bpmDragRef.current = { startY: e.clientY, startBpm: bpm };
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              const input = document.createElement('input');
+              input.type = 'number';
+              input.value = String(bpm);
+              input.className = 'w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center';
+              input.style.backgroundColor = 'hsl(210, 70%, 80%, 0.2)';
+              const target = e.currentTarget;
+              target.replaceWith(input);
+              input.focus();
+              input.select();
+              const finish = () => {
+                const val = Math.max(40, Math.min(300, Number(input.value) || 120));
+                setBpm(val);
+                input.replaceWith(target);
+              };
+              input.addEventListener('blur', finish);
+              input.addEventListener('keydown', (ke) => { if (ke.key === 'Enter') { ke.preventDefault(); finish(); }});
+            }}
+          >
+            {bpm}
+          </div>
         </div>
 
         <div className="flex items-center gap-1">
@@ -447,6 +472,7 @@ export default function SongTimeline({
           style={{ height: `calc(100% - 24px)` }}
           onDrop={handleGridDrop}
           onDragOver={handleGridDragOver}
+          onDragLeave={handleGridDragLeave}
           onDoubleClick={handleGridDoubleClick}
           onClick={() => setVariationPopup(null)}
         >
