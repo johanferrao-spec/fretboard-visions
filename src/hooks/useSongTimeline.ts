@@ -28,7 +28,7 @@ let nextId = 1;
 
 export function useSongTimeline() {
   const [chords, setChords] = useState<TimelineChord[]>([]);
-  const [measures, setMeasures] = useState(8);
+  const [measures, setMeasures] = useState(2);
   const [bpm, setBpm] = useState(120);
   const [genre, setGenre] = useState<Genre>('Rock');
   const [snap, setSnap] = useState<SnapValue>('1/4');
