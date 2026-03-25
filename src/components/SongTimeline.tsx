@@ -541,6 +541,21 @@ export default function SongTimeline({
             />
           </div>
 
+          {/* Drag preview ghost cell */}
+          {dragPreview && (
+            <div
+              className="absolute top-2 rounded-md pointer-events-none"
+              style={{
+                left: `${(dragPreview.beat / totalBeats) * 100}%`,
+                width: `${(2 / totalBeats) * 100}%`,
+                height: 'calc(100% - 16px)',
+                backgroundColor: 'hsl(var(--primary) / 0.2)',
+                border: '2px dashed hsl(var(--primary) / 0.5)',
+                minWidth: 20,
+              }}
+            />
+          )}
+
           {/* Chord blocks */}
           {chords.map(chord => {
             const leftPct = (chord.startBeat / totalBeats) * 100;
@@ -549,6 +564,8 @@ export default function SongTimeline({
             const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
             const isDiatonic = degree >= 0;
             const borrowed = isBorrowed(chord);
+            const chordLabel = `${chord.root}${chord.chordType === 'Major' ? '' : chord.chordType === 'Minor' ? 'm' : ` ${chord.chordType}`}`;
+            const bassLabel = chord.bassNote ? `/${chord.bassNote}` : '';
 
             return (
               <div
@@ -584,13 +601,13 @@ export default function SongTimeline({
                   e.stopPropagation();
                   onRemoveChord(chord.id);
                 }}
-                title={`${chord.root} ${chord.chordType}${isDiatonic ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed chord' : ' — outside key'} — click to seek, right-click for variations, double-click to remove`}
+                title={`${chordLabel}${bassLabel}${isDiatonic ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed' : ''} — click: seek, right-click: variations/bass, dbl-click: remove`}
               >
                 <span
                   className="text-[10px] font-mono font-bold px-1.5 truncate"
                   style={{ color: borrowed ? '#000' : isDiatonic ? '#000' : `hsl(${color})` }}
                 >
-                  {chord.root}{chord.chordType === 'Major' ? '' : chord.chordType === 'Minor' ? 'm' : ` ${chord.chordType}`}
+                  {chordLabel}{bassLabel && <span className="opacity-70">{bassLabel}</span>}
                 </span>
                 {/* Resize handle */}
                 <div
