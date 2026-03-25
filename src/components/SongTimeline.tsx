@@ -37,6 +37,7 @@ interface SongTimelineProps {
   keyMode: KeyMode;
   setKeyMode: (m: KeyMode) => void;
   onSeek?: (beat: number) => void;
+  onSetChordBass?: (id: string, bassNote: NoteName | undefined) => void;
 }
 
 export default function SongTimeline({
@@ -45,7 +46,7 @@ export default function SongTimeline({
   isPlaying, currentBeat, panelHeight, setPanelHeight,
   onPlay, onStop, onAddChord, onMoveChord, onResizeChord, onRemoveChord, onClearTimeline, onTrimOverlaps,
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
-  onSeek,
+  onSeek, onSetChordBass,
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragChord, setDragChord] = useState<string | null>(null);
