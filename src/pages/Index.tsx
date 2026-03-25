@@ -305,6 +305,7 @@ const Index = () => {
         keyMode={keyMode}
         setKeyMode={setKeyMode}
         onSeek={handleSeek}
+        onSetChordBass={timeline.setChordBass}
       />
 
       <NoteInfoPanel
