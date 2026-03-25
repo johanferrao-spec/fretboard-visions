@@ -66,6 +66,10 @@ export function useSongTimeline() {
     setChords(prev => prev.filter(c => c.id !== id));
   }, []);
 
+  const setChordBass = useCallback((id: string, bassNote: NoteName | undefined) => {
+    setChords(prev => prev.map(c => c.id === id ? { ...c, bassNote } : c));
+  }, []);
+
   const clearTimeline = useCallback(() => {
     setChords([]);
     setCurrentBeat(0);
@@ -101,7 +105,7 @@ export function useSongTimeline() {
     isPlaying, setIsPlaying,
     currentBeat, setCurrentBeat,
     panelHeight, setPanelHeight,
-    addChord, moveChord, resizeChord, removeChord, clearTimeline, trimOverlaps,
+    addChord, moveChord, resizeChord, removeChord, setChordBass, clearTimeline, trimOverlaps,
     snapToBeat,
   };
 }
