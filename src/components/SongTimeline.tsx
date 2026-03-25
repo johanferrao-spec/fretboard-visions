@@ -671,6 +671,23 @@ export default function SongTimeline({
                     </button>
                   ))}
                 </div>
+                {/* Altered bass note selector */}
+                <div className="mt-1.5 pt-1.5 border-t border-border/30">
+                  <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Bass Note</div>
+                  <div className="flex flex-wrap gap-0.5">
+                    <button
+                      onClick={() => { onSetChordBass?.(variationPopup.chordId, undefined); setVariationPopup(null); }}
+                      className="px-1.5 py-0.5 rounded text-[8px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >Root</button>
+                    {NOTE_NAMES.map(n => (
+                      <button
+                        key={n}
+                        onClick={() => { onSetChordBass?.(variationPopup.chordId, n); setVariationPopup(null); }}
+                        className="px-1 py-0.5 rounded text-[8px] font-mono bg-muted/50 text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                      >{n}</button>
+                    ))}
+                  </div>
+                </div>
                 {/* Speech bubble arrow pointing down */}
                 <div
                   className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-card border-r border-b border-border rotate-45"
