@@ -12,6 +12,8 @@ export interface TimelineChord {
   startBeat: number;
   /** Duration in beats */
   duration: number;
+  /** Altered bass note (e.g. for C/E slash chord) */
+  bassNote?: NoteName;
 }
 
 export interface SongTimelineState {
