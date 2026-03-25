@@ -51,6 +51,9 @@ export default function SongTimeline({
   const [dragChord, setDragChord] = useState<string | null>(null);
   const [resizeChord, setResizeChord] = useState<string | null>(null);
   const [playheadDragging, setPlayheadDragging] = useState(false);
+  const [dragPreview, setDragPreview] = useState<{ beat: number; root: NoteName; chordType: string } | null>(null);
+  const [bpmDragging, setBpmDragging] = useState(false);
+  const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
   const [variationPopup, setVariationPopup] = useState<{
     chordId: string;
     degree: number;
@@ -119,18 +122,50 @@ export default function SongTimeline({
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [playheadDragging, getRawBeatFromX, onSeek]);
 
+  // Spacebar play/pause
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+        e.preventDefault();
+        if (isPlaying) onStop(); else onPlay();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isPlaying, onPlay, onStop]);
+
+  // BPM drag
+  useEffect(() => {
+    if (!bpmDragging) return;
+    const onMove = (e: MouseEvent) => {
+      const dy = bpmDragRef.current.startY - e.clientY;
+      const newBpm = Math.max(40, Math.min(300, bpmDragRef.current.startBpm + Math.round(dy / 2)));
+      setBpm(newBpm);
+    };
+    const onUp = () => setBpmDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [bpmDragging, setBpm]);
+
   // Handle drop from chord library, diatonic buttons, or identify tab
   const handleGridDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    setDragPreview(null);
     const beat = getBeatFromX(e.clientX);
-    const dur = 4;
+    const dur = 2; // half a bar default
 
     const degreeData = e.dataTransfer.getData('application/diatonic-degree');
     if (degreeData) {
       const { degree } = JSON.parse(degreeData);
       const dc = diatonicChords[degree];
+      // Remove any overlapping chords
+      const existingOverlaps = chords.filter(c => {
+        const cEnd = c.startBeat + c.duration;
+        return (beat < cEnd && beat + dur > c.startBeat);
+      });
+      existingOverlaps.forEach(c => onRemoveChord(c.id));
       onAddChord(dc.root, dc.type, beat, dur);
-      setTimeout(() => onTrimOverlaps(), 0);
       return;
     }
 
@@ -138,21 +173,43 @@ export default function SongTimeline({
     if (!data) return;
     try {
       const { root, chordType } = JSON.parse(data);
+      // Remove any overlapping chords
+      const existingOverlaps = chords.filter(c => {
+        const cEnd = c.startBeat + c.duration;
+        return (beat < cEnd && beat + dur > c.startBeat);
+      });
+      existingOverlaps.forEach(c => onRemoveChord(c.id));
       onAddChord(root, chordType, beat, dur);
-      setTimeout(() => onTrimOverlaps(), 0);
     } catch {}
-  }, [getBeatFromX, onAddChord, snap, diatonicChords, onTrimOverlaps]);
+  }, [getBeatFromX, onAddChord, chords, diatonicChords, onRemoveChord]);
 
   const handleGridDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
+    const beat = getBeatFromX(e.clientX);
+    // Try to extract chord info for preview
+    const degreeData = e.dataTransfer.types.includes('application/diatonic-degree');
+    const chordData = e.dataTransfer.types.includes('application/chord');
+    if (degreeData || chordData) {
+      setDragPreview({ beat, root: 'C' as NoteName, chordType: 'Major' });
+    }
+  }, [getBeatFromX]);
+
+  const handleGridDragLeave = useCallback(() => {
+    setDragPreview(null);
   }, []);
 
   const handleGridDoubleClick = useCallback((e: React.MouseEvent) => {
     const beat = getBeatFromX(e.clientX);
-    onAddChord('C', 'Major', beat, 4);
-    setTimeout(() => onTrimOverlaps(), 0);
-  }, [getBeatFromX, onAddChord, snap, onTrimOverlaps]);
+    // Remove any overlapping chords
+    const dur = 2;
+    const existingOverlaps = chords.filter(c => {
+      const cEnd = c.startBeat + c.duration;
+      return (beat < cEnd && beat + dur > c.startBeat);
+    });
+    existingOverlaps.forEach(c => onRemoveChord(c.id));
+    onAddChord('C', 'Major', beat, dur);
+  }, [getBeatFromX, onAddChord, chords, onRemoveChord]);
 
   // Click a chord block to seek playhead there and pause
   const handleChordClick = useCallback((chord: TimelineChord, e: React.MouseEvent) => {
