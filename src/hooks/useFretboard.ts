@@ -47,7 +47,7 @@ export function useFretboard() {
   const [fretBoxStringStart, setFretBoxStringStart] = useState(0); // 0-based row index in stringOrder
   const [fretBoxStringSize, setFretBoxStringSize] = useState(6); // number of strings visible
   const [noteMarkerSize, setNoteMarkerSize] = useState(20);
-  const [degreeColors, setDegreeColors] = useState(true);
+  const [degreeColors, setDegreeColors] = useState(false);
   const [disabledDegrees, setDisabledDegrees] = useState<Set<string>>(new Set());
   const [activeChord, setActiveChord] = useState<ChordSelection | null>(null);
   const [showCAGED, setShowCAGED] = useState(false);

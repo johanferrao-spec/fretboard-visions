@@ -592,6 +592,15 @@ export default function Fretboard({
               </button>
             );
           })}
+          {/* Position focus toggle — left of Degrees Active */}
+          <button
+            onClick={() => setShowFretBox(!showFretBox)}
+            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
+              showFretBox ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+            }`}
+          >
+            Position focus: {showFretBox ? 'on' : 'off'}
+          </button>
           {/* Degrees Active / Disable All toggle */}
           <button
             onClick={() => {
@@ -618,16 +627,6 @@ export default function Fretboard({
           >
             {degreeColors && DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position))) ? 'Disable All' : 'Degrees Active'}
           </button>
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => setShowFretBox(!showFretBox)}
-              className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
-                showFretBox ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
-              }`}
-            >
-              Position focus: {showFretBox ? 'on' : 'off'}
-            </button>
-          </div>
         </div>
 
         {/* Fret numbers */}
