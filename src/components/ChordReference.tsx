@@ -1341,7 +1341,7 @@ function ArpeggioPositionsPanel({
 }
 
 // Mini arpeggio position diagram
-function MiniArpDiagram({ position, root }: { position: ArpeggioPosition; root: NoteName }) {
+function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition; root: NoteName; large?: boolean }) {
   if (!position.notes || position.notes.length === 0) return null;
   const playedFrets = position.notes.filter(n => n.fret > 0).map(n => n.fret);
   const allFrets = position.notes.map(n => n.fret);
