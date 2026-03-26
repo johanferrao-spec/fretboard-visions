@@ -66,7 +66,18 @@ export default function SongTimeline({
   const snapGrid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
 
   const diatonicChords = useMemo(() => getDiatonicChords(timelineKey, keyMode), [timelineKey, keyMode]);
-  const currentNumerals = keyMode === 'minor' ? ROMAN_NUMERALS_MINOR : ROMAN_NUMERALS;
+  const { numerals: currentNumerals } = useMemo(() => {
+    const ALL_MODES: KeyMode[] = ['major', 'minor', 'ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian', 'locrian'];
+    if (keyMode === 'minor') return { numerals: ROMAN_NUMERALS_MINOR };
+    if (keyMode === 'major') return { numerals: ROMAN_NUMERALS };
+    // For modes, compute numerals
+    const qualities = diatonicChords.map(dc => {
+      if (dc.type === 'Minor') return dc.roman;
+      if (dc.type === 'Diminished') return dc.roman;
+      return dc.roman;
+    });
+    return { numerals: diatonicChords.map(dc => dc.roman) };
+  }, [keyMode, diatonicChords]);
 
   const getBeatFromX = useCallback((clientX: number): number => {
     if (!gridRef.current) return 0;
