@@ -1624,6 +1624,7 @@ export interface ChordVariation {
 }
 
 export function getChordVariations(key: NoteName, degree: number, keyMode: KeyMode = 'major'): ChordVariation[] {
+  const keyIndex = NOTE_NAMES.indexOf(key);
   const { scale, qualities } = resolveMode(keyMode);
   const rootInterval = scale[degree];
   const root = NOTE_NAMES[(keyIndex + rootInterval) % 12];
@@ -1738,8 +1739,7 @@ export function getChordDegree(key: NoteName, chordRoot: NoteName, chordType: st
   const keyIndex = NOTE_NAMES.indexOf(key);
   const rootIndex = NOTE_NAMES.indexOf(chordRoot);
   const interval = (rootIndex - keyIndex + 12) % 12;
-  const scale = keyMode === 'minor' ? MINOR_SCALE : MAJOR_SCALE;
-  const qualities = keyMode === 'minor' ? DIATONIC_QUALITIES_MINOR : DIATONIC_QUALITIES_MAJOR;
+  const { scale, qualities } = resolveMode(keyMode);
   
   for (let d = 0; d < scale.length; d++) {
     if (scale[d] === interval) {
