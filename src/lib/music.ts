@@ -1544,7 +1544,7 @@ const DIATONIC_QUALITIES_MINOR: { type: string; symbol: string }[] = [
 
 const DIATONIC_QUALITIES = DIATONIC_QUALITIES_MAJOR; // backward compat
 
-export type KeyMode = 'major' | 'minor';
+export type KeyMode = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian' | 'aeolian' | 'locrian';
 
 export interface DiatonicChord {
   degree: number; // 0-6
