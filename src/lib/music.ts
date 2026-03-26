@@ -1768,9 +1768,7 @@ export interface ChordAnalysis {
 
 export function analyzeProgression(key: NoteName, keyMode: KeyMode, chords: { root: NoteName; chordType: string }[]): ChordAnalysis[] {
   const keyIndex = NOTE_NAMES.indexOf(key);
-  const scale = keyMode === 'minor' ? MINOR_SCALE : MAJOR_SCALE;
-  const qualities = keyMode === 'minor' ? DIATONIC_QUALITIES_MINOR : DIATONIC_QUALITIES_MAJOR;
-  const numerals = keyMode === 'minor' ? ROMAN_NUMERALS_MINOR : ROMAN_NUMERALS_MAJOR;
+  const { scale, qualities, numerals } = resolveMode(keyMode);
   
   const formatRoman = (root: NoteName, type: string, degree: number, isDiatonic: boolean): string => {
     if (isDiatonic && degree >= 0) return numerals[degree];
