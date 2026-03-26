@@ -66,7 +66,18 @@ export default function SongTimeline({
   const snapGrid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
 
   const diatonicChords = useMemo(() => getDiatonicChords(timelineKey, keyMode), [timelineKey, keyMode]);
-  const currentNumerals = keyMode === 'minor' ? ROMAN_NUMERALS_MINOR : ROMAN_NUMERALS;
+  const { numerals: currentNumerals } = useMemo(() => {
+    const ALL_MODES: KeyMode[] = ['major', 'minor', 'ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian', 'locrian'];
+    if (keyMode === 'minor') return { numerals: ROMAN_NUMERALS_MINOR };
+    if (keyMode === 'major') return { numerals: ROMAN_NUMERALS };
+    // For modes, compute numerals
+    const qualities = diatonicChords.map(dc => {
+      if (dc.type === 'Minor') return dc.roman;
+      if (dc.type === 'Diminished') return dc.roman;
+      return dc.roman;
+    });
+    return { numerals: diatonicChords.map(dc => dc.roman) };
+  }, [keyMode, diatonicChords]);
 
   const getBeatFromX = useCallback((clientX: number): number => {
     if (!gridRef.current) return 0;
@@ -364,17 +375,15 @@ export default function SongTimeline({
           >
             {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
           </select>
-          <div className="flex">
-            {(['major', 'minor'] as KeyMode[]).map(m => (
-              <button
-                key={m}
-                onClick={() => setKeyMode(m)}
-                className={`px-1.5 py-0.5 text-[9px] font-mono uppercase transition-colors ${
-                  keyMode === m ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:bg-muted'
-                } ${m === 'major' ? 'rounded-l' : 'rounded-r'}`}
-              >{m}</button>
+          <select
+            value={keyMode}
+            onChange={e => setKeyMode(e.target.value as KeyMode)}
+            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
+          >
+            {(['major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'] as KeyMode[]).map(m => (
+              <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
             ))}
-          </div>
+          </select>
         </div>
 
         <div className="flex items-center gap-1">

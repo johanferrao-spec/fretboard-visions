@@ -957,14 +957,44 @@ function ArpeggioPositionsPanel({
   setArpPathVisible: (v: boolean) => void;
 }) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
-  const [selectedArp, setSelectedArp] = useState<string | null>(null);
+  const [selectedArp, setSelectedArp] = useState<string | null>('Major');
   const [octaveRange, setOctaveRange] = useState<OctaveRange>(1);
   const [selectedPosIdx, setSelectedPosIdx] = useState(0);
+  const [arpPage, setArpPage] = useState(0);
+  const ARP_PER_PAGE = 6;
+
+  // Custom voicings from localStorage
+  const [customArpPositions, setCustomArpPositions] = useState<Record<string, ArpeggioPosition[]>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('mf-custom-arp-positions') || '{}');
+    } catch { return {}; }
+  });
+
+  const saveCustomArpPositions = useCallback((data: Record<string, ArpeggioPosition[]>) => {
+    setCustomArpPositions(data);
+    localStorage.setItem('mf-custom-arp-positions', JSON.stringify(data));
+  }, []);
+
+  // Adding mode
+  const [addingMode, setAddingMode] = useState(false);
+  const [addingFrets, setAddingFrets] = useState<(number | -1)[]>([-1, -1, -1, -1, -1, -1]);
 
   const generatedPositions = useMemo(() => {
     if (!selectedArp) return [];
-    return generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
-  }, [selectedRoot, selectedArp, octaveRange, tuning]);
+    const generated = generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
+    const customKey = `${selectedRoot}-${selectedArp}-${octaveRange}`;
+    const custom = customArpPositions[customKey] || [];
+    return [...generated, ...custom];
+  }, [selectedRoot, selectedArp, octaveRange, tuning, customArpPositions]);
+
+  // On mount, apply default arpeggio
+  useEffect(() => {
+    if (selectedArp) {
+      onApplyScale(selectedRoot, selectedArp, 'arpeggio');
+      const positions = generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
+      if (positions.length > 0) onSetArpeggioPosition?.(positions[0]);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectArp = (arpType: string) => {
     if (selectedArp === arpType) {
@@ -973,6 +1003,7 @@ function ArpeggioPositionsPanel({
     } else {
       setSelectedArp(arpType);
       setSelectedPosIdx(0);
+      setArpPage(0);
       onApplyScale(selectedRoot, arpType, 'arpeggio');
       const positions = generateArpeggioPositions(selectedRoot, arpType, octaveRange, tuning);
       if (positions.length > 0) onSetArpeggioPosition?.(positions[0]);
@@ -982,6 +1013,7 @@ function ArpeggioPositionsPanel({
   const handleRootChange = (n: NoteName) => {
     setSelectedRoot(n);
     setSelectedPosIdx(0);
+    setArpPage(0);
     if (selectedArp) {
       onApplyScale(n, selectedArp, 'arpeggio');
       const positions = generateArpeggioPositions(n, selectedArp, octaveRange, tuning);
@@ -992,6 +1024,7 @@ function ArpeggioPositionsPanel({
   const handleOctaveChange = (oct: OctaveRange) => {
     setOctaveRange(oct);
     setSelectedPosIdx(0);
+    setArpPage(0);
     if (selectedArp) {
       const positions = generateArpeggioPositions(selectedRoot, selectedArp, oct, tuning);
       onSetArpeggioPosition?.(positions.length > 0 ? positions[0] : null);
@@ -1001,6 +1034,52 @@ function ArpeggioPositionsPanel({
   const handleSelectPosition = (idx: number) => {
     setSelectedPosIdx(idx);
     if (generatedPositions[idx]) onSetArpeggioPosition?.(generatedPositions[idx]);
+  };
+
+  const handlePrevPosition = () => {
+    const newIdx = selectedPosIdx <= 0 ? generatedPositions.length - 1 : selectedPosIdx - 1;
+    handleSelectPosition(newIdx);
+    setArpPage(Math.floor(newIdx / ARP_PER_PAGE));
+  };
+
+  const handleNextPosition = () => {
+    const newIdx = selectedPosIdx >= generatedPositions.length - 1 ? 0 : selectedPosIdx + 1;
+    handleSelectPosition(newIdx);
+    setArpPage(Math.floor(newIdx / ARP_PER_PAGE));
+  };
+
+  const handleDeletePosition = (idx: number) => {
+    if (!selectedArp) return;
+    const customKey = `${selectedRoot}-${selectedArp}-${octaveRange}`;
+    const generated = generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
+    const customIdx = idx - generated.length;
+    if (customIdx < 0) return; // Can't delete generated positions
+    const custom = [...(customArpPositions[customKey] || [])];
+    custom.splice(customIdx, 1);
+    const newData = { ...customArpPositions, [customKey]: custom };
+    saveCustomArpPositions(newData);
+  };
+
+  const handleSaveCustomPosition = () => {
+    if (!selectedArp || addingFrets.every(f => f === -1)) return;
+    const customKey = `${selectedRoot}-${selectedArp}-${octaveRange}`;
+    const notes: { stringIndex: number; fret: number }[] = [];
+    addingFrets.forEach((f, i) => { if (f >= 0) notes.push({ stringIndex: i, fret: f }); });
+    if (notes.length < 2) return;
+    const playedFrets = notes.filter(n => n.fret > 0).map(n => n.fret);
+    const startFret = playedFrets.length > 0 ? Math.min(...playedFrets) : 0;
+    const frets = [...addingFrets];
+    const newPos: ArpeggioPosition = {
+      notes,
+      label: `Custom ${startFret}`,
+      startFret,
+      type: 'static',
+      frets,
+    };
+    const existing = customArpPositions[customKey] || [];
+    saveCustomArpPositions({ ...customArpPositions, [customKey]: [...existing, newPos] });
+    setAddingMode(false);
+    setAddingFrets([-1, -1, -1, -1, -1, -1]);
   };
 
   const splitIntoColumns = (types: string[]) => {
@@ -1040,6 +1119,9 @@ function ArpeggioPositionsPanel({
     return descs[arpType] || arpType;
   };
 
+  const arpTotalPages = Math.ceil(generatedPositions.length / ARP_PER_PAGE);
+  const pagedPositions = generatedPositions.slice(arpPage * ARP_PER_PAGE, (arpPage + 1) * ARP_PER_PAGE);
+
   return (
     <>
       <div className="mb-2">
@@ -1047,7 +1129,7 @@ function ArpeggioPositionsPanel({
           <div className="min-w-0">
             <RootSelector selectedRoot={selectedRoot} setSelectedRoot={(n) => handleRootChange(n)} />
           </div>
-          <div className="flex items-center gap-1 shrink-0 ml-auto">
+          <div className="flex items-center gap-1 shrink-0">
             <input
               type="range"
               min={0}
@@ -1127,37 +1209,108 @@ function ArpeggioPositionsPanel({
           </div>
         </div>
 
-        {/* Info + positions panel */}
+        {/* Info + positions panel — 6 per page, bigger diagrams */}
         <div className="flex-1 min-w-0">
           {selectedArp ? (
             <div className="bg-secondary/20 rounded p-1.5">
-              <div className="text-[10px] font-mono font-bold text-foreground mb-1">{selectedRoot} {selectedArp}</div>
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-[10px] font-mono font-bold text-foreground">{selectedRoot} {selectedArp}</div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => { setAddingMode(!addingMode); setAddingFrets([-1, -1, -1, -1, -1, -1]); }}
+                    className={`px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
+                      addingMode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >Add</button>
+                  {addingMode && (
+                    <button
+                      onClick={handleSaveCustomPosition}
+                      className="px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-accent text-accent-foreground"
+                    >Save</button>
+                  )}
+                </div>
+              </div>
+
+              {/* Adding mode fret input */}
+              {addingMode && (
+                <div className="flex gap-1 mb-2 items-center">
+                  <span className="text-[8px] font-mono text-muted-foreground">Frets:</span>
+                  {addingFrets.map((f, i) => (
+                    <input
+                      key={i}
+                      type="text"
+                      value={f === -1 ? 'X' : f.toString()}
+                      onChange={(e) => {
+                        const val = e.target.value.trim();
+                        const nf = [...addingFrets];
+                        if (val === '' || val.toLowerCase() === 'x') nf[i] = -1;
+                        else if (!isNaN(Number(val))) nf[i] = Math.max(0, Math.min(24, Number(val)));
+                        setAddingFrets(nf);
+                      }}
+                      className="w-6 h-5 text-center text-[9px] font-mono rounded border border-border bg-muted text-foreground"
+                    />
+                  ))}
+                </div>
+              )}
+
               <div className="text-[9px] font-mono text-muted-foreground leading-relaxed mb-2">
                 {getArpDescription(selectedArp)}
               </div>
               
               {generatedPositions.length > 0 ? (
                 <div>
-                  <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-1">
-                    {generatedPositions.length} Position{generatedPositions.length !== 1 ? 's' : ''}
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider">
+                      {generatedPositions.length} Position{generatedPositions.length !== 1 ? 's' : ''}
+                    </div>
+                    {arpTotalPages > 1 && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={() => setArpPage(Math.max(0, arpPage - 1))} disabled={arpPage === 0}
+                          className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">◀</button>
+                        <span className="text-[8px] font-mono text-muted-foreground">{arpPage + 1}/{arpTotalPages}</span>
+                        <button onClick={() => setArpPage(Math.min(arpTotalPages - 1, arpPage + 1))} disabled={arpPage >= arpTotalPages - 1}
+                          className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">▶</button>
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-1 max-h-48 overflow-y-auto">
-                    {generatedPositions.map((pos, i) => {
-                      const isActive = selectedPosIdx === i;
+                  {/* Large prev/next cycling buttons */}
+                  <div className="flex gap-1 mb-2">
+                    <button
+                      onClick={handlePrevPosition}
+                      className="flex-1 py-1.5 rounded bg-secondary text-secondary-foreground hover:bg-muted text-[11px] font-mono font-bold transition-colors"
+                    >◀ Prev</button>
+                    <button
+                      onClick={handleNextPosition}
+                      className="flex-1 py-1.5 rounded bg-secondary text-secondary-foreground hover:bg-muted text-[11px] font-mono font-bold transition-colors"
+                    >Next ▶</button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    {pagedPositions.map((pos, i) => {
+                      const globalIdx = arpPage * ARP_PER_PAGE + i;
+                      const isActive = selectedPosIdx === globalIdx;
+                      const generated = generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
+                      const isCustom = globalIdx >= generated.length;
                       return (
-                        <button
-                          key={i}
-                          onClick={() => handleSelectPosition(i)}
-                          className={`rounded p-0.5 transition-all border ${
-                            isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
-                          }`}
-                        >
-                          <MiniArpDiagram position={pos} root={selectedRoot} />
-                          <div className="flex items-center justify-center gap-0.5">
-                            <span className="text-[7px] font-mono text-muted-foreground">{pos.label}</span>
-                            <span className="text-[6px] font-mono text-muted-foreground/60">{pos.type === 'linear' ? '↗' : '▪'}</span>
-                          </div>
-                        </button>
+                        <div key={globalIdx} className="relative">
+                          <button
+                            onClick={() => handleSelectPosition(globalIdx)}
+                            className={`w-full rounded p-0.5 transition-all border ${
+                              isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
+                            }`}
+                          >
+                            <MiniArpDiagram position={pos} root={selectedRoot} large />
+                            <div className="flex items-center justify-center gap-0.5">
+                              <span className="text-[7px] font-mono text-muted-foreground">{pos.label}</span>
+                              <span className="text-[6px] font-mono text-muted-foreground/60">{pos.type === 'linear' ? '↗' : '▪'}</span>
+                            </div>
+                          </button>
+                          {isCustom && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeletePosition(globalIdx); }}
+                              className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[8px] flex items-center justify-center hover:brightness-110"
+                            >×</button>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -1188,7 +1341,7 @@ function ArpeggioPositionsPanel({
 }
 
 // Mini arpeggio position diagram
-function MiniArpDiagram({ position, root }: { position: ArpeggioPosition; root: NoteName }) {
+function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition; root: NoteName; large?: boolean }) {
   if (!position.notes || position.notes.length === 0) return null;
   const playedFrets = position.notes.filter(n => n.fret > 0).map(n => n.fret);
   const allFrets = position.notes.map(n => n.fret);
@@ -1196,8 +1349,8 @@ function MiniArpDiagram({ position, root }: { position: ArpeggioPosition; root: 
   const maxFret = Math.max(...allFrets, minFret + 4);
   const startFret = Math.max(0, minFret);
   const numFrets = Math.max(4, maxFret - startFret + 1);
-  const w = 50;
-  const h = 40;
+  const w = large ? 70 : 50;
+  const h = large ? 56 : 40;
   const stringSpacing = w / 7;
   const fretSpacing = (h - 5) / numFrets;
 

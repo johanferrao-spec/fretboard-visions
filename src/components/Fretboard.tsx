@@ -617,40 +617,37 @@ export default function Fretboard({
               </button>
             );
           })}
-          {/* Position focus toggle — left of Degrees Active */}
-          <button
-            onClick={() => setShowFretBox(!showFretBox)}
-            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
-              showFretBox ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
-            }`}
-          >
-            Position focus: {showFretBox ? 'on' : 'off'}
-          </button>
           {/* Degrees Active / Disable All toggle */}
           <button
             onClick={() => {
               if (!degreeColors) {
-                // Turn on degree colors and enable all degrees
                 setDegreeColors(true);
                 DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (disabledDegrees.has(k)) toggleDegree(k); });
               } else {
                 const allOn = DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)));
                 if (allOn) {
-                  // Disable all individual degrees (keeps degreeColors true but no colors show)
                   DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (!disabledDegrees.has(k)) toggleDegree(k); });
                 } else {
-                  // Enable all individual degrees
                   DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (disabledDegrees.has(k)) toggleDegree(k); });
                 }
               }
             }}
-            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ml-1 ${
+            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
               degreeColors && DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)))
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-secondary text-secondary-foreground'
             }`}
           >
             {degreeColors && DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position))) ? 'Disable All' : 'Degrees Active'}
+          </button>
+          {/* Position focus toggle — right of Degrees Active */}
+          <button
+            onClick={() => setShowFretBox(!showFretBox)}
+            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ml-1 ${
+              showFretBox ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+            }`}
+          >
+            Position focus: {showFretBox ? 'on' : 'off'}
           </button>
         </div>
 
