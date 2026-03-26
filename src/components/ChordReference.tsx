@@ -1349,8 +1349,8 @@ function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition;
   const maxFret = Math.max(...allFrets, minFret + 4);
   const startFret = Math.max(0, minFret);
   const numFrets = Math.max(4, maxFret - startFret + 1);
-  const w = 50;
-  const h = 40;
+  const w = large ? 70 : 50;
+  const h = large ? 56 : 40;
   const stringSpacing = w / 7;
   const fretSpacing = (h - 5) / numFrets;
 
