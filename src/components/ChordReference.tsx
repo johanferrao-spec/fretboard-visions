@@ -1149,6 +1149,7 @@ function ArpeggioPositionsPanel({
       setAddingNotes([]);
       setDetectedName(null);
       setDetectedRoot(null);
+      setArpAddMode?.(false);
       // Re-apply current position
       if (generatedPositions[selectedPosIdx]) onSetArpeggioPosition?.(generatedPositions[selectedPosIdx]);
       return;
@@ -1157,6 +1158,7 @@ function ArpeggioPositionsPanel({
     setAddingNotes([]);
     setDetectedName(null);
     setDetectedRoot(null);
+    setArpAddMode?.(true);
     onSetArpeggioPosition?.(null);
   };
 
