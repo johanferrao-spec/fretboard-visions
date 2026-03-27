@@ -959,6 +959,9 @@ function ArpeggioPositionsPanel({
   setArpOverlayOpacity,
   arpPathVisible,
   setArpPathVisible,
+  arpAddMode,
+  setArpAddMode,
+  onArpAddClick,
 }: {
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   tuning: number[];
@@ -967,6 +970,9 @@ function ArpeggioPositionsPanel({
   setArpOverlayOpacity: (v: number) => void;
   arpPathVisible: boolean;
   setArpPathVisible: (v: boolean) => void;
+  arpAddMode?: boolean;
+  setArpAddMode?: (v: boolean) => void;
+  onArpAddClick?: (stringIndex: number, fret: number) => void;
 }) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedArp, setSelectedArp] = useState<string | null>('Major');
