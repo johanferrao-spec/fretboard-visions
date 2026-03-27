@@ -912,7 +912,9 @@ export default function Fretboard({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (identifyMode) {
+                              if (arpAddMode && onArpAddClick && fret > 0) {
+                                onArpAddClick(stringIdx, fret);
+                              } else if (identifyMode) {
                                 const newFrets = [...identifyFrets];
                                 if (newFrets[stringIdx] === fret) {
                                   newFrets[stringIdx] = -1;
