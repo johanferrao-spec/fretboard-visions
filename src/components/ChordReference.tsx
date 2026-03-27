@@ -45,6 +45,10 @@ interface ChordReferenceProps {
   setArpOverlayOpacity: (v: number) => void;
   arpPathVisible: boolean;
   setArpPathVisible: (v: boolean) => void;
+  // Arpeggio add mode callback — fretboard click routing
+  onArpAddClick?: (stringIndex: number, fret: number) => void;
+  arpAddMode?: boolean;
+  setArpAddMode?: (v: boolean) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
