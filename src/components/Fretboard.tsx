@@ -593,7 +593,7 @@ export default function Fretboard({
     <div
       className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}
       onMouseUp={() => { handleDragEnd(); setIdentifyDrag(null); }}
-      onDoubleClick={handleDoubleClick}
+      onDoubleClick={() => { handleDoubleClick(); setShowFretBox(!showFretBox); }}
     >
       <div
         className={isVertical ? 'origin-center' : ''}
@@ -795,7 +795,7 @@ export default function Fretboard({
                       stroke="hsl(var(--primary))"
                       strokeWidth={6}
                       strokeLinecap="round"
-                      opacity={0.5}
+                      opacity={1}
                       vectorEffect="non-scaling-stroke"
                     />
                   );
