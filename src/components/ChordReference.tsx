@@ -1078,6 +1078,37 @@ function ArpeggioPositionsPanel({
     }
   }, [editingNotes, editingIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Register click handler on the ref so fretboard clicks route here
+  useEffect(() => {
+    if (!arpAddClickRef) return;
+    if (addingMode) {
+      arpAddClickRef.current = (si: number, fret: number) => {
+        setAddingNotes(prev => {
+          const exists = prev.findIndex(n => n.stringIndex === si && n.fret === fret);
+          if (exists >= 0) return prev.filter((_, i) => i !== exists);
+          return [...prev, { stringIndex: si, fret }];
+        });
+      };
+    } else if (editingIdx !== null) {
+      arpAddClickRef.current = (si: number, fret: number) => {
+        setEditingNotes(prev => {
+          const exists = prev.findIndex(n => n.stringIndex === si && n.fret === fret);
+          if (exists >= 0) return prev.filter((_, i) => i !== exists);
+          return [...prev, { stringIndex: si, fret }];
+        });
+      };
+    } else {
+      arpAddClickRef.current = null;
+    }
+    return () => { if (arpAddClickRef) arpAddClickRef.current = null; };
+  }, [addingMode, editingIdx, arpAddClickRef]);
+
+  // Also set arpAddMode when editing
+  useEffect(() => {
+    if (editingIdx !== null) setArpAddMode?.(true);
+    else if (!addingMode) setArpAddMode?.(false);
+  }, [editingIdx, addingMode, setArpAddMode]);
+
   const handleSelectArp = (arpType: string) => {
     if (selectedArp === arpType) {
       setSelectedArp(null);
