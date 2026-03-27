@@ -48,6 +48,8 @@ interface FretboardProps {
   arpeggioPosition?: ArpeggioPosition | null;
   arpOverlayOpacity?: number;
   arpPathVisible?: boolean;
+  arpAddMode?: boolean;
+  onArpAddClick?: (stringIndex: number, fret: number) => void;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
