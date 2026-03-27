@@ -21,6 +21,7 @@ const Index = () => {
   const [volume, setVolume] = useState(0.7);
   const [timelineKey, setTimelineKey] = useState<NoteName>('E');
   const [keyMode, setKeyMode] = useState<KeyMode>('major');
+  const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
 
   const handleApplyChord = (chord: ChordSelection) => {
     fb.setActiveChord(chord);
