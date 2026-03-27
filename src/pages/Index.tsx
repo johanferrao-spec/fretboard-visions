@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useFretboard } from '@/hooks/useFretboard';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import { useSongTimeline } from '@/hooks/useSongTimeline';
