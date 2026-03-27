@@ -275,9 +275,7 @@ const Index = () => {
                setArpPathVisible={fb.setArpPathVisible}
                arpAddMode={fb.arpAddMode}
                setArpAddMode={fb.setArpAddMode}
-               onArpAddClick={(si, fret) => {
-                 if (fb.arpAddClickHandler) fb.arpAddClickHandler(si, fret);
-               }}
+               arpAddClickRef={arpAddClickRef}
             />
           </div>
         </main>
