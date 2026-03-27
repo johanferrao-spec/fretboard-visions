@@ -147,6 +147,8 @@ export function useFretboard() {
     arpeggioPosition, setArpeggioPosition,
     arpOverlayOpacity, setArpOverlayOpacity,
     arpPathVisible, setArpPathVisible,
+    arpAddMode, setArpAddMode,
+    arpAddClickHandler, setArpAddClickHandler,
     clearFretboard,
   };
 }
