@@ -4,7 +4,7 @@ import {
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
   isVoicingPlayableInTuning, getTensionSuggestions, getChordTones,
-  analyzeProgression,
+  analyzeProgression, identifyArpeggioFromNotes,
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
   type ArpeggioPosition,
