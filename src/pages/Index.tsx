@@ -278,7 +278,6 @@ const Index = () => {
                  if (fb.arpAddClickHandler) fb.arpAddClickHandler(si, fret);
                }}
             />
-            />
           </div>
         </main>
       </div>
