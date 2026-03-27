@@ -272,6 +272,12 @@ const Index = () => {
                setArpOverlayOpacity={fb.setArpOverlayOpacity}
                arpPathVisible={fb.arpPathVisible}
                setArpPathVisible={fb.setArpPathVisible}
+               arpAddMode={fb.arpAddMode}
+               setArpAddMode={fb.setArpAddMode}
+               onArpAddClick={(si, fret) => {
+                 if (fb.arpAddClickHandler) fb.arpAddClickHandler(si, fret);
+               }}
+            />
             />
           </div>
         </main>
