@@ -49,6 +49,7 @@ interface ChordReferenceProps {
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   arpAddMode?: boolean;
   setArpAddMode?: (v: boolean) => void;
+  arpAddClickRef?: React.MutableRefObject<((si: number, fret: number) => void) | null>;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
