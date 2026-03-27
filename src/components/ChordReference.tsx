@@ -226,6 +226,10 @@ export default function ChordReference({
     } else {
       setIdentifyMode(false);
     }
+    // Clear arpeggio position/path when leaving arpeggios tab
+    if (tab !== 'arpeggios') {
+      onSetArpeggioPosition?.(null);
+    }
   };
 
   const currentIdentifyRoot = useMemo(() => {
