@@ -291,6 +291,9 @@ export default function ChordReference({
           setArpOverlayOpacity={setArpOverlayOpacity}
           arpPathVisible={arpPathVisible}
           setArpPathVisible={setArpPathVisible}
+          arpAddMode={arpAddMode}
+          setArpAddMode={setArpAddMode}
+          onArpAddClick={onArpAddClick}
         />
       ) : activeTab === 'caged' ? (
         <CAGEDPanel positions={cagedPositions} cagedShape={cagedShape} setCagedShape={setCagedShape} root={cagedRoot} />
