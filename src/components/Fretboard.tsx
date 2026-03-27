@@ -869,28 +869,33 @@ export default function Fretboard({
                         {fret > 0 && <div className="absolute left-0 top-0 bottom-0 bg-fretboard-fret" style={{ width: 2, opacity: 0.6 }} />}
                         {fret === 0 && <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-fretboard-nut" />}
 
-                        {/* In identify mode, always render a clickable/hoverable target */}
-                        {identifyMode && !style && fret > 0 && (
+                        {/* In identify mode or arp add mode, always render a clickable/hoverable target */}
+                        {(identifyMode || arpAddMode) && !style && fret > 0 && (
                           <button
                             onMouseDown={(e) => {
                               e.stopPropagation();
                               e.preventDefault();
-                              setIdentifyDrag({ startString: stringIdx, fret });
-                              const newFrets = [...identifyFrets];
-                              newFrets[stringIdx] = fret;
-                              setIdentifyFrets(newFrets);
+                              if (arpAddMode && onArpAddClick) {
+                                onArpAddClick(stringIdx, fret);
+                              } else if (identifyMode) {
+                                setIdentifyDrag({ startString: stringIdx, fret });
+                                const newFrets = [...identifyFrets];
+                                newFrets[stringIdx] = fret;
+                                setIdentifyFrets(newFrets);
+                              }
                             }}
                             onMouseEnter={() => {
-                              setIdentifyHover({ stringIndex: stringIdx, fret });
-                              if (identifyDrag && identifyDrag.fret === fret) {
-                                // Barre drag: fill all strings between start and current
-                                const newFrets = [...identifyFrets];
-                                const minS = Math.min(identifyDrag.startString, stringIdx);
-                                const maxS = Math.max(identifyDrag.startString, stringIdx);
-                                for (let s = minS; s <= maxS; s++) {
-                                  newFrets[s] = fret;
+                              if (identifyMode) {
+                                setIdentifyHover({ stringIndex: stringIdx, fret });
+                                if (identifyDrag && identifyDrag.fret === fret) {
+                                  const newFrets = [...identifyFrets];
+                                  const minS = Math.min(identifyDrag.startString, stringIdx);
+                                  const maxS = Math.max(identifyDrag.startString, stringIdx);
+                                  for (let s = minS; s <= maxS; s++) {
+                                    newFrets[s] = fret;
+                                  }
+                                  setIdentifyFrets(newFrets);
                                 }
-                                setIdentifyFrets(newFrets);
                               }
                             }}
                             onMouseUp={() => setIdentifyDrag(null)}
@@ -899,7 +904,7 @@ export default function Fretboard({
                             style={{
                               width: noteMarkerSize,
                               height: noteMarkerSize,
-                              backgroundColor: 'hsl(var(--muted-foreground))',
+                              backgroundColor: arpAddMode ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
                               color: 'hsl(var(--muted-foreground))',
                               fontSize: Math.max(6, noteMarkerSize * 0.35),
                             }}
