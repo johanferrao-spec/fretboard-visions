@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useFretboard } from '@/hooks/useFretboard';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import { useSongTimeline } from '@/hooks/useSongTimeline';
@@ -21,6 +21,7 @@ const Index = () => {
   const [volume, setVolume] = useState(0.7);
   const [timelineKey, setTimelineKey] = useState<NoteName>('E');
   const [keyMode, setKeyMode] = useState<KeyMode>('major');
+  const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
 
   const handleApplyChord = (chord: ChordSelection) => {
     fb.setActiveChord(chord);
@@ -233,6 +234,8 @@ const Index = () => {
               arpeggioPosition={fb.arpeggioPosition}
               arpOverlayOpacity={fb.arpOverlayOpacity}
               arpPathVisible={fb.arpPathVisible}
+              arpAddMode={fb.arpAddMode}
+              onArpAddClick={(si, fret) => arpAddClickRef.current?.(si, fret)}
             />
           </div>
 
@@ -270,6 +273,9 @@ const Index = () => {
                setArpOverlayOpacity={fb.setArpOverlayOpacity}
                arpPathVisible={fb.arpPathVisible}
                setArpPathVisible={fb.setArpPathVisible}
+               arpAddMode={fb.arpAddMode}
+               setArpAddMode={fb.setArpAddMode}
+               arpAddClickRef={arpAddClickRef}
             />
           </div>
         </main>

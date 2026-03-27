@@ -60,8 +60,10 @@ export function useFretboard() {
   const [tuningLabels, setTuningLabels] = useState<string[]>(['E', 'A', 'D', 'G', 'B', 'e']);
   const [customTunings, setCustomTunings] = useState<TuningPreset[]>([]);
   const [arpeggioPosition, setArpeggioPosition] = useState<ArpeggioPosition | null>(null);
-  const [arpOverlayOpacity, setArpOverlayOpacity] = useState(1);
+  const [arpOverlayOpacity, setArpOverlayOpacity] = useState(0.3);
   const [arpPathVisible, setArpPathVisible] = useState(true);
+  const [arpAddMode, setArpAddMode] = useState(false);
+  const [arpAddClickHandler, setArpAddClickHandler] = useState<((si: number, fret: number) => void) | null>(null);
 
   const setTuning = useCallback((preset: TuningPreset) => {
     setTuningState(preset.notes);
@@ -145,6 +147,8 @@ export function useFretboard() {
     arpeggioPosition, setArpeggioPosition,
     arpOverlayOpacity, setArpOverlayOpacity,
     arpPathVisible, setArpPathVisible,
+    arpAddMode, setArpAddMode,
+    arpAddClickHandler, setArpAddClickHandler,
     clearFretboard,
   };
 }

@@ -457,6 +457,78 @@ function buildLinearNotes(
 // CHORD GROUPING for display
 // ============================================================
 
+/**
+ * Identify arpeggio type from a set of notes (fret positions on the fretboard).
+ * Returns the arpeggio name and detected root, or null if no match.
+ */
+export function identifyArpeggioFromNotes(
+  notePositions: { stringIndex: number; fret: number }[],
+  tuning: number[] = STANDARD_TUNING,
+): { name: string; root: NoteName } | null {
+  if (notePositions.length < 2) return null;
+  
+  const baseMidi = [40, 45, 50, 55, 59, 64].map((m, i) => 
+    m + ((tuning[i] ?? STANDARD_TUNING[i]) - STANDARD_TUNING[i])
+  );
+  
+  // Get all note classes from the positions
+  const midiNotes = notePositions.map(n => baseMidi[n.stringIndex] + n.fret);
+  // First note is root
+  const rootMidi = midiNotes[0];
+  const rootClass = rootMidi % 12;
+  const root = NOTE_NAMES[rootClass];
+  
+  // Get unique intervals relative to root
+  const intervals = new Set<number>();
+  for (const midi of midiNotes) {
+    intervals.add((midi - rootMidi + 120) % 12);
+  }
+  
+  // Match against arpeggio formulas
+  const allFormulas = { ...ARPEGGIO_FORMULAS, ...CHORD_FORMULAS };
+  let bestMatch: string | null = null;
+  let bestScore = 0;
+  
+  for (const [name, formula] of Object.entries(allFormulas)) {
+    const formulaIntervals = new Set(formula.map(i => i % 12));
+    // Check if all detected intervals match the formula
+    let matches = 0;
+    let misses = 0;
+    for (const interval of intervals) {
+      if (formulaIntervals.has(interval)) matches++;
+      else misses++;
+    }
+    // Perfect match: all intervals present and no extras
+    if (misses === 0 && matches === formulaIntervals.size && matches > bestScore) {
+      bestScore = matches;
+      bestMatch = name;
+    }
+    // Partial match: all formula intervals found, allow extras
+    if (misses === 0 && matches >= formulaIntervals.size && !bestMatch) {
+      bestScore = matches;
+      bestMatch = name;
+    }
+  }
+  
+  // Fallback: best partial match
+  if (!bestMatch) {
+    for (const [name, formula] of Object.entries(allFormulas)) {
+      const formulaIntervals = new Set(formula.map(i => i % 12));
+      let matches = 0;
+      for (const interval of intervals) {
+        if (formulaIntervals.has(interval)) matches++;
+      }
+      if (matches > bestScore && matches >= 2) {
+        bestScore = matches;
+        bestMatch = name;
+      }
+    }
+  }
+  
+  if (!bestMatch) return null;
+  return { name: bestMatch, root };
+}
+
 export const CHORD_GROUPS: { label: string; types: string[] }[] = [
   { label: 'Major 3rd', types: ['Major', 'Major 7', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', 'Major 9', 'Dominant 9', 'Major 6', '7#9', '7♭9', '7#5', '7♭5', '11', '13'] },
   { label: 'Minor 3rd', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'] },
