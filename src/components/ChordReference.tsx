@@ -6,8 +6,10 @@ import {
   isVoicingPlayableInTuning, getTensionSuggestions, getChordTones,
   analyzeProgression, identifyArpeggioFromNotes,
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
+  getDiatonicChords, generate7thInversions, scaleToKeyMode, get7thChordType,
+  STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
-  type ArpeggioPosition,
+  type ArpeggioPosition, type StringGroup, type InversionVoicing,
 } from '@/lib/music';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
@@ -50,10 +52,19 @@ interface ChordReferenceProps {
   arpAddMode?: boolean;
   setArpAddMode?: (v: boolean) => void;
   arpAddClickRef?: React.MutableRefObject<((si: number, fret: number) => void) | null>;
+  activeTab: MainTab;
+  setActiveTab: (tab: MainTab) => void;
+  primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
+  scaleViewDegreeFilter: number | null;
+  setScaleViewDegreeFilter: (d: number | null) => void;
+  scaleViewMode: 'basic' | 'inversion';
+  setScaleViewMode: (m: 'basic' | 'inversion') => void;
+  inversionStringGroup: StringGroup;
+  setInversionStringGroup: (g: StringGroup) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
-type MainTab = 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes';
+type MainTab = 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes';
 type OctaveRange = 1 | 2 | 3;
 
 const ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
@@ -159,11 +170,11 @@ export default function ChordReference({
   onSeekToChord, onSetArpeggioPosition,
   arpOverlayOpacity, setArpOverlayOpacity, arpPathVisible, setArpPathVisible,
   onArpAddClick, arpAddMode, setArpAddMode, arpAddClickRef,
+  activeTab, setActiveTab,
+  primaryScale, scaleViewDegreeFilter, setScaleViewDegreeFilter,
+  scaleViewMode, setScaleViewMode, inversionStringGroup, setInversionStringGroup,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
-  const [selectedChord, setSelectedChord] = useState<string | null>(null);
-  const [voicingTab, setVoicingTab] = useState<VoicingTab>('full');
-  const [activeTab, setActiveTab] = useState<MainTab>('chords');
   const [voicingPage, setVoicingPage] = useState(0);
   const [identifyViewName, setIdentifyViewName] = useState<string | null>(null);
 
@@ -232,9 +243,14 @@ export default function ChordReference({
     } else {
       setIdentifyMode(false);
     }
-    // Clear arpeggio position/path when leaving arpeggios tab
-    if (tab !== 'arpeggios') {
+    if (tab !== 'arpeggios' && tab !== 'scaleview') {
       onSetArpeggioPosition?.(null);
+    }
+    if (tab !== 'scaleview') {
+      setScaleViewDegreeFilter(null);
+    }
+    if (tab === 'scaleview') {
+      setActiveChord(null);
     }
   };
 
@@ -249,6 +265,7 @@ export default function ChordReference({
       {/* Tab switcher */}
       <div className="flex gap-1 mb-2 flex-wrap">
         {([
+          { key: 'scaleview' as MainTab, label: 'Scale View' },
           { key: 'chords' as MainTab, label: 'Chord Library' },
           { key: 'arpeggios' as MainTab, label: 'Arpeggio Positions' },
           { key: 'caged' as MainTab, label: 'CAGED' },
@@ -273,7 +290,20 @@ export default function ChordReference({
         )}
       </div>
 
-      {activeTab === 'changes' ? (
+      {activeTab === 'scaleview' ? (
+        <ScaleViewPanel
+          primaryScale={primaryScale}
+          degreeFilter={scaleViewDegreeFilter}
+          setDegreeFilter={setScaleViewDegreeFilter}
+          scaleViewMode={scaleViewMode}
+          setScaleViewMode={setScaleViewMode}
+          inversionStringGroup={inversionStringGroup}
+          setInversionStringGroup={setInversionStringGroup}
+          tuning={tuning}
+          onSetArpeggioPosition={onSetArpeggioPosition}
+          degreeColors={degreeColors}
+        />
+      ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
           chords={timelineChords}
           currentBeat={currentBeat}

@@ -50,6 +50,7 @@ interface FretboardProps {
   arpPathVisible?: boolean;
   arpAddMode?: boolean;
   onArpAddClick?: (stringIndex: number, fret: number) => void;
+  scaleViewChordTones?: Set<number> | null;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -83,6 +84,7 @@ export default function Fretboard({
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
   arpOverlayOpacity = 0.3, arpPathVisible = true,
   arpAddMode = false, onArpAddClick,
+  scaleViewChordTones,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -458,12 +460,8 @@ export default function Fretboard({
     setDragArpStepIndex(0);
   };
 
-  // Double-click on fretboard to clear paths
-  const handleDoubleClick = useCallback(() => {
-    if (persistedPaths.length > 0) {
-      setPersistedPaths([]);
-    }
-  }, [persistedPaths]);
+  // Double-click handled by outer div
+  const handleDoubleClick = useCallback(() => {}, []);
 
   const stringOrder = [5, 4, 3, 2, 1, 0];
   const isVertical = orientation === 'vertical';
@@ -596,7 +594,37 @@ export default function Fretboard({
     <div
       className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}
       onMouseUp={() => { handleDragEnd(); setIdentifyDrag(null); }}
-      onDoubleClick={() => { handleDoubleClick(); setShowFretBox(!showFretBox); }}
+      onContextMenu={(e) => {
+        if (persistedPaths.length > 0) {
+          e.preventDefault();
+          setPersistedPaths(prev => prev.slice(0, -1));
+        }
+      }}
+      onDoubleClick={(e) => {
+        if (persistedPaths.length > 0) {
+          setPersistedPaths([]);
+          return;
+        }
+        const fbEl = fretboardRef.current;
+        if (fbEl && !showFretBox) {
+          const rect = fbEl.getBoundingClientRect();
+          const relX = e.clientX - rect.left - 28;
+          const fretAreaWidth = rect.width - 28;
+          const xPct = (relX / fretAreaWidth) * 100;
+          const relY = e.clientY - rect.top;
+          const rowH = rect.height / 6;
+          const row = Math.floor(relY / rowH);
+          let clickedFret = 1;
+          for (let f = 1; f <= maxFrets; f++) {
+            if (xPct < cumLeft[f] + widths[f]) { clickedFret = f; break; }
+          }
+          const halfSize = Math.floor(fretBoxSize / 2);
+          setFretBoxStart(Math.max(1, Math.min(maxFrets - fretBoxSize + 1, clickedFret - halfSize)));
+          const halfStrSize = Math.floor(fretBoxStringSize / 2);
+          setFretBoxStringStart(Math.max(0, Math.min(6 - fretBoxStringSize, row - halfStrSize)));
+        }
+        setShowFretBox(!showFretBox);
+      }}
     >
       <div
         className={isVertical ? 'origin-center' : ''}
@@ -768,7 +796,7 @@ export default function Fretboard({
                       stroke="hsl(280, 70%, 60%)"
                       strokeWidth={6}
                       strokeLinecap="round"
-                      opacity={0.7}
+                      opacity={1}
                       vectorEffect="non-scaling-stroke"
                     />
                   );
