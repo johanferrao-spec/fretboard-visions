@@ -2084,3 +2084,150 @@ export function getChordTones(root: NoteName, chordType: string): number[] {
   const rootIdx = NOTE_NAMES.indexOf(root);
   return formula.map(interval => (rootIdx + (interval % 12)) % 12);
 }
+
+// ============================================================
+// SCALE VIEW HELPERS
+// ============================================================
+
+export type StringGroup = 'upper' | 'mid' | 'lower';
+
+export const STRING_GROUP_CONFIG: Record<StringGroup, { label: string; strings: number[]; disabled: number[] }> = {
+  upper: { label: 'Upper (DGBe)', strings: [2, 3, 4, 5], disabled: [0, 1] },
+  mid: { label: 'Mid (ADGB)', strings: [1, 2, 3, 4], disabled: [0, 5] },
+  lower: { label: 'Lower (EADG)', strings: [0, 1, 2, 3], disabled: [4, 5] },
+};
+
+export function scaleToKeyMode(scaleName: string): KeyMode {
+  const map: Record<string, KeyMode> = {
+    'Major (Ionian)': 'major',
+    'Natural Minor (Aeolian)': 'minor',
+    'Dorian': 'dorian',
+    'Phrygian': 'phrygian',
+    'Lydian': 'lydian',
+    'Mixolydian': 'mixolydian',
+    'Locrian': 'locrian',
+  };
+  return map[scaleName] || 'major';
+}
+
+export function get7thChordType(baseType: string, degree: number): string {
+  if (baseType === 'Major' && degree === 4) return 'Dominant 7';
+  if (baseType === 'Major') return 'Major 7';
+  if (baseType === 'Minor') return 'Minor 7';
+  if (baseType === 'Diminished') return 'Half-Dim 7';
+  return 'Dominant 7';
+}
+
+export interface InversionVoicing {
+  frets: (number | -1)[];
+  notes: ArpeggioPositionNote[];
+  inversionNumber: number;
+  inversionLabel: string;
+  bottomDegree: string;
+  topDegree: string;
+  tab: string;
+  chordType: string;
+}
+
+export function generate7thInversions(
+  root: NoteName,
+  chordType: string,
+  stringGroup: StringGroup,
+  tuning: number[] = STANDARD_TUNING,
+  maxFret: number = 22,
+): InversionVoicing[] {
+  const formula = CHORD_FORMULAS[chordType] || ARPEGGIO_FORMULAS[chordType];
+  if (!formula || formula.length < 4) return [];
+
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  const intervals = formula.slice(0, 4).map(i => i % 12);
+  const config = STRING_GROUP_CONFIG[stringGroup];
+  const strings = config.strings;
+
+  const baseMidi = [40, 45, 50, 55, 59, 64].map((m, i) =>
+    m + ((tuning[i] ?? STANDARD_TUNING[i]) - STANDARD_TUNING[i])
+  );
+
+  const intervalLabels: Record<number, string> = {
+    0: 'root', 1: '♭2nd', 2: '2nd', 3: '♭3rd', 4: '3rd',
+    5: '4th', 6: '♭5th', 7: '5th', 8: '#5th', 9: '6th',
+    10: '♭7th', 11: '7th',
+  };
+
+  const degreeNames = intervals.map(i => intervalLabels[i] || `${i}`);
+
+  const inversionOrders = [
+    [0, 1, 2, 3],
+    [1, 2, 3, 0],
+    [2, 3, 0, 1],
+    [3, 0, 1, 2],
+  ];
+
+  const invLabels = ['Root position', '1st inversion', '2nd inversion', '3rd inversion'];
+  const results: InversionVoicing[] = [];
+
+  for (let inv = 0; inv < 4; inv++) {
+    const order = inversionOrders[inv];
+    let bestVoicing: InversionVoicing | null = null;
+    let bestSpan = Infinity;
+
+    for (let startRegion = 1; startRegion <= maxFret - 3; startRegion++) {
+      const frets: (number | -1)[] = [-1, -1, -1, -1, -1, -1];
+      const notes: ArpeggioPositionNote[] = [];
+      let valid = true;
+      let prevMidi = -1;
+
+      for (let s = 0; s < 4; s++) {
+        const stringIdx = strings[s];
+        const formulaIdx = order[s];
+        const targetInterval = intervals[formulaIdx];
+        const targetNote = (rootIdx + targetInterval) % 12;
+
+        let foundFret = -1;
+        let foundMidi = -1;
+
+        for (let f = Math.max(1, startRegion - 2); f <= Math.min(maxFret, startRegion + 6); f++) {
+          const midi = baseMidi[stringIdx] + f;
+          if (midi % 12 === targetNote && midi > prevMidi) {
+            foundFret = f;
+            foundMidi = midi;
+            break;
+          }
+        }
+
+        if (foundFret === -1) { valid = false; break; }
+
+        frets[stringIdx] = foundFret;
+        notes.push({ stringIndex: stringIdx, fret: foundFret });
+        prevMidi = foundMidi;
+      }
+
+      if (!valid) continue;
+
+      const activeFrets = frets.filter(f => f > 0);
+      const span = Math.max(...activeFrets) - Math.min(...activeFrets);
+      if (span > 5) continue;
+
+      if (span < bestSpan) {
+        bestSpan = span;
+        const tab = frets.map(f => f === -1 ? 'X' : f.toString()).join('');
+        if (!results.some(r => r.tab === tab)) {
+          bestVoicing = {
+            frets,
+            notes,
+            inversionNumber: inv,
+            inversionLabel: `${chordType} ${invLabels[inv]}`,
+            bottomDegree: `${degreeNames[order[0]]} at the bottom`,
+            topDegree: `${degreeNames[order[3]]} on top`,
+            tab,
+            chordType,
+          };
+        }
+      }
+    }
+
+    if (bestVoicing) results.push(bestVoicing);
+  }
+
+  return results;
+}

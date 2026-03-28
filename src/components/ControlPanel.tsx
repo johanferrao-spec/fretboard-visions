@@ -211,7 +211,7 @@ function ModeSelector({
           }`}
         >Scale</button>
         <button
-          onClick={() => { onChange({ ...value, mode: 'arpeggio', scale: arpeggioNames[0] }); setOpenCategory(null); }}
+          onClick={() => { onChange({ ...value, mode: 'arpeggio', scale: 'Major' }); setOpenCategory(null); }}
           className={`flex-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
             value.mode === 'arpeggio' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
           }`}
