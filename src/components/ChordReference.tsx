@@ -174,6 +174,7 @@ export default function ChordReference({
   activeTab, setActiveTab,
   primaryScale, scaleViewDegreeFilter, setScaleViewDegreeFilter,
   scaleViewMode, setScaleViewMode, inversionStringGroup, setInversionStringGroup,
+  onSetInversionVoicing,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
