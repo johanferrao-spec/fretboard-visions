@@ -306,6 +306,7 @@ export default function ChordReference({
           tuning={tuning}
           onSetArpeggioPosition={onSetArpeggioPosition}
           degreeColors={degreeColors}
+          onSetInversionVoicing={onSetInversionVoicing}
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
