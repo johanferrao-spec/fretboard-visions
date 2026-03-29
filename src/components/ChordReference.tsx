@@ -61,6 +61,7 @@ interface ChordReferenceProps {
   setScaleViewMode: (m: 'basic' | 'inversion') => void;
   inversionStringGroup: StringGroup;
   setInversionStringGroup: (g: StringGroup) => void;
+  onSetInversionVoicing?: (v: InversionVoicing | null) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
