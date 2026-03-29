@@ -232,7 +232,29 @@ export default function Fretboard({
       return null;
     }
 
-    // Arpeggio position mode: highlight specific fret positions
+    // Inversion voicing mode: show voicing notes prominently, chord tones dimmed, scale notes very dimmed
+    if (inversionVoicing && inversionNoteSet.size > 0) {
+      const key = `${stringIndex}-${fret}`;
+      if (inversionNoteSet.has(key)) {
+        let bg = 'hsl(330, 70%, 60%)'; // pink
+        if (degreeColors) {
+          const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
+          const dc = getDegreeColor(activeRoot, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(330, 70%, 60%)', greyed: false };
+      }
+      // Show other scale chord tones dimmed
+      if (scaleViewChordTones && scaleViewChordTones.has((['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note))) {
+        return { backgroundColor: pColor, opacity: 0.2, ring: false, ringColor: '', greyed: true };
+      }
+      // Scale notes very dimmed
+      const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
+      if (inP) return { backgroundColor: pColor, opacity: 0.08, ring: false, ringColor: '', greyed: true };
+      return null;
+    }
+
+
     if (arpeggioPosition && arpPositionSet.size > 0 && !activeChord) {
       const key = `${stringIndex}-${fret}`;
       const isInPosition = arpPositionSet.has(key);
