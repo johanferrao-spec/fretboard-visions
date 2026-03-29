@@ -127,6 +127,15 @@ export default function Fretboard({
     });
   }
 
+  // Inversion voicing note set
+  const inversionNoteSet = useMemo(() => {
+    const set = new Set<string>();
+    if (inversionVoicing) {
+      inversionVoicing.notes.forEach(n => set.add(`${n.stringIndex}-${n.fret}`));
+    }
+    return set;
+  }, [inversionVoicing]);
+
   // Arpeggio position note set + all arpeggio chord tone names
   const { arpPositionSet, arpChordToneNames } = useMemo(() => {
     const set = new Set<string>();
