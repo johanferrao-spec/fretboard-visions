@@ -25,7 +25,37 @@ const Index = () => {
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
   const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower'>('upper');
+  const [activeInversionVoicing, setActiveInversionVoicing] = useState<InversionVoicing | null>(null);
   const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
+
+  // Auto-disable strings based on inversion string group when in inversion mode
+  const prevDisabledRef = useRef<Set<number> | null>(null);
+  useMemo(() => {
+    if (activeTab === 'scaleview' && scaleViewMode === 'inversion' && scaleViewDegreeFilter !== null) {
+      const config = STRING_GROUP_CONFIG[inversionStringGroup];
+      // Store previous disabled strings on first entry
+      if (!prevDisabledRef.current) {
+        prevDisabledRef.current = new Set(fb.disabledStrings);
+      }
+      // Set disabled strings to match string group
+      config.disabled.forEach(s => {
+        if (!fb.disabledStrings.has(s)) fb.toggleStringDisabled(s);
+      });
+      // Enable strings that should be active
+      config.strings.forEach(s => {
+        if (fb.disabledStrings.has(s)) fb.toggleStringDisabled(s);
+      });
+    } else if (prevDisabledRef.current !== null) {
+      // Restore previous disabled strings
+      for (let s = 0; s < 6; s++) {
+        const shouldBeDisabled = prevDisabledRef.current.has(s);
+        const isDisabled = fb.disabledStrings.has(s);
+        if (shouldBeDisabled !== isDisabled) fb.toggleStringDisabled(s);
+      }
+      prevDisabledRef.current = null;
+      setActiveInversionVoicing(null);
+    }
+  }, [activeTab, scaleViewMode, scaleViewDegreeFilter, inversionStringGroup]);
 
   const handleApplyChord = (chord: ChordSelection) => {
     fb.setActiveChord(chord);
