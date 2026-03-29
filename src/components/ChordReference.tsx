@@ -385,6 +385,7 @@ function ScaleViewPanel({
   scaleViewMode, setScaleViewMode,
   inversionStringGroup, setInversionStringGroup,
   tuning, onSetArpeggioPosition, degreeColors,
+  onSetInversionVoicing,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
@@ -396,11 +397,12 @@ function ScaleViewPanel({
   tuning: number[];
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
   degreeColors: boolean;
+  onSetInversionVoicing?: (v: InversionVoicing | null) => void;
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
 
-  const [hoveredInversion, setHoveredInversion] = useState<InversionVoicing | null>(null);
+  const [currentInvIdx, setCurrentInvIdx] = useState(0);
 
   const inversions = useMemo(() => {
     if (scaleViewMode !== 'inversion' || degreeFilter === null) return [];
@@ -410,11 +412,28 @@ function ScaleViewPanel({
     return generate7thInversions(chord.root, chordType7, inversionStringGroup, tuning);
   }, [scaleViewMode, degreeFilter, diatonicChords, inversionStringGroup, tuning]);
 
+  // Reset index when inversions change
+  useEffect(() => {
+    setCurrentInvIdx(0);
+  }, [inversions]);
+
+  // Push active inversion to fretboard
+  useEffect(() => {
+    if (scaleViewMode === 'inversion' && inversions.length > 0) {
+      const idx = Math.min(currentInvIdx, inversions.length - 1);
+      onSetInversionVoicing?.(inversions[idx]);
+    } else {
+      onSetInversionVoicing?.(null);
+    }
+  }, [scaleViewMode, inversions, currentInvIdx, onSetInversionVoicing]);
+
+  const activeInv = inversions.length > 0 ? inversions[Math.min(currentInvIdx, inversions.length - 1)] : null;
+
   return (
     <div className="space-y-2">
       <div className="flex gap-1">
         <button
-          onClick={() => setScaleViewMode('basic')}
+          onClick={() => { setScaleViewMode('basic'); onSetInversionVoicing?.(null); }}
           className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
             scaleViewMode === 'basic' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
           }`}
@@ -463,29 +482,34 @@ function ScaleViewPanel({
           </div>
 
           {degreeFilter !== null && inversions.length > 0 && (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <div className="text-[10px] font-mono text-muted-foreground font-bold uppercase">
-                {diatonicChords[degreeFilter]?.symbol} 7th Inversions — {STRING_GROUP_CONFIG[inversionStringGroup].label}
+                {diatonicChords[degreeFilter]?.symbol} 7th — {STRING_GROUP_CONFIG[inversionStringGroup].label}
               </div>
-              <div className="grid grid-cols-2 gap-1">
-                {inversions.map((inv, i) => (
-                  <div
-                    key={i}
-                    onMouseEnter={() => setHoveredInversion(inv)}
-                    onMouseLeave={() => setHoveredInversion(null)}
-                    className="bg-muted/50 rounded p-1.5 border border-border/40 cursor-pointer hover:border-primary/50 transition-all"
-                  >
-                    <div className="text-[9px] font-mono font-bold text-foreground">{inv.inversionLabel}</div>
-                    <div className="text-[8px] font-mono text-muted-foreground">{inv.bottomDegree}, {inv.topDegree}</div>
-                    <div className="text-[10px] font-mono text-primary mt-0.5">{inv.tab}</div>
-                  </div>
-                ))}
+
+              {/* Cycling controls */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentInvIdx(i => Math.max(0, i - 1))}
+                  disabled={currentInvIdx === 0}
+                  className="px-2 py-1 rounded text-[10px] font-mono bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-30 transition-colors"
+                >◀</button>
+                <span className="text-[10px] font-mono text-foreground font-bold flex-1 text-center">
+                  {currentInvIdx + 1} / {inversions.length}
+                </span>
+                <button
+                  onClick={() => setCurrentInvIdx(i => Math.min(inversions.length - 1, i + 1))}
+                  disabled={currentInvIdx >= inversions.length - 1}
+                  className="px-2 py-1 rounded text-[10px] font-mono bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-30 transition-colors"
+                >▶</button>
               </div>
-              {hoveredInversion && (
-                <div className="bg-card border border-primary/30 rounded p-2 mt-1">
-                  <div className="text-[10px] font-mono font-bold text-foreground">{hoveredInversion.inversionLabel}</div>
-                  <div className="text-[9px] font-mono text-muted-foreground">{hoveredInversion.bottomDegree}, {hoveredInversion.topDegree}</div>
-                  <div className="text-[11px] font-mono text-primary mt-1">{hoveredInversion.tab}</div>
+
+              {/* Active inversion info */}
+              {activeInv && (
+                <div className="rounded p-2 border transition-all" style={{ borderColor: 'hsl(330, 70%, 60%)', backgroundColor: 'hsla(330, 70%, 60%, 0.08)' }}>
+                  <div className="text-[10px] font-mono font-bold text-foreground">{activeInv.inversionLabel}</div>
+                  <div className="text-[9px] font-mono text-muted-foreground">{activeInv.bottomDegree}, {activeInv.topDegree}</div>
+                  <div className="text-[11px] font-mono mt-1" style={{ color: 'hsl(330, 70%, 60%)' }}>{activeInv.tab}</div>
                 </div>
               )}
             </div>
