@@ -779,7 +779,35 @@ export default function Fretboard({
             </div>
           )}
 
-          {/* Barre chord overlay for chord library */}
+          {/* Inversion voicing pink box */}
+          {inversionVoicing && inversionVoicing.notes.length > 0 && (() => {
+            const invNotes = inversionVoicing.notes;
+            const rows = invNotes.map(n => stringOrder.indexOf(n.stringIndex));
+            const fretNums = invNotes.map(n => n.fret);
+            const minRow = Math.min(...rows);
+            const maxRow = Math.max(...rows);
+            const minFret = Math.min(...fretNums);
+            const maxFret2 = Math.max(...fretNums);
+            const padFret = 0.3; // percentage padding
+            const leftPct = (cumLeft[minFret] || 0) - padFret;
+            const rightPct = (cumLeft[maxFret2] || 0) + (widths[maxFret2] || 0) + padFret;
+            return (
+              <div
+                className="absolute z-[18] pointer-events-none rounded-lg transition-all duration-300 ease-in-out"
+                style={{
+                  left: `calc(28px + (100% - 28px) * ${leftPct} / 100)`,
+                  width: `calc((100% - 28px) * ${rightPct - leftPct} / 100)`,
+                  top: `${((minRow * stringH + stringH * 0.15) / (6 * stringH)) * 100}%`,
+                  height: `${(((maxRow - minRow) * stringH + stringH * 0.7) / (6 * stringH)) * 100}%`,
+                  border: '2px solid hsl(330, 70%, 60%)',
+                  backgroundColor: 'hsla(330, 70%, 60%, 0.08)',
+                  boxShadow: '0 0 12px hsla(330, 70%, 60%, 0.3)',
+                }}
+              />
+            );
+          })()}
+
+
           {chordVoicingData && chordVoicingData.barreFrom != null && chordVoicingData.barreTo != null && chordVoicingData.barreFret != null && (
             (() => {
               const bf = chordVoicingData.barreFret!;
