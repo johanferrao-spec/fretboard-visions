@@ -282,6 +282,7 @@ const Index = () => {
               arpAddMode={fb.arpAddMode}
               onArpAddClick={(si, fret) => arpAddClickRef.current?.(si, fret)}
               inversionVoicing={activeInversionVoicing}
+              scaleViewChordTones={scaleViewChordTones}
             />
           </div>
 
