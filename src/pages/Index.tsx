@@ -30,23 +30,20 @@ const Index = () => {
 
   // Auto-disable strings based on inversion string group when in inversion mode
   const prevDisabledRef = useRef<Set<number> | null>(null);
-  useMemo(() => {
-    if (activeTab === 'scaleview' && scaleViewMode === 'inversion' && scaleViewDegreeFilter !== null) {
+  const inversionActive = activeTab === 'scaleview' && scaleViewMode === 'inversion' && scaleViewDegreeFilter !== null;
+  useEffect(() => {
+    if (inversionActive) {
       const config = STRING_GROUP_CONFIG[inversionStringGroup];
-      // Store previous disabled strings on first entry
       if (!prevDisabledRef.current) {
         prevDisabledRef.current = new Set(fb.disabledStrings);
       }
-      // Set disabled strings to match string group
       config.disabled.forEach(s => {
         if (!fb.disabledStrings.has(s)) fb.toggleStringDisabled(s);
       });
-      // Enable strings that should be active
       config.strings.forEach(s => {
         if (fb.disabledStrings.has(s)) fb.toggleStringDisabled(s);
       });
     } else if (prevDisabledRef.current !== null) {
-      // Restore previous disabled strings
       for (let s = 0; s < 6; s++) {
         const shouldBeDisabled = prevDisabledRef.current.has(s);
         const isDisabled = fb.disabledStrings.has(s);
@@ -55,7 +52,21 @@ const Index = () => {
       prevDisabledRef.current = null;
       setActiveInversionVoicing(null);
     }
-  }, [activeTab, scaleViewMode, scaleViewDegreeFilter, inversionStringGroup]);
+  }, [inversionActive, inversionStringGroup]);
+
+  // Compute chord tones for scaleView degree filter (used to dim non-chord-tones)
+  const scaleViewChordTones = useMemo(() => {
+    if (scaleViewDegreeFilter === null) return null;
+    const svKeyMode = scaleToKeyMode(fb.primaryScale.scale);
+    const diaChords = getDiatonicChords(fb.primaryScale.root, svKeyMode);
+    const chord = diaChords[scaleViewDegreeFilter];
+    if (!chord) return null;
+    const chordType7 = get7thChordType(chord.type, scaleViewDegreeFilter + 1);
+    const formula = CHORD_FORMULAS[chordType7] || ARPEGGIO_FORMULAS[chordType7];
+    if (!formula) return null;
+    const rootIdx = NOTE_NAMES.indexOf(chord.root);
+    return new Set(formula.map(i => (rootIdx + (i % 12)) % 12));
+  }, [scaleViewDegreeFilter, fb.primaryScale.root, fb.primaryScale.scale]);
 
   const handleApplyChord = (chord: ChordSelection) => {
     fb.setActiveChord(chord);
