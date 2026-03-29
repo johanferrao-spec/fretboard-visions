@@ -373,6 +373,137 @@ export default function ChordReference({
   );
 }
 
+// ============================================================
+// SCALE VIEW PANEL
+// ============================================================
+
+function ScaleViewPanel({
+  primaryScale, degreeFilter, setDegreeFilter,
+  scaleViewMode, setScaleViewMode,
+  inversionStringGroup, setInversionStringGroup,
+  tuning, onSetArpeggioPosition, degreeColors,
+}: {
+  primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
+  degreeFilter: number | null;
+  setDegreeFilter: (d: number | null) => void;
+  scaleViewMode: 'basic' | 'inversion';
+  setScaleViewMode: (m: 'basic' | 'inversion') => void;
+  inversionStringGroup: StringGroup;
+  setInversionStringGroup: (g: StringGroup) => void;
+  tuning: number[];
+  onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
+  degreeColors: boolean;
+}) {
+  const keyMode = scaleToKeyMode(primaryScale.scale);
+  const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
+
+  const [hoveredInversion, setHoveredInversion] = useState<InversionVoicing | null>(null);
+
+  const inversions = useMemo(() => {
+    if (scaleViewMode !== 'inversion' || degreeFilter === null) return [];
+    const chord = diatonicChords[degreeFilter];
+    if (!chord) return [];
+    const chordType7 = get7thChordType(chord.type, degreeFilter + 1);
+    return generate7thInversions(chord.root, chordType7, inversionStringGroup, tuning);
+  }, [scaleViewMode, degreeFilter, diatonicChords, inversionStringGroup, tuning]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-1">
+        <button
+          onClick={() => setScaleViewMode('basic')}
+          className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+            scaleViewMode === 'basic' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+          }`}
+        >Basic View</button>
+        <button
+          onClick={() => setScaleViewMode('inversion')}
+          className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+            scaleViewMode === 'inversion' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+          }`}
+        >Inversion View</button>
+      </div>
+
+      <div className="flex gap-1 flex-wrap">
+        {diatonicChords.map((chord, i) => {
+          const isActive = degreeFilter === i;
+          const color = SCALE_DEGREE_COLORS[i];
+          return (
+            <button
+              key={i}
+              onClick={() => setDegreeFilter(isActive ? null : i)}
+              className="px-2 py-1 rounded text-[10px] font-mono font-bold transition-all border"
+              style={{
+                backgroundColor: isActive ? `hsl(${color})` : `hsla(${color}, 0.15)`,
+                borderColor: `hsl(${color})`,
+                color: isActive ? '#fff' : `hsl(${color})`,
+              }}
+            >
+              {chord.roman} {chord.symbol}
+            </button>
+          );
+        })}
+      </div>
+
+      {scaleViewMode === 'inversion' && (
+        <div className="space-y-2">
+          <div className="flex gap-1">
+            {(['upper', 'mid', 'lower'] as StringGroup[]).map(sg => (
+              <button
+                key={sg}
+                onClick={() => setInversionStringGroup(sg)}
+                className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+                  inversionStringGroup === sg ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+                }`}
+              >{STRING_GROUP_CONFIG[sg].label}</button>
+            ))}
+          </div>
+
+          {degreeFilter !== null && inversions.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-[10px] font-mono text-muted-foreground font-bold uppercase">
+                {diatonicChords[degreeFilter]?.symbol} 7th Inversions — {STRING_GROUP_CONFIG[inversionStringGroup].label}
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {inversions.map((inv, i) => (
+                  <div
+                    key={i}
+                    onMouseEnter={() => setHoveredInversion(inv)}
+                    onMouseLeave={() => setHoveredInversion(null)}
+                    className="bg-muted/50 rounded p-1.5 border border-border/40 cursor-pointer hover:border-primary/50 transition-all"
+                  >
+                    <div className="text-[9px] font-mono font-bold text-foreground">{inv.inversionLabel}</div>
+                    <div className="text-[8px] font-mono text-muted-foreground">{inv.bottomDegree}, {inv.topDegree}</div>
+                    <div className="text-[10px] font-mono text-primary mt-0.5">{inv.tab}</div>
+                  </div>
+                ))}
+              </div>
+              {hoveredInversion && (
+                <div className="bg-card border border-primary/30 rounded p-2 mt-1">
+                  <div className="text-[10px] font-mono font-bold text-foreground">{hoveredInversion.inversionLabel}</div>
+                  <div className="text-[9px] font-mono text-muted-foreground">{hoveredInversion.bottomDegree}, {hoveredInversion.topDegree}</div>
+                  <div className="text-[11px] font-mono text-primary mt-1">{hoveredInversion.tab}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {degreeFilter !== null && inversions.length === 0 && (
+            <div className="text-[9px] font-mono text-muted-foreground italic">No 7th inversions available for this chord type</div>
+          )}
+          {degreeFilter === null && (
+            <div className="text-[9px] font-mono text-muted-foreground italic">Select a degree above to view inversions</div>
+          )}
+        </div>
+      )}
+
+      {scaleViewMode === 'basic' && degreeFilter === null && (
+        <div className="text-[9px] font-mono text-muted-foreground italic">Select a degree to highlight its chord tones on the fretboard</div>
+      )}
+    </div>
+  );
+}
+
 function formatCompactTab(frets: number[]): string {
   return frets.map(fret => {
     if (fret === -1) return 'X';
