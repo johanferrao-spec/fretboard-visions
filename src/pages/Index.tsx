@@ -270,6 +270,7 @@ const Index = () => {
               arpPathVisible={fb.arpPathVisible}
               arpAddMode={fb.arpAddMode}
               onArpAddClick={(si, fret) => arpAddClickRef.current?.(si, fret)}
+              inversionVoicing={activeInversionVoicing}
             />
           </div>
 
@@ -319,6 +320,7 @@ const Index = () => {
                setScaleViewMode={setScaleViewMode}
                inversionStringGroup={inversionStringGroup}
                setInversionStringGroup={setInversionStringGroup}
+               onSetInversionVoicing={setActiveInversionVoicing}
             />
           </div>
         </main>
