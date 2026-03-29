@@ -21,6 +21,10 @@ const Index = () => {
   const [volume, setVolume] = useState(0.7);
   const [timelineKey, setTimelineKey] = useState<NoteName>('E');
   const [keyMode, setKeyMode] = useState<KeyMode>('major');
+  const [activeTab, setActiveTab] = useState<'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes'>('scaleview');
+  const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
+  const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
+  const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower'>('upper');
   const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
 
   const handleApplyChord = (chord: ChordSelection) => {
