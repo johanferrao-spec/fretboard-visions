@@ -175,6 +175,8 @@ export default function ChordReference({
   scaleViewMode, setScaleViewMode, inversionStringGroup, setInversionStringGroup,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
+  const [selectedChord, setSelectedChord] = useState<string | null>(null);
+  const [voicingTab, setVoicingTab] = useState<VoicingTab>('full');
   const [voicingPage, setVoicingPage] = useState(0);
   const [identifyViewName, setIdentifyViewName] = useState<string | null>(null);
 
