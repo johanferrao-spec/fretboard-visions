@@ -9,7 +9,7 @@ import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import type { NoteName } from '@/lib/music';
-import { TUNING_PRESETS, NOTE_NAMES, getChordTones, type TuningPreset, type KeyMode, type ArpeggioPosition } from '@/lib/music';
+import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
