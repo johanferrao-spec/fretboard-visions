@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useFretboard } from '@/hooks/useFretboard';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import { useSongTimeline } from '@/hooks/useSongTimeline';
@@ -9,7 +9,7 @@ import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import type { NoteName } from '@/lib/music';
-import { TUNING_PRESETS, NOTE_NAMES, getChordTones, type TuningPreset, type KeyMode, type ArpeggioPosition } from '@/lib/music';
+import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
@@ -25,7 +25,48 @@ const Index = () => {
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
   const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower'>('upper');
+  const [activeInversionVoicing, setActiveInversionVoicing] = useState<InversionVoicing | null>(null);
   const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
+
+  // Auto-disable strings based on inversion string group when in inversion mode
+  const prevDisabledRef = useRef<Set<number> | null>(null);
+  const inversionActive = activeTab === 'scaleview' && scaleViewMode === 'inversion' && scaleViewDegreeFilter !== null;
+  useEffect(() => {
+    if (inversionActive) {
+      const config = STRING_GROUP_CONFIG[inversionStringGroup];
+      if (!prevDisabledRef.current) {
+        prevDisabledRef.current = new Set(fb.disabledStrings);
+      }
+      config.disabled.forEach(s => {
+        if (!fb.disabledStrings.has(s)) fb.toggleStringDisabled(s);
+      });
+      config.strings.forEach(s => {
+        if (fb.disabledStrings.has(s)) fb.toggleStringDisabled(s);
+      });
+    } else if (prevDisabledRef.current !== null) {
+      for (let s = 0; s < 6; s++) {
+        const shouldBeDisabled = prevDisabledRef.current.has(s);
+        const isDisabled = fb.disabledStrings.has(s);
+        if (shouldBeDisabled !== isDisabled) fb.toggleStringDisabled(s);
+      }
+      prevDisabledRef.current = null;
+      setActiveInversionVoicing(null);
+    }
+  }, [inversionActive, inversionStringGroup]);
+
+  // Compute chord tones for scaleView degree filter (used to dim non-chord-tones)
+  const scaleViewChordTones = useMemo(() => {
+    if (scaleViewDegreeFilter === null) return null;
+    const svKeyMode = scaleToKeyMode(fb.primaryScale.scale);
+    const diaChords = getDiatonicChords(fb.primaryScale.root, svKeyMode);
+    const chord = diaChords[scaleViewDegreeFilter];
+    if (!chord) return null;
+    const chordType7 = get7thChordType(chord.type, scaleViewDegreeFilter + 1);
+    const formula = CHORD_FORMULAS[chordType7] || ARPEGGIO_FORMULAS[chordType7];
+    if (!formula) return null;
+    const rootIdx = NOTE_NAMES.indexOf(chord.root);
+    return new Set(formula.map(i => (rootIdx + (i % 12)) % 12));
+  }, [scaleViewDegreeFilter, fb.primaryScale.root, fb.primaryScale.scale]);
 
   const handleApplyChord = (chord: ChordSelection) => {
     fb.setActiveChord(chord);
@@ -186,8 +227,11 @@ const Index = () => {
             <button
               onClick={() => {
                 fb.clearFretboard();
-                // Reinstate the selected scale from left panel by clearing chord/arp overlays
                 fb.setActiveChord(null);
+                setActiveInversionVoicing(null);
+                setScaleViewDegreeFilter(null);
+                setScaleViewMode('basic');
+                setActiveTab('scaleview');
               }}
               className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
             >
@@ -240,6 +284,8 @@ const Index = () => {
               arpPathVisible={fb.arpPathVisible}
               arpAddMode={fb.arpAddMode}
               onArpAddClick={(si, fret) => arpAddClickRef.current?.(si, fret)}
+              inversionVoicing={activeInversionVoicing}
+              scaleViewChordTones={scaleViewChordTones}
             />
           </div>
 
@@ -289,6 +335,7 @@ const Index = () => {
                setScaleViewMode={setScaleViewMode}
                inversionStringGroup={inversionStringGroup}
                setInversionStringGroup={setInversionStringGroup}
+               onSetInversionVoicing={setActiveInversionVoicing}
             />
           </div>
         </main>

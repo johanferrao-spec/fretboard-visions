@@ -51,6 +51,7 @@ interface FretboardProps {
   arpAddMode?: boolean;
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
+  inversionVoicing?: import('@/lib/music').InversionVoicing | null;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -85,6 +86,7 @@ export default function Fretboard({
   arpOverlayOpacity = 0.3, arpPathVisible = true,
   arpAddMode = false, onArpAddClick,
   scaleViewChordTones,
+  inversionVoicing,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -124,6 +126,15 @@ export default function Fretboard({
       if (fret >= 0) chordNoteSet.add(`${si}-${fret}`);
     });
   }
+
+  // Inversion voicing note set
+  const inversionNoteSet = useMemo(() => {
+    const set = new Set<string>();
+    if (inversionVoicing) {
+      inversionVoicing.notes.forEach(n => set.add(`${n.stringIndex}-${n.fret}`));
+    }
+    return set;
+  }, [inversionVoicing]);
 
   // Arpeggio position note set + all arpeggio chord tone names
   const { arpPositionSet, arpChordToneNames } = useMemo(() => {
@@ -221,7 +232,29 @@ export default function Fretboard({
       return null;
     }
 
-    // Arpeggio position mode: highlight specific fret positions
+    // Inversion voicing mode: show voicing notes prominently, chord tones dimmed, scale notes very dimmed
+    if (inversionVoicing && inversionNoteSet.size > 0) {
+      const key = `${stringIndex}-${fret}`;
+      if (inversionNoteSet.has(key)) {
+        let bg = 'hsl(330, 70%, 60%)'; // pink
+        if (degreeColors) {
+          const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
+          const dc = getDegreeColor(activeRoot, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(330, 70%, 60%)', greyed: false };
+      }
+      // Show other scale chord tones dimmed
+      if (scaleViewChordTones && scaleViewChordTones.has((['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note))) {
+        return { backgroundColor: pColor, opacity: 0.2, ring: false, ringColor: '', greyed: true };
+      }
+      // Scale notes very dimmed
+      const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
+      if (inP) return { backgroundColor: pColor, opacity: 0.08, ring: false, ringColor: '', greyed: true };
+      return null;
+    }
+
+
     if (arpeggioPosition && arpPositionSet.size > 0 && !activeChord) {
       const key = `${stringIndex}-${fret}`;
       const isInPosition = arpPositionSet.has(key);
@@ -746,7 +779,35 @@ export default function Fretboard({
             </div>
           )}
 
-          {/* Barre chord overlay for chord library */}
+          {/* Inversion voicing pink box */}
+          {inversionVoicing && inversionVoicing.notes.length > 0 && (() => {
+            const invNotes = inversionVoicing.notes;
+            const rows = invNotes.map(n => stringOrder.indexOf(n.stringIndex));
+            const fretNums = invNotes.map(n => n.fret);
+            const minRow = Math.min(...rows);
+            const maxRow = Math.max(...rows);
+            const minFret = Math.min(...fretNums);
+            const maxFret2 = Math.max(...fretNums);
+            const padFret = 0.3; // percentage padding
+            const leftPct = (cumLeft[minFret] || 0) - padFret;
+            const rightPct = (cumLeft[maxFret2] || 0) + (widths[maxFret2] || 0) + padFret;
+            return (
+              <div
+                className="absolute z-[18] pointer-events-none rounded-lg transition-all duration-300 ease-in-out"
+                style={{
+                  left: `calc(28px + (100% - 28px) * ${leftPct} / 100)`,
+                  width: `calc((100% - 28px) * ${rightPct - leftPct} / 100)`,
+                  top: `${((minRow * stringH + stringH * 0.15) / (6 * stringH)) * 100}%`,
+                  height: `${(((maxRow - minRow) * stringH + stringH * 0.7) / (6 * stringH)) * 100}%`,
+                  border: '2px solid hsl(330, 70%, 60%)',
+                  backgroundColor: 'hsla(330, 70%, 60%, 0.08)',
+                  boxShadow: '0 0 12px hsla(330, 70%, 60%, 0.3)',
+                }}
+              />
+            );
+          })()}
+
+
           {chordVoicingData && chordVoicingData.barreFrom != null && chordVoicingData.barreTo != null && chordVoicingData.barreFret != null && (
             (() => {
               const bf = chordVoicingData.barreFret!;
