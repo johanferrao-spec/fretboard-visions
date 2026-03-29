@@ -51,6 +51,7 @@ interface FretboardProps {
   arpAddMode?: boolean;
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
+  inversionVoicing?: import('@/lib/music').InversionVoicing | null;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -85,6 +86,7 @@ export default function Fretboard({
   arpOverlayOpacity = 0.3, arpPathVisible = true,
   arpAddMode = false, onArpAddClick,
   scaleViewChordTones,
+  inversionVoicing,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);

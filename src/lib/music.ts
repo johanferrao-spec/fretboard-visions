@@ -2142,7 +2142,7 @@ export function generate7thInversions(
   const rootIdx = NOTE_NAMES.indexOf(root);
   const intervals = formula.slice(0, 4).map(i => i % 12);
   const config = STRING_GROUP_CONFIG[stringGroup];
-  const strings = config.strings;
+  const strings = config.strings; // 4 strings, low to high
 
   const baseMidi = [40, 45, 50, 55, 59, 64].map((m, i) =>
     m + ((tuning[i] ?? STANDARD_TUNING[i]) - STANDARD_TUNING[i])
@@ -2153,80 +2153,81 @@ export function generate7thInversions(
     5: '4th', 6: '♭5th', 7: '5th', 8: '#5th', 9: '6th',
     10: '♭7th', 11: '7th',
   };
-
   const degreeNames = intervals.map(i => intervalLabels[i] || `${i}`);
-
-  const inversionOrders = [
-    [0, 1, 2, 3],
-    [1, 2, 3, 0],
-    [2, 3, 0, 1],
-    [3, 0, 1, 2],
-  ];
-
   const invLabels = ['Root position', '1st inversion', '2nd inversion', '3rd inversion'];
-  const results: InversionVoicing[] = [];
 
-  for (let inv = 0; inv < 4; inv++) {
-    const order = inversionOrders[inv];
-    let bestVoicing: InversionVoicing | null = null;
-    let bestSpan = Infinity;
-
-    for (let startRegion = 1; startRegion <= maxFret - 3; startRegion++) {
-      const frets: (number | -1)[] = [-1, -1, -1, -1, -1, -1];
-      const notes: ArpeggioPositionNote[] = [];
-      let valid = true;
-      let prevMidi = -1;
-
-      for (let s = 0; s < 4; s++) {
-        const stringIdx = strings[s];
-        const formulaIdx = order[s];
-        const targetInterval = intervals[formulaIdx];
-        const targetNote = (rootIdx + targetInterval) % 12;
-
-        let foundFret = -1;
-        let foundMidi = -1;
-
-        for (let f = Math.max(1, startRegion - 2); f <= Math.min(maxFret, startRegion + 6); f++) {
-          const midi = baseMidi[stringIdx] + f;
-          if (midi % 12 === targetNote && midi > prevMidi) {
-            foundFret = f;
-            foundMidi = midi;
-            break;
-          }
-        }
-
-        if (foundFret === -1) { valid = false; break; }
-
-        frets[stringIdx] = foundFret;
-        notes.push({ stringIndex: stringIdx, fret: foundFret });
-        prevMidi = foundMidi;
-      }
-
-      if (!valid) continue;
-
-      const activeFrets = frets.filter(f => f > 0);
-      const span = Math.max(...activeFrets) - Math.min(...activeFrets);
-      if (span > 5) continue;
-
-      if (span < bestSpan) {
-        bestSpan = span;
-        const tab = frets.map(f => f === -1 ? 'X' : f.toString()).join('');
-        if (!results.some(r => r.tab === tab)) {
-          bestVoicing = {
-            frets,
-            notes,
-            inversionNumber: inv,
-            inversionLabel: `${chordType} ${invLabels[inv]}`,
-            bottomDegree: `${degreeNames[order[0]]} at the bottom`,
-            topDegree: `${degreeNames[order[3]]} on top`,
-            tab,
-            chordType,
-          };
+  // For each string, build sorted list of all chord tone frets with their interval index
+  const stringChordTones: { fret: number; midi: number; intervalIdx: number }[][] = [];
+  for (const si of strings) {
+    const tones: { fret: number; midi: number; intervalIdx: number }[] = [];
+    for (let f = 1; f <= maxFret; f++) {
+      const midi = baseMidi[si] + f;
+      const pc = midi % 12;
+      const target = (rootIdx + 0) % 12; // check against all intervals
+      for (let ii = 0; ii < intervals.length; ii++) {
+        if (pc === (rootIdx + intervals[ii]) % 12) {
+          tones.push({ fret: f, midi, intervalIdx: ii });
+          break;
         }
       }
     }
+    stringChordTones.push(tones);
+  }
 
-    if (bestVoicing) results.push(bestVoicing);
+  const results: InversionVoicing[] = [];
+  const seenTabs = new Set<string>();
+
+  // Walk up: for each starting chord tone on the lowest string, build a voicing
+  // by finding the next ascending chord tone on each subsequent string
+  for (const startTone of stringChordTones[0]) {
+    const frets: (number | -1)[] = [-1, -1, -1, -1, -1, -1];
+    const notes: ArpeggioPositionNote[] = [];
+    const usedIntervals: number[] = [];
+    let prevMidi = startTone.midi;
+    let valid = true;
+
+    frets[strings[0]] = startTone.fret;
+    notes.push({ stringIndex: strings[0], fret: startTone.fret });
+    usedIntervals.push(startTone.intervalIdx);
+
+    for (let s = 1; s < 4; s++) {
+      // Find the lowest chord tone on this string that is higher than prevMidi
+      const found = stringChordTones[s].find(t => t.midi > prevMidi);
+      if (!found) { valid = false; break; }
+      frets[strings[s]] = found.fret;
+      notes.push({ stringIndex: strings[s], fret: found.fret });
+      usedIntervals.push(found.intervalIdx);
+      prevMidi = found.midi;
+    }
+
+    if (!valid) continue;
+
+    // Check span
+    const activeFrets = notes.map(n => n.fret);
+    const span = Math.max(...activeFrets) - Math.min(...activeFrets);
+    if (span > 7) continue; // allow slightly wider for inversions
+
+    const tab = frets.map(f => f === -1 ? 'X' : f.toString()).join('');
+    if (seenTabs.has(tab)) continue;
+    seenTabs.add(tab);
+
+    // Determine inversion from bottom note
+    const bottomInterval = usedIntervals[0];
+    const invNumber = intervals.indexOf(intervals[bottomInterval]) === 0 ? 0 
+      : bottomInterval === 1 ? 1 
+      : bottomInterval === 2 ? 2 
+      : 3;
+
+    results.push({
+      frets,
+      notes,
+      inversionNumber: invNumber,
+      inversionLabel: `${chordType} ${invLabels[invNumber]}`,
+      bottomDegree: `${degreeNames[usedIntervals[0]]} at the bottom`,
+      topDegree: `${degreeNames[usedIntervals[3]]} on top`,
+      tab,
+      chordType,
+    });
   }
 
   return results;
