@@ -280,6 +280,15 @@ const Index = () => {
                arpAddMode={fb.arpAddMode}
                setArpAddMode={fb.setArpAddMode}
                arpAddClickRef={arpAddClickRef}
+               activeTab={activeTab}
+               setActiveTab={setActiveTab}
+               primaryScale={fb.primaryScale}
+               scaleViewDegreeFilter={scaleViewDegreeFilter}
+               setScaleViewDegreeFilter={setScaleViewDegreeFilter}
+               scaleViewMode={scaleViewMode}
+               setScaleViewMode={setScaleViewMode}
+               inversionStringGroup={inversionStringGroup}
+               setInversionStringGroup={setInversionStringGroup}
             />
           </div>
         </main>
