@@ -227,8 +227,11 @@ const Index = () => {
             <button
               onClick={() => {
                 fb.clearFretboard();
-                // Reinstate the selected scale from left panel by clearing chord/arp overlays
                 fb.setActiveChord(null);
+                setActiveInversionVoicing(null);
+                setScaleViewDegreeFilter(null);
+                setScaleViewMode('basic');
+                setActiveTab('scaleview');
               }}
               className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
             >
