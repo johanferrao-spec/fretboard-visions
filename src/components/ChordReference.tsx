@@ -6,7 +6,7 @@ import {
   isVoicingPlayableInTuning, getTensionSuggestions, getChordTones,
   analyzeProgression, identifyArpeggioFromNotes,
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
-  getDiatonicChords, generate7thInversions, scaleToKeyMode, get7thChordType,
+  getDiatonicChords, generate7thInversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
   STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
   type ArpeggioPosition, type StringGroup, type InversionVoicing,
@@ -380,6 +380,79 @@ export default function ChordReference({
 // SCALE VIEW PANEL
 // ============================================================
 
+// Mini chord diagram for inversion voicings
+function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
+  voicing: InversionVoicing;
+  stringGroup: StringGroup;
+  isActive: boolean;
+  color: string;
+  onClick: () => void;
+}) {
+  const config = STRING_GROUP_CONFIG[stringGroup];
+  const activeStrings = config.strings;
+  const activeFrets = activeStrings.map(s => voicing.frets[s]).filter(f => f >= 0);
+  if (activeFrets.length === 0) return null;
+  const minFret = Math.min(...activeFrets);
+  const maxFret = Math.max(...activeFrets);
+  const startFret = Math.max(1, minFret - 1);
+  const endFret = Math.max(startFret + 3, maxFret + 1);
+  const numFrets = endFret - startFret + 1;
+  const cellSize = 14;
+  const w = 4 * cellSize + 20;
+  const h = numFrets * cellSize + 28;
+
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center transition-all rounded-xl"
+      style={{
+        border: isActive ? `2px solid hsl(${color})` : '2px solid transparent',
+        backgroundColor: isActive ? `hsla(${color}, 0.15)` : 'hsla(var(--secondary), 0.5)',
+        padding: 4,
+        aspectRatio: '1',
+        width: 90,
+        minHeight: 90,
+      }}
+    >
+      <div className="text-[8px] font-mono font-bold mb-0.5" style={{ color: `hsl(${color})` }}>
+        {voicing.slashName}
+      </div>
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="flex-1">
+        {/* Fret numbers */}
+        <text x={4} y={16} fontSize={7} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+        {/* Strings (vertical) */}
+        {[0, 1, 2, 3].map(si => (
+          <line key={`s${si}`} x1={16 + si * cellSize} y1={12} x2={16 + si * cellSize} y2={12 + numFrets * cellSize}
+            stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={0.5} />
+        ))}
+        {/* Frets (horizontal) */}
+        {Array.from({ length: numFrets + 1 }, (_, i) => (
+          <line key={`f${i}`} x1={16} y1={12 + i * cellSize} x2={16 + 3 * cellSize} y2={12 + i * cellSize}
+            stroke="hsl(var(--muted-foreground))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.5} />
+        ))}
+        {/* Notes */}
+        {activeStrings.map((si, idx) => {
+          const fret = voicing.frets[si];
+          if (fret < 0) return null;
+          const fretPos = fret - startFret;
+          return (
+            <circle key={`n${idx}`}
+              cx={16 + idx * cellSize}
+              cy={12 + fretPos * cellSize + cellSize / 2}
+              r={5}
+              fill={`hsl(${color})`}
+              opacity={0.9}
+            />
+          );
+        })}
+      </svg>
+      <div className="text-[7px] font-mono mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>
+        {voicing.inversionLabel.replace(' position', '').replace('Root', 'Root pos.')}
+      </div>
+    </button>
+  );
+}
+
 function ScaleViewPanel({
   primaryScale, degreeFilter, setDegreeFilter,
   scaleViewMode, setScaleViewMode,
@@ -404,20 +477,24 @@ function ScaleViewPanel({
 
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
 
+  // Build 7th chord labels for each diatonic chord
+  const diatonicLabels = useMemo(() => diatonicChords.map((chord, i) => {
+    const chordType7 = get7thChordType(chord.type, i + 1);
+    const suffix = get7thChordSymbol(chord.type);
+    return { ...chord, label7: `${chord.root}${suffix}`, chordType7 };
+  }), [diatonicChords]);
+
   const inversions = useMemo(() => {
     if (scaleViewMode !== 'inversion' || degreeFilter === null) return [];
-    const chord = diatonicChords[degreeFilter];
+    const chord = diatonicLabels[degreeFilter];
     if (!chord) return [];
-    const chordType7 = get7thChordType(chord.type, degreeFilter + 1);
-    return generate7thInversions(chord.root, chordType7, inversionStringGroup, tuning);
-  }, [scaleViewMode, degreeFilter, diatonicChords, inversionStringGroup, tuning]);
+    return generate7thInversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
+  }, [scaleViewMode, degreeFilter, diatonicLabels, inversionStringGroup, tuning]);
 
-  // Reset index when inversions change
   useEffect(() => {
     setCurrentInvIdx(0);
   }, [inversions]);
 
-  // Push active inversion to fretboard
   useEffect(() => {
     if (scaleViewMode === 'inversion' && inversions.length > 0) {
       const idx = Math.min(currentInvIdx, inversions.length - 1);
@@ -427,55 +504,64 @@ function ScaleViewPanel({
     }
   }, [scaleViewMode, inversions, currentInvIdx, onSetInversionVoicing]);
 
-  const activeInv = inversions.length > 0 ? inversions[Math.min(currentInvIdx, inversions.length - 1)] : null;
+  const activeColor = degreeFilter !== null ? SCALE_DEGREE_COLORS[degreeFilter] : null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      {/* Mode buttons */}
       <div className="flex gap-1">
         <button
           onClick={() => { setScaleViewMode('basic'); onSetInversionVoicing?.(null); }}
-          className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
-            scaleViewMode === 'basic' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+            scaleViewMode === 'basic' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground'
           }`}
-        >Basic View</button>
+        >🎵 Basic View</button>
         <button
           onClick={() => setScaleViewMode('inversion')}
-          className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
-            scaleViewMode === 'inversion' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+            scaleViewMode === 'inversion' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground'
           }`}
-        >Inversion View</button>
+        >🎹 Inversion View</button>
       </div>
 
-      <div className="flex gap-1 flex-wrap">
-        {diatonicChords.map((chord, i) => {
+      {/* Degree buttons - BIG and colourful */}
+      <div className="grid grid-cols-7 gap-1">
+        {diatonicLabels.map((chord, i) => {
           const isActive = degreeFilter === i;
           const color = SCALE_DEGREE_COLORS[i];
           return (
             <button
               key={i}
               onClick={() => setDegreeFilter(isActive ? null : i)}
-              className="px-2 py-1 rounded text-[10px] font-mono font-bold transition-all border"
+              className="rounded-xl font-bold transition-all flex flex-col items-center justify-center py-2 px-1"
               style={{
-                backgroundColor: isActive ? `hsl(${color})` : `hsla(${color}, 0.15)`,
-                borderColor: `hsl(${color})`,
+                backgroundColor: isActive ? `hsl(${color})` : `hsla(${color}, 0.2)`,
+                border: `2px solid hsl(${color})`,
                 color: isActive ? '#fff' : `hsl(${color})`,
+                boxShadow: isActive ? `0 0 12px hsla(${color}, 0.5)` : 'none',
+                minHeight: 52,
               }}
             >
-              {chord.roman} {chord.symbol}
+              <span className="text-[12px] font-black">{chord.roman}</span>
+              <span className="text-[8px] font-mono opacity-80">{chord.label7}</span>
             </button>
           );
         })}
       </div>
 
+      {/* Inversion mode content */}
       {scaleViewMode === 'inversion' && (
         <div className="space-y-2">
+          {/* String group selector */}
           <div className="flex gap-1">
             {(['upper', 'mid', 'lower'] as StringGroup[]).map(sg => (
               <button
                 key={sg}
                 onClick={() => setInversionStringGroup(sg)}
-                className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
-                  inversionStringGroup === sg ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
+                  inversionStringGroup === sg
+                    ? 'bg-accent text-accent-foreground shadow-md'
+                    : 'bg-secondary text-secondary-foreground'
                 }`}
               >{STRING_GROUP_CONFIG[sg].label}</button>
             ))}
@@ -483,54 +569,79 @@ function ScaleViewPanel({
 
           {degreeFilter !== null && inversions.length > 0 && (
             <div className="space-y-2">
-              <div className="text-[10px] font-mono text-muted-foreground font-bold uppercase">
-                {diatonicChords[degreeFilter]?.symbol} 7th — {STRING_GROUP_CONFIG[inversionStringGroup].label}
+              {/* Title in degree color */}
+              <div
+                className="text-[11px] font-bold font-mono uppercase rounded-lg px-3 py-1.5"
+                style={{
+                  backgroundColor: activeColor ? `hsla(${activeColor}, 0.15)` : undefined,
+                  color: activeColor ? `hsl(${activeColor})` : undefined,
+                }}
+              >
+                {diatonicLabels[degreeFilter]?.label7} — {STRING_GROUP_CONFIG[inversionStringGroup].label}
               </div>
 
-              {/* Cycling controls */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentInvIdx(i => Math.max(0, i - 1))}
-                  disabled={currentInvIdx === 0}
-                  className="px-2 py-1 rounded text-[10px] font-mono bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-30 transition-colors"
-                >◀</button>
-                <span className="text-[10px] font-mono text-foreground font-bold flex-1 text-center">
-                  {currentInvIdx + 1} / {inversions.length}
-                </span>
-                <button
-                  onClick={() => setCurrentInvIdx(i => Math.min(inversions.length - 1, i + 1))}
-                  disabled={currentInvIdx >= inversions.length - 1}
-                  className="px-2 py-1 rounded text-[10px] font-mono bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-30 transition-colors"
-                >▶</button>
+              {/* All voicing diagrams in a grid - square shaped */}
+              <div
+                className="grid gap-2 p-2 rounded-xl"
+                style={{
+                  gridTemplateColumns: `repeat(${Math.min(inversions.length, 4)}, 1fr)`,
+                  backgroundColor: activeColor ? `hsla(${activeColor}, 0.08)` : 'hsla(var(--secondary), 0.3)',
+                  border: activeColor ? `1px solid hsla(${activeColor}, 0.3)` : undefined,
+                }}
+              >
+                {inversions.map((inv, idx) => (
+                  <MiniChordDiagram
+                    key={idx}
+                    voicing={inv}
+                    stringGroup={inversionStringGroup}
+                    isActive={currentInvIdx === idx}
+                    color={activeColor || '0, 0%, 60%'}
+                    onClick={() => setCurrentInvIdx(idx)}
+                  />
+                ))}
               </div>
 
               {/* Active inversion info */}
-              {activeInv && (
-                <div className="rounded p-2 border transition-all" style={{ borderColor: 'hsl(330, 70%, 60%)', backgroundColor: 'hsla(330, 70%, 60%, 0.08)' }}>
-                  <div className="text-[10px] font-mono font-bold text-foreground">{activeInv.inversionLabel}</div>
-                  <div className="text-[9px] font-mono text-muted-foreground">{activeInv.bottomDegree}, {activeInv.topDegree}</div>
-                  <div className="text-[11px] font-mono mt-1" style={{ color: 'hsl(330, 70%, 60%)' }}>{activeInv.tab}</div>
-                </div>
-              )}
+              {inversions[Math.min(currentInvIdx, inversions.length - 1)] && (() => {
+                const activeInv = inversions[Math.min(currentInvIdx, inversions.length - 1)];
+                return (
+                  <div
+                    className="rounded-xl p-3 transition-all"
+                    style={{
+                      backgroundColor: activeColor ? `hsla(${activeColor}, 0.1)` : 'hsla(var(--secondary), 0.3)',
+                      border: activeColor ? `2px solid hsla(${activeColor}, 0.4)` : undefined,
+                    }}
+                  >
+                    <div className="text-[11px] font-bold" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
+                      {activeInv.slashName} — {activeInv.inversionLabel}
+                    </div>
+                    <div className="text-[9px] font-mono text-muted-foreground mt-0.5">
+                      {activeInv.bottomDegree} · {activeInv.topDegree}
+                    </div>
+                    <div className="text-[10px] font-mono font-bold mt-1" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
+                      Tab: {activeInv.tab}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
           {degreeFilter !== null && inversions.length === 0 && (
-            <div className="text-[9px] font-mono text-muted-foreground italic">No 7th inversions available for this chord type</div>
+            <div className="text-[10px] font-mono text-muted-foreground italic p-2">No inversions available for this chord type</div>
           )}
           {degreeFilter === null && (
-            <div className="text-[9px] font-mono text-muted-foreground italic">Select a degree above to view inversions</div>
+            <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree above to view inversions</div>
           )}
         </div>
       )}
 
       {scaleViewMode === 'basic' && degreeFilter === null && (
-        <div className="text-[9px] font-mono text-muted-foreground italic">Select a degree to highlight its chord tones on the fretboard</div>
+        <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree to highlight its chord tones on the fretboard</div>
       )}
     </div>
   );
 }
-
 function formatCompactTab(frets: number[]): string {
   return frets.map(fret => {
     if (fret === -1) return 'X';
@@ -674,7 +785,7 @@ function ChordLibraryPanel({
                           isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
                         }`}
                       >
-                        <MiniChordDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} />
+                        <MiniChordVoicingDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} />
                         <div className="flex items-center justify-center gap-0.5">
                           <span className="text-[7px] font-mono text-muted-foreground">
                             {formatCompactTab(v.frets)}
@@ -1085,7 +1196,7 @@ function getChordTypeDescription(suffix: string): string {
   return descriptions[suffix] || '';
 }
 
-function MiniChordDiagram({ voicing, root, showDegrees = false }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean }) {
+function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean }) {
   const positiveFrets = voicing.frets.filter(f => f > 0);
   const maxFret = positiveFrets.length > 0 ? Math.max(...positiveFrets) : 1;
   const minFret = positiveFrets.length > 0 ? Math.min(...positiveFrets) : 1;

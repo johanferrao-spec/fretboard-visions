@@ -246,11 +246,11 @@ export default function Fretboard({
       }
       // Show other scale chord tones dimmed
       if (scaleViewChordTones && scaleViewChordTones.has((['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note))) {
-        return { backgroundColor: pColor, opacity: 0.2, ring: false, ringColor: '', greyed: true };
+        return { backgroundColor: pColor, opacity: 0.25, ring: false, ringColor: '', greyed: true };
       }
-      // Scale notes very dimmed
+      // Scale notes dimmed but still visible
       const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
-      if (inP) return { backgroundColor: pColor, opacity: 0.08, ring: false, ringColor: '', greyed: true };
+      if (inP) return { backgroundColor: pColor, opacity: 0.15, ring: false, ringColor: '', greyed: true };
       return null;
     }
 
@@ -779,33 +779,7 @@ export default function Fretboard({
             </div>
           )}
 
-          {/* Inversion voicing pink box */}
-          {inversionVoicing && inversionVoicing.notes.length > 0 && (() => {
-            const invNotes = inversionVoicing.notes;
-            const rows = invNotes.map(n => stringOrder.indexOf(n.stringIndex));
-            const fretNums = invNotes.map(n => n.fret);
-            const minRow = Math.min(...rows);
-            const maxRow = Math.max(...rows);
-            const minFret = Math.min(...fretNums);
-            const maxFret2 = Math.max(...fretNums);
-            const padFret = 0.3; // percentage padding
-            const leftPct = (cumLeft[minFret] || 0) - padFret;
-            const rightPct = (cumLeft[maxFret2] || 0) + (widths[maxFret2] || 0) + padFret;
-            return (
-              <div
-                className="absolute z-[18] pointer-events-none rounded-lg transition-all duration-300 ease-in-out"
-                style={{
-                  left: `calc(28px + (100% - 28px) * ${leftPct} / 100)`,
-                  width: `calc((100% - 28px) * ${rightPct - leftPct} / 100)`,
-                  top: `${((minRow * stringH + stringH * 0.15) / (6 * stringH)) * 100}%`,
-                  height: `${(((maxRow - minRow) * stringH + stringH * 0.7) / (6 * stringH)) * 100}%`,
-                  border: '2px solid hsl(330, 70%, 60%)',
-                  backgroundColor: 'hsla(330, 70%, 60%, 0.08)',
-                  boxShadow: '0 0 12px hsla(330, 70%, 60%, 0.3)',
-                }}
-              />
-            );
-          })()}
+          {/* Inversion voicing pink box - REMOVED */}
 
 
           {chordVoicingData && chordVoicingData.barreFrom != null && chordVoicingData.barreTo != null && chordVoicingData.barreFret != null && (
