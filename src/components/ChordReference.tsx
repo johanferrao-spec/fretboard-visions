@@ -6,7 +6,7 @@ import {
   isVoicingPlayableInTuning, getTensionSuggestions, getChordTones,
   analyzeProgression, identifyArpeggioFromNotes,
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
-  getDiatonicChords, generate7thInversions, scaleToKeyMode, get7thChordType,
+  getDiatonicChords, generate7thInversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
   STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
   type ArpeggioPosition, type StringGroup, type InversionVoicing,
