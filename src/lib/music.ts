@@ -2110,19 +2110,27 @@ export function scaleToKeyMode(scaleName: string): KeyMode {
   return map[scaleName] || 'major';
 }
 
-export function get7thChordType(baseType: string, degree: number): string {
-  if (baseType === 'Major' && degree === 4) return 'Dominant 7';
+export function get7thChordType(baseType: string, _degree: number): string {
   if (baseType === 'Major') return 'Major 7';
   if (baseType === 'Minor') return 'Minor 7';
   if (baseType === 'Diminished') return 'Half-Dim 7';
   return 'Dominant 7';
 }
 
+// Map base type to 7th chord symbol for display
+export function get7thChordSymbol(baseType: string): string {
+  if (baseType === 'Major') return 'maj7';
+  if (baseType === 'Minor') return 'm7';
+  if (baseType === 'Diminished') return 'ø7';
+  return '7';
+}
+
 export interface InversionVoicing {
   frets: (number | -1)[];
   notes: ArpeggioPositionNote[];
-  inversionNumber: number;
+  inversionNumber: number; // 0=root, 1=1st, 2=2nd, 3=3rd
   inversionLabel: string;
+  slashName: string; // e.g. "Em7/B"
   bottomDegree: string;
   topDegree: string;
   tab: string;
@@ -2140,31 +2148,34 @@ export function generate7thInversions(
   if (!formula || formula.length < 4) return [];
 
   const rootIdx = NOTE_NAMES.indexOf(root);
+  // Always use exactly 4 intervals: root, 3rd, 5th, 7th
   const intervals = formula.slice(0, 4).map(i => i % 12);
   const config = STRING_GROUP_CONFIG[stringGroup];
   const strings = config.strings; // 4 strings, low to high
 
-  const baseMidi = [40, 45, 50, 55, 59, 64].map((m, i) =>
+  // Base MIDI for standard tuning strings
+  const baseMidi = [40, 45, 50, 55, 59, 64];
+  // Adjust for actual tuning
+  const stringMidi = baseMidi.map((m, i) =>
     m + ((tuning[i] ?? STANDARD_TUNING[i]) - STANDARD_TUNING[i])
   );
 
   const intervalLabels: Record<number, string> = {
-    0: 'root', 1: '♭2nd', 2: '2nd', 3: '♭3rd', 4: '3rd',
+    0: 'Root', 1: '♭2', 2: '2nd', 3: '♭3rd', 4: '3rd',
     5: '4th', 6: '♭5th', 7: '5th', 8: '#5th', 9: '6th',
     10: '♭7th', 11: '7th',
   };
-  const degreeNames = intervals.map(i => intervalLabels[i] || `${i}`);
+
   const invLabels = ['Root position', '1st inversion', '2nd inversion', '3rd inversion'];
 
-  // For each string, build sorted list of all chord tone frets with their interval index
+  // For each string, compute all chord tone frets sorted ascending
   const stringChordTones: { fret: number; midi: number; intervalIdx: number }[][] = [];
   for (const si of strings) {
     const tones: { fret: number; midi: number; intervalIdx: number }[] = [];
-    for (let f = 1; f <= maxFret; f++) {
-      const midi = baseMidi[si] + f;
+    for (let f = 0; f <= maxFret; f++) {
+      const midi = stringMidi[si] + f;
       const pc = midi % 12;
-      const target = (rootIdx + 0) % 12; // check against all intervals
-      for (let ii = 0; ii < intervals.length; ii++) {
+      for (let ii = 0; ii < 4; ii++) {
         if (pc === (rootIdx + intervals[ii]) % 12) {
           tones.push({ fret: f, midi, intervalIdx: ii });
           break;
@@ -2174,57 +2185,81 @@ export function generate7thInversions(
     stringChordTones.push(tones);
   }
 
+  // Generate exactly 4 inversions
+  // Inversion N: bottom note has interval index N
+  // Then each subsequent string gets the next ascending chord tone
   const results: InversionVoicing[] = [];
-  const seenTabs = new Set<string>();
 
-  // Walk up: for each starting chord tone on the lowest string, build a voicing
-  // by finding the next ascending chord tone on each subsequent string
-  for (const startTone of stringChordTones[0]) {
+  for (let inv = 0; inv < 4; inv++) {
+    // The interval order for this inversion: [inv, (inv+1)%4, (inv+2)%4, (inv+3)%4]
+    const intervalOrder = [0, 1, 2, 3].map(i => (inv + i) % 4);
+
+    // Find the LOWEST occurrence of the bottom interval on the bottom string
+    const bottomInterval = intervalOrder[0];
+    const bottomCandidates = stringChordTones[0].filter(t => t.intervalIdx === bottomInterval && t.fret >= 1);
+    if (bottomCandidates.length === 0) continue;
+
+    // Use the first (lowest) candidate
+    const bottomTone = bottomCandidates[0];
     const frets: (number | -1)[] = [-1, -1, -1, -1, -1, -1];
     const notes: ArpeggioPositionNote[] = [];
-    const usedIntervals: number[] = [];
-    let prevMidi = startTone.midi;
+
+    frets[strings[0]] = bottomTone.fret;
+    notes.push({ stringIndex: strings[0], fret: bottomTone.fret });
+    let prevMidi = bottomTone.midi;
     let valid = true;
 
-    frets[strings[0]] = startTone.fret;
-    notes.push({ stringIndex: strings[0], fret: startTone.fret });
-    usedIntervals.push(startTone.intervalIdx);
-
     for (let s = 1; s < 4; s++) {
-      // Find the lowest chord tone on this string that is higher than prevMidi
-      const found = stringChordTones[s].find(t => t.midi > prevMidi);
-      if (!found) { valid = false; break; }
-      frets[strings[s]] = found.fret;
-      notes.push({ stringIndex: strings[s], fret: found.fret });
-      usedIntervals.push(found.intervalIdx);
-      prevMidi = found.midi;
+      const targetInterval = intervalOrder[s];
+      // Find lowest chord tone on this string with the correct interval AND midi > prevMidi
+      const candidates = stringChordTones[s].filter(
+        t => t.intervalIdx === targetInterval && t.midi > prevMidi
+      );
+      if (candidates.length === 0) {
+        // If exact interval not found ascending, allow ANY instance of that interval
+        // by also checking open strings
+        const fallback = stringChordTones[s].filter(
+          t => t.intervalIdx === targetInterval && t.midi >= prevMidi
+        );
+        if (fallback.length === 0) { valid = false; break; }
+        const found = fallback[0];
+        frets[strings[s]] = found.fret;
+        notes.push({ stringIndex: strings[s], fret: found.fret });
+        prevMidi = found.midi;
+      } else {
+        const found = candidates[0];
+        frets[strings[s]] = found.fret;
+        notes.push({ stringIndex: strings[s], fret: found.fret });
+        prevMidi = found.midi;
+      }
     }
 
     if (!valid) continue;
 
-    // Check span
-    const activeFrets = notes.map(n => n.fret);
-    const span = Math.max(...activeFrets) - Math.min(...activeFrets);
-    if (span > 7) continue; // allow slightly wider for inversions
-
     const tab = frets.map(f => f === -1 ? 'X' : f.toString()).join('');
-    if (seenTabs.has(tab)) continue;
-    seenTabs.add(tab);
+    const bottomNoteName = NOTE_NAMES[(rootIdx + intervals[bottomInterval]) % 12];
+    const topInterval = intervalOrder[3];
+    const topNoteName = NOTE_NAMES[(rootIdx + intervals[topInterval]) % 12];
 
-    // Determine inversion from bottom note
-    const bottomInterval = usedIntervals[0];
-    const invNumber = intervals.indexOf(intervals[bottomInterval]) === 0 ? 0 
-      : bottomInterval === 1 ? 1 
-      : bottomInterval === 2 ? 2 
-      : 3;
+    // Slash chord name
+    const chordSymbol = `${root}${get7thChordSymbol(chordType.replace(' 7', '').replace('Dominant', 'Major').replace('Half-Dim', 'Diminished').replace('Min/Maj', 'Minor'))}`;
+    // Simpler: use the chordType directly
+    const shortNames: Record<string, string> = {
+      'Major 7': 'maj7', 'Minor 7': 'm7', 'Dominant 7': '7',
+      'Half-Dim 7': 'ø7', 'Dim 7': 'dim7', 'Min/Maj 7': 'mM7',
+    };
+    const suffix = shortNames[chordType] || '7';
+    const fullName = `${root}${suffix}`;
+    const slashName = inv === 0 ? fullName : `${fullName}/${bottomNoteName}`;
 
     results.push({
       frets,
       notes,
-      inversionNumber: invNumber,
-      inversionLabel: `${chordType} ${invLabels[invNumber]}`,
-      bottomDegree: `${degreeNames[usedIntervals[0]]} at the bottom`,
-      topDegree: `${degreeNames[usedIntervals[3]]} on top`,
+      inversionNumber: inv,
+      inversionLabel: invLabels[inv],
+      slashName,
+      bottomDegree: `${intervalLabels[intervals[bottomInterval]]} in the bass`,
+      topDegree: `${intervalLabels[intervals[topInterval]]} on top`,
       tab,
       chordType,
     });
