@@ -52,6 +52,8 @@ interface FretboardProps {
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
   inversionVoicing?: import('@/lib/music').InversionVoicing | null;
+  ghostNoteOpacity?: number;
+  inversionDegreeColor?: string | null;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
