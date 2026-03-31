@@ -647,6 +647,20 @@ function ScaleViewPanel({
       {scaleViewMode === 'basic' && degreeFilter === null && (
         <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree to highlight its chord tones on the fretboard</div>
       )}
+
+      {/* Ghost note opacity slider */}
+      {degreeFilter !== null && (
+        <div className="flex items-center gap-2 px-2 py-1">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase whitespace-nowrap">Ghost:</span>
+          <input
+            type="range" min={0} max={50} step={1}
+            value={Math.round(ghostNoteOpacity * 100)}
+            onChange={e => setGhostNoteOpacity(Number(e.target.value) / 100)}
+            className="flex-1 accent-primary h-1"
+          />
+          <span className="text-[9px] font-mono text-muted-foreground w-7">{Math.round(ghostNoteOpacity * 100)}%</span>
+        </div>
+      )}
     </div>
   );
 }
