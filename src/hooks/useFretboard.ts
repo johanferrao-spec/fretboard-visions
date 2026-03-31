@@ -150,6 +150,7 @@ export function useFretboard() {
     arpPathVisible, setArpPathVisible,
     arpAddMode, setArpAddMode,
     arpAddClickHandler, setArpAddClickHandler,
+    ghostNoteOpacity, setGhostNoteOpacity,
     clearFretboard,
   };
 }
