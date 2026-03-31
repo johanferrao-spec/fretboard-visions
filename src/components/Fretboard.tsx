@@ -52,6 +52,8 @@ interface FretboardProps {
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
   inversionVoicing?: import('@/lib/music').InversionVoicing | null;
+  ghostNoteOpacity?: number;
+  inversionDegreeColor?: string | null;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -87,6 +89,8 @@ export default function Fretboard({
   arpAddMode = false, onArpAddClick,
   scaleViewChordTones,
   inversionVoicing,
+  ghostNoteOpacity = 0.15,
+  inversionDegreeColor,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -246,11 +250,11 @@ export default function Fretboard({
       }
       // Show other scale chord tones dimmed
       if (scaleViewChordTones && scaleViewChordTones.has((['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note))) {
-        return { backgroundColor: pColor, opacity: 0.25, ring: false, ringColor: '', greyed: true };
+        return { backgroundColor: pColor, opacity: ghostNoteOpacity * 1.7, ring: false, ringColor: '', greyed: true };
       }
       // Scale notes dimmed but still visible
       const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
-      if (inP) return { backgroundColor: pColor, opacity: 0.15, ring: false, ringColor: '', greyed: true };
+      if (inP) return { backgroundColor: pColor, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: true };
       return null;
     }
 
@@ -859,6 +863,51 @@ export default function Fretboard({
                       x1={prev.x} y1={prev.y * totalH / 100}
                       x2={pt.x} y2={pt.y * totalH / 100}
                       stroke="hsl(var(--primary))"
+                      strokeWidth={6}
+                      strokeLinecap="round"
+                      opacity={1}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  );
+                })}
+              </svg>
+            );
+          })()}
+
+          {/* Inversion voicing path */}
+          {inversionVoicing && inversionVoicing.notes.length >= 2 && (() => {
+            const totalH = 6 * stringH;
+            const sortedNotes = [...inversionVoicing.notes].sort((a, b) => {
+              const aMidi = ([40, 45, 50, 55, 59, 64][a.stringIndex] || 40) + a.fret;
+              const bMidi = ([40, 45, 50, 55, 59, 64][b.stringIndex] || 40) + b.fret;
+              return aMidi - bMidi;
+            });
+            const points = sortedNotes.map(n => {
+              const row = stringOrder.indexOf(n.stringIndex);
+              if (row < 0) return null;
+              return {
+                x: cumLeft[n.fret] + widths[n.fret] / 2,
+                y: (row * stringH + stringH / 2) / totalH * 100,
+              };
+            }).filter(Boolean) as { x: number; y: number }[];
+            if (points.length < 2) return null;
+            const strokeColor = inversionDegreeColor ? `hsl(${inversionDegreeColor})` : 'hsl(330, 70%, 60%)';
+            return (
+              <svg
+                className="absolute inset-0 pointer-events-none z-[5]"
+                style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
+                viewBox={`0 0 100 ${totalH}`}
+                preserveAspectRatio="none"
+              >
+                {points.map((pt, i, arr) => {
+                  if (i === 0) return null;
+                  const prev = arr[i - 1];
+                  return (
+                    <line
+                      key={i}
+                      x1={prev.x} y1={prev.y * totalH / 100}
+                      x2={pt.x} y2={pt.y * totalH / 100}
+                      stroke={strokeColor}
                       strokeWidth={6}
                       strokeLinecap="round"
                       opacity={1}

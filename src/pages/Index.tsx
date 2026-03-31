@@ -9,7 +9,7 @@ import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import type { NoteName } from '@/lib/music';
-import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
+import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_DEGREE_COLORS, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
@@ -284,8 +284,10 @@ const Index = () => {
               arpPathVisible={fb.arpPathVisible}
               arpAddMode={fb.arpAddMode}
               onArpAddClick={(si, fret) => arpAddClickRef.current?.(si, fret)}
-              inversionVoicing={activeInversionVoicing}
-              scaleViewChordTones={scaleViewChordTones}
+               inversionVoicing={activeInversionVoicing}
+               scaleViewChordTones={scaleViewChordTones}
+               ghostNoteOpacity={fb.ghostNoteOpacity}
+               inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
             />
           </div>
 
@@ -335,7 +337,9 @@ const Index = () => {
                setScaleViewMode={setScaleViewMode}
                inversionStringGroup={inversionStringGroup}
                setInversionStringGroup={setInversionStringGroup}
-               onSetInversionVoicing={setActiveInversionVoicing}
+                onSetInversionVoicing={setActiveInversionVoicing}
+                ghostNoteOpacity={fb.ghostNoteOpacity}
+                setGhostNoteOpacity={fb.setGhostNoteOpacity}
             />
           </div>
         </main>

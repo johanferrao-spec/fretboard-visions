@@ -62,6 +62,8 @@ interface ChordReferenceProps {
   inversionStringGroup: StringGroup;
   setInversionStringGroup: (g: StringGroup) => void;
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
+  ghostNoteOpacity: number;
+  setGhostNoteOpacity: (v: number) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
@@ -175,6 +177,7 @@ export default function ChordReference({
   primaryScale, scaleViewDegreeFilter, setScaleViewDegreeFilter,
   scaleViewMode, setScaleViewMode, inversionStringGroup, setInversionStringGroup,
   onSetInversionVoicing,
+  ghostNoteOpacity, setGhostNoteOpacity,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
@@ -307,6 +310,8 @@ export default function ChordReference({
           onSetArpeggioPosition={onSetArpeggioPosition}
           degreeColors={degreeColors}
           onSetInversionVoicing={onSetInversionVoicing}
+          ghostNoteOpacity={ghostNoteOpacity}
+          setGhostNoteOpacity={setGhostNoteOpacity}
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
@@ -459,6 +464,7 @@ function ScaleViewPanel({
   inversionStringGroup, setInversionStringGroup,
   tuning, onSetArpeggioPosition, degreeColors,
   onSetInversionVoicing,
+  ghostNoteOpacity, setGhostNoteOpacity,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
@@ -471,6 +477,8 @@ function ScaleViewPanel({
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
   degreeColors: boolean;
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
+  ghostNoteOpacity: number;
+  setGhostNoteOpacity: (v: number) => void;
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
@@ -638,6 +646,20 @@ function ScaleViewPanel({
 
       {scaleViewMode === 'basic' && degreeFilter === null && (
         <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree to highlight its chord tones on the fretboard</div>
+      )}
+
+      {/* Ghost note opacity slider */}
+      {degreeFilter !== null && (
+        <div className="flex items-center gap-2 px-2 py-1">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase whitespace-nowrap">Ghost:</span>
+          <input
+            type="range" min={0} max={50} step={1}
+            value={Math.round(ghostNoteOpacity * 100)}
+            onChange={e => setGhostNoteOpacity(Number(e.target.value) / 100)}
+            className="flex-1 accent-primary h-1"
+          />
+          <span className="text-[9px] font-mono text-muted-foreground w-7">{Math.round(ghostNoteOpacity * 100)}%</span>
+        </div>
       )}
     </div>
   );

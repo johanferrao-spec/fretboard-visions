@@ -61,6 +61,7 @@ export function useFretboard() {
   const [customTunings, setCustomTunings] = useState<TuningPreset[]>([]);
   const [arpeggioPosition, setArpeggioPosition] = useState<ArpeggioPosition | null>(null);
   const [arpOverlayOpacity, setArpOverlayOpacity] = useState(0.3);
+  const [ghostNoteOpacity, setGhostNoteOpacity] = useState(0.15);
   const [arpPathVisible, setArpPathVisible] = useState(true);
   const [arpAddMode, setArpAddMode] = useState(false);
   const [arpAddClickHandler, setArpAddClickHandler] = useState<((si: number, fret: number) => void) | null>(null);
@@ -149,6 +150,7 @@ export function useFretboard() {
     arpPathVisible, setArpPathVisible,
     arpAddMode, setArpAddMode,
     arpAddClickHandler, setArpAddClickHandler,
+    ghostNoteOpacity, setGhostNoteOpacity,
     clearFretboard,
   };
 }
