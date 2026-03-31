@@ -464,6 +464,7 @@ function ScaleViewPanel({
   inversionStringGroup, setInversionStringGroup,
   tuning, onSetArpeggioPosition, degreeColors,
   onSetInversionVoicing,
+  ghostNoteOpacity, setGhostNoteOpacity,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
@@ -476,6 +477,8 @@ function ScaleViewPanel({
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
   degreeColors: boolean;
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
+  ghostNoteOpacity: number;
+  setGhostNoteOpacity: (v: number) => void;
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
