@@ -177,6 +177,7 @@ export default function ChordReference({
   primaryScale, scaleViewDegreeFilter, setScaleViewDegreeFilter,
   scaleViewMode, setScaleViewMode, inversionStringGroup, setInversionStringGroup,
   onSetInversionVoicing,
+  ghostNoteOpacity, setGhostNoteOpacity,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
