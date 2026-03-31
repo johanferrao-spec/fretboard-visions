@@ -62,6 +62,8 @@ interface ChordReferenceProps {
   inversionStringGroup: StringGroup;
   setInversionStringGroup: (g: StringGroup) => void;
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
+  ghostNoteOpacity: number;
+  setGhostNoteOpacity: (v: number) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
