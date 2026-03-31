@@ -250,11 +250,11 @@ export default function Fretboard({
       }
       // Show other scale chord tones dimmed
       if (scaleViewChordTones && scaleViewChordTones.has((['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note))) {
-        return { backgroundColor: pColor, opacity: 0.25, ring: false, ringColor: '', greyed: true };
+        return { backgroundColor: pColor, opacity: ghostNoteOpacity * 1.7, ring: false, ringColor: '', greyed: true };
       }
       // Scale notes dimmed but still visible
       const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
-      if (inP) return { backgroundColor: pColor, opacity: 0.15, ring: false, ringColor: '', greyed: true };
+      if (inP) return { backgroundColor: pColor, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: true };
       return null;
     }
 
