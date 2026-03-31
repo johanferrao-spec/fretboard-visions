@@ -89,6 +89,8 @@ export default function Fretboard({
   arpAddMode = false, onArpAddClick,
   scaleViewChordTones,
   inversionVoicing,
+  ghostNoteOpacity = 0.15,
+  inversionDegreeColor,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
