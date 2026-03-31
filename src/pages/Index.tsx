@@ -284,8 +284,10 @@ const Index = () => {
               arpPathVisible={fb.arpPathVisible}
               arpAddMode={fb.arpAddMode}
               onArpAddClick={(si, fret) => arpAddClickRef.current?.(si, fret)}
-              inversionVoicing={activeInversionVoicing}
-              scaleViewChordTones={scaleViewChordTones}
+               inversionVoicing={activeInversionVoicing}
+               scaleViewChordTones={scaleViewChordTones}
+               ghostNoteOpacity={fb.ghostNoteOpacity}
+               inversionDegreeColor={scaleViewDegreeFilter !== null ? (await import('@/lib/music')).SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
             />
           </div>
 
