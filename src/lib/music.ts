@@ -2137,119 +2137,168 @@ export interface InversionVoicing {
   chordType: string;
 }
 
+// Hardcoded E-root templates — user-verified voicings
+const E_ROOT_7TH_TEMPLATES: Record<string, Record<string, string>> = {
+  'm7': {
+    Stack: 'XX14121210',
+    Root: 'XX2433',
+    '1st': 'XX5757',
+    '2nd': 'XX99810',
+    '3rd': 'XX12121212',
+  },
+  'maj7': {
+    Stack: 'XX14131211',
+    Root: 'XX2444',
+    '1st': 'XX6857',
+    '2nd': 'XX99911',
+    '3rd': 'XX13131212',
+  },
+  'dom7': {
+    Stack: 'XX14131210',
+    Root: 'XX2434',
+    '1st': 'XX6757',
+    '2nd': 'XX99910',
+    '3rd': 'XX12131212',
+  },
+  'm7b5': {
+    Stack: 'XX14121110',
+    Root: 'XX2333',
+    '1st': 'XX5545',
+    '2nd': 'XX89810',
+  },
+};
+
+const CHORD_TYPE_TO_TEMPLATE_KEY: Record<string, string> = {
+  'Minor 7': 'm7',
+  'Major 7': 'maj7',
+  'Dominant 7': 'dom7',
+  'Half-Dim 7': 'm7b5',
+  'Dim 7': 'm7b5', // fallback
+  'Min/Maj 7': 'maj7', // fallback
+};
+
+function parseShapeTokens(shape: string): string[] {
+  const tokens: string[] = [];
+  let i = 0;
+  while (i < shape.length) {
+    if (shape[i] === 'X') {
+      tokens.push('X');
+      i++;
+    } else {
+      // greedily read digits
+      let num = '';
+      while (i < shape.length && shape[i] >= '0' && shape[i] <= '9') {
+        num += shape[i];
+        i++;
+      }
+      if (num) tokens.push(num);
+    }
+  }
+  return tokens;
+}
+
+function transposeShape(shape: string, delta: number): string {
+  return parseShapeTokens(shape).map(t => t === 'X' ? 'X' : String(+t + delta)).join('');
+}
+
+function shapeToFrets(shape: string): (number | -1)[] {
+  const tokens = parseShapeTokens(shape);
+  return tokens.map(t => t === 'X' ? -1 : +t);
+}
+
 export function generate7thInversions(
   root: NoteName,
   chordType: string,
   stringGroup: StringGroup,
   tuning: number[] = STANDARD_TUNING,
-  maxFret: number = 22,
+  _maxFret: number = 22,
 ): InversionVoicing[] {
-  const formula = CHORD_FORMULAS[chordType] || ARPEGGIO_FORMULAS[chordType];
-  if (!formula || formula.length < 4) return [];
+  const templateKey = CHORD_TYPE_TO_TEMPLATE_KEY[chordType];
+  if (!templateKey) return [];
+  const templates = E_ROOT_7TH_TEMPLATES[templateKey];
+  if (!templates) return [];
 
   const rootIdx = NOTE_NAMES.indexOf(root);
-  // Always use exactly 4 intervals: root, 3rd, 5th, 7th
-  const intervals = formula.slice(0, 4).map(i => i % 12);
+  const eIdx = NOTE_NAMES.indexOf('E' as NoteName); // 4
+  const delta = ((rootIdx - eIdx) + 12) % 12;
+
+  // String group offset: templates are for upper strings (D G B e = indices 2,3,4,5)
+  // For mid strings (A D G B = 1,2,3,4) shift frets based on tuning difference
+  // For lower strings (E A D G = 0,1,2,3) shift similarly
   const config = STRING_GROUP_CONFIG[stringGroup];
-  const strings = config.strings; // 4 strings, low to high
+  const targetStrings = config.strings; // 4 string indices
 
-  // Base MIDI for standard tuning strings
-  const baseMidi = [40, 45, 50, 55, 59, 64];
-  // Adjust for actual tuning
-  const stringMidi = baseMidi.map((m, i) =>
-    m + ((tuning[i] ?? STANDARD_TUNING[i]) - STANDARD_TUNING[i])
-  );
+  // Templates are written for upper strings: indices 2,3,4,5 (D,G,B,e)
+  // We need to adjust for different string groups by computing tuning offsets
+  const upperStrings = [2, 3, 4, 5];
+  const upperTuning = upperStrings.map(s => STANDARD_TUNING[s]); // [50,55,59,64]
 
-  const intervalLabels: Record<number, string> = {
-    0: 'Root', 1: '♭2', 2: '2nd', 3: '♭3rd', 4: '3rd',
-    5: '4th', 6: '♭5th', 7: '5th', 8: '#5th', 9: '6th',
-    10: '♭7th', 11: '7th',
+  const formula = CHORD_FORMULAS[chordType] || ARPEGGIO_FORMULAS[chordType];
+  const intervals = formula ? formula.slice(0, 4).map(i => i % 12) : [0, 3, 7, 10];
+
+  const shortNames: Record<string, string> = {
+    'Major 7': 'maj7', 'Minor 7': 'm7', 'Dominant 7': '7',
+    'Half-Dim 7': 'ø7', 'Dim 7': 'dim7', 'Min/Maj 7': 'mM7',
   };
+  const suffix = shortNames[chordType] || '7';
+  const fullName = `${root}${suffix}`;
 
   const invLabels = ['Root position', '1st inversion', '2nd inversion', '3rd inversion'];
+  const invKeys = ['Root', '1st', '2nd', '3rd'];
 
-  // For each string, compute all chord tone frets sorted ascending
-  const stringChordTones: { fret: number; midi: number; intervalIdx: number }[][] = [];
-  for (const si of strings) {
-    const tones: { fret: number; midi: number; intervalIdx: number }[] = [];
-    for (let f = 0; f <= maxFret; f++) {
-      const midi = stringMidi[si] + f;
-      const pc = midi % 12;
-      for (let ii = 0; ii < 4; ii++) {
-        if (pc === (rootIdx + intervals[ii]) % 12) {
-          tones.push({ fret: f, midi, intervalIdx: ii });
-          break;
-        }
-      }
-    }
-    stringChordTones.push(tones);
-  }
-
-  // Generate exactly 4 inversions
-  // Inversion N: bottom note has interval index N
-  // Then each subsequent string gets the next ascending chord tone
   const results: InversionVoicing[] = [];
 
-  for (let inv = 0; inv < 4; inv++) {
-    // The interval order for this inversion: [inv, (inv+1)%4, (inv+2)%4, (inv+3)%4]
-    const intervalOrder = [0, 1, 2, 3].map(i => (inv + i) % 4);
+  for (let inv = 0; inv < invKeys.length; inv++) {
+    const key = invKeys[inv];
+    const template = templates[key];
+    if (!template) continue;
 
-    // Find the LOWEST occurrence of the bottom interval on the bottom string
-    const bottomInterval = intervalOrder[0];
-    const bottomCandidates = stringChordTones[0].filter(t => t.intervalIdx === bottomInterval && t.fret >= 1);
-    if (bottomCandidates.length === 0) continue;
+    // Transpose for root
+    const transposed = transposeShape(template, delta);
+    const templateFrets = shapeToFrets(transposed);
+    // templateFrets has 6 values: first two are X (-1), last 4 are fret numbers for upper strings
 
-    // Use the first (lowest) candidate
-    const bottomTone = bottomCandidates[0];
+    // Now map to target string group
     const frets: (number | -1)[] = [-1, -1, -1, -1, -1, -1];
     const notes: ArpeggioPositionNote[] = [];
 
-    frets[strings[0]] = bottomTone.fret;
-    notes.push({ stringIndex: strings[0], fret: bottomTone.fret });
-    let prevMidi = bottomTone.midi;
-    let valid = true;
+    // Extract the 4 fretted values from template (skip X's)
+    const frettedValues: number[] = [];
+    for (const f of templateFrets) {
+      if (f !== -1) frettedValues.push(f);
+    }
 
-    for (let s = 1; s < 4; s++) {
-      const targetInterval = intervalOrder[s];
-      // Find lowest chord tone on this string with the correct interval AND midi > prevMidi
-      const candidates = stringChordTones[s].filter(
-        t => t.intervalIdx === targetInterval && t.midi > prevMidi
-      );
-      if (candidates.length === 0) {
-        // If exact interval not found ascending, allow ANY instance of that interval
-        // by also checking open strings
-        const fallback = stringChordTones[s].filter(
-          t => t.intervalIdx === targetInterval && t.midi >= prevMidi
-        );
-        if (fallback.length === 0) { valid = false; break; }
-        const found = fallback[0];
-        frets[strings[s]] = found.fret;
-        notes.push({ stringIndex: strings[s], fret: found.fret });
-        prevMidi = found.midi;
-      } else {
-        const found = candidates[0];
-        frets[strings[s]] = found.fret;
-        notes.push({ stringIndex: strings[s], fret: found.fret });
-        prevMidi = found.midi;
-      }
+    if (frettedValues.length !== 4) continue;
+
+    // Adjust each fret for tuning difference between upper strings and target strings
+    let valid = true;
+    for (let s = 0; s < 4; s++) {
+      const upperMidi = upperTuning[s];
+      const targetMidi = tuning[targetStrings[s]] !== undefined
+        ? STANDARD_TUNING[targetStrings[s]] + (tuning[targetStrings[s]] - STANDARD_TUNING[targetStrings[s]])
+        : STANDARD_TUNING[targetStrings[s]];
+      const tuningDiff = upperMidi - targetMidi;
+      const adjustedFret = frettedValues[s] + tuningDiff;
+      if (adjustedFret < 0) { valid = false; break; }
+      frets[targetStrings[s]] = adjustedFret;
+      notes.push({ stringIndex: targetStrings[s], fret: adjustedFret });
     }
 
     if (!valid) continue;
 
     const tab = frets.map(f => f === -1 ? 'X' : f.toString()).join('');
-    const bottomNoteName = NOTE_NAMES[(rootIdx + intervals[bottomInterval]) % 12];
-    const topInterval = intervalOrder[3];
-    const topNoteName = NOTE_NAMES[(rootIdx + intervals[topInterval]) % 12];
 
-    // Slash chord name
-    const chordSymbol = `${root}${get7thChordSymbol(chordType.replace(' 7', '').replace('Dominant', 'Major').replace('Half-Dim', 'Diminished').replace('Min/Maj', 'Minor'))}`;
-    // Simpler: use the chordType directly
-    const shortNames: Record<string, string> = {
-      'Major 7': 'maj7', 'Minor 7': 'm7', 'Dominant 7': '7',
-      'Half-Dim 7': 'ø7', 'Dim 7': 'dim7', 'Min/Maj 7': 'mM7',
+    // Determine bottom note for slash chord name
+    const intervalOrder = [0, 1, 2, 3].map(i => (inv + i) % 4);
+    const bottomNoteName = NOTE_NAMES[(rootIdx + intervals[intervalOrder[0]]) % 12];
+    const topNoteName = NOTE_NAMES[(rootIdx + intervals[intervalOrder[3]]) % 12];
+
+    const intervalLabels: Record<number, string> = {
+      0: 'Root', 1: '♭2', 2: '2nd', 3: '♭3rd', 4: '3rd',
+      5: '4th', 6: '♭5th', 7: '5th', 8: '#5th', 9: '6th',
+      10: '♭7th', 11: '7th',
     };
-    const suffix = shortNames[chordType] || '7';
-    const fullName = `${root}${suffix}`;
+
     const slashName = inv === 0 ? fullName : `${fullName}/${bottomNoteName}`;
 
     results.push({
@@ -2258,8 +2307,8 @@ export function generate7thInversions(
       inversionNumber: inv,
       inversionLabel: invLabels[inv],
       slashName,
-      bottomDegree: `${intervalLabels[intervals[bottomInterval]]} in the bass`,
-      topDegree: `${intervalLabels[intervals[topInterval]]} on top`,
+      bottomDegree: `${intervalLabels[intervals[intervalOrder[0]]] || 'Root'} in the bass`,
+      topDegree: `${intervalLabels[intervals[intervalOrder[3]]] || '7th'} on top`,
       tab,
       chordType,
     });
