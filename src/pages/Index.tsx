@@ -337,7 +337,9 @@ const Index = () => {
                setScaleViewMode={setScaleViewMode}
                inversionStringGroup={inversionStringGroup}
                setInversionStringGroup={setInversionStringGroup}
-               onSetInversionVoicing={setActiveInversionVoicing}
+                onSetInversionVoicing={setActiveInversionVoicing}
+                ghostNoteOpacity={fb.ghostNoteOpacity}
+                setGhostNoteOpacity={fb.setGhostNoteOpacity}
             />
           </div>
         </main>
