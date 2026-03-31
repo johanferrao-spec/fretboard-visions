@@ -287,7 +287,7 @@ const Index = () => {
                inversionVoicing={activeInversionVoicing}
                scaleViewChordTones={scaleViewChordTones}
                ghostNoteOpacity={fb.ghostNoteOpacity}
-               inversionDegreeColor={scaleViewDegreeFilter !== null ? (await import('@/lib/music')).SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
+               inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
             />
           </div>
 
