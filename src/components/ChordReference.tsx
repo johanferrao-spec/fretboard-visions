@@ -615,17 +615,21 @@ function ScaleViewPanel({
                 const activeInv = inversions[Math.min(currentInvIdx, inversions.length - 1)];
                 return (
                   <div
-                    className="rounded-xl p-3 transition-all"
+                    className="rounded-xl p-2.5 transition-all"
                     style={{
                       backgroundColor: activeColor ? `hsla(${activeColor}, 0.1)` : 'hsla(var(--secondary), 0.3)',
                       border: activeColor ? `2px solid hsla(${activeColor}, 0.4)` : undefined,
                     }}
                   >
                     <div className="text-[11px] font-bold" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
-                      {activeInv.slashName} — {activeInv.inversionLabel}
+                      {activeInv.slashName}
+                      {activeInv.alternateName && <span className="ml-1 opacity-70 font-normal">{activeInv.alternateName}</span>}
                     </div>
                     <div className="text-[9px] font-mono text-muted-foreground mt-0.5">
-                      {activeInv.bottomDegree} · {activeInv.topDegree}
+                      {activeInv.inversionLabel} · {activeInv.bottomDegree} · {activeInv.topDegree}
+                    </div>
+                    <div className="text-[9px] font-mono mt-0.5 opacity-60">
+                      Voicing: {activeInv.degreeOrder}
                     </div>
                     <div className="text-[10px] font-mono font-bold mt-1" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
                       Tab: {activeInv.tab}
@@ -649,17 +653,17 @@ function ScaleViewPanel({
         <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree to highlight its chord tones on the fretboard</div>
       )}
 
-      {/* Ghost note opacity slider */}
+      {/* Ghost note opacity slider - compact */}
       {degreeFilter !== null && (
-        <div className="flex items-center gap-2 px-2 py-1">
-          <span className="text-[9px] font-mono text-muted-foreground uppercase whitespace-nowrap">Ghost:</span>
+        <div className="flex items-center gap-1 px-2">
+          <span className="text-[8px] font-mono text-muted-foreground uppercase">👻</span>
           <input
             type="range" min={0} max={50} step={1}
             value={Math.round(ghostNoteOpacity * 100)}
             onChange={e => setGhostNoteOpacity(Number(e.target.value) / 100)}
-            className="flex-1 accent-primary h-1"
+            className="w-16 accent-primary h-0.5"
           />
-          <span className="text-[9px] font-mono text-muted-foreground w-7">{Math.round(ghostNoteOpacity * 100)}%</span>
+          <span className="text-[8px] font-mono text-muted-foreground">{Math.round(ghostNoteOpacity * 100)}%</span>
         </div>
       )}
     </div>
