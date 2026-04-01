@@ -236,23 +236,43 @@ export default function Fretboard({
       return null;
     }
 
-    // Inversion voicing mode: show voicing notes prominently, chord tones dimmed, scale notes very dimmed
-    if (inversionVoicing && inversionNoteSet.size > 0) {
-      const key = `${stringIndex}-${fret}`;
-      if (inversionNoteSet.has(key)) {
-        let bg = 'hsl(330, 70%, 60%)'; // pink
+    // Scale view degree filter: show chord tones bright, rest as ghost
+    if (scaleViewChordTones && scaleViewChordTones.size > 0 && !inversionVoicing) {
+      const noteIdx = (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note);
+      const isChordTone = scaleViewChordTones.has(noteIdx);
+      const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
+      if (!inP) return null;
+      if (isChordTone) {
+        let bg = inversionDegreeColor ? `hsl(${inversionDegreeColor})` : pColor;
         if (degreeColors) {
           const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
           const dc = getDegreeColor(activeRoot, note);
           if (dc) bg = dc;
         }
-        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(330, 70%, 60%)', greyed: false };
+        return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
       }
-      // Show other scale chord tones dimmed
+      // Non-chord-tone scale notes as ghost
+      return { backgroundColor: pColor, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: true };
+    }
+
+    // Inversion voicing mode: show voicing notes prominently, chord tones dimmed, scale notes very dimmed
+    if (inversionVoicing && inversionNoteSet.size > 0) {
+      const key = `${stringIndex}-${fret}`;
+      if (inversionNoteSet.has(key)) {
+        let bg = inversionDegreeColor ? `hsl(${inversionDegreeColor})` : pColor;
+        if (degreeColors) {
+          const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
+          const dc = getDegreeColor(activeRoot, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: inversionDegreeColor ? `hsl(${inversionDegreeColor})` : 'hsl(var(--primary))', greyed: false };
+      }
+      // Show other arpeggio chord tones dimmed
       if (scaleViewChordTones && scaleViewChordTones.has((['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note))) {
-        return { backgroundColor: pColor, opacity: ghostNoteOpacity * 1.7, ring: false, ringColor: '', greyed: true };
+        const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
+        if (inP) return { backgroundColor: pColor, opacity: ghostNoteOpacity * 2, ring: false, ringColor: '', greyed: true };
       }
-      // Scale notes dimmed but still visible
+      // Scale notes very dimmed
       const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
       if (inP) return { backgroundColor: pColor, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: true };
       return null;
