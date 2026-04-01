@@ -402,57 +402,58 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   const startFret = Math.max(1, minFret - 1);
   const endFret = Math.max(startFret + 3, maxFret + 1);
   const numFrets = endFret - startFret + 1;
-  const cellSize = 14;
-  const w = 4 * cellSize + 20;
-  const h = numFrets * cellSize + 28;
+  const cellSize = 16;
+  const w = 4 * cellSize + 24;
+  const h = numFrets * cellSize + 36;
 
   return (
     <button
       onClick={onClick}
       className="flex flex-col items-center transition-all rounded-xl"
       style={{
-        border: isActive ? `2px solid hsl(${color})` : '2px solid transparent',
+        border: isActive ? `2px solid hsl(${color})` : '2px solid hsla(var(--border), 0.3)',
         backgroundColor: isActive ? `hsla(${color}, 0.15)` : 'hsla(var(--secondary), 0.5)',
-        padding: 4,
+        padding: 6,
         aspectRatio: '1',
-        width: 90,
-        minHeight: 90,
+        width: 100,
+        minHeight: 100,
       }}
     >
-      <div className="text-[8px] font-mono font-bold mb-0.5" style={{ color: `hsl(${color})` }}>
+      <div className="text-[9px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
         {voicing.slashName}
       </div>
+      {voicing.alternateName && (
+        <div className="text-[7px] font-mono opacity-70 mb-0.5" style={{ color: `hsl(${color})` }}>
+          {voicing.alternateName}
+        </div>
+      )}
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="flex-1">
-        {/* Fret numbers */}
-        <text x={4} y={16} fontSize={7} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
-        {/* Strings (vertical) */}
+        <text x={4} y={18} fontSize={8} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
         {[0, 1, 2, 3].map(si => (
-          <line key={`s${si}`} x1={16 + si * cellSize} y1={12} x2={16 + si * cellSize} y2={12 + numFrets * cellSize}
+          <line key={`s${si}`} x1={18 + si * cellSize} y1={14} x2={18 + si * cellSize} y2={14 + numFrets * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={0.5} />
         ))}
-        {/* Frets (horizontal) */}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
-          <line key={`f${i}`} x1={16} y1={12 + i * cellSize} x2={16 + 3 * cellSize} y2={12 + i * cellSize}
+          <line key={`f${i}`} x1={18} y1={14 + i * cellSize} x2={18 + 3 * cellSize} y2={14 + i * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.5} />
         ))}
-        {/* Notes */}
         {activeStrings.map((si, idx) => {
           const fret = voicing.frets[si];
           if (fret < 0) return null;
           const fretPos = fret - startFret;
           return (
             <circle key={`n${idx}`}
-              cx={16 + idx * cellSize}
-              cy={12 + fretPos * cellSize + cellSize / 2}
-              r={5}
+              cx={18 + idx * cellSize}
+              cy={14 + fretPos * cellSize + cellSize / 2}
+              r={6}
               fill={`hsl(${color})`}
               opacity={0.9}
             />
           );
         })}
       </svg>
-      <div className="text-[7px] font-mono mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>
-        {voicing.inversionLabel.replace(' position', '').replace('Root', 'Root pos.')}
+      <div className="text-[7px] font-mono mt-0.5 leading-tight text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
+        {voicing.degreeOrder}
       </div>
     </button>
   );
