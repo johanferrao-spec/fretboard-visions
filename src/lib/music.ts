@@ -2179,32 +2179,49 @@ const CHORD_TYPE_TO_TEMPLATE_KEY: Record<string, string> = {
   'Min/Maj 7': 'maj7', // fallback
 };
 
+// Parse shape string into exactly 6 tokens.
+// Format: "XX2433" means X,X,2,4,3,3 — first read X's, then parse remaining digits
+// as 4 fret numbers. Since frets can be 1-2 digits, we need to figure out the split.
+// Strategy: we know there are exactly 4 fret numbers after the X's. Try all valid splits.
 function parseShapeTokens(shape: string): string[] {
   const tokens: string[] = [];
   let i = 0;
-  while (i < shape.length) {
-    if (shape[i] === 'X') {
-      tokens.push('X');
-      i++;
-    } else {
-      let num = '';
-      while (i < shape.length && shape[i] >= '0' && shape[i] <= '9') {
-        num += shape[i];
-        i++;
-      }
-      if (num) tokens.push(num);
-    }
+  // Read X's first
+  while (i < shape.length && shape[i] === 'X') {
+    tokens.push('X');
+    i++;
+  }
+  // Remaining string is all digits representing the fret numbers
+  const digitStr = shape.slice(i);
+  const numFrets = 6 - tokens.length; // should be 4
+  
+  // Try to split digitStr into exactly numFrets numbers
+  const fretNums = splitDigitsIntoFrets(digitStr, numFrets);
+  if (fretNums) {
+    for (const f of fretNums) tokens.push(String(f));
   }
   return tokens;
 }
 
-function transposeShape(shape: string, delta: number): string {
-  return parseShapeTokens(shape).map(t => t === 'X' ? 'X' : String(+t + delta)).join('');
+// Split a digit string into exactly `count` fret numbers (each 1-2 digits, value 0-24)
+function splitDigitsIntoFrets(digits: string, count: number): number[] | null {
+  if (count === 0) return digits.length === 0 ? [] : null;
+  // Try 1-digit then 2-digit at current position
+  for (const len of [1, 2]) {
+    if (len > digits.length) continue;
+    const numStr = digits.slice(0, len);
+    const num = parseInt(numStr, 10);
+    if (num > 24) continue; // fret numbers shouldn't exceed 24
+    if (len === 2 && numStr[0] === '0') continue; // no leading zeros for 2-digit
+    const rest = splitDigitsIntoFrets(digits.slice(len), count - 1);
+    if (rest !== null) return [num, ...rest];
+  }
+  return null;
 }
 
-function shapeToFrets(shape: string): (number | -1)[] {
+function transposeShape(shape: string, delta: number): (number | -1)[] {
   const tokens = parseShapeTokens(shape);
-  return tokens.map(t => t === 'X' ? -1 : +t);
+  return tokens.map(t => t === 'X' ? -1 : +t + delta);
 }
 
 // Degree ordering per inversion for 7th chords (bass to top on 4 strings)
