@@ -2128,13 +2128,15 @@ export function get7thChordSymbol(baseType: string): string {
 export interface InversionVoicing {
   frets: (number | -1)[];
   notes: ArpeggioPositionNote[];
-  inversionNumber: number; // 0=root, 1=1st, 2=2nd, 3=3rd
+  inversionNumber: number; // -1=stack, 0=root, 1=1st, 2=2nd, 3=3rd
   inversionLabel: string;
   slashName: string; // e.g. "Em7/B"
+  alternateName: string; // e.g. "= C6"
   bottomDegree: string;
   topDegree: string;
   tab: string;
   chordType: string;
+  degreeOrder: string; // e.g. "R 5 7 3" 
 }
 
 // Hardcoded E-root templates — user-verified voicings
@@ -2185,7 +2187,6 @@ function parseShapeTokens(shape: string): string[] {
       tokens.push('X');
       i++;
     } else {
-      // greedily read digits
       let num = '';
       while (i < shape.length && shape[i] >= '0' && shape[i] <= '9') {
         num += shape[i];
@@ -2206,6 +2207,46 @@ function shapeToFrets(shape: string): (number | -1)[] {
   return tokens.map(t => t === 'X' ? -1 : +t);
 }
 
+// Degree ordering per inversion for 7th chords (bass to top on 4 strings)
+const DEGREE_ORDERS: Record<string, string> = {
+  'Stack': 'R 3 5 7',
+  'Root': 'R 5 7 3',
+  '1st': '3 7 R 5',
+  '2nd': '5 R 3 7',
+  '3rd': '7 3 5 R',
+};
+
+// Compute alternate chord name for an inversion
+function getAlternateName(root: NoteName, chordType: string, invKey: string): string {
+  if (invKey === 'Stack' || invKey === 'Root') return '';
+  
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  const formula = CHORD_FORMULAS[chordType] || ARPEGGIO_FORMULAS[chordType];
+  if (!formula || formula.length < 4) return '';
+  
+  const intervals = formula.slice(0, 4).map(i => i % 12);
+  // intervals: [0, 3rd, 5th, 7th]
+  
+  if (invKey === '1st') {
+    // Bass note is the 3rd
+    const bassNote = NOTE_NAMES[(rootIdx + intervals[1]) % 12];
+    // m7 1st inv = major 6 from 3rd
+    if (chordType === 'Minor 7') return `= ${bassNote}6`;
+    // maj7 1st inv: could be described as augmented from 3rd perspective
+    if (chordType === 'Major 7') return `= ${bassNote}6(♯5)`;
+    return '';
+  }
+  if (invKey === '2nd') {
+    // Bass note is the 5th  
+    return '';
+  }
+  if (invKey === '3rd') {
+    // Bass note is the 7th
+    return '';
+  }
+  return '';
+}
+
 export function generate7thInversions(
   root: NoteName,
   chordType: string,
@@ -2222,16 +2263,12 @@ export function generate7thInversions(
   const eIdx = NOTE_NAMES.indexOf('E' as NoteName); // 4
   const delta = ((rootIdx - eIdx) + 12) % 12;
 
-  // String group offset: templates are for upper strings (D G B e = indices 2,3,4,5)
-  // For mid strings (A D G B = 1,2,3,4) shift frets based on tuning difference
-  // For lower strings (E A D G = 0,1,2,3) shift similarly
   const config = STRING_GROUP_CONFIG[stringGroup];
-  const targetStrings = config.strings; // 4 string indices
+  const targetStrings = config.strings;
 
   // Templates are written for upper strings: indices 2,3,4,5 (D,G,B,e)
-  // We need to adjust for different string groups by computing tuning offsets
   const upperStrings = [2, 3, 4, 5];
-  const upperTuning = upperStrings.map(s => STANDARD_TUNING[s]); // [50,55,59,64]
+  const upperTuning = upperStrings.map(s => STANDARD_TUNING[s]);
 
   const formula = CHORD_FORMULAS[chordType] || ARPEGGIO_FORMULAS[chordType];
   const intervals = formula ? formula.slice(0, 4).map(i => i % 12) : [0, 3, 7, 10];
@@ -2243,74 +2280,90 @@ export function generate7thInversions(
   const suffix = shortNames[chordType] || '7';
   const fullName = `${root}${suffix}`;
 
-  const invLabels = ['Root position', '1st inversion', '2nd inversion', '3rd inversion'];
-  const invKeys = ['Root', '1st', '2nd', '3rd'];
+  const intervalLabels: Record<number, string> = {
+    0: 'Root', 1: '♭2', 2: '2nd', 3: '♭3', 4: '3rd',
+    5: '4th', 6: '♭5', 7: '5th', 8: '#5', 9: '6th',
+    10: '♭7', 11: '7th',
+  };
+
+  // Process all keys including Stack
+  const allKeys = ['Stack', 'Root', '1st', '2nd', '3rd'];
+  const invNumbers: Record<string, number> = { Stack: -1, Root: 0, '1st': 1, '2nd': 2, '3rd': 3 };
 
   const results: InversionVoicing[] = [];
 
-  for (let inv = 0; inv < invKeys.length; inv++) {
-    const key = invKeys[inv];
+  for (const key of allKeys) {
     const template = templates[key];
     if (!template) continue;
 
-    // Transpose for root
     const transposed = transposeShape(template, delta);
     const templateFrets = shapeToFrets(transposed);
-    // templateFrets has 6 values: first two are X (-1), last 4 are fret numbers for upper strings
 
-    // Now map to target string group
+    // Build frets for target string group
     const frets: (number | -1)[] = [-1, -1, -1, -1, -1, -1];
     const notes: ArpeggioPositionNote[] = [];
 
-    // Extract the 4 fretted values from template (skip X's)
     const frettedValues: number[] = [];
     for (const f of templateFrets) {
       if (f !== -1) frettedValues.push(f);
     }
-
     if (frettedValues.length !== 4) continue;
 
-    // Adjust each fret for tuning difference between upper strings and target strings
     let valid = true;
     for (let s = 0; s < 4; s++) {
       const upperMidi = upperTuning[s];
-      const targetMidi = tuning[targetStrings[s]] !== undefined
-        ? STANDARD_TUNING[targetStrings[s]] + (tuning[targetStrings[s]] - STANDARD_TUNING[targetStrings[s]])
-        : STANDARD_TUNING[targetStrings[s]];
+      const targetMidi = STANDARD_TUNING[targetStrings[s]] + (tuning[targetStrings[s]] - STANDARD_TUNING[targetStrings[s]]);
       const tuningDiff = upperMidi - targetMidi;
       const adjustedFret = frettedValues[s] + tuningDiff;
       if (adjustedFret < 0) { valid = false; break; }
       frets[targetStrings[s]] = adjustedFret;
       notes.push({ stringIndex: targetStrings[s], fret: adjustedFret });
     }
-
     if (!valid) continue;
 
     const tab = frets.map(f => f === -1 ? 'X' : f.toString()).join('');
+    const invNum = invNumbers[key];
+    const degreeOrder = DEGREE_ORDERS[key] || '';
 
-    // Determine bottom note for slash chord name
-    const intervalOrder = [0, 1, 2, 3].map(i => (inv + i) % 4);
-    const bottomNoteName = NOTE_NAMES[(rootIdx + intervals[intervalOrder[0]]) % 12];
-    const topNoteName = NOTE_NAMES[(rootIdx + intervals[intervalOrder[3]]) % 12];
+    // Determine bass and top notes
+    let bottomInterval: number, topInterval: number;
+    if (key === 'Stack') {
+      bottomInterval = intervals[0]; topInterval = intervals[3];
+    } else if (key === 'Root') {
+      bottomInterval = intervals[0]; topInterval = intervals[1]; // R 5 7 3 → top is 3rd
+    } else if (key === '1st') {
+      bottomInterval = intervals[1]; topInterval = intervals[2]; // 3 7 R 5 → top is 5th
+    } else if (key === '2nd') {
+      bottomInterval = intervals[2]; topInterval = intervals[3]; // 5 R 3 7 → top is 7th
+    } else {
+      bottomInterval = intervals[3]; topInterval = intervals[0]; // 7 3 5 R → top is Root
+    }
 
-    const intervalLabels: Record<number, string> = {
-      0: 'Root', 1: '♭2', 2: '2nd', 3: '♭3rd', 4: '3rd',
-      5: '4th', 6: '♭5th', 7: '5th', 8: '#5th', 9: '6th',
-      10: '♭7th', 11: '7th',
-    };
+    const bottomNoteName = NOTE_NAMES[(rootIdx + bottomInterval) % 12];
+    const topNoteName = NOTE_NAMES[(rootIdx + topInterval) % 12];
 
-    const slashName = inv === 0 ? fullName : `${fullName}/${bottomNoteName}`;
+    const slashName = (key === 'Root' || key === 'Stack')
+      ? fullName
+      : `${fullName}/${bottomNoteName}`;
+
+    const alternateName = getAlternateName(root, chordType, key);
+
+    const invLabel = key === 'Stack' ? 'Stacked (R 3 5 7)'
+      : key === 'Root' ? 'Root position'
+      : `${key} inversion`;
 
     results.push({
       frets,
       notes,
-      inversionNumber: inv,
-      inversionLabel: invLabels[inv],
+      inversionNumber: invNum,
+      inversionLabel: invLabel,
       slashName,
-      bottomDegree: `${intervalLabels[intervals[intervalOrder[0]]] || 'Root'} in the bass`,
-      topDegree: `${intervalLabels[intervals[intervalOrder[3]]] || '7th'} on top`,
+      alternateName,
+      bottomDegree: `${intervalLabels[bottomInterval] || 'Root'} in bass`,
+      topDegree: `${intervalLabels[topInterval] || '7th'} on top`,
       tab,
       chordType,
+      degreeOrder,
     });
   }
 
