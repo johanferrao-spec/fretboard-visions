@@ -2313,8 +2313,7 @@ export function generate7thInversions(
     const template = templates[key];
     if (!template) continue;
 
-    const transposed = transposeShape(template, delta);
-    const templateFrets = shapeToFrets(transposed);
+    const templateFrets = transposeShape(template, delta);
 
     // Build frets for target string group
     const frets: (number | -1)[] = [-1, -1, -1, -1, -1, -1];
