@@ -2139,34 +2139,91 @@ export interface InversionVoicing {
   degreeOrder: string; // e.g. "R 5 7 3" 
 }
 
-// Hardcoded E-root templates — user-verified voicings
-const E_ROOT_7TH_TEMPLATES: Record<string, Record<string, string>> = {
+// Hardcoded templates — user-verified voicings
+// Upper strings: E-root, strings D G B e (indices 2,3,4,5)
+const UPPER_E_ROOT_TEMPLATES: Record<string, Record<string, string>> = {
   'm7': {
-    Stack: 'XX14121210',
     Root: 'XX2433',
     '1st': 'XX5757',
     '2nd': 'XX99810',
     '3rd': 'XX12121212',
+    Stack: 'XX14121210',
   },
   'maj7': {
-    Stack: 'XX14131211',
     Root: 'XX2444',
     '1st': 'XX6857',
     '2nd': 'XX99911',
     '3rd': 'XX13131212',
+    Stack: 'XX14131211',
   },
   'dom7': {
-    Stack: 'XX14131210',
     Root: 'XX2434',
     '1st': 'XX6757',
     '2nd': 'XX99910',
     '3rd': 'XX12131212',
+    Stack: 'XX14131210',
   },
   'm7b5': {
-    Stack: 'XX14121110',
     Root: 'XX2333',
     '1st': 'XX5545',
     '2nd': 'XX89810',
+    Stack: 'XX14121110',
+  },
+};
+
+// Mid strings: C-root, strings A D G B (indices 1,2,3,4)
+const MID_C_ROOT_TEMPLATES: Record<string, Record<string, string>> = {
+  'm7': {
+    Root: 'X3534X',
+    '1st': 'X6858X',
+    '2nd': 'X1010811X',
+    '3rd': 'X13131213X',
+  },
+  'maj7': {
+    Root: 'X3545X',
+    '1st': 'X7958X',
+    '2nd': 'X1010912X',
+    '3rd': 'X14141213X',
+  },
+  'dom7': {
+    Root: 'X3535X',
+    '1st': 'X7858X',
+    '2nd': 'X1010911X',
+    '3rd': 'X13141213X',
+  },
+  'm7b5': {
+    Root: 'X3434X',
+    '1st': 'X6857X',
+    '2nd': 'X910811X',
+    '3rd': 'X13131113X',
+  },
+};
+
+// Lower strings: G-root, strings E A D G (indices 0,1,2,3)
+const LOWER_G_ROOT_TEMPLATES: Record<string, Record<string, string>> = {
+  'm7': {
+    Root: '3533XX',
+    '1st': '6857XX',
+    '2nd': '1010810XX',
+    '3rd': '13131212XX',
+  },
+  'maj7': {
+    Root: '3544XX',
+    '1st': '7957XX',
+    '2nd': '1010911XX',
+    '3rd': '14141212XX',
+  },
+  'dom7': {
+    Root: '3534XX',
+    '1st': '7857XX',
+    '2nd': '1010910XX',
+    '3rd': '13141212XX',
+  },
+  'm7b5': {
+    Root: '3433XX',
+    '1st': '6856XX',
+    '2nd': '910810XX',
+    '3rd': '13131112XX',
   },
 };
 
@@ -2177,6 +2234,13 @@ const CHORD_TYPE_TO_TEMPLATE_KEY: Record<string, string> = {
   'Half-Dim 7': 'm7b5',
   'Dim 7': 'm7b5', // fallback
   'Min/Maj 7': 'maj7', // fallback
+};
+
+// Template reference roots per string group
+const TEMPLATE_REF_ROOTS: Record<StringGroup, { templates: Record<string, Record<string, string>>; rootNote: NoteName }> = {
+  upper: { templates: UPPER_E_ROOT_TEMPLATES, rootNote: 'E' },
+  mid: { templates: MID_C_ROOT_TEMPLATES, rootNote: 'C' },
+  lower: { templates: LOWER_G_ROOT_TEMPLATES, rootNote: 'G' },
 };
 
 // Parse shape string into exactly 6 tokens.
