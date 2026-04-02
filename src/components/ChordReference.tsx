@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import BeginnerModePanel from './BeginnerMode';
 import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
@@ -64,10 +65,12 @@ interface ChordReferenceProps {
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
   ghostNoteOpacity: number;
   setGhostNoteOpacity: (v: number) => void;
+  onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number }) => void;
+  onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
-type MainTab = 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes';
+type MainTab = 'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes';
 type OctaveRange = 1 | 2 | 3;
 
 const ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
@@ -178,6 +181,7 @@ export default function ChordReference({
   scaleViewMode, setScaleViewMode, inversionStringGroup, setInversionStringGroup,
   onSetInversionVoicing,
   ghostNoteOpacity, setGhostNoteOpacity,
+  onApplyBeginnerPreset, onApplyOpenChord,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
@@ -272,6 +276,7 @@ export default function ChordReference({
       {/* Tab switcher */}
       <div className="flex gap-1 mb-2 flex-wrap">
         {([
+          { key: 'beginner' as MainTab, label: '🎓 Beginner' },
           { key: 'scaleview' as MainTab, label: 'Scale View' },
           { key: 'chords' as MainTab, label: 'Chord Library' },
           { key: 'arpeggios' as MainTab, label: 'Arpeggio Positions' },
@@ -297,7 +302,12 @@ export default function ChordReference({
         )}
       </div>
 
-      {activeTab === 'scaleview' ? (
+      {activeTab === 'beginner' ? (
+        <BeginnerModePanel
+          onApplyPreset={onApplyBeginnerPreset}
+          onApplyOpenChord={onApplyOpenChord}
+        />
+      ) : activeTab === 'scaleview' ? (
         <ScaleViewPanel
           primaryScale={primaryScale}
           degreeFilter={scaleViewDegreeFilter}
