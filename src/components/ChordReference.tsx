@@ -375,6 +375,11 @@ export default function ChordReference({
           handleSelectVoicing={handleSelectVoicing}
           degreeColors={degreeColors}
           tuning={tuning}
+          arpAddClickRef={arpAddClickRef}
+          setArpAddMode={setArpAddMode}
+          arpAddMode={arpAddMode}
+          setActiveChord={setActiveChord}
+          onSetArpeggioPosition={onSetArpeggioPosition}
         />
       ) : null}
     </div>
