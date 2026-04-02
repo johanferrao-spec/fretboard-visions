@@ -58,36 +58,40 @@ const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: {
 
 const SCALE_PRESETS = [
   {
-    name: 'Minor pentatonic',
+    name: 'Minor\npentatonic',
     root: 'A' as NoteName,
     scale: 'Pentatonic Minor',
     fretBoxStart: 5,
     fretBoxSize: 4,
     bg: 'hsl(20, 70%, 55%)',
+    emoji: '🔥',
   },
   {
-    name: 'Major pentatonic',
+    name: 'Major\npentatonic',
     root: 'C' as NoteName,
     scale: 'Pentatonic Major',
     fretBoxStart: 7,
     fretBoxSize: 4,
     bg: 'hsl(120, 55%, 55%)',
+    emoji: '🌿',
   },
   {
-    name: 'Minor',
+    name: 'Minor\nscale',
     root: 'A' as NoteName,
     scale: 'Natural Minor (Aeolian)',
     fretBoxStart: 4,
     fretBoxSize: 5,
     bg: 'hsl(0, 70%, 55%)',
+    emoji: '🌙',
   },
   {
-    name: 'Major',
+    name: 'Major\nscale',
     root: 'C' as NoteName,
     scale: 'Major (Ionian)',
     fretBoxStart: 7,
     fretBoxSize: 4,
     bg: 'hsl(55, 65%, 50%)',
+    emoji: '☀️',
   },
 ];
 
@@ -114,7 +118,7 @@ function OpenChordDiagram({ chord, isActive, onClick }: {
         boxShadow: isActive ? `0 0 20px hsla(${chord.color}, 0.3)` : 'none',
       }}
     >
-      <div className="text-base font-bold mb-1" style={{ color: `hsl(${chord.color})` }}>
+      <div className="text-base font-bold mb-1" style={{ color: `hsl(${chord.color})`, fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>
         {chord.name}
       </div>
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
@@ -159,13 +163,13 @@ function OpenChordDiagram({ chord, isActive, onClick }: {
 }
 
 function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
-  const cellSize = 28;
+  const cellSize = 32;
   const numFrets = 4;
   const leftPad = 12;
   const topPad = 18;
   const w = leftPad + 5 * cellSize + 12;
   const h = topPad + numFrets * cellSize + 12;
-  const markerR = 10;
+  const markerR = 12;
 
   return (
     <div
@@ -174,7 +178,7 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
         backgroundColor: `hsla(${chord.color}, 0.08)`,
       }}
     >
-      <div className="text-xs font-bold mb-0.5" style={{ color: `hsl(${chord.color})` }}>{chord.name}</div>
+      <div className="text-xs font-bold mb-0.5" style={{ color: `hsl(${chord.color})`, fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>{chord.name}</div>
       <div className="text-[9px] font-mono text-muted-foreground mb-1">{chord.description}</div>
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
         {Array.from({ length: numFrets + 1 }, (_, i) => (
@@ -187,7 +191,7 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
             x2={leftPad + s * cellSize} y2={topPad + numFrets * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={0.8} strokeOpacity={0.6} />
         ))}
-        {/* Barre bar - only endpoint markers, no middle markers */}
+        {/* Barre bar - only endpoint markers */}
         {(() => {
           const { from, to } = chord.barre;
           const x1 = leftPad + from * cellSize;
@@ -203,7 +207,7 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
             </>
           );
         })()}
-        {/* Fretted notes above barre - skip strings inside barre range */}
+        {/* Fretted notes above barre */}
         {chord.frets.map((fret, si) => {
           if (fret === -1) {
             const x = leftPad + si * cellSize;
@@ -219,20 +223,6 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
   );
 }
 
-// Hand-drawn wobble for circle paths
-function wobblyCirclePath(cx: number, cy: number, r: number, seed: number): string {
-  const points = 24;
-  const parts: string[] = [];
-  for (let i = 0; i <= points; i++) {
-    const angle = (i / points) * Math.PI * 2;
-    const wobble = 1 + Math.sin(angle * 3 + seed) * 0.03 + Math.cos(angle * 5 + seed * 2) * 0.02;
-    const x = cx + r * wobble * Math.cos(angle);
-    const y = cy + r * wobble * Math.sin(angle);
-    parts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`);
-  }
-  return parts.join(' ') + ' Z';
-}
-
 export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: BeginnerModeProps) {
   const [page, setPage] = useState<BeginnerPage>('menu');
   const [activePreset, setActivePreset] = useState<string | null>(null);
@@ -240,7 +230,6 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
 
   const handlePresetClick = (preset: typeof SCALE_PRESETS[0]) => {
     if (activePreset === preset.name) {
-      // Deselect
       setActivePreset(null);
       onApplyPreset(null);
       return;
@@ -268,7 +257,7 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
         >
           ← Back to menu
         </button>
-        <div className="text-sm font-bold text-foreground mb-1">🎶 Open Chords</div>
+        <div className="text-sm font-bold text-foreground mb-1" style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>🎶 Open Chords</div>
         <div className="text-[10px] font-mono text-muted-foreground mb-3">
           Click a chord to see it on the fretboard. Numbers show which fingers to use.
         </div>
@@ -302,11 +291,11 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
         >
           ← Back to menu
         </button>
-        <div className="text-sm font-bold text-foreground mb-1">🤘 Barre Chords</div>
+        <div className="text-sm font-bold text-foreground mb-1" style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>🤘 Barre Chords</div>
         <div className="text-[10px] font-mono text-muted-foreground mb-2">
           These shapes can be moved up and down the neck. The grey bar shows where to lay your index finger flat.
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           {BAR_CHORDS.map(chord => (
             <div key={chord.name} className="flex-1 min-w-0">
               <BarreChordDiagram chord={chord} />
@@ -323,98 +312,121 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
     );
   }
 
-  // Bubble layout like the reference image
-  const bubbles = [
-    ...SCALE_PRESETS.map(p => ({ type: 'scale' as const, name: p.name, bg: p.bg, preset: p })),
-    { type: 'nav' as const, name: 'Open chords', bg: 'hsl(290, 55%, 60%)', target: 'open' as BeginnerPage },
-    { type: 'nav' as const, name: 'Bar chords', bg: 'hsl(270, 60%, 40%)', target: 'barre' as BeginnerPage },
-  ];
-
-  // Positions around a central circle (relative % coords within a container)
-  const positions = [
-    { x: 12, y: 8, size: 80 },   // Minor pentatonic - top left
-    { x: 42, y: 2, size: 75 },   // Major pentatonic - top center
-    { x: 78, y: 10, size: 72 },  // Minor - top right (was Major)
-    { x: 72, y: 52, size: 78 },  // Major - mid right (was Minor)
-    { x: 8, y: 55, size: 76 },   // Open chords - bottom left
-    { x: 40, y: 65, size: 68 },  // Bar chords - bottom center
-  ];
-
+  // Menu page — symmetrical grid of big colorful bubbles
   return (
     <div className="animate-fade-in">
-      <div className="relative" style={{ height: 280, width: '100%' }}>
-        {/* Central circle */}
-        <div className="absolute" style={{
-          left: '50%', top: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 120, height: 120,
-        }}>
-          <svg width="100%" height="100%" viewBox="0 0 120 120">
-            <defs>
-              <filter id="glow-center">
-                <feGaussianBlur stdDeviation="4" result="blur" />
-                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-              </filter>
-            </defs>
-            <path
-              d={wobblyCirclePath(60, 60, 56, 42)}
-              fill="hsl(200, 40%, 30%)"
-              filter="url(#glow-center)"
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center text-center">
-            <span className="text-white font-bold text-sm leading-tight" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-              Guitar<br/>basics!
-            </span>
-          </div>
+      <div className="text-center mb-4">
+        <div className="text-lg font-bold text-foreground" style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>
+          🎸 Guitar Basics!
         </div>
+        <div className="text-[10px] text-muted-foreground font-mono">Pick something to learn</div>
+      </div>
 
-        {/* Orbiting bubbles */}
-        {bubbles.map((bubble, i) => {
-          const pos = positions[i];
-          const isActive = bubble.type === 'scale' && activePreset === bubble.name;
-          const filterId = `glow-${i}`;
+      {/* Symmetrical 3x2 grid of big bubbles */}
+      <div className="grid grid-cols-3 gap-3 px-2">
+        {SCALE_PRESETS.map((preset, i) => {
+          const isActive = activePreset === preset.name;
           return (
             <button
-              key={bubble.name}
-              onClick={() => {
-                if (bubble.type === 'scale') {
-                  handlePresetClick(bubble.preset!);
-                } else {
-                  setPage(bubble.target!);
-                }
-              }}
-              className="absolute transition-all duration-300 hover:scale-110"
+              key={preset.name}
+              onClick={() => handlePresetClick(preset)}
+              className="transition-all duration-300 hover:scale-105 active:scale-95"
               style={{
-                left: `${pos.x}%`,
-                top: `${pos.y}%`,
-                width: pos.size,
-                height: pos.size,
-                transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                aspectRatio: '1',
+                borderRadius: '50%',
+                backgroundColor: isActive ? preset.bg : preset.bg,
+                opacity: isActive ? 1 : 0.8,
+                boxShadow: isActive
+                  ? `0 0 24px ${preset.bg}, 0 0 48px ${preset.bg}40`
+                  : `0 0 12px ${preset.bg}30`,
+                border: isActive ? '3px solid rgba(255,255,255,0.4)' : '2px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 12,
+                transform: isActive ? 'scale(1.08)' : undefined,
               }}
             >
-              <svg width="100%" height="100%" viewBox={`0 0 ${pos.size} ${pos.size}`}>
-                <defs>
-                  <filter id={filterId}>
-                    <feGaussianBlur stdDeviation={isActive ? '6' : '3'} result="blur" />
-                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                  </filter>
-                </defs>
-                <path
-                  d={wobblyCirclePath(pos.size / 2, pos.size / 2, pos.size / 2 - 4, i * 7 + 3)}
-                  fill={bubble.bg}
-                  filter={`url(#${filterId})`}
-                  opacity={isActive ? 1 : 0.85}
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center text-center px-2">
-                <span className="text-white font-bold text-xs leading-tight" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
-                  {bubble.name}
-                </span>
-              </div>
+              <span className="text-xl mb-1">{preset.emoji}</span>
+              <span
+                className="text-white font-bold text-center leading-tight"
+                style={{
+                  fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive',
+                  fontSize: 13,
+                  textShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                  whiteSpace: 'pre-line',
+                }}
+              >
+                {preset.name}
+              </span>
             </button>
           );
         })}
+
+        {/* Open chords bubble */}
+        <button
+          onClick={() => setPage('open')}
+          className="transition-all duration-300 hover:scale-105 active:scale-95"
+          style={{
+            aspectRatio: '1',
+            borderRadius: '50%',
+            backgroundColor: 'hsl(290, 55%, 60%)',
+            opacity: 0.85,
+            boxShadow: '0 0 12px hsla(290, 55%, 60%, 0.3)',
+            border: '2px solid rgba(255,255,255,0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 12,
+          }}
+        >
+          <span className="text-xl mb-1">🎶</span>
+          <span
+            className="text-white font-bold text-center leading-tight"
+            style={{
+              fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive',
+              fontSize: 13,
+              textShadow: '0 2px 6px rgba(0,0,0,0.4)',
+              whiteSpace: 'pre-line',
+            }}
+          >
+            {'Open\nchords'}
+          </span>
+        </button>
+
+        {/* Barre chords bubble */}
+        <button
+          onClick={() => setPage('barre')}
+          className="transition-all duration-300 hover:scale-105 active:scale-95"
+          style={{
+            aspectRatio: '1',
+            borderRadius: '50%',
+            backgroundColor: 'hsl(270, 60%, 40%)',
+            opacity: 0.85,
+            boxShadow: '0 0 12px hsla(270, 60%, 40%, 0.3)',
+            border: '2px solid rgba(255,255,255,0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 12,
+          }}
+        >
+          <span className="text-xl mb-1">🤘</span>
+          <span
+            className="text-white font-bold text-center leading-tight"
+            style={{
+              fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive',
+              fontSize: 13,
+              textShadow: '0 2px 6px rgba(0,0,0,0.4)',
+              whiteSpace: 'pre-line',
+            }}
+          >
+            {'Barre\nchords'}
+          </span>
+        </button>
       </div>
     </div>
   );
