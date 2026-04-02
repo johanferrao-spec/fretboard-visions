@@ -67,7 +67,7 @@ interface ChordReferenceProps {
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
-type MainTab = 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes';
+type MainTab = 'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes';
 type OctaveRange = 1 | 2 | 3;
 
 const ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
