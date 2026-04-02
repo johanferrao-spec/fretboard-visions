@@ -128,7 +128,19 @@ export default function Fretboard({
   const chordNoteSet = new Set<string>();
   if (chordVoicing) {
     chordVoicing.forEach((fret, si) => {
-      if (fret >= 0) chordNoteSet.add(`${si}-${fret}`);
+      if (fret >= 0) {
+        // Skip middle barre notes (only show endpoints)
+        if (chordVoicingData && chordVoicingData.barreFret != null && fret === chordVoicingData.barreFret &&
+            chordVoicingData.barreFrom != null && chordVoicingData.barreTo != null) {
+          const from = chordVoicingData.barreFrom;
+          const to = chordVoicingData.barreTo;
+          const minS = Math.min(from, to);
+          const maxS = Math.max(from, to);
+          // Only show if it's an endpoint or has a different fret value (higher note on same string)
+          if (si > minS && si < maxS) return; // skip middle barre notes
+        }
+        chordNoteSet.add(`${si}-${fret}`);
+      }
     });
   }
 
@@ -220,6 +232,11 @@ export default function Fretboard({
   }
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
+    // In arp add mode (custom voicing creation), hide all scale notes - fretboard should be empty
+    if (arpAddMode) {
+      return null;
+    }
+
     // In identify mode, only show notes that have been clicked or hovered
     if (identifyMode) {
       if (identifyFrets[stringIndex] === fret) {
@@ -823,6 +840,10 @@ export default function Fretboard({
           {/* Inversion voicing pink box - REMOVED */}
 
 
+
+
+
+          {/* Barre bar overlay using SVG for precision */}
           {chordVoicingData && chordVoicingData.barreFrom != null && chordVoicingData.barreTo != null && chordVoicingData.barreFret != null && (
             (() => {
               const bf = chordVoicingData.barreFret!;
@@ -832,19 +853,28 @@ export default function Fretboard({
               const bottomRow = Math.max(fromRow, toRow);
               const barreLeft = cumLeft[bf] || 0;
               const barreWidth = widths[bf] || 0;
+              const centerX = barreLeft + barreWidth * 0.5;
+              const totalH = 6 * stringH;
+              const y1 = (topRow * stringH + stringH * 0.5) / totalH * 100;
+              const y2 = (bottomRow * stringH + stringH * 0.5) / totalH * 100;
+              const barThick = noteMarkerSize * 0.9;
               return (
-                <div
-                  className="absolute z-15 pointer-events-none rounded-full"
-                  style={{
-                    left: `calc(28px + (100% - 28px) * ${barreLeft + barreWidth * 0.3} / 100)`,
-                    width: `calc((100% - 28px) * ${barreWidth * 0.4} / 100)`,
-                    top: `${(topRow * stringH + stringH * 0.3) / (6 * stringH) * 100}%`,
-                    height: `${((bottomRow - topRow) * stringH + stringH * 0.4) / (6 * stringH) * 100}%`,
-                    backgroundColor: 'hsl(var(--foreground))',
-                    opacity: 0.35,
-                    borderRadius: 6,
-                  }}
-                />
+                <svg
+                  className="absolute inset-0 pointer-events-none z-[15]"
+                  style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
+                  viewBox={`0 0 100 ${totalH}`}
+                  preserveAspectRatio="none"
+                >
+                  <line
+                    x1={centerX} y1={y1 * totalH / 100}
+                    x2={centerX} y2={y2 * totalH / 100}
+                    stroke="hsl(var(--foreground))"
+                    strokeWidth={barThick}
+                    strokeLinecap="round"
+                    opacity={0.5}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
               );
             })()
           )}
