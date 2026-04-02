@@ -531,9 +531,40 @@ function ScaleViewPanel({
 
   const activeColor = degreeFilter !== null ? SCALE_DEGREE_COLORS[degreeFilter] : null;
 
+  // Octave shift for inversions
+  const [octaveShift, setOctaveShift] = useState(0);
+
+  // Apply octave shift to inversion voicing
+  useEffect(() => {
+    if (scaleViewMode === 'inversion' && inversions.length > 0) {
+      const idx = Math.min(currentInvIdx, inversions.length - 1);
+      const baseInv = inversions[idx];
+      if (octaveShift === 0) {
+        onSetInversionVoicing?.(baseInv);
+      } else {
+        // Shift all frets by 12 * octaveShift
+        const shifted = {
+          ...baseInv,
+          frets: baseInv.frets.map(f => f < 0 ? f : Math.max(0, Math.min(24, f + octaveShift * 12))),
+          notes: baseInv.notes.map(n => ({ ...n, fret: Math.max(0, Math.min(24, n.fret + octaveShift * 12)) })),
+        };
+        onSetInversionVoicing?.(shifted);
+      }
+    } else {
+      onSetInversionVoicing?.(null);
+    }
+  }, [scaleViewMode, inversions, currentInvIdx, onSetInversionVoicing, octaveShift]);
+
+  // Reset octave shift when inversions change
+  useEffect(() => {
+    setOctaveShift(0);
+  }, [inversions]);
+
+  const activeColor = degreeFilter !== null ? SCALE_DEGREE_COLORS[degreeFilter] : null;
+
   return (
     <div className="space-y-2">
-      {/* Mode buttons + Ghost slider + String group buttons in one row */}
+      {/* Mode buttons + Ghost slider */}
       <div className="flex items-center gap-1 flex-wrap">
         <button
           onClick={() => { setScaleViewMode('basic'); onSetInversionVoicing?.(null); }}
@@ -559,24 +590,6 @@ function ScaleViewPanel({
           />
           <span className="text-[7px] font-mono text-muted-foreground w-5">{Math.round(ghostNoteOpacity * 100)}%</span>
         </div>
-
-        {/* String group buttons - only show in inversion mode */}
-        {scaleViewMode === 'inversion' && (
-          <>
-            <div className="w-px h-4 bg-border/40 mx-0.5" />
-            {(['upper', 'mid', 'lower'] as StringGroup[]).map(sg => (
-              <button
-                key={sg}
-                onClick={() => setInversionStringGroup(sg)}
-                className={`px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wider transition-all ${
-                  inversionStringGroup === sg
-                    ? 'bg-accent text-accent-foreground shadow-md'
-                    : 'bg-secondary text-secondary-foreground'
-                }`}
-              >{STRING_GROUP_CONFIG[sg].label}</button>
-            ))}
-          </>
-        )}
       </div>
 
       {/* Degree buttons - BIG and colourful */}
@@ -607,6 +620,21 @@ function ScaleViewPanel({
       {/* Inversion mode content */}
       {scaleViewMode === 'inversion' && (
         <div>
+          {/* String group buttons - below degree buttons */}
+          <div className="flex items-center gap-1 mb-2">
+            {(['upper', 'mid', 'lower'] as StringGroup[]).map(sg => (
+              <button
+                key={sg}
+                onClick={() => setInversionStringGroup(sg)}
+                className={`px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wider transition-all ${
+                  inversionStringGroup === sg
+                    ? 'bg-accent text-accent-foreground shadow-md'
+                    : 'bg-secondary text-secondary-foreground'
+                }`}
+              >{STRING_GROUP_CONFIG[sg].label}</button>
+            ))}
+          </div>
+
           {degreeFilter !== null && inversions.length > 0 && (
             <div className="flex gap-0.5 items-stretch">
               {/* Voicing diagrams - 5 across, tight */}
@@ -661,8 +689,25 @@ function ScaleViewPanel({
                       <div className="text-[11px] font-mono mt-1 opacity-60">
                         {activeInv.degreeOrder}
                       </div>
-                      <div className="text-[14px] font-mono font-bold mt-1" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
-                        {activeInv.tab}
+                      <div className="flex items-center gap-1 mt-1">
+                        <div className="text-[14px] font-mono font-bold" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
+                          {activeInv.tab}
+                        </div>
+                        {/* Octave up/down buttons */}
+                        <div className="flex gap-0.5 ml-auto">
+                          <button
+                            onClick={() => setOctaveShift(prev => Math.max(-1, prev - 1))}
+                            disabled={octaveShift <= -1}
+                            className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                            title="Octave down"
+                          >8vb</button>
+                          <button
+                            onClick={() => setOctaveShift(prev => Math.min(1, prev + 1))}
+                            disabled={octaveShift >= 1}
+                            className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                            title="Octave up"
+                          >8va</button>
+                        </div>
                       </div>
                     </div>
                   </div>
