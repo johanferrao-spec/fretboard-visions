@@ -915,6 +915,7 @@ export default function Fretboard({
             })()
           )}
 
+          {allPaths.map((path, pathIdx) => {
             const pts = getPathLinePoints(path);
             if (pts.length < 2) return null;
             const totalH = 6 * stringH;
