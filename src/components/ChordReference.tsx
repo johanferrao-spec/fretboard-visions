@@ -875,6 +875,9 @@ function ChordLibraryPanel({
         startFret: Math.min(...notes.filter(n => n.fret > 0).map(n => n.fret), 99),
         type: 'static',
         frets: voicing.frets.map(f => f) as (number | -1)[],
+        barreFrom: voicing.barreFrom,
+        barreTo: voicing.barreTo,
+        barreFret: voicing.barreFret,
       });
     }
   };
