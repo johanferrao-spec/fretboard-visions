@@ -304,9 +304,7 @@ export default function Fretboard({
       // Chord tones not in the voicing: dimmed by ghostNoteOpacity
       return { backgroundColor: bg, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: false };
     }
-      }
-      return null;
-    }
+
 
 
     if (arpeggioPosition && arpPositionSet.size > 0 && !activeChord) {
