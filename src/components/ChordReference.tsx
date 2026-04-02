@@ -691,19 +691,50 @@ function ScaleViewPanel({
                           {activeInv.tab}
                         </div>
                         {/* Octave up/down buttons */}
-                        <div className="flex gap-0.5 ml-auto">
+                        <div className="flex gap-1 ml-auto">
                           <button
-                            onClick={() => setOctaveShift(prev => Math.max(-1, prev - 1))}
-                            disabled={octaveShift <= -1}
-                            className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                            onClick={() => setOctaveShift(prev => {
+                              const next = prev - 1;
+                              // Check if shifting down would put any note below fret 0
+                              const idx = Math.min(currentInvIdx, inversions.length - 1);
+                              const baseInv = inversions[idx];
+                              if (baseInv) {
+                                const minFret = Math.min(...baseInv.frets.filter(f => f >= 0));
+                                if (minFret + next * 12 < 0) return prev;
+                              }
+                              return next;
+                            })}
+                            disabled={(() => {
+                              const idx = Math.min(currentInvIdx, inversions.length - 1);
+                              const baseInv = inversions[idx];
+                              if (!baseInv) return true;
+                              const minFret = Math.min(...baseInv.frets.filter(f => f >= 0));
+                              return minFret + (octaveShift - 1) * 12 < 0;
+                            })()}
+                            className="w-7 h-7 rounded flex items-center justify-center text-[16px] font-bold bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 transition-colors"
                             title="Octave down"
-                          >8vb</button>
+                          >−</button>
                           <button
-                            onClick={() => setOctaveShift(prev => Math.min(1, prev + 1))}
-                            disabled={octaveShift >= 1}
-                            className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                            onClick={() => setOctaveShift(prev => {
+                              const next = prev + 1;
+                              const idx = Math.min(currentInvIdx, inversions.length - 1);
+                              const baseInv = inversions[idx];
+                              if (baseInv) {
+                                const maxFret = Math.max(...baseInv.frets.filter(f => f >= 0));
+                                if (maxFret + next * 12 > 24) return prev;
+                              }
+                              return next;
+                            })}
+                            disabled={(() => {
+                              const idx = Math.min(currentInvIdx, inversions.length - 1);
+                              const baseInv = inversions[idx];
+                              if (!baseInv) return true;
+                              const maxFret = Math.max(...baseInv.frets.filter(f => f >= 0));
+                              return maxFret + (octaveShift + 1) * 12 > 24;
+                            })()}
+                            className="w-7 h-7 rounded flex items-center justify-center text-[16px] font-bold bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 transition-colors"
                             title="Octave up"
-                          >8va</button>
+                          >+</button>
                         </div>
                       </div>
                     </div>
