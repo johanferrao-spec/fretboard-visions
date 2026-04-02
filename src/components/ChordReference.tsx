@@ -53,6 +53,7 @@ interface ChordReferenceProps {
   arpAddMode?: boolean;
   setArpAddMode?: (v: boolean) => void;
   arpAddClickRef?: React.MutableRefObject<((si: number, fret: number) => void) | null>;
+  arpBarreDragRef?: React.MutableRefObject<((fromSi: number, toSi: number, fret: number) => void) | null>;
   activeTab: MainTab;
   setActiveTab: (tab: MainTab) => void;
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
@@ -175,7 +176,7 @@ export default function ChordReference({
   timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, keyMode,
   onSeekToChord, onSetArpeggioPosition,
   arpOverlayOpacity, setArpOverlayOpacity, arpPathVisible, setArpPathVisible,
-  onArpAddClick, arpAddMode, setArpAddMode, arpAddClickRef,
+  onArpAddClick, arpAddMode, setArpAddMode, arpAddClickRef, arpBarreDragRef,
   activeTab, setActiveTab,
   primaryScale, scaleViewDegreeFilter, setScaleViewDegreeFilter,
   scaleViewMode, setScaleViewMode, inversionStringGroup, setInversionStringGroup,
@@ -386,6 +387,7 @@ export default function ChordReference({
           degreeColors={degreeColors}
           tuning={tuning}
           arpAddClickRef={arpAddClickRef}
+          arpBarreDragRef={arpBarreDragRef}
           setArpAddMode={setArpAddMode}
           arpAddMode={arpAddMode}
           setActiveChord={setActiveChord}
@@ -741,7 +743,7 @@ function ChordLibraryPanel({
   voicingPage, setVoicingPage, totalPages, activeChord, handleSelectVoicing,
   degreeColors,
   tuning,
-  arpAddClickRef, setArpAddMode, arpAddMode,
+  arpAddClickRef, arpBarreDragRef, setArpAddMode, arpAddMode,
   setActiveChord, onSetArpeggioPosition,
 }: {
   selectedRoot: NoteName;
@@ -760,6 +762,7 @@ function ChordLibraryPanel({
   degreeColors: boolean;
   tuning: number[];
   arpAddClickRef?: React.MutableRefObject<((si: number, fret: number) => void) | null>;
+  arpBarreDragRef?: React.MutableRefObject<((fromSi: number, toSi: number, fret: number) => void) | null>;
   setArpAddMode?: (v: boolean) => void;
   arpAddMode?: boolean;
   setActiveChord: (c: ChordSelection | null) => void;
@@ -767,6 +770,7 @@ function ChordLibraryPanel({
 }) {
   const VOICINGS_PER_PAGE = 4;
   const [libCopied, setLibCopied] = useState(false);
+  const [addingBarre, setAddingBarre] = useState<{ from: number; to: number; fret: number } | null>(null);
 
   // Custom chord voicing state
   const [customChordVoicings, setCustomChordVoicings] = useState<Record<string, {frets: number[], refRoot: NoteName, barreFrom?: number, barreTo?: number, barreFret?: number}[]>>(() => {
@@ -798,6 +802,37 @@ function ChordLibraryPanel({
   const mergedTotalPages = Math.ceil(mergedVoicings.length / VOICINGS_PER_PAGE);
   const mergedPagedVoicings = mergedVoicings.slice(voicingPage * VOICINGS_PER_PAGE, (voicingPage + 1) * VOICINGS_PER_PAGE);
 
+  const detectFallbackBarre = useCallback((frets: (number | -1)[]) => {
+    let best: { from: number; to: number; fret: number } | null = null;
+    for (let start = 0; start < frets.length; start += 1) {
+      const fret = frets[start];
+      if (fret < 1) continue;
+      let end = start;
+      while (end + 1 < frets.length && frets[end + 1] === fret) end += 1;
+      if (end > start) {
+        const candidate = { from: start, to: end, fret };
+        if (!best || candidate.to - candidate.from > best.to - best.from) best = candidate;
+      }
+    }
+    return best;
+  }, []);
+
+  const buildStaticVoicingPosition = useCallback((frets: (number | -1)[], label: string, barre: { from: number; to: number; fret: number } | null) => {
+    const notes = frets.map((f, si) => f >= 0 ? { stringIndex: si, fret: f } : null).filter(Boolean) as { stringIndex: number; fret: number }[];
+    if (notes.length === 0) return null;
+    const playedFrets = notes.filter(n => n.fret > 0).map(n => n.fret);
+    if (barre && barre.fret > 0) playedFrets.push(barre.fret);
+    return {
+      notes,
+      label,
+      startFret: playedFrets.length > 0 ? Math.min(...playedFrets) : 0,
+      type: 'static' as const,
+      showPath: false,
+      frets: [...frets] as (number | -1)[],
+      ...(barre ? { barreFrom: barre.from, barreTo: barre.to, barreFret: barre.fret } : {}),
+    };
+  }, []);
+
   // Register click handler for add mode
   useEffect(() => {
     if (!arpAddClickRef || !chordAddMode) return;
@@ -812,33 +847,64 @@ function ChordLibraryPanel({
     return () => { if (arpAddClickRef) arpAddClickRef.current = null; };
   }, [chordAddMode, arpAddClickRef]);
 
+  useEffect(() => {
+    if (!arpBarreDragRef || !chordAddMode) return;
+    arpBarreDragRef.current = (fromSi: number, toSi: number, fret: number) => {
+      const from = Math.min(fromSi, toSi);
+      const to = Math.max(fromSi, toSi);
+      setAddingBarre({ from, to, fret });
+      setAddingFrets(prev => {
+        const next = [...prev];
+        for (let s = from; s <= to; s += 1) {
+          if (next[s] === -1 || next[s] < fret) next[s] = fret;
+        }
+        return next;
+      });
+    };
+    return () => { if (arpBarreDragRef) arpBarreDragRef.current = null; };
+  }, [chordAddMode, arpBarreDragRef]);
+
+  useEffect(() => {
+    if (!addingBarre) return;
+    const coveredStrings: number[] = [];
+    for (let s = addingBarre.from; s <= addingBarre.to; s += 1) {
+      if (addingFrets[s] >= addingBarre.fret) coveredStrings.push(s);
+    }
+    if (coveredStrings.length < 2) {
+      setAddingBarre(null);
+      return;
+    }
+    const nextFrom = coveredStrings[0];
+    const nextTo = coveredStrings[coveredStrings.length - 1];
+    if (nextFrom !== addingBarre.from || nextTo !== addingBarre.to) {
+      setAddingBarre({ ...addingBarre, from: nextFrom, to: nextTo });
+    }
+  }, [addingBarre, addingFrets]);
+
   // Show adding notes on fretboard via ArpeggioPosition
   useEffect(() => {
     if (chordAddMode) {
-      const notes = addingFrets.map((f, si) => f >= 0 ? {stringIndex: si, fret: f} : null).filter(Boolean) as {stringIndex: number, fret: number}[];
-      if (notes.length > 0) {
-        onSetArpeggioPosition?.({
-          notes, label: 'Adding...',
-          startFret: Math.min(...notes.filter(n => n.fret > 0).map(n => n.fret), 99),
-          type: 'static',
-          frets: addingFrets as (number | -1)[],
-        });
+      const preview = buildStaticVoicingPosition(addingFrets, 'Adding...', addingBarre ?? detectFallbackBarre(addingFrets));
+      if (preview) {
+        onSetArpeggioPosition?.(preview);
       } else {
         onSetArpeggioPosition?.(null);
       }
     }
-  }, [addingFrets, chordAddMode]); // eslint-disable-line
+  }, [addingFrets, addingBarre, buildStaticVoicingPosition, chordAddMode, detectFallbackBarre, onSetArpeggioPosition]);
 
   const handleStartAddMode = () => {
     if (chordAddMode) {
       setChordAddMode(false);
       setAddingFrets([-1,-1,-1,-1,-1,-1]);
+      setAddingBarre(null);
       setArpAddMode?.(false);
       onSetArpeggioPosition?.(null);
       return;
     }
     setChordAddMode(true);
     setAddingFrets([-1,-1,-1,-1,-1,-1]);
+    setAddingBarre(null);
     setArpAddMode?.(true);
     setActiveChord(null);
     onSetArpeggioPosition?.(null);
@@ -848,31 +914,20 @@ function ChordLibraryPanel({
     if (!selectedChord) return;
     const hasNotes = addingFrets.some(f => f >= 0);
     if (!hasNotes) return;
-    // Auto-detect barres
-    let barreFrom: number | undefined, barreTo: number | undefined, barreFret: number | undefined;
-    for (let s = 0; s < 5; s++) {
-      if (addingFrets[s] >= 1 && addingFrets[s] === addingFrets[s + 1]) {
-        if (barreFret === undefined) {
-          barreFret = addingFrets[s];
-          barreFrom = s;
-          barreTo = s + 1;
-        } else if (addingFrets[s] === barreFret && barreTo === s) {
-          barreTo = s + 1;
-        }
-      }
-    }
+    const barre = addingBarre ?? detectFallbackBarre(addingFrets);
     const key = selectedChord;
     const existing = customChordVoicings[key] || [];
     const newVoicing = {
       frets: [...addingFrets],
       refRoot: selectedRoot,
-      ...(barreFrom !== undefined ? { barreFrom, barreTo, barreFret } : {}),
+      ...(barre ? { barreFrom: barre.from, barreTo: barre.to, barreFret: barre.fret } : {}),
     };
     const updated = { ...customChordVoicings, [key]: [...existing, newVoicing] };
     setCustomChordVoicings(updated);
     localStorage.setItem('mf-custom-chord-voicings', JSON.stringify(updated));
     setChordAddMode(false);
     setAddingFrets([-1,-1,-1,-1,-1,-1]);
+    setAddingBarre(null);
     setArpAddMode?.(false);
     onSetArpeggioPosition?.(null);
   };
@@ -902,20 +957,22 @@ function ChordLibraryPanel({
 
   // Handle clicking a custom voicing (display via ArpeggioPosition)
   const handleSelectCustomVoicing = (globalIdx: number) => {
+    setChordAddMode(false);
+    setAddingFrets([-1,-1,-1,-1,-1,-1]);
+    setAddingBarre(null);
+    setArpAddMode?.(false);
     setActiveChord(null);
     const voicing = mergedVoicings[globalIdx];
     if (!voicing) return;
-    const notes = voicing.frets.map((f, si) => f >= 0 ? {stringIndex: si, fret: f} : null).filter(Boolean) as {stringIndex: number, fret: number}[];
-    if (notes.length > 0) {
-      onSetArpeggioPosition?.({
-        notes, label: 'Custom',
-        startFret: Math.min(...notes.filter(n => n.fret > 0).map(n => n.fret), 99),
-        type: 'static',
-        frets: voicing.frets.map(f => f) as (number | -1)[],
-        barreFrom: voicing.barreFrom,
-        barreTo: voicing.barreTo,
-        barreFret: voicing.barreFret,
-      });
+    const position = buildStaticVoicingPosition(
+      voicing.frets.map(f => f) as (number | -1)[],
+      'Custom',
+      voicing.barreFrom != null && voicing.barreTo != null && voicing.barreFret != null
+        ? { from: voicing.barreFrom, to: voicing.barreTo, fret: voicing.barreFret }
+        : null,
+    );
+    if (position) {
+      onSetArpeggioPosition?.(position);
     }
   };
 

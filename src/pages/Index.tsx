@@ -27,6 +27,7 @@ const Index = () => {
   const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower'>('upper');
   const [activeInversionVoicing, setActiveInversionVoicing] = useState<InversionVoicing | null>(null);
   const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
+  const arpBarreDragRef = useRef<((fromSi: number, toSi: number, fret: number) => void) | null>(null);
 
   // Auto-disable strings based on inversion string group when in inversion mode
   const prevDisabledRef = useRef<Set<number> | null>(null);
@@ -284,6 +285,7 @@ const Index = () => {
               arpPathVisible={fb.arpPathVisible}
               arpAddMode={fb.arpAddMode}
               onArpAddClick={(si, fret) => arpAddClickRef.current?.(si, fret)}
+              onArpBarreDrag={(fromSi, toSi, fret) => arpBarreDragRef.current?.(fromSi, toSi, fret)}
                inversionVoicing={activeInversionVoicing}
                scaleViewChordTones={scaleViewChordTones}
                ghostNoteOpacity={fb.ghostNoteOpacity}
@@ -328,6 +330,7 @@ const Index = () => {
                arpAddMode={fb.arpAddMode}
                setArpAddMode={fb.setArpAddMode}
                arpAddClickRef={arpAddClickRef}
+               arpBarreDragRef={arpBarreDragRef}
                activeTab={activeTab}
                setActiveTab={setActiveTab}
                primaryScale={fb.primaryScale}
