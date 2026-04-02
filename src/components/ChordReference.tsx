@@ -65,7 +65,7 @@ interface ChordReferenceProps {
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
   ghostNoteOpacity: number;
   setGhostNoteOpacity: (v: number) => void;
-  onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number }) => void;
+  onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
 }
 

@@ -341,6 +341,11 @@ const Index = () => {
                 ghostNoteOpacity={fb.ghostNoteOpacity}
                 setGhostNoteOpacity={fb.setGhostNoteOpacity}
                 onApplyBeginnerPreset={(preset) => {
+                  if (preset === null) {
+                    // Deselect: turn off focus box
+                    fb.setShowFretBox(false);
+                    return;
+                  }
                   fb.setPrimaryScale({ mode: 'scale', root: preset.root, scale: preset.scale });
                   fb.setActiveChord(null);
                   fb.setShowFretBox(true);
