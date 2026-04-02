@@ -232,6 +232,11 @@ export default function Fretboard({
   }
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
+    // In arp add mode (custom voicing creation), hide all scale notes - fretboard should be empty
+    if (arpAddMode) {
+      return null;
+    }
+
     // In identify mode, only show notes that have been clicked or hovered
     if (identifyMode) {
       if (identifyFrets[stringIndex] === fret) {
