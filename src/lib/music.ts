@@ -2115,16 +2115,27 @@ export function scaleToKeyMode(scaleName: string): KeyMode {
   return map[scaleName] || 'major';
 }
 
-export function get7thChordType(baseType: string, _degree: number): string {
-  if (baseType === 'Major') return 'Major 7';
+export function get7thChordType(baseType: string, degree: number, keyMode: KeyMode = 'major'): string {
+  if (baseType === 'Major') {
+    // V in major and VII in minor are dominant 7, not major 7
+    if ((keyMode === 'major' && degree === 5) || (keyMode === 'minor' && degree === 7)) {
+      return 'Dominant 7';
+    }
+    return 'Major 7';
+  }
   if (baseType === 'Minor') return 'Minor 7';
   if (baseType === 'Diminished') return 'Half-Dim 7';
   return 'Dominant 7';
 }
 
 // Map base type to 7th chord symbol for display
-export function get7thChordSymbol(baseType: string): string {
-  if (baseType === 'Major') return 'maj7';
+export function get7thChordSymbol(baseType: string, degree: number = 0, keyMode: KeyMode = 'major'): string {
+  if (baseType === 'Major') {
+    if ((keyMode === 'major' && degree === 5) || (keyMode === 'minor' && degree === 7)) {
+      return '7';
+    }
+    return 'maj7';
+  }
   if (baseType === 'Minor') return 'm7';
   if (baseType === 'Diminished') return 'ø7';
   return '7';
