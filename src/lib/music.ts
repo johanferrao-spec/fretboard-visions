@@ -2243,27 +2243,31 @@ const TEMPLATE_REF_ROOTS: Record<StringGroup, { templates: Record<string, Record
   lower: { templates: LOWER_G_ROOT_TEMPLATES, rootNote: 'G' },
 };
 
-// Parse shape string into exactly 6 tokens.
-// Format: "XX2433" means X,X,2,4,3,3 — first read X's, then parse remaining digits
-// as 4 fret numbers. Since frets can be 1-2 digits, we need to figure out the split.
-// Strategy: we know there are exactly 4 fret numbers after the X's. Try all valid splits.
+// Parse shape string like "XX2433", "X3534X", "3533XX" into 6 tokens
 function parseShapeTokens(shape: string): string[] {
   const tokens: string[] = [];
   let i = 0;
-  // Read X's first
+  // Read leading X's
   while (i < shape.length && shape[i] === 'X') {
     tokens.push('X');
     i++;
   }
-  // Remaining string is all digits representing the fret numbers
-  const digitStr = shape.slice(i);
-  const numFrets = 6 - tokens.length; // should be 4
+  // Read trailing X's
+  let j = shape.length - 1;
+  let trailingXCount = 0;
+  while (j >= i && shape[j] === 'X') {
+    trailingXCount++;
+    j--;
+  }
+  // Middle part is digits
+  const digitStr = shape.slice(i, shape.length - trailingXCount);
+  const numFrets = 6 - tokens.length - trailingXCount;
   
-  // Try to split digitStr into exactly numFrets numbers
   const fretNums = splitDigitsIntoFrets(digitStr, numFrets);
   if (fretNums) {
     for (const f of fretNums) tokens.push(String(f));
   }
+  for (let k = 0; k < trailingXCount; k++) tokens.push('X');
   return tokens;
 }
 
