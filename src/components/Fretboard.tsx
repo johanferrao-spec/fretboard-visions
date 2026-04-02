@@ -273,14 +273,30 @@ export default function Fretboard({
         }
         return { backgroundColor: bg, opacity: 1, ring: true, ringColor: inversionDegreeColor ? `hsl(${inversionDegreeColor})` : 'hsl(var(--primary))', greyed: false };
       }
-      // Show other arpeggio chord tones dimmed
+      // Show other arpeggio chord tones dimmed - with degree colors if active
       if (scaleViewChordTones && scaleViewChordTones.has((['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note))) {
         const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
-        if (inP) return { backgroundColor: pColor, opacity: ghostNoteOpacity * 2, ring: false, ringColor: '', greyed: true };
+        if (inP) {
+          let ghostBg = pColor;
+          if (degreeColors) {
+            const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
+            const dc = getDegreeColor(activeRoot, note);
+            if (dc) ghostBg = dc;
+          }
+          return { backgroundColor: ghostBg, opacity: ghostNoteOpacity * 2, ring: false, ringColor: '', greyed: false };
+        }
       }
-      // Scale notes very dimmed
+      // Scale notes very dimmed - with degree colors if active
       const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
-      if (inP) return { backgroundColor: pColor, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: true };
+      if (inP) {
+        let ghostBg = pColor;
+        if (degreeColors) {
+          const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
+          const dc = getDegreeColor(activeRoot, note);
+          if (dc) ghostBg = dc;
+        }
+        return { backgroundColor: ghostBg, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: false };
+      }
       return null;
     }
 

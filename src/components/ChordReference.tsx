@@ -409,14 +409,15 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center transition-all rounded-xl"
+      className="flex flex-col items-center transition-all rounded-lg"
       style={{
         border: isActive ? `2px solid hsl(${color})` : '2px solid hsla(var(--border), 0.3)',
         backgroundColor: isActive ? `hsla(${color}, 0.15)` : 'hsla(var(--secondary), 0.5)',
-        padding: 6,
+        padding: 3,
         aspectRatio: '1',
-        width: 100,
-        minHeight: 100,
+        width: 72,
+        minWidth: 72,
+        minHeight: 72,
       }}
     >
       <div className="text-[9px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
