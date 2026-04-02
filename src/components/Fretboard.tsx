@@ -128,7 +128,19 @@ export default function Fretboard({
   const chordNoteSet = new Set<string>();
   if (chordVoicing) {
     chordVoicing.forEach((fret, si) => {
-      if (fret >= 0) chordNoteSet.add(`${si}-${fret}`);
+      if (fret >= 0) {
+        // Skip middle barre notes (only show endpoints)
+        if (chordVoicingData && chordVoicingData.barreFret != null && fret === chordVoicingData.barreFret &&
+            chordVoicingData.barreFrom != null && chordVoicingData.barreTo != null) {
+          const from = chordVoicingData.barreFrom;
+          const to = chordVoicingData.barreTo;
+          const minS = Math.min(from, to);
+          const maxS = Math.max(from, to);
+          // Only show if it's an endpoint or has a different fret value (higher note on same string)
+          if (si > minS && si < maxS) return; // skip middle barre notes
+        }
+        chordNoteSet.add(`${si}-${fret}`);
+      }
     });
   }
 
