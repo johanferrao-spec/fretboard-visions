@@ -315,15 +315,15 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
   // Menu page — symmetrical grid of big colorful bubbles
   return (
     <div className="animate-fade-in">
-      <div className="text-center mb-4">
-        <div className="text-lg font-bold text-foreground" style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>
+      <div className="text-center mb-2">
+        <div className="text-base font-bold text-foreground" style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>
           🎸 Guitar Basics!
         </div>
-        <div className="text-[10px] text-muted-foreground font-mono">Pick something to learn</div>
+        <div className="text-[9px] text-muted-foreground font-mono">Pick something to learn</div>
       </div>
 
-      {/* Symmetrical 3x2 grid of big bubbles */}
-      <div className="grid grid-cols-3 gap-3 px-2">
+      {/* Symmetrical 3x2 grid of bubbles - constrained to fit without scrolling */}
+      <div className="grid grid-cols-3 gap-2 px-4" style={{ maxWidth: 520, margin: '0 auto' }}>
         {SCALE_PRESETS.map((preset, i) => {
           const isActive = activePreset === preset.name;
           return (
