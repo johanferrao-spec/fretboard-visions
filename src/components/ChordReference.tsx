@@ -375,6 +375,11 @@ export default function ChordReference({
           handleSelectVoicing={handleSelectVoicing}
           degreeColors={degreeColors}
           tuning={tuning}
+          arpAddClickRef={arpAddClickRef}
+          setArpAddMode={setArpAddMode}
+          arpAddMode={arpAddMode}
+          setActiveChord={setActiveChord}
+          onSetArpeggioPosition={onSetArpeggioPosition}
         />
       ) : null}
     </div>
@@ -402,40 +407,40 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   const startFret = Math.max(1, minFret - 1);
   const endFret = Math.max(startFret + 3, maxFret + 1);
   const numFrets = endFret - startFret + 1;
-  const cellSize = 16;
-  const w = 4 * cellSize + 24;
-  const h = numFrets * cellSize + 36;
+  const cellSize = 22;
+  const w = 4 * cellSize + 30;
+  const h = numFrets * cellSize + 40;
 
   return (
     <button
       onClick={onClick}
       className="flex flex-col items-center transition-all rounded-lg"
       style={{
-        border: isActive ? `2px solid hsl(${color})` : '2px solid hsla(var(--border), 0.3)',
+        border: isActive ? `3px solid hsl(${color})` : '2px solid hsla(var(--border), 0.3)',
         backgroundColor: isActive ? `hsla(${color}, 0.15)` : 'hsla(var(--secondary), 0.5)',
-        padding: 3,
+        padding: 4,
         aspectRatio: '1',
-        width: 72,
-        minWidth: 72,
-        minHeight: 72,
+        width: 110,
+        minWidth: 110,
+        minHeight: 110,
       }}
     >
-      <div className="text-[9px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
+      <div className="text-[11px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
         {voicing.slashName}
       </div>
       {voicing.alternateName && (
-        <div className="text-[7px] font-mono opacity-70 mb-0.5" style={{ color: `hsl(${color})` }}>
+        <div className="text-[9px] font-mono opacity-70 mb-0.5" style={{ color: `hsl(${color})` }}>
           {voicing.alternateName}
         </div>
       )}
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="flex-1">
-        <text x={4} y={18} fontSize={8} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+        <text x={4} y={20} fontSize={10} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
         {[0, 1, 2, 3].map(si => (
-          <line key={`s${si}`} x1={18 + si * cellSize} y1={14} x2={18 + si * cellSize} y2={14 + numFrets * cellSize}
+          <line key={`s${si}`} x1={22 + si * cellSize} y1={16} x2={22 + si * cellSize} y2={16 + numFrets * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={0.5} />
         ))}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
-          <line key={`f${i}`} x1={18} y1={14 + i * cellSize} x2={18 + 3 * cellSize} y2={14 + i * cellSize}
+          <line key={`f${i}`} x1={22} y1={16 + i * cellSize} x2={22 + 3 * cellSize} y2={16 + i * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.5} />
         ))}
         {activeStrings.map((si, idx) => {
@@ -444,16 +449,16 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
           const fretPos = fret - startFret;
           return (
             <circle key={`n${idx}`}
-              cx={18 + idx * cellSize}
-              cy={14 + fretPos * cellSize + cellSize / 2}
-              r={6}
+              cx={22 + idx * cellSize}
+              cy={16 + fretPos * cellSize + cellSize / 2}
+              r={8}
               fill={`hsl(${color})`}
               opacity={0.9}
             />
           );
         })}
       </svg>
-      <div className="text-[7px] font-mono mt-0.5 leading-tight text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
+      <div className="text-[9px] font-mono mt-0.5 leading-tight text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
         {voicing.degreeOrder}
       </div>
     </button>
@@ -593,10 +598,10 @@ function ScaleViewPanel({
       {scaleViewMode === 'inversion' && (
         <div>
           {degreeFilter !== null && inversions.length > 0 && (
-            <div className="flex gap-1 items-start">
-              {/* Voicing diagrams - 5 across, compact */}
+            <div className="flex gap-0.5 items-stretch">
+              {/* Voicing diagrams - 5 across, tight */}
               <div
-                className="flex gap-1 flex-1 min-w-0"
+                className="flex gap-0.5 shrink-0"
                 style={{
                   backgroundColor: activeColor ? `hsla(${activeColor}, 0.08)` : 'hsla(var(--secondary), 0.3)',
                   border: activeColor ? `1px solid hsla(${activeColor}, 0.3)` : undefined,
@@ -616,35 +621,39 @@ function ScaleViewPanel({
                 ))}
               </div>
 
-              {/* Active inversion info - to the right */}
+              {/* Active inversion info - fills remaining space */}
               {inversions[Math.min(currentInvIdx, inversions.length - 1)] && (() => {
                 const activeInv = inversions[Math.min(currentInvIdx, inversions.length - 1)];
                 return (
                   <div
-                    className="rounded-xl p-2 shrink-0 w-36 transition-all"
+                    className="rounded-xl p-3 flex-1 min-w-0 transition-all flex flex-col justify-between"
                     style={{
                       backgroundColor: activeColor ? `hsla(${activeColor}, 0.12)` : 'hsla(var(--secondary), 0.3)',
                       border: activeColor ? `2px solid hsla(${activeColor}, 0.4)` : undefined,
                     }}
                   >
-                    <div className="text-[10px] font-bold" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
-                      {activeInv.slashName}
-                      {activeInv.alternateName && <span className="ml-1 opacity-70 font-normal text-[8px]">{activeInv.alternateName}</span>}
+                    <div>
+                      <div className="text-[16px] font-bold leading-tight" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
+                        {activeInv.slashName}
+                        {activeInv.alternateName && <span className="ml-2 opacity-70 font-normal text-[12px]">{activeInv.alternateName}</span>}
+                      </div>
+                      <div className="text-[12px] font-mono text-muted-foreground mt-1">
+                        {activeInv.inversionLabel}
+                      </div>
+                      <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                        {activeInv.bottomDegree}
+                      </div>
+                      <div className="text-[11px] font-mono text-muted-foreground">
+                        {activeInv.topDegree}
+                      </div>
                     </div>
-                    <div className="text-[8px] font-mono text-muted-foreground mt-0.5">
-                      {activeInv.inversionLabel}
-                    </div>
-                    <div className="text-[8px] font-mono text-muted-foreground">
-                      {activeInv.bottomDegree}
-                    </div>
-                    <div className="text-[8px] font-mono text-muted-foreground">
-                      {activeInv.topDegree}
-                    </div>
-                    <div className="text-[8px] font-mono mt-0.5 opacity-60">
-                      {activeInv.degreeOrder}
-                    </div>
-                    <div className="text-[9px] font-mono font-bold mt-1" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
-                      {activeInv.tab}
+                    <div>
+                      <div className="text-[11px] font-mono mt-1 opacity-60">
+                        {activeInv.degreeOrder}
+                      </div>
+                      <div className="text-[14px] font-mono font-bold mt-1" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
+                        {activeInv.tab}
+                      </div>
                     </div>
                   </div>
                 );
@@ -684,6 +693,9 @@ function ChordLibraryPanel({
   voicingTab, handleVoicingTabChange, currentVoicings, pagedVoicings,
   voicingPage, setVoicingPage, totalPages, activeChord, handleSelectVoicing,
   degreeColors,
+  tuning,
+  arpAddClickRef, setArpAddMode, arpAddMode,
+  setActiveChord, onSetArpeggioPosition,
 }: {
   selectedRoot: NoteName;
   setSelectedRoot: (n: NoteName) => void;
@@ -700,10 +712,135 @@ function ChordLibraryPanel({
   handleSelectVoicing: (idx: number) => void;
   degreeColors: boolean;
   tuning: number[];
+  arpAddClickRef?: React.MutableRefObject<((si: number, fret: number) => void) | null>;
+  setArpAddMode?: (v: boolean) => void;
+  arpAddMode?: boolean;
+  setActiveChord: (c: ChordSelection | null) => void;
+  onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
 }) {
   const VOICINGS_PER_PAGE = 4;
-
   const [libCopied, setLibCopied] = useState(false);
+
+  // Custom chord voicing state
+  const [customChordVoicings, setCustomChordVoicings] = useState<Record<string, {frets: number[], refRoot: NoteName, barreFrom?: number, barreTo?: number, barreFret?: number}[]>>(() => {
+    try { return JSON.parse(localStorage.getItem('mf-custom-chord-voicings') || '{}'); } catch { return {}; }
+  });
+  const [chordAddMode, setChordAddMode] = useState(false);
+  const [addingFrets, setAddingFrets] = useState<(number | -1)[]>([-1,-1,-1,-1,-1,-1]);
+
+  // Transpose custom voicings for current root
+  const customForRoot = useMemo((): ChordVoicing[] => {
+    if (!selectedChord) return [];
+    const customs = customChordVoicings[selectedChord] || [];
+    return customs.map(cv => {
+      const refIdx = NOTE_NAMES.indexOf(cv.refRoot);
+      const targetIdx = NOTE_NAMES.indexOf(selectedRoot);
+      const delta = (targetIdx - refIdx + 12) % 12;
+      const transposed = cv.frets.map(f => f < 0 ? -1 : f + delta);
+      return {
+        frets: transposed.map(f => f < 0 ? -1 : f > 24 ? f - 12 : f),
+        fingers: null,
+        barreFrom: cv.barreFrom,
+        barreTo: cv.barreTo,
+        barreFret: cv.barreFret != null ? cv.barreFret + delta : undefined,
+      } as ChordVoicing;
+    });
+  }, [selectedChord, selectedRoot, customChordVoicings]);
+
+  const mergedVoicings = useMemo(() => [...currentVoicings, ...customForRoot], [currentVoicings, customForRoot]);
+  const mergedTotalPages = Math.ceil(mergedVoicings.length / VOICINGS_PER_PAGE);
+  const mergedPagedVoicings = mergedVoicings.slice(voicingPage * VOICINGS_PER_PAGE, (voicingPage + 1) * VOICINGS_PER_PAGE);
+
+  // Register click handler for add mode
+  useEffect(() => {
+    if (!arpAddClickRef || !chordAddMode) return;
+    arpAddClickRef.current = (si: number, fret: number) => {
+      setAddingFrets(prev => {
+        const next = [...prev];
+        if (next[si] === fret) next[si] = -1;
+        else next[si] = fret;
+        return next;
+      });
+    };
+    return () => { if (arpAddClickRef) arpAddClickRef.current = null; };
+  }, [chordAddMode, arpAddClickRef]);
+
+  // Show adding notes on fretboard via ArpeggioPosition
+  useEffect(() => {
+    if (chordAddMode) {
+      const notes = addingFrets.map((f, si) => f >= 0 ? {stringIndex: si, fret: f} : null).filter(Boolean) as {stringIndex: number, fret: number}[];
+      if (notes.length > 0) {
+        onSetArpeggioPosition?.({
+          notes, label: 'Adding...',
+          startFret: Math.min(...notes.filter(n => n.fret > 0).map(n => n.fret), 99),
+          type: 'static',
+          frets: addingFrets as (number | -1)[],
+        });
+      } else {
+        onSetArpeggioPosition?.(null);
+      }
+    }
+  }, [addingFrets, chordAddMode]); // eslint-disable-line
+
+  const handleStartAddMode = () => {
+    if (chordAddMode) {
+      setChordAddMode(false);
+      setAddingFrets([-1,-1,-1,-1,-1,-1]);
+      setArpAddMode?.(false);
+      onSetArpeggioPosition?.(null);
+      return;
+    }
+    setChordAddMode(true);
+    setAddingFrets([-1,-1,-1,-1,-1,-1]);
+    setArpAddMode?.(true);
+    setActiveChord(null);
+    onSetArpeggioPosition?.(null);
+  };
+
+  const handleSaveVoicing = () => {
+    if (!selectedChord) return;
+    const hasNotes = addingFrets.some(f => f >= 0);
+    if (!hasNotes) return;
+    // Auto-detect barres
+    let barreFrom: number | undefined, barreTo: number | undefined, barreFret: number | undefined;
+    for (let s = 0; s < 5; s++) {
+      if (addingFrets[s] >= 1 && addingFrets[s] === addingFrets[s + 1]) {
+        if (barreFret === undefined) {
+          barreFret = addingFrets[s];
+          barreFrom = s;
+          barreTo = s + 1;
+        } else if (addingFrets[s] === barreFret && barreTo === s) {
+          barreTo = s + 1;
+        }
+      }
+    }
+    const key = selectedChord;
+    const existing = customChordVoicings[key] || [];
+    const newVoicing = {
+      frets: [...addingFrets],
+      refRoot: selectedRoot,
+      ...(barreFrom !== undefined ? { barreFrom, barreTo, barreFret } : {}),
+    };
+    const updated = { ...customChordVoicings, [key]: [...existing, newVoicing] };
+    setCustomChordVoicings(updated);
+    localStorage.setItem('mf-custom-chord-voicings', JSON.stringify(updated));
+    setChordAddMode(false);
+    setAddingFrets([-1,-1,-1,-1,-1,-1]);
+    setArpAddMode?.(false);
+    onSetArpeggioPosition?.(null);
+  };
+
+  const handleDeleteCustom = (globalIdx: number) => {
+    if (!selectedChord) return;
+    const customIdx = globalIdx - currentVoicings.length;
+    if (customIdx < 0) return;
+    const key = selectedChord;
+    const custom = [...(customChordVoicings[key] || [])];
+    custom.splice(customIdx, 1);
+    const updated = { ...customChordVoicings, [key]: custom };
+    setCustomChordVoicings(updated);
+    localStorage.setItem('mf-custom-chord-voicings', JSON.stringify(updated));
+  };
 
   const handleLibCopy = (v: ChordVoicing) => {
     navigator.clipboard.writeText(formatCompactTab(v.frets));
@@ -716,9 +853,65 @@ function ChordLibraryPanel({
     return [types.slice(0, mid), types.slice(mid)];
   };
 
+  // Handle clicking a custom voicing (display via ArpeggioPosition)
+  const handleSelectCustomVoicing = (globalIdx: number) => {
+    setActiveChord(null);
+    const voicing = mergedVoicings[globalIdx];
+    if (!voicing) return;
+    const notes = voicing.frets.map((f, si) => f >= 0 ? {stringIndex: si, fret: f} : null).filter(Boolean) as {stringIndex: number, fret: number}[];
+    if (notes.length > 0) {
+      onSetArpeggioPosition?.({
+        notes, label: 'Custom',
+        startFret: Math.min(...notes.filter(n => n.fret > 0).map(n => n.fret), 99),
+        type: 'static',
+        frets: voicing.frets.map(f => f) as (number | -1)[],
+      });
+    }
+  };
+
   return (
     <>
       <RootSelector selectedRoot={selectedRoot} setSelectedRoot={setSelectedRoot} />
+
+      {/* Add mode UI */}
+      {chordAddMode && (
+        <div className="bg-accent/10 border border-accent/30 rounded-lg p-2 mb-2">
+          <div className="text-[10px] font-mono font-bold text-foreground mb-1">
+            🎸 Click frets to build a {selectedRoot} {selectedChord} voicing
+          </div>
+          <div className="text-[8px] font-mono text-muted-foreground mb-1.5">
+            Click to add notes. Drag across strings for barres. Click again to remove.
+          </div>
+          <div className="flex gap-0.5 mb-1.5 items-center">
+            <span className="text-[8px] font-mono text-muted-foreground shrink-0">Frets:</span>
+            {[0,1,2,3,4,5].map(si => (
+              <input
+                key={si}
+                type="text"
+                value={addingFrets[si] === -1 ? 'X' : addingFrets[si].toString()}
+                onChange={(e) => {
+                  const val = e.target.value.trim();
+                  setAddingFrets(prev => {
+                    const next = [...prev];
+                    if (val === '' || val.toLowerCase() === 'x') next[si] = -1;
+                    else if (!isNaN(Number(val))) next[si] = Math.max(0, Math.min(24, Number(val)));
+                    return next;
+                  });
+                }}
+                className="w-7 h-6 text-center text-[10px] font-mono rounded border border-border bg-muted text-foreground"
+              />
+            ))}
+          </div>
+          <div className="flex gap-1">
+            <button onClick={handleSaveVoicing} disabled={!addingFrets.some(f => f >= 0)}
+              className="px-3 py-1 rounded text-[9px] font-mono uppercase tracking-wider bg-primary text-primary-foreground disabled:opacity-30 transition-colors font-bold"
+            >Save Voicing</button>
+            <button onClick={handleStartAddMode}
+              className="px-3 py-1 rounded text-[9px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground transition-colors"
+            >Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* Main layout */}
       <div className="flex gap-1.5">
@@ -787,43 +980,70 @@ function ChordLibraryPanel({
             <div className="bg-secondary/20 rounded p-1.5">
               <div className="flex items-center justify-between mb-1">
                 <div className="text-[10px] font-mono font-bold text-foreground truncate">{selectedRoot} {selectedChord}</div>
-                {totalPages > 1 && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => setVoicingPage(Math.max(0, voicingPage - 1))} disabled={voicingPage === 0}
-                      className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">◀</button>
-                    <span className="text-[8px] font-mono text-muted-foreground">{voicingPage + 1}/{totalPages}</span>
-                    <button onClick={() => setVoicingPage(Math.min(totalPages - 1, voicingPage + 1))} disabled={voicingPage >= totalPages - 1}
-                      className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">▶</button>
-                  </div>
-                )}
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={handleStartAddMode}
+                    className={`px-2 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors font-bold ${
+                      chordAddMode
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-accent text-accent-foreground hover:bg-accent/80'
+                    }`}
+                  >{chordAddMode ? '✕ Cancel' : '＋ Add Shape'}</button>
+                  {mergedTotalPages > 1 && (
+                    <>
+                      <button onClick={() => setVoicingPage(Math.max(0, voicingPage - 1))} disabled={voicingPage === 0}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">◀</button>
+                      <span className="text-[8px] font-mono text-muted-foreground">{voicingPage + 1}/{mergedTotalPages}</span>
+                      <button onClick={() => setVoicingPage(Math.min(mergedTotalPages - 1, voicingPage + 1))} disabled={voicingPage >= mergedTotalPages - 1}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">▶</button>
+                    </>
+                  )}
+                </div>
               </div>
-              {currentVoicings.length > 0 ? (
+              {mergedVoicings.length > 0 ? (
                 <div className="grid grid-cols-2 gap-1">
-                  {pagedVoicings.map((v, i) => {
+                  {mergedPagedVoicings.map((v, i) => {
                     const globalIdx = voicingPage * VOICINGS_PER_PAGE + i;
-                    const isActive = activeChord?.voicingIndex === globalIdx && activeChord?.voicingSource === voicingTab;
+                    const isCurated = globalIdx < currentVoicings.length;
+                    const isActive = isCurated
+                      ? (activeChord?.voicingIndex === globalIdx && activeChord?.voicingSource === voicingTab)
+                      : false;
                     return (
-                      <button
-                        key={i}
-                        onClick={() => handleSelectVoicing(i)}
-                        className={`rounded p-0.5 transition-all border ${
-                          isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
-                        }`}
-                      >
-                        <MiniChordVoicingDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} />
-                        <div className="flex items-center justify-center gap-0.5">
-                          <span className="text-[7px] font-mono text-muted-foreground">
-                            {formatCompactTab(v.frets)}
-                          </span>
-                          {isActive && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleLibCopy(v); }}
-                              className="text-[7px] font-mono text-primary hover:text-primary/80 transition-colors"
-                              title="Copy tab"
-                            >{libCopied ? '✓' : '⎘'}</button>
-                          )}
-                        </div>
-                      </button>
+                      <div key={i} className="relative">
+                        <button
+                          onClick={() => {
+                            if (isCurated) {
+                              handleSelectVoicing(i);
+                              onSetArpeggioPosition?.(null);
+                            } else {
+                              handleSelectCustomVoicing(globalIdx);
+                            }
+                          }}
+                          className={`w-full rounded p-0.5 transition-all border ${
+                            isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
+                          }`}
+                        >
+                          <MiniChordVoicingDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} />
+                          <div className="flex items-center justify-center gap-0.5">
+                            <span className="text-[7px] font-mono text-muted-foreground">
+                              {formatCompactTab(v.frets)}
+                            </span>
+                            {isActive && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleLibCopy(v); }}
+                                className="text-[7px] font-mono text-primary hover:text-primary/80 transition-colors"
+                                title="Copy tab"
+                              >{libCopied ? '✓' : '⎘'}</button>
+                            )}
+                          </div>
+                        </button>
+                        {!isCurated && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteCustom(globalIdx); }}
+                            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[8px] flex items-center justify-center hover:brightness-110 z-10"
+                          >×</button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>

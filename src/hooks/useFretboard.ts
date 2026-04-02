@@ -113,6 +113,7 @@ export function useFretboard() {
   const handleSetSecondaryEnabled = useCallback((v: boolean) => {
     setSecondaryEnabled(v);
     if (v) setDegreeColors(false);
+    if (!v) setActivePrimary(true);
   }, []);
 
   return {
