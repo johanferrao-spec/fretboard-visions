@@ -298,7 +298,12 @@ export default function ChordReference({
         )}
       </div>
 
-      {activeTab === 'scaleview' ? (
+      {activeTab === 'beginner' ? (
+        <BeginnerModePanel
+          onApplyPreset={onApplyBeginnerPreset}
+          onApplyOpenChord={onApplyOpenChord}
+        />
+      ) : activeTab === 'scaleview' ? (
         <ScaleViewPanel
           primaryScale={primaryScale}
           degreeFilter={scaleViewDegreeFilter}
