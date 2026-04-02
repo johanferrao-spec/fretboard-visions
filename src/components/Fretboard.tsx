@@ -106,6 +106,7 @@ export default function Fretboard({
   const [dragArpStepIndex, setDragArpStepIndex] = useState(0);
   const [persistedPaths, setPersistedPaths] = useState<DragNote[][]>([]);
   const fretboardRef = useRef<HTMLDivElement>(null);
+  const arpDragRef = useRef<{startString: number, fret: number, coveredStrings: Set<number>} | null>(null);
 
   // Position box drag state
   const [boxDragging, setBoxDragging] = useState<'move' | 'left' | 'right' | 'bottom' | 'corner' | null>(null);
