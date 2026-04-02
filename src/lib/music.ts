@@ -2337,19 +2337,17 @@ export function generate7thInversions(
 ): InversionVoicing[] {
   const templateKey = CHORD_TYPE_TO_TEMPLATE_KEY[chordType];
   if (!templateKey) return [];
-  const templates = E_ROOT_7TH_TEMPLATES[templateKey];
-  if (!templates) return [];
+
+  const { templates, rootNote } = TEMPLATE_REF_ROOTS[stringGroup];
+  const groupTemplates = templates[templateKey];
+  if (!groupTemplates) return [];
 
   const rootIdx = NOTE_NAMES.indexOf(root);
-  const eIdx = NOTE_NAMES.indexOf('E' as NoteName); // 4
-  const delta = ((rootIdx - eIdx) + 12) % 12;
+  const refIdx = NOTE_NAMES.indexOf(rootNote);
+  const delta = ((rootIdx - refIdx) + 12) % 12;
 
   const config = STRING_GROUP_CONFIG[stringGroup];
   const targetStrings = config.strings;
-
-  // Templates are written for upper strings: indices 2,3,4,5 (D,G,B,e)
-  const upperStrings = [2, 3, 4, 5];
-  const upperTuning = upperStrings.map(s => STANDARD_TUNING[s]);
 
   const formula = CHORD_FORMULAS[chordType] || ARPEGGIO_FORMULAS[chordType];
   const intervals = formula ? formula.slice(0, 4).map(i => i % 12) : [0, 3, 7, 10];
@@ -2367,39 +2365,46 @@ export function generate7thInversions(
     10: '♭7', 11: '7th',
   };
 
-  // Process all keys including Stack
-  const allKeys = ['Stack', 'Root', '1st', '2nd', '3rd'];
+  // Order: Root, 1st, 2nd, 3rd, Stack (stack last)
+  const allKeys = ['Root', '1st', '2nd', '3rd', 'Stack'];
   const invNumbers: Record<string, number> = { Stack: -1, Root: 0, '1st': 1, '2nd': 2, '3rd': 3 };
 
   const results: InversionVoicing[] = [];
 
   for (const key of allKeys) {
-    const template = templates[key];
+    const template = groupTemplates[key];
     if (!template) continue;
 
+    // Transpose: just add delta to each fret number directly
     const templateFrets = transposeShape(template, delta);
 
-    // Build frets for target string group
-    const frets: (number | -1)[] = [-1, -1, -1, -1, -1, -1];
+    // The template already has X's in the right positions for this string group
+    // Just use them directly — frets can be 0 (open strings are allowed)
+    const frets: (number | -1)[] = [...templateFrets];
     const notes: ArpeggioPositionNote[] = [];
 
-    const frettedValues: number[] = [];
-    for (const f of templateFrets) {
-      if (f !== -1) frettedValues.push(f);
-    }
-    if (frettedValues.length !== 4) continue;
-
     let valid = true;
-    for (let s = 0; s < 4; s++) {
-      const upperMidi = upperTuning[s];
-      const targetMidi = STANDARD_TUNING[targetStrings[s]] + (tuning[targetStrings[s]] - STANDARD_TUNING[targetStrings[s]]);
-      const tuningDiff = upperMidi - targetMidi;
-      const adjustedFret = frettedValues[s] + tuningDiff;
-      if (adjustedFret < 0) { valid = false; break; }
-      frets[targetStrings[s]] = adjustedFret;
-      notes.push({ stringIndex: targetStrings[s], fret: adjustedFret });
+    for (let i = 0; i < 6; i++) {
+      if (frets[i] !== -1) {
+        if (frets[i] < 0) { valid = false; break; }
+        notes.push({ stringIndex: i, fret: frets[i] as number });
+      }
     }
-    if (!valid) continue;
+    if (!valid || notes.length !== 4) continue;
+
+    // Apply custom tuning offset if tuning differs from standard
+    const isStandard = tuning.every((n, i) => n === STANDARD_TUNING[i]);
+    if (!isStandard) {
+      let tuningValid = true;
+      for (const n of notes) {
+        const tuningDiff = STANDARD_TUNING[n.stringIndex] - tuning[n.stringIndex];
+        const adjusted = n.fret + tuningDiff;
+        if (adjusted < 0) { tuningValid = false; break; }
+        frets[n.stringIndex] = adjusted;
+        n.fret = adjusted;
+      }
+      if (!tuningValid) continue;
+    }
 
     const tab = frets.map(f => f === -1 ? 'X' : f.toString()).join('');
     const invNum = invNumbers[key];
@@ -2420,7 +2425,6 @@ export function generate7thInversions(
     }
 
     const bottomNoteName = NOTE_NAMES[(rootIdx + bottomInterval) % 12];
-    const topNoteName = NOTE_NAMES[(rootIdx + topInterval) % 12];
 
     const slashName = (key === 'Root' || key === 'Stack')
       ? fullName
