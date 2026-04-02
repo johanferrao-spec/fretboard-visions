@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import BeginnerModePanel from './BeginnerMode';
 import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
