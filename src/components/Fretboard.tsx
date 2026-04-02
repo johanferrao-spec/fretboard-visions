@@ -941,8 +941,8 @@ export default function Fretboard({
             );
           })()}
 
-          {/* Inversion voicing path */}
-          {inversionVoicing && inversionVoicing.notes.length >= 2 && (() => {
+          {/* Inversion voicing path - no paths for custom/static voicings */}
+          {inversionVoicing && inversionVoicing.notes.length >= 2 && !arpAddMode && (() => {
             const totalH = 6 * stringH;
             const sortedNotes = [...inversionVoicing.notes].sort((a, b) => {
               const aMidi = ([40, 45, 50, 55, 59, 64][a.stringIndex] || 40) + a.fret;

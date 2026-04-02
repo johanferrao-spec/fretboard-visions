@@ -371,7 +371,7 @@ export default function ChordReference({
       ) : activeTab === 'chords' ? (
         <ChordLibraryPanel
           selectedRoot={selectedRoot}
-          setSelectedRoot={(n) => { setSelectedRoot(n); setSelectedChord(null); setActiveChord(null); setVoicingPage(0); }}
+          setSelectedRoot={(n) => { setSelectedRoot(n); setVoicingPage(0); if (selectedChord) { const voicings = getVoicingsForChord(n, selectedChord, voicingTab); if (voicings.length > 0) { setActiveChord({ root: n, chordType: selectedChord, voicingIndex: 0, voicingSource: voicingTab }); } else { setActiveChord(null); } } }}
           selectedChord={selectedChord}
           handleSelectChord={handleSelectChord}
           voicingTab={voicingTab}
