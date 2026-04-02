@@ -1082,8 +1082,8 @@ export default function Fretboard({
                     ...(identifyMode && identifyFrets[stringIdx] === -1 ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isChordMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isGlowing && !isChordMuted && !identifyMode ? {
-                      color: pColor,
-                      textShadow: `0 0 6px ${pColor}, 0 0 12px ${pColor}`,
+                      color: 'hsl(210, 85%, 65%)',
+                      textShadow: '0 0 6px hsl(210, 85%, 65%), 0 0 14px hsl(210, 85%, 55%)',
                     } : {}),
                   }}
                   title={identifyMode ? "Click to toggle open string" : "Double-click to toggle string"}
@@ -1108,21 +1108,6 @@ export default function Fretboard({
                       return (
                         <div key={fret} className="flex items-center justify-center relative" style={{ width: `${widths[fret]}%`, height: stringH }}>
                           <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-fretboard-nut" />
-                          <div
-                            className={`absolute z-10 rounded-full flex items-center justify-center font-mono font-bold shadow-md ${isVertical ? '-rotate-90' : ''}`}
-                            style={{
-                              width: noteMarkerSize,
-                              height: noteMarkerSize,
-                              right: -noteMarkerSize * 0.35,
-                              backgroundColor: style.greyed ? 'hsl(var(--muted))' : style.backgroundColor,
-                              opacity: style.opacity,
-                              color: 'hsl(var(--primary-foreground))',
-                              fontSize: Math.max(6, noteMarkerSize * 0.35),
-                              ...(style.ring ? { boxShadow: `0 0 0 2px ${style.ringColor}` } : {}),
-                            }}
-                          >
-                            {label}
-                          </div>
                         </div>
                       );
                     }

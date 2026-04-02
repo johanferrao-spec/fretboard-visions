@@ -21,7 +21,7 @@ const Index = () => {
   const [volume, setVolume] = useState(0.7);
   const [timelineKey, setTimelineKey] = useState<NoteName>('E');
   const [keyMode, setKeyMode] = useState<KeyMode>('major');
-  const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes'>('scaleview');
+  const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes'>('beginner');
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
   const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower'>('upper');
