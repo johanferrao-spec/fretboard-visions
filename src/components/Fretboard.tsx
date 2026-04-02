@@ -840,46 +840,8 @@ export default function Fretboard({
           {/* Inversion voicing pink box - REMOVED */}
 
 
-          {chordVoicingData && chordVoicingData.barreFrom != null && chordVoicingData.barreTo != null && chordVoicingData.barreFret != null && (
-            (() => {
-              const bf = chordVoicingData.barreFret!;
-              const fromRow = stringOrder.indexOf(chordVoicingData.barreFrom!);
-              const toRow = stringOrder.indexOf(chordVoicingData.barreTo!);
-              const topRow = Math.min(fromRow, toRow);
-              const bottomRow = Math.max(fromRow, toRow);
-              const barreLeft = cumLeft[bf] || 0;
-              const barreWidth = widths[bf] || 0;
-              // Bar thickness slightly smaller than marker diameter, doesn't extend past markers
-              const barH = noteMarkerSize * 0.9;
-              return (
-                <div
-                  className="absolute z-15 pointer-events-none"
-                  style={{
-                    left: `calc(28px + (100% - 28px) * ${barreLeft + barreWidth * 0.5} / 100)`,
-                    width: `calc((100% - 28px) * 0px / 100)`,
-                    top: `${(topRow * stringH + stringH * 0.5) / (6 * stringH) * 100}%`,
-                    height: `${((bottomRow - topRow) * stringH) / (6 * stringH) * 100}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                >
-                  {/* Use absolute positioning based on actual row positions */}
-                  <div
-                    className="absolute"
-                    style={{
-                      left: `calc(-${barH / 2}px)`,
-                      right: `calc(-${barH / 2}px)`,
-                      width: barH,
-                      top: 0,
-                      bottom: 0,
-                      backgroundColor: 'hsl(var(--foreground))',
-                      opacity: 0.5,
-                      borderRadius: barH / 2,
-                    }}
-                  />
-                </div>
-              );
-            })()
-          )}
+
+
 
           {/* Barre bar overlay using SVG for precision */}
           {chordVoicingData && chordVoicingData.barreFrom != null && chordVoicingData.barreTo != null && chordVoicingData.barreFret != null && (
