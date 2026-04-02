@@ -65,6 +65,8 @@ interface ChordReferenceProps {
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
   ghostNoteOpacity: number;
   setGhostNoteOpacity: (v: number) => void;
+  onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number }) => void;
+  onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
