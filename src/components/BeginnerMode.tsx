@@ -323,7 +323,7 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
       </div>
 
       {/* Symmetrical 3x2 grid of bubbles - constrained to fit without scrolling */}
-      <div className="grid grid-cols-3 gap-2 px-4" style={{ maxWidth: 520, margin: '0 auto' }}>
+      <div className="grid grid-cols-3 gap-2 px-4" style={{ maxWidth: 420, margin: '0 auto' }}>
         {SCALE_PRESETS.map((preset, i) => {
           const isActive = activePreset === preset.name;
           return (
