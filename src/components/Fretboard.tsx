@@ -50,6 +50,7 @@ interface FretboardProps {
   arpPathVisible?: boolean;
   arpAddMode?: boolean;
   onArpAddClick?: (stringIndex: number, fret: number) => void;
+  onArpBarreDrag?: (fromStringIndex: number, toStringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
   inversionVoicing?: import('@/lib/music').InversionVoicing | null;
   ghostNoteOpacity?: number;
@@ -86,7 +87,7 @@ export default function Fretboard({
   identifyMode, identifyFrets, setIdentifyFrets, identifyRoot,
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
   arpOverlayOpacity = 0.3, arpPathVisible = true,
-  arpAddMode = false, onArpAddClick,
+  arpAddMode = false, onArpAddClick, onArpBarreDrag,
   scaleViewChordTones,
   inversionVoicing,
   ghostNoteOpacity = 0.75,
@@ -159,12 +160,23 @@ export default function Fretboard({
     const toneNames = new Set<NoteName>();
     if (arpeggioPosition && arpeggioPosition.notes) {
       arpeggioPosition.notes.forEach(n => {
-        set.add(`${n.stringIndex}-${n.fret}`);
+        const isBarreMiddleNote = arpeggioPosition.barreFret != null
+          && arpeggioPosition.barreFrom != null
+          && arpeggioPosition.barreTo != null
+          && n.fret === arpeggioPosition.barreFret
+          && n.stringIndex > Math.min(arpeggioPosition.barreFrom, arpeggioPosition.barreTo)
+          && n.stringIndex < Math.max(arpeggioPosition.barreFrom, arpeggioPosition.barreTo);
+        if (!isBarreMiddleNote) {
+          set.add(`${n.stringIndex}-${n.fret}`);
+        }
         toneNames.add(noteAtFret(n.stringIndex, n.fret, tuning));
       });
     }
     return { arpPositionSet: set, arpChordToneNames: toneNames };
   }, [arpeggioPosition, tuning]);
+
+  const isStaticArpeggioPosition = arpeggioPosition?.type === 'static';
+  const shouldShowGuidedPaths = !arpAddMode && !isStaticArpeggioPosition;
 
   const pColor = primaryColor || 'hsl(var(--primary))';
   const sColor = secondaryColor || 'hsl(200, 80%, 60%)';
@@ -233,7 +245,7 @@ export default function Fretboard({
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
     // In arp add mode (custom voicing creation), hide all scale notes - fretboard should be empty
-    if (arpAddMode) {
+    if (arpAddMode && !isStaticArpeggioPosition) {
       return null;
     }
 
@@ -311,6 +323,25 @@ export default function Fretboard({
       const key = `${stringIndex}-${fret}`;
       const isInPosition = arpPositionSet.has(key);
       const isChordTone = arpChordToneNames.has(note);
+
+      if (isStaticArpeggioPosition) {
+        if (!isInPosition) return null;
+
+        let bg = pColor;
+        if (degreeColors) {
+          const arpRoot = (() => {
+            if (arpeggioPosition.notes && arpeggioPosition.notes.length > 0) {
+              const lowest = arpeggioPosition.notes[0];
+              return noteAtFret(lowest.stringIndex, lowest.fret, tuning);
+            }
+            return primaryScale.root;
+          })();
+          const dc = getDegreeColor(arpRoot, note);
+          if (dc) bg = dc;
+        }
+
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
+      }
 
       if (isInPosition) {
         // Selected position notes always full opacity
@@ -437,7 +468,7 @@ export default function Fretboard({
 
     // Arpeggio path notes: show ring in purple like dual-scale mode
     const noteKey = `${stringIndex}-${fret}`;
-    if (pathNoteSet.has(noteKey)) {
+    if (shouldShowGuidedPaths && pathNoteSet.has(noteKey)) {
       ring = true;
       ringColor = 'hsl(280, 70%, 60%)';
       opacity = 1;
@@ -633,7 +664,9 @@ export default function Fretboard({
     return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
   }, [boxDragging, maxFrets, setFretBoxStart, setFretBoxSize, setFretBoxStringStart, setFretBoxStringSize]);
 
-  const allPaths = [...persistedPaths, ...(isDragging && dragPath.length >= 2 ? [dragPath] : [])];
+  const allPaths = shouldShowGuidedPaths
+    ? [...persistedPaths, ...(isDragging && dragPath.length >= 2 ? [dragPath] : [])]
+    : [];
 
   // Build arpeggio position path points
   const arpPositionPath = useMemo(() => {
@@ -1104,6 +1137,7 @@ export default function Fretboard({
                                     arpDragRef.current.coveredStrings.add(s);
                                   }
                                 }
+                                if (maxS > minS) onArpBarreDrag?.(arpDragRef.current.startString, stringIdx, fret);
                               } else if (identifyMode) {
                                 setIdentifyHover({ stringIndex: stringIdx, fret });
                                 if (identifyDrag && identifyDrag.fret === fret) {
@@ -1171,6 +1205,7 @@ export default function Fretboard({
                                     arpDragRef.current.coveredStrings.add(s);
                                   }
                                 }
+                                if (maxS > minS) onArpBarreDrag?.(arpDragRef.current.startString, stringIdx, fret);
                               } else if (identifyMode) {
                                 setIdentifyHover({ stringIndex: stringIdx, fret });
                                 if (identifyDrag && identifyDrag.fret === fret) {
