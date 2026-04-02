@@ -210,6 +210,11 @@ export interface ArpeggioPosition {
   type: 'static' | 'linear';
   // Legacy compat — derived from notes
   frets: (number | -1)[];
+  root?: NoteName;
+  showPath?: boolean;
+  barreFrom?: number;
+  barreTo?: number;
+  barreFret?: number;
 }
 
 /**
@@ -2292,6 +2297,15 @@ function transposeShape(shape: string, delta: number): (number | -1)[] {
   return tokens.map(t => t === 'X' ? -1 : +t + delta);
 }
 
+function canLowerVoicingByOctave(frets: (number | -1)[]): boolean {
+  const played = frets.filter((f): f is number => f >= 0);
+  return played.length > 0 && played.every(f => f >= 12);
+}
+
+function lowerVoicingByOctave(frets: (number | -1)[]): (number | -1)[] {
+  return frets.map(f => (f > 0 ? f - 12 : f));
+}
+
 // Degree ordering per inversion for 7th chords (bass to top on 4 strings)
 const DEGREE_ORDERS: Record<string, string> = {
   'Stack': 'R 3 5 7',
@@ -2379,36 +2393,36 @@ export function generate7thInversions(
     const template = groupTemplates[key];
     if (!template) continue;
 
-    // Transpose: just add delta to each fret number directly
-    const templateFrets = transposeShape(template, delta);
-
-    // The template already has X's in the right positions for this string group
-    // Just use them directly — frets can be 0 (open strings are allowed)
-    const frets: (number | -1)[] = [...templateFrets];
-    const notes: ArpeggioPositionNote[] = [];
-
-    let valid = true;
-    for (let i = 0; i < 6; i++) {
-      if (frets[i] !== -1) {
-        if (frets[i] < 0) { valid = false; break; }
-        notes.push({ stringIndex: i, fret: frets[i] as number });
-      }
-    }
-    if (!valid || notes.length !== 4) continue;
+    const frets: (number | -1)[] = [...transposeShape(template, delta)];
 
     // Apply custom tuning offset if tuning differs from standard
     const isStandard = tuning.every((n, i) => n === STANDARD_TUNING[i]);
     if (!isStandard) {
       let tuningValid = true;
-      for (const n of notes) {
-        const tuningDiff = STANDARD_TUNING[n.stringIndex] - tuning[n.stringIndex];
-        const adjusted = n.fret + tuningDiff;
+      for (let i = 0; i < frets.length; i++) {
+        if (frets[i] < 0) continue;
+        const tuningDiff = STANDARD_TUNING[i] - tuning[i];
+        const adjusted = (frets[i] as number) + tuningDiff;
         if (adjusted < 0) { tuningValid = false; break; }
-        frets[n.stringIndex] = adjusted;
-        n.fret = adjusted;
+        frets[i] = adjusted;
       }
       if (!tuningValid) continue;
     }
+
+    while (canLowerVoicingByOctave(frets)) {
+      const lowered = lowerVoicingByOctave(frets);
+      for (let i = 0; i < frets.length; i++) frets[i] = lowered[i];
+    }
+
+    const notes: ArpeggioPositionNote[] = [];
+    let valid = true;
+    for (let i = 0; i < 6; i++) {
+      if (frets[i] !== -1) {
+        if ((frets[i] as number) < 0) { valid = false; break; }
+        notes.push({ stringIndex: i, fret: frets[i] as number });
+      }
+    }
+    if (!valid || notes.length !== 4) continue;
 
     const tab = frets.map(f => f === -1 ? 'X' : f.toString()).join('');
     const invNum = invNumbers[key];
