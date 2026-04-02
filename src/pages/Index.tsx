@@ -340,6 +340,29 @@ const Index = () => {
                 onSetInversionVoicing={setActiveInversionVoicing}
                 ghostNoteOpacity={fb.ghostNoteOpacity}
                 setGhostNoteOpacity={fb.setGhostNoteOpacity}
+                onApplyBeginnerPreset={(preset) => {
+                  fb.setPrimaryScale({ mode: 'scale', root: preset.root, scale: preset.scale });
+                  fb.setActiveChord(null);
+                  fb.setShowFretBox(true);
+                  fb.setFretBoxStart(preset.fretBoxStart);
+                  fb.setFretBoxSize(preset.fretBoxSize);
+                  fb.setDegreeColors(true);
+                  // Disable all degrees except root
+                  const degs = ['1', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7'];
+                  degs.forEach(d => {
+                    if (d !== '1' && !fb.disabledDegrees.has(d)) fb.toggleDegree(d);
+                    if (d === '1' && fb.disabledDegrees.has(d)) fb.toggleDegree(d);
+                  });
+                }}
+                onApplyOpenChord={(frets, fingers) => {
+                  fb.setIdentifyMode(true);
+                  fb.setIdentifyFrets(frets);
+                  const rootIdx = frets.findIndex(f => f >= 0);
+                  if (rootIdx >= 0) {
+                    const note = NOTE_NAMES[(fb.tuning[rootIdx] + Math.max(0, frets[rootIdx])) % 12];
+                    fb.setIdentifyRoot(note);
+                  }
+                }}
             />
           </div>
         </main>
