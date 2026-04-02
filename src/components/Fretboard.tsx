@@ -667,7 +667,7 @@ export default function Fretboard({
   return (
     <div
       className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}
-      onMouseUp={() => { handleDragEnd(); setIdentifyDrag(null); }}
+      onMouseUp={() => { handleDragEnd(); setIdentifyDrag(null); arpDragRef.current = null; }}
       onContextMenu={(e) => {
         if (persistedPaths.length > 0) {
           e.preventDefault();
