@@ -251,8 +251,14 @@ export default function Fretboard({
         }
         return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
       }
-      // Non-chord-tone scale notes as ghost
-      return { backgroundColor: pColor, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: true };
+      // Non-chord-tone scale notes as ghost — use degree colors if active
+      let ghostBg = pColor;
+      if (degreeColors) {
+        const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
+        const dc = getDegreeColor(activeRoot, note);
+        if (dc) ghostBg = dc;
+      }
+      return { backgroundColor: ghostBg, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: false };
     }
 
     // Inversion voicing mode: show voicing notes prominently, chord tones dimmed, scale notes very dimmed
