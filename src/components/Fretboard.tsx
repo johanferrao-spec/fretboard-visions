@@ -1082,8 +1082,8 @@ export default function Fretboard({
                     ...(identifyMode && identifyFrets[stringIdx] === -1 ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isChordMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isGlowing && !isChordMuted && !identifyMode ? {
-                      color: 'hsl(210, 85%, 65%)',
-                      textShadow: '0 0 6px hsl(210, 85%, 65%), 0 0 14px hsl(210, 85%, 55%)',
+                      color: 'hsl(30, 100%, 55%)',
+                      textShadow: '0 0 8px hsl(30, 100%, 55%), 0 0 18px hsl(25, 100%, 45%), 0 0 30px hsl(20, 100%, 40%)',
                     } : {}),
                   }}
                   title={identifyMode ? "Click to toggle open string" : "Double-click to toggle string"}
