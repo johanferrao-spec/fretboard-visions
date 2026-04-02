@@ -2139,34 +2139,91 @@ export interface InversionVoicing {
   degreeOrder: string; // e.g. "R 5 7 3" 
 }
 
-// Hardcoded E-root templates — user-verified voicings
-const E_ROOT_7TH_TEMPLATES: Record<string, Record<string, string>> = {
+// Hardcoded templates — user-verified voicings
+// Upper strings: E-root, strings D G B e (indices 2,3,4,5)
+const UPPER_E_ROOT_TEMPLATES: Record<string, Record<string, string>> = {
   'm7': {
-    Stack: 'XX14121210',
     Root: 'XX2433',
     '1st': 'XX5757',
     '2nd': 'XX99810',
     '3rd': 'XX12121212',
+    Stack: 'XX14121210',
   },
   'maj7': {
-    Stack: 'XX14131211',
     Root: 'XX2444',
     '1st': 'XX6857',
     '2nd': 'XX99911',
     '3rd': 'XX13131212',
+    Stack: 'XX14131211',
   },
   'dom7': {
-    Stack: 'XX14131210',
     Root: 'XX2434',
     '1st': 'XX6757',
     '2nd': 'XX99910',
     '3rd': 'XX12131212',
+    Stack: 'XX14131210',
   },
   'm7b5': {
-    Stack: 'XX14121110',
     Root: 'XX2333',
     '1st': 'XX5545',
     '2nd': 'XX89810',
+    Stack: 'XX14121110',
+  },
+};
+
+// Mid strings: C-root, strings A D G B (indices 1,2,3,4)
+const MID_C_ROOT_TEMPLATES: Record<string, Record<string, string>> = {
+  'm7': {
+    Root: 'X3534X',
+    '1st': 'X6858X',
+    '2nd': 'X1010811X',
+    '3rd': 'X13131213X',
+  },
+  'maj7': {
+    Root: 'X3545X',
+    '1st': 'X7958X',
+    '2nd': 'X1010912X',
+    '3rd': 'X14141213X',
+  },
+  'dom7': {
+    Root: 'X3535X',
+    '1st': 'X7858X',
+    '2nd': 'X1010911X',
+    '3rd': 'X13141213X',
+  },
+  'm7b5': {
+    Root: 'X3434X',
+    '1st': 'X6857X',
+    '2nd': 'X910811X',
+    '3rd': 'X13131113X',
+  },
+};
+
+// Lower strings: G-root, strings E A D G (indices 0,1,2,3)
+const LOWER_G_ROOT_TEMPLATES: Record<string, Record<string, string>> = {
+  'm7': {
+    Root: '3533XX',
+    '1st': '6857XX',
+    '2nd': '1010810XX',
+    '3rd': '13131212XX',
+  },
+  'maj7': {
+    Root: '3544XX',
+    '1st': '7957XX',
+    '2nd': '1010911XX',
+    '3rd': '14141212XX',
+  },
+  'dom7': {
+    Root: '3534XX',
+    '1st': '7857XX',
+    '2nd': '1010910XX',
+    '3rd': '13141212XX',
+  },
+  'm7b5': {
+    Root: '3433XX',
+    '1st': '6856XX',
+    '2nd': '910810XX',
+    '3rd': '13131112XX',
   },
 };
 
@@ -2179,27 +2236,38 @@ const CHORD_TYPE_TO_TEMPLATE_KEY: Record<string, string> = {
   'Min/Maj 7': 'maj7', // fallback
 };
 
-// Parse shape string into exactly 6 tokens.
-// Format: "XX2433" means X,X,2,4,3,3 — first read X's, then parse remaining digits
-// as 4 fret numbers. Since frets can be 1-2 digits, we need to figure out the split.
-// Strategy: we know there are exactly 4 fret numbers after the X's. Try all valid splits.
+// Template reference roots per string group
+const TEMPLATE_REF_ROOTS: Record<StringGroup, { templates: Record<string, Record<string, string>>; rootNote: NoteName }> = {
+  upper: { templates: UPPER_E_ROOT_TEMPLATES, rootNote: 'E' },
+  mid: { templates: MID_C_ROOT_TEMPLATES, rootNote: 'C' },
+  lower: { templates: LOWER_G_ROOT_TEMPLATES, rootNote: 'G' },
+};
+
+// Parse shape string like "XX2433", "X3534X", "3533XX" into 6 tokens
 function parseShapeTokens(shape: string): string[] {
   const tokens: string[] = [];
   let i = 0;
-  // Read X's first
+  // Read leading X's
   while (i < shape.length && shape[i] === 'X') {
     tokens.push('X');
     i++;
   }
-  // Remaining string is all digits representing the fret numbers
-  const digitStr = shape.slice(i);
-  const numFrets = 6 - tokens.length; // should be 4
+  // Read trailing X's
+  let j = shape.length - 1;
+  let trailingXCount = 0;
+  while (j >= i && shape[j] === 'X') {
+    trailingXCount++;
+    j--;
+  }
+  // Middle part is digits
+  const digitStr = shape.slice(i, shape.length - trailingXCount);
+  const numFrets = 6 - tokens.length - trailingXCount;
   
-  // Try to split digitStr into exactly numFrets numbers
   const fretNums = splitDigitsIntoFrets(digitStr, numFrets);
   if (fretNums) {
     for (const f of fretNums) tokens.push(String(f));
   }
+  for (let k = 0; k < trailingXCount; k++) tokens.push('X');
   return tokens;
 }
 
@@ -2273,19 +2341,17 @@ export function generate7thInversions(
 ): InversionVoicing[] {
   const templateKey = CHORD_TYPE_TO_TEMPLATE_KEY[chordType];
   if (!templateKey) return [];
-  const templates = E_ROOT_7TH_TEMPLATES[templateKey];
-  if (!templates) return [];
+
+  const { templates, rootNote } = TEMPLATE_REF_ROOTS[stringGroup];
+  const groupTemplates = templates[templateKey];
+  if (!groupTemplates) return [];
 
   const rootIdx = NOTE_NAMES.indexOf(root);
-  const eIdx = NOTE_NAMES.indexOf('E' as NoteName); // 4
-  const delta = ((rootIdx - eIdx) + 12) % 12;
+  const refIdx = NOTE_NAMES.indexOf(rootNote);
+  const delta = ((rootIdx - refIdx) + 12) % 12;
 
   const config = STRING_GROUP_CONFIG[stringGroup];
   const targetStrings = config.strings;
-
-  // Templates are written for upper strings: indices 2,3,4,5 (D,G,B,e)
-  const upperStrings = [2, 3, 4, 5];
-  const upperTuning = upperStrings.map(s => STANDARD_TUNING[s]);
 
   const formula = CHORD_FORMULAS[chordType] || ARPEGGIO_FORMULAS[chordType];
   const intervals = formula ? formula.slice(0, 4).map(i => i % 12) : [0, 3, 7, 10];
@@ -2303,39 +2369,46 @@ export function generate7thInversions(
     10: '♭7', 11: '7th',
   };
 
-  // Process all keys including Stack
-  const allKeys = ['Stack', 'Root', '1st', '2nd', '3rd'];
+  // Order: Root, 1st, 2nd, 3rd, Stack (stack last)
+  const allKeys = ['Root', '1st', '2nd', '3rd', 'Stack'];
   const invNumbers: Record<string, number> = { Stack: -1, Root: 0, '1st': 1, '2nd': 2, '3rd': 3 };
 
   const results: InversionVoicing[] = [];
 
   for (const key of allKeys) {
-    const template = templates[key];
+    const template = groupTemplates[key];
     if (!template) continue;
 
+    // Transpose: just add delta to each fret number directly
     const templateFrets = transposeShape(template, delta);
 
-    // Build frets for target string group
-    const frets: (number | -1)[] = [-1, -1, -1, -1, -1, -1];
+    // The template already has X's in the right positions for this string group
+    // Just use them directly — frets can be 0 (open strings are allowed)
+    const frets: (number | -1)[] = [...templateFrets];
     const notes: ArpeggioPositionNote[] = [];
 
-    const frettedValues: number[] = [];
-    for (const f of templateFrets) {
-      if (f !== -1) frettedValues.push(f);
-    }
-    if (frettedValues.length !== 4) continue;
-
     let valid = true;
-    for (let s = 0; s < 4; s++) {
-      const upperMidi = upperTuning[s];
-      const targetMidi = STANDARD_TUNING[targetStrings[s]] + (tuning[targetStrings[s]] - STANDARD_TUNING[targetStrings[s]]);
-      const tuningDiff = upperMidi - targetMidi;
-      const adjustedFret = frettedValues[s] + tuningDiff;
-      if (adjustedFret < 0) { valid = false; break; }
-      frets[targetStrings[s]] = adjustedFret;
-      notes.push({ stringIndex: targetStrings[s], fret: adjustedFret });
+    for (let i = 0; i < 6; i++) {
+      if (frets[i] !== -1) {
+        if (frets[i] < 0) { valid = false; break; }
+        notes.push({ stringIndex: i, fret: frets[i] as number });
+      }
     }
-    if (!valid) continue;
+    if (!valid || notes.length !== 4) continue;
+
+    // Apply custom tuning offset if tuning differs from standard
+    const isStandard = tuning.every((n, i) => n === STANDARD_TUNING[i]);
+    if (!isStandard) {
+      let tuningValid = true;
+      for (const n of notes) {
+        const tuningDiff = STANDARD_TUNING[n.stringIndex] - tuning[n.stringIndex];
+        const adjusted = n.fret + tuningDiff;
+        if (adjusted < 0) { tuningValid = false; break; }
+        frets[n.stringIndex] = adjusted;
+        n.fret = adjusted;
+      }
+      if (!tuningValid) continue;
+    }
 
     const tab = frets.map(f => f === -1 ? 'X' : f.toString()).join('');
     const invNum = invNumbers[key];
@@ -2356,7 +2429,6 @@ export function generate7thInversions(
     }
 
     const bottomNoteName = NOTE_NAMES[(rootIdx + bottomInterval) % 12];
-    const topNoteName = NOTE_NAMES[(rootIdx + topInterval) % 12];
 
     const slashName = (key === 'Root' || key === 'Stack')
       ? fullName

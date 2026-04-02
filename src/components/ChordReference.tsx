@@ -409,14 +409,15 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center transition-all rounded-xl"
+      className="flex flex-col items-center transition-all rounded-lg"
       style={{
         border: isActive ? `2px solid hsl(${color})` : '2px solid hsla(var(--border), 0.3)',
         backgroundColor: isActive ? `hsla(${color}, 0.15)` : 'hsla(var(--secondary), 0.5)',
-        padding: 6,
+        padding: 3,
         aspectRatio: '1',
-        width: 100,
-        minHeight: 100,
+        width: 72,
+        minWidth: 72,
+        minHeight: 72,
       }}
     >
       <div className="text-[9px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
@@ -516,21 +517,51 @@ function ScaleViewPanel({
   const activeColor = degreeFilter !== null ? SCALE_DEGREE_COLORS[degreeFilter] : null;
 
   return (
-    <div className="space-y-3">
-      {/* Mode buttons */}
-      <div className="flex gap-1">
+    <div className="space-y-2">
+      {/* Mode buttons + Ghost slider + String group buttons in one row */}
+      <div className="flex items-center gap-1 flex-wrap">
         <button
           onClick={() => { setScaleViewMode('basic'); onSetInversionVoicing?.(null); }}
-          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+          className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
             scaleViewMode === 'basic' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground'
           }`}
-        >🎵 Basic View</button>
+        >🎵 Basic</button>
         <button
           onClick={() => setScaleViewMode('inversion')}
-          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+          className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
             scaleViewMode === 'inversion' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground'
           }`}
-        >🎹 Inversion View</button>
+        >🎹 Inversions</button>
+
+        {/* Ghost note slider - always visible, compact */}
+        <div className="flex items-center gap-0.5 ml-1">
+          <span className="text-[7px] font-mono text-muted-foreground">👻</span>
+          <input
+            type="range" min={0} max={100} step={1}
+            value={Math.round(ghostNoteOpacity * 100)}
+            onChange={e => setGhostNoteOpacity(Number(e.target.value) / 100)}
+            className="w-12 accent-primary h-0.5"
+          />
+          <span className="text-[7px] font-mono text-muted-foreground w-5">{Math.round(ghostNoteOpacity * 100)}%</span>
+        </div>
+
+        {/* String group buttons - only show in inversion mode */}
+        {scaleViewMode === 'inversion' && (
+          <>
+            <div className="w-px h-4 bg-border/40 mx-0.5" />
+            {(['upper', 'mid', 'lower'] as StringGroup[]).map(sg => (
+              <button
+                key={sg}
+                onClick={() => setInversionStringGroup(sg)}
+                className={`px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wider transition-all ${
+                  inversionStringGroup === sg
+                    ? 'bg-accent text-accent-foreground shadow-md'
+                    : 'bg-secondary text-secondary-foreground'
+                }`}
+              >{STRING_GROUP_CONFIG[sg].label}</button>
+            ))}
+          </>
+        )}
       </div>
 
       {/* Degree buttons - BIG and colourful */}
@@ -542,17 +573,17 @@ function ScaleViewPanel({
             <button
               key={i}
               onClick={() => setDegreeFilter(isActive ? null : i)}
-              className="rounded-xl font-bold transition-all flex flex-col items-center justify-center py-2 px-1"
+              className="rounded-xl font-bold transition-all flex flex-col items-center justify-center py-3 px-1"
               style={{
                 backgroundColor: isActive ? `hsl(${color})` : `hsla(${color}, 0.2)`,
                 border: `2px solid hsl(${color})`,
                 color: isActive ? '#fff' : `hsl(${color})`,
                 boxShadow: isActive ? `0 0 12px hsla(${color}, 0.5)` : 'none',
-                minHeight: 52,
+                minHeight: 60,
               }}
             >
-              <span className="text-[12px] font-black">{chord.roman}</span>
-              <span className="text-[8px] font-mono opacity-80">{chord.label7}</span>
+              <span className="text-[14px] font-black">{chord.roman}</span>
+              <span className="text-[9px] font-mono opacity-80">{chord.label7}</span>
             </button>
           );
         })}
@@ -560,42 +591,17 @@ function ScaleViewPanel({
 
       {/* Inversion mode content */}
       {scaleViewMode === 'inversion' && (
-        <div className="space-y-2">
-          {/* String group selector */}
-          <div className="flex gap-1">
-            {(['upper', 'mid', 'lower'] as StringGroup[]).map(sg => (
-              <button
-                key={sg}
-                onClick={() => setInversionStringGroup(sg)}
-                className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
-                  inversionStringGroup === sg
-                    ? 'bg-accent text-accent-foreground shadow-md'
-                    : 'bg-secondary text-secondary-foreground'
-                }`}
-              >{STRING_GROUP_CONFIG[sg].label}</button>
-            ))}
-          </div>
-
+        <div>
           {degreeFilter !== null && inversions.length > 0 && (
-            <div className="space-y-2">
-              {/* Title in degree color */}
+            <div className="flex gap-1 items-start">
+              {/* Voicing diagrams - 5 across, compact */}
               <div
-                className="text-[11px] font-bold font-mono uppercase rounded-lg px-3 py-1.5"
+                className="flex gap-1 flex-1 min-w-0"
                 style={{
-                  backgroundColor: activeColor ? `hsla(${activeColor}, 0.15)` : undefined,
-                  color: activeColor ? `hsl(${activeColor})` : undefined,
-                }}
-              >
-                {diatonicLabels[degreeFilter]?.label7} — {STRING_GROUP_CONFIG[inversionStringGroup].label}
-              </div>
-
-              {/* All voicing diagrams in a grid - square shaped */}
-              <div
-                className="grid gap-2 p-2 rounded-xl"
-                style={{
-                  gridTemplateColumns: `repeat(${Math.min(inversions.length, 4)}, 1fr)`,
                   backgroundColor: activeColor ? `hsla(${activeColor}, 0.08)` : 'hsla(var(--secondary), 0.3)',
                   border: activeColor ? `1px solid hsla(${activeColor}, 0.3)` : undefined,
+                  borderRadius: 12,
+                  padding: 4,
                 }}
               >
                 {inversions.map((inv, idx) => (
@@ -610,29 +616,35 @@ function ScaleViewPanel({
                 ))}
               </div>
 
-              {/* Active inversion info */}
+              {/* Active inversion info - to the right */}
               {inversions[Math.min(currentInvIdx, inversions.length - 1)] && (() => {
                 const activeInv = inversions[Math.min(currentInvIdx, inversions.length - 1)];
                 return (
                   <div
-                    className="rounded-xl p-2.5 transition-all"
+                    className="rounded-xl p-2 shrink-0 w-36 transition-all"
                     style={{
-                      backgroundColor: activeColor ? `hsla(${activeColor}, 0.1)` : 'hsla(var(--secondary), 0.3)',
+                      backgroundColor: activeColor ? `hsla(${activeColor}, 0.12)` : 'hsla(var(--secondary), 0.3)',
                       border: activeColor ? `2px solid hsla(${activeColor}, 0.4)` : undefined,
                     }}
                   >
-                    <div className="text-[11px] font-bold" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
+                    <div className="text-[10px] font-bold" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
                       {activeInv.slashName}
-                      {activeInv.alternateName && <span className="ml-1 opacity-70 font-normal">{activeInv.alternateName}</span>}
+                      {activeInv.alternateName && <span className="ml-1 opacity-70 font-normal text-[8px]">{activeInv.alternateName}</span>}
                     </div>
-                    <div className="text-[9px] font-mono text-muted-foreground mt-0.5">
-                      {activeInv.inversionLabel} · {activeInv.bottomDegree} · {activeInv.topDegree}
+                    <div className="text-[8px] font-mono text-muted-foreground mt-0.5">
+                      {activeInv.inversionLabel}
                     </div>
-                    <div className="text-[9px] font-mono mt-0.5 opacity-60">
-                      Voicing: {activeInv.degreeOrder}
+                    <div className="text-[8px] font-mono text-muted-foreground">
+                      {activeInv.bottomDegree}
                     </div>
-                    <div className="text-[10px] font-mono font-bold mt-1" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
-                      Tab: {activeInv.tab}
+                    <div className="text-[8px] font-mono text-muted-foreground">
+                      {activeInv.topDegree}
+                    </div>
+                    <div className="text-[8px] font-mono mt-0.5 opacity-60">
+                      {activeInv.degreeOrder}
+                    </div>
+                    <div className="text-[9px] font-mono font-bold mt-1" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
+                      {activeInv.tab}
                     </div>
                   </div>
                 );
@@ -651,20 +663,6 @@ function ScaleViewPanel({
 
       {scaleViewMode === 'basic' && degreeFilter === null && (
         <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree to highlight its chord tones on the fretboard</div>
-      )}
-
-      {/* Ghost note opacity slider - compact */}
-      {degreeFilter !== null && (
-        <div className="flex items-center gap-1 px-2">
-          <span className="text-[8px] font-mono text-muted-foreground uppercase">👻</span>
-          <input
-            type="range" min={0} max={50} step={1}
-            value={Math.round(ghostNoteOpacity * 100)}
-            onChange={e => setGhostNoteOpacity(Number(e.target.value) / 100)}
-            className="w-16 accent-primary h-0.5"
-          />
-          <span className="text-[8px] font-mono text-muted-foreground">{Math.round(ghostNoteOpacity * 100)}%</span>
-        </div>
       )}
     </div>
   );
