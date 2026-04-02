@@ -22,6 +22,8 @@ interface ControlPanelProps {
 
 const arpeggioNames = Object.keys(ARPEGGIO_FORMULAS);
 
+const NATURAL_NOTES: NoteName[] = ['E', 'F', 'G', 'A', 'B', 'C', 'D'];
+
 const ARPEGGIO_CATEGORIES: { label: string; types: string[] }[] = [
   { label: 'Major', types: ['Major', 'Major 7', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', 'Major 9', 'Dominant 9', 'Major 6', '7#9', '7♭9', '11', '13'] },
   { label: 'Minor', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'] },
@@ -134,6 +136,84 @@ export default function ControlPanel({
   );
 }
 
+function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: NoteName; onSelect: (n: NoteName) => void }) {
+  const [baseNote, setBaseNote] = useState<NoteName>(() => {
+    if (NATURAL_NOTES.includes(selectedRoot)) return selectedRoot;
+    const idx = NOTE_NAMES.indexOf(selectedRoot);
+    const flatBase = NOTE_NAMES[(idx + 1) % 12];
+    if (NATURAL_NOTES.includes(flatBase as NoteName)) return flatBase as NoteName;
+    return 'E';
+  });
+  const [accidental, setAccidental] = useState<'natural' | 'sharp' | 'flat'>(() => {
+    if (NATURAL_NOTES.includes(selectedRoot)) return 'natural';
+    const idx = NOTE_NAMES.indexOf(selectedRoot);
+    for (const n of NATURAL_NOTES) {
+      const ni = NOTE_NAMES.indexOf(n);
+      if ((ni + 1) % 12 === idx) return 'sharp';
+    }
+    return 'flat';
+  });
+
+  const resolveNote = (base: NoteName, acc: 'natural' | 'sharp' | 'flat'): NoteName => {
+    const idx = NOTE_NAMES.indexOf(base);
+    if (acc === 'sharp') return NOTE_NAMES[(idx + 1) % 12];
+    if (acc === 'flat') return NOTE_NAMES[(idx + 11) % 12];
+    return base;
+  };
+
+  const handleNoteClick = (n: NoteName) => {
+    setBaseNote(n);
+    setAccidental('natural');
+    onSelect(n);
+  };
+
+  const handleAccidental = (acc: 'sharp' | 'flat') => {
+    const newAcc = accidental === acc ? 'natural' : acc;
+    setAccidental(newAcc);
+    onSelect(resolveNote(baseNote, newAcc));
+  };
+
+  return (
+    <div className="mb-2">
+      <div className="flex flex-wrap gap-0.5 items-end">
+        {NATURAL_NOTES.map(n => {
+          const isBase = n === baseNote;
+          return (
+            <div key={n} className="flex flex-col items-center">
+              <button
+                onClick={() => handleNoteClick(n)}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
+                  isBase ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
+                }`}
+              >{n}</button>
+              {isBase && (
+                <div className="mt-0.5 flex gap-px">
+                  <button
+                    onClick={() => handleAccidental('flat')}
+                    className={`w-5 h-4 rounded-l border text-[9px] font-mono font-bold transition-colors ${
+                      accidental === 'flat'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >♭</button>
+                  <button
+                    onClick={() => handleAccidental('sharp')}
+                    className={`w-5 h-4 rounded-r border border-l-0 text-[9px] font-mono font-bold transition-colors ${
+                      accidental === 'sharp'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >♯</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ModeSelector({
   label, value, onChange, active, color, onColorChange, condensed, hideDescription,
 }: {
@@ -147,11 +227,16 @@ function ModeSelector({
   hideDescription?: boolean;
 }) {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
-  const description = !hideDescription && value.mode === 'scale' ? SCALE_DESCRIPTIONS[value.scale] : undefined;
+  const [hoveredScale, setHoveredScale] = useState<string | null>(null);
+
+  const displayDescription = !hideDescription && value.mode === 'scale'
+    ? SCALE_DESCRIPTIONS[hoveredScale || value.scale]
+    : undefined;
 
   const handleSelectScale = (scaleName: string) => {
     onChange({ ...value, mode: 'scale', scale: scaleName });
     setOpenCategory(null);
+    setHoveredScale(null);
   };
 
   // Condensed mode: just show selected scale/arp compactly
@@ -218,14 +303,8 @@ function ModeSelector({
         >Arpeggio</button>
       </div>
 
-      {/* Root note */}
-      <select
-        value={value.root}
-        onChange={e => onChange({ ...value, root: e.target.value as NoteName })}
-        className="w-full text-foreground text-sm rounded-md px-2 py-1.5 border font-mono mb-2 appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
-      >
-        {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
-      </select>
+      {/* Root note selector — E-starting with sharp/flat */}
+      <ScaleRootSelector selectedRoot={value.root} onSelect={(n) => onChange({ ...value, root: n })} />
 
       {/* Selected scale display — glowing */}
       <div className="text-[10px] font-mono font-bold rounded px-2 py-1 mb-2 border" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 12px hsl(270, 80%, 65%, 0.4), 0 0 24px hsl(270, 80%, 65%, 0.15)' }}>
@@ -315,6 +394,8 @@ function ModeSelector({
                   <button
                     key={s}
                     onClick={() => handleSelectScale(s)}
+                    onMouseEnter={() => setHoveredScale(s)}
+                    onMouseLeave={() => setHoveredScale(null)}
                     className={`w-full text-left px-2 py-1 rounded text-[10px] font-mono transition-all border ${
                       value.scale === s
                         ? 'bg-primary/20 text-primary border-primary/60 shadow-[0_0_8px_hsl(var(--primary)/0.3)] font-bold'
@@ -330,10 +411,10 @@ function ModeSelector({
         </div>
       )}
 
-      {/* Scale description — hidden in dual mode */}
-      {description && (
+      {/* Scale description — shows for hovered or selected scale */}
+      {displayDescription && (
         <div className="mt-2 text-[9px] font-mono text-muted-foreground leading-relaxed bg-muted/50 rounded p-2">
-          {description}
+          {displayDescription}
         </div>
       )}
     </div>
