@@ -509,8 +509,8 @@ function ScaleViewPanel({
 
   // Build 7th chord labels for each diatonic chord
   const diatonicLabels = useMemo(() => diatonicChords.map((chord, i) => {
-    const chordType7 = get7thChordType(chord.type, i + 1);
-    const suffix = get7thChordSymbol(chord.type);
+    const chordType7 = get7thChordType(chord.type, i + 1, keyMode);
+    const suffix = get7thChordSymbol(chord.type, i + 1, keyMode);
     return { ...chord, label7: `${chord.root}${suffix}`, chordType7 };
   }), [diatonicChords]);
 

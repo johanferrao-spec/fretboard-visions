@@ -62,7 +62,7 @@ const Index = () => {
     const diaChords = getDiatonicChords(fb.primaryScale.root, svKeyMode);
     const chord = diaChords[scaleViewDegreeFilter];
     if (!chord) return null;
-    const chordType7 = get7thChordType(chord.type, scaleViewDegreeFilter + 1);
+    const chordType7 = get7thChordType(chord.type, scaleViewDegreeFilter + 1, svKeyMode);
     const formula = CHORD_FORMULAS[chordType7] || ARPEGGIO_FORMULAS[chordType7];
     if (!formula) return null;
     const rootIdx = NOTE_NAMES.indexOf(chord.root);
