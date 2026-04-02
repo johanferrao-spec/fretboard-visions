@@ -832,19 +832,70 @@ export default function Fretboard({
               const bottomRow = Math.max(fromRow, toRow);
               const barreLeft = cumLeft[bf] || 0;
               const barreWidth = widths[bf] || 0;
+              // Bar thickness slightly smaller than marker diameter, doesn't extend past markers
+              const barH = noteMarkerSize * 0.9;
               return (
                 <div
-                  className="absolute z-15 pointer-events-none rounded-full"
+                  className="absolute z-15 pointer-events-none"
                   style={{
-                    left: `calc(28px + (100% - 28px) * ${barreLeft + barreWidth * 0.3} / 100)`,
-                    width: `calc((100% - 28px) * ${barreWidth * 0.4} / 100)`,
-                    top: `${(topRow * stringH + stringH * 0.3) / (6 * stringH) * 100}%`,
-                    height: `${((bottomRow - topRow) * stringH + stringH * 0.4) / (6 * stringH) * 100}%`,
-                    backgroundColor: 'hsl(var(--foreground))',
-                    opacity: 0.35,
-                    borderRadius: 6,
+                    left: `calc(28px + (100% - 28px) * ${barreLeft + barreWidth * 0.5} / 100)`,
+                    width: `calc((100% - 28px) * 0px / 100)`,
+                    top: `${(topRow * stringH + stringH * 0.5) / (6 * stringH) * 100}%`,
+                    height: `${((bottomRow - topRow) * stringH) / (6 * stringH) * 100}%`,
+                    transform: 'translate(-50%, -50%)',
                   }}
-                />
+                >
+                  {/* Use absolute positioning based on actual row positions */}
+                  <div
+                    className="absolute"
+                    style={{
+                      left: `calc(-${barH / 2}px)`,
+                      right: `calc(-${barH / 2}px)`,
+                      width: barH,
+                      top: 0,
+                      bottom: 0,
+                      backgroundColor: 'hsl(var(--foreground))',
+                      opacity: 0.5,
+                      borderRadius: barH / 2,
+                    }}
+                  />
+                </div>
+              );
+            })()
+          )}
+
+          {/* Barre bar overlay using SVG for precision */}
+          {chordVoicingData && chordVoicingData.barreFrom != null && chordVoicingData.barreTo != null && chordVoicingData.barreFret != null && (
+            (() => {
+              const bf = chordVoicingData.barreFret!;
+              const fromRow = stringOrder.indexOf(chordVoicingData.barreFrom!);
+              const toRow = stringOrder.indexOf(chordVoicingData.barreTo!);
+              const topRow = Math.min(fromRow, toRow);
+              const bottomRow = Math.max(fromRow, toRow);
+              const barreLeft = cumLeft[bf] || 0;
+              const barreWidth = widths[bf] || 0;
+              const centerX = barreLeft + barreWidth * 0.5;
+              const totalH = 6 * stringH;
+              const y1 = (topRow * stringH + stringH * 0.5) / totalH * 100;
+              const y2 = (bottomRow * stringH + stringH * 0.5) / totalH * 100;
+              const barThick = noteMarkerSize * 0.9;
+              return (
+                <svg
+                  className="absolute inset-0 pointer-events-none z-[15]"
+                  style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
+                  viewBox={`0 0 100 ${totalH}`}
+                  preserveAspectRatio="none"
+                >
+                  <line
+                    x1={centerX} y1={y1 * totalH / 100}
+                    x2={centerX} y2={y2 * totalH / 100}
+                    stroke="hsl(var(--foreground))"
+                    strokeWidth={barThick}
+                    strokeLinecap="round"
+                    opacity={0.5}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
               );
             })()
           )}
