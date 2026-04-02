@@ -263,14 +263,19 @@ export default function Fretboard({
       if (isChordTone) {
         let bg = inversionDegreeColor ? `hsl(${inversionDegreeColor})` : pColor;
         if (degreeColors) {
-          const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
-          const dc = getDegreeColor(activeRoot, note);
+          // Basic mode: degree colors always relative to the I chord root
+          const dc = getDegreeColor(primaryScale.root, note);
           if (dc) bg = dc;
         }
         return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
       }
-      // Non-chord-tone scale notes hidden when degree filter active
-      return null;
+      // Non-chord-tone scale notes: dimmed by ghost opacity slider
+      let ghostBg = pColor;
+      if (degreeColors) {
+        const dc = getDegreeColor(primaryScale.root, note);
+        if (dc) ghostBg = dc;
+      }
+      return { backgroundColor: ghostBg, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: false };
     }
 
     // Inversion voicing mode: show voicing notes prominently, chord tones dimmed, scale notes very dimmed
