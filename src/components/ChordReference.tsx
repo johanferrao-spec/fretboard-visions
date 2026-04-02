@@ -420,22 +420,22 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
         minHeight: 110,
       }}
     >
-      <div className="text-[9px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
+      <div className="text-[11px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
         {voicing.slashName}
       </div>
       {voicing.alternateName && (
-        <div className="text-[7px] font-mono opacity-70 mb-0.5" style={{ color: `hsl(${color})` }}>
+        <div className="text-[9px] font-mono opacity-70 mb-0.5" style={{ color: `hsl(${color})` }}>
           {voicing.alternateName}
         </div>
       )}
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="flex-1">
-        <text x={4} y={18} fontSize={8} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+        <text x={4} y={20} fontSize={10} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
         {[0, 1, 2, 3].map(si => (
-          <line key={`s${si}`} x1={18 + si * cellSize} y1={14} x2={18 + si * cellSize} y2={14 + numFrets * cellSize}
+          <line key={`s${si}`} x1={22 + si * cellSize} y1={16} x2={22 + si * cellSize} y2={16 + numFrets * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={0.5} />
         ))}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
-          <line key={`f${i}`} x1={18} y1={14 + i * cellSize} x2={18 + 3 * cellSize} y2={14 + i * cellSize}
+          <line key={`f${i}`} x1={22} y1={16 + i * cellSize} x2={22 + 3 * cellSize} y2={16 + i * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.5} />
         ))}
         {activeStrings.map((si, idx) => {
@@ -444,16 +444,16 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
           const fretPos = fret - startFret;
           return (
             <circle key={`n${idx}`}
-              cx={18 + idx * cellSize}
-              cy={14 + fretPos * cellSize + cellSize / 2}
-              r={6}
+              cx={22 + idx * cellSize}
+              cy={16 + fretPos * cellSize + cellSize / 2}
+              r={8}
               fill={`hsl(${color})`}
               opacity={0.9}
             />
           );
         })}
       </svg>
-      <div className="text-[7px] font-mono mt-0.5 leading-tight text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
+      <div className="text-[9px] font-mono mt-0.5 leading-tight text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
         {voicing.degreeOrder}
       </div>
     </button>
