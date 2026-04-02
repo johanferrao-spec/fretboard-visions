@@ -320,6 +320,8 @@ const Index = () => {
               onApplyScale={(root, scale, mode) => {
                 fb.setPrimaryScale({ mode, root, scale });
                 fb.setActiveChord(null);
+                fb.setArpeggioPosition(null);
+                setActiveInversionVoicing(null);
               }}
                onSeekToChord={(beat) => handleSeek(beat)}
                onSetArpeggioPosition={fb.setArpeggioPosition}
@@ -347,14 +349,17 @@ const Index = () => {
                   if (preset === null) {
                     // Deselect: turn off focus box
                     fb.setShowFretBox(false);
+                    fb.setArpeggioPosition(null);
                     return;
                   }
                   fb.setPrimaryScale({ mode: 'scale', root: preset.root, scale: preset.scale });
                   fb.setActiveChord(null);
+                  fb.setArpeggioPosition(null);
                   fb.setShowFretBox(true);
                   fb.setFretBoxStart(preset.fretBoxStart);
                   fb.setFretBoxSize(preset.fretBoxSize);
                   fb.setDegreeColors(true);
+                  fb.setDisplayMode('degrees');
                   // Disable all degrees except root
                   const degs = ['1', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7'];
                   degs.forEach(d => {
@@ -363,6 +368,8 @@ const Index = () => {
                   });
                 }}
                 onApplyOpenChord={(frets, fingers) => {
+                  fb.setArpeggioPosition(null);
+                  fb.setShowFretBox(false);
                   fb.setIdentifyMode(true);
                   fb.setIdentifyFrets(frets);
                   const rootIdx = frets.findIndex(f => f >= 0);
