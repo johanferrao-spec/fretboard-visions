@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { noteAtFret, getIntervalName, DEGREE_COLORS, NOTE_NAMES, type NoteName } from '@/lib/music';
+import { type NoteName } from '@/lib/music';
 
 type BeginnerPage = 'menu' | 'open' | 'barre';
 
@@ -9,11 +9,11 @@ interface BeginnerModeProps {
     scale: string;
     fretBoxStart: number;
     fretBoxSize: number;
-  }) => void;
+  } | null) => void;
   onApplyOpenChord: (frets: (number | -1)[], fingers: string[]) => void;
 }
 
-// Open chord definitions: [frets, fingers, name]
+// Open chord definitions
 const OPEN_CHORDS: { name: string; frets: (number | -1)[]; fingers: string[]; color: string }[] = [
   { name: 'Em', frets: [0, 2, 2, 0, 0, 0], fingers: ['', '2', '3', '', '', ''], color: '160, 70%, 50%' },
   { name: 'E',  frets: [0, 2, 2, 1, 0, 0], fingers: ['', '2', '3', '1', '', ''], color: '200, 70%, 55%' },
@@ -24,82 +24,70 @@ const OPEN_CHORDS: { name: string; frets: (number | -1)[]; fingers: string[]; co
   { name: 'D',  frets: [-1, -1, 0, 2, 3, 2], fingers: ['', '', '', '1', '3', '2'], color: '120, 60%, 45%' },
 ];
 
-// Bar chord shapes (generic, shown as diagrams only)
+// Bar chord shapes
 const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: { fret: number; from: number; to: number }; color: string }[] = [
   {
-    name: 'Major (E shape)',
-    description: 'Root on low E string',
-    frets: [0, 2, 2, 1, 0, 0], // relative to barre
-    barre: { fret: 0, from: 0, to: 5 },
-    color: '200, 70%, 55%',
-  },
-  {
-    name: 'Minor (E shape)',
+    name: 'Minor (1st string)',
     description: 'Root on low E string',
     frets: [0, 2, 2, 0, 0, 0],
     barre: { fret: 0, from: 0, to: 5 },
     color: '350, 70%, 55%',
   },
   {
-    name: 'Major (A shape)',
-    description: 'Root on A string',
-    frets: [-1, 0, 2, 2, 2, -1],
-    barre: { fret: 0, from: 1, to: 5 },
-    color: '30, 75%, 55%',
+    name: 'Major (1st string)',
+    description: 'Root on low E string',
+    frets: [0, 2, 2, 1, 0, 0],
+    barre: { fret: 0, from: 0, to: 5 },
+    color: '200, 70%, 55%',
   },
   {
-    name: 'Minor (A shape)',
+    name: 'Minor (2nd string)',
     description: 'Root on A string',
     frets: [-1, 0, 2, 2, 1, 0],
     barre: { fret: 0, from: 1, to: 5 },
     color: '280, 65%, 55%',
   },
+  {
+    name: 'Major (2nd string)',
+    description: 'Root on A string',
+    frets: [-1, 0, 2, 2, 2, -1],
+    barre: { fret: 0, from: 1, to: 4 },
+    color: '30, 75%, 55%',
+  },
 ];
 
 const SCALE_PRESETS = [
   {
-    name: 'Minor Pentatonic',
-    emoji: '🎸',
-    desc: 'The most popular scale for rock & blues',
+    name: 'Minor pentatonic',
     root: 'A' as NoteName,
     scale: 'Pentatonic Minor',
     fretBoxStart: 5,
     fretBoxSize: 4,
-    gradient: 'from-[hsl(350,70%,45%)] to-[hsl(20,80%,50%)]',
-    bg: 'hsl(350, 70%, 45%)',
+    bg: 'hsl(20, 70%, 55%)',
   },
   {
-    name: 'Major Pentatonic',
-    emoji: '☀️',
-    desc: 'Bright & happy — great for country & pop',
+    name: 'Major pentatonic',
     root: 'C' as NoteName,
     scale: 'Pentatonic Major',
     fretBoxStart: 7,
     fretBoxSize: 4,
-    gradient: 'from-[hsl(45,80%,50%)] to-[hsl(30,85%,55%)]',
-    bg: 'hsl(45, 80%, 50%)',
+    bg: 'hsl(120, 55%, 55%)',
   },
   {
-    name: 'Minor Scale',
-    emoji: '🌙',
-    desc: 'The natural minor — dark & emotional',
+    name: 'Minor',
     root: 'A' as NoteName,
     scale: 'Natural Minor (Aeolian)',
     fretBoxStart: 4,
     fretBoxSize: 5,
-    gradient: 'from-[hsl(240,60%,50%)] to-[hsl(270,65%,55%)]',
-    bg: 'hsl(240, 60%, 50%)',
+    bg: 'hsl(0, 70%, 55%)',
   },
   {
-    name: 'Major Scale',
-    emoji: '🌟',
-    desc: 'The foundation of Western music',
+    name: 'Major',
     root: 'C' as NoteName,
     scale: 'Major (Ionian)',
     fretBoxStart: 7,
     fretBoxSize: 4,
-    gradient: 'from-[hsl(140,60%,40%)] to-[hsl(160,65%,50%)]',
-    bg: 'hsl(140, 60%, 40%)',
+    bg: 'hsl(55, 65%, 50%)',
   },
 ];
 
@@ -130,21 +118,17 @@ function OpenChordDiagram({ chord, isActive, onClick }: {
         {chord.name}
       </div>
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-        {/* Nut */}
         <line x1={leftPad} y1={topPad} x2={leftPad + 5 * cellSize} y2={topPad} stroke="hsl(var(--foreground))" strokeWidth={4} />
-        {/* Fret lines */}
         {Array.from({ length: numFrets }, (_, i) => (
           <line key={i} x1={leftPad} y1={topPad + (i + 1) * cellSize}
             x2={leftPad + 5 * cellSize} y2={topPad + (i + 1) * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={0.8} strokeOpacity={0.5} />
         ))}
-        {/* Strings */}
         {[0,1,2,3,4,5].map(s => (
           <line key={s} x1={leftPad + s * cellSize} y1={topPad}
             x2={leftPad + s * cellSize} y2={topPad + numFrets * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={s === 0 ? 1.5 : 0.8} strokeOpacity={0.6} />
         ))}
-        {/* Notes + fingers */}
         {chord.frets.map((fret, si) => {
           const x = leftPad + si * cellSize;
           if (fret === -1) {
@@ -175,70 +159,78 @@ function OpenChordDiagram({ chord, isActive, onClick }: {
 }
 
 function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
-  const cellSize = 32;
+  const cellSize = 28;
   const numFrets = 4;
   const leftPad = 12;
   const topPad = 18;
   const w = leftPad + 5 * cellSize + 12;
   const h = topPad + numFrets * cellSize + 12;
+  const markerR = 10;
 
   return (
     <div
-      className="flex flex-col items-center rounded-2xl p-3"
+      className="flex flex-col items-center rounded-2xl p-2"
       style={{
-        border: `2px solid hsl(${chord.color})`,
         backgroundColor: `hsla(${chord.color}, 0.08)`,
       }}
     >
-      <div className="text-sm font-bold mb-0.5" style={{ color: `hsl(${chord.color})` }}>{chord.name}</div>
-      <div className="text-[10px] font-mono text-muted-foreground mb-2">{chord.description}</div>
+      <div className="text-xs font-bold mb-0.5" style={{ color: `hsl(${chord.color})` }}>{chord.name}</div>
+      <div className="text-[9px] font-mono text-muted-foreground mb-1">{chord.description}</div>
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-        {/* Fret lines */}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
           <line key={i} x1={leftPad} y1={topPad + i * cellSize}
             x2={leftPad + 5 * cellSize} y2={topPad + i * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={i === 0 ? 3 : 0.8} strokeOpacity={i === 0 ? 1 : 0.5} />
         ))}
-        {/* Strings */}
         {[0,1,2,3,4,5].map(s => (
           <line key={s} x1={leftPad + s * cellSize} y1={topPad}
             x2={leftPad + s * cellSize} y2={topPad + numFrets * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={0.8} strokeOpacity={0.6} />
         ))}
-        {/* Barre */}
+        {/* Barre bar - only endpoint markers, no middle markers */}
         {(() => {
           const { from, to } = chord.barre;
           const x1 = leftPad + from * cellSize;
           const x2 = leftPad + to * cellSize;
           const y = topPad + 0.5 * cellSize;
+          const barThickness = markerR * 1.8;
           return (
             <>
               <line x1={x1} y1={y} x2={x2} y2={y}
-                stroke="hsl(var(--muted-foreground))" strokeWidth={14} strokeLinecap="round" opacity={0.35} />
-              <circle cx={x1} cy={y} r={10} fill={`hsl(${chord.color})`} opacity={0.9} />
-              <circle cx={x2} cy={y} r={10} fill={`hsl(${chord.color})`} opacity={0.9} />
+                stroke="hsl(var(--muted-foreground))" strokeWidth={barThickness} strokeLinecap="round" opacity={0.5} />
+              <circle cx={x1} cy={y} r={markerR} fill={`hsl(${chord.color})`} opacity={0.9} />
+              <circle cx={x2} cy={y} r={markerR} fill={`hsl(${chord.color})`} opacity={0.9} />
             </>
           );
         })()}
-        {/* Fretted notes above barre */}
+        {/* Fretted notes above barre - skip strings inside barre range */}
         {chord.frets.map((fret, si) => {
           if (fret === -1) {
             const x = leftPad + si * cellSize;
             return <text key={si} x={x} y={topPad - 4} fontSize={14} textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="sans-serif" fontWeight="bold">×</text>;
           }
-          if (fret <= 0) return null; // barre handles fret 0
+          if (fret <= 0) return null;
           const x = leftPad + si * cellSize;
           const y = topPad + (fret + 0.5) * cellSize;
-          return <circle key={si} cx={x} cy={y} r={10} fill={`hsl(${chord.color})`} />;
-        })}
-        {/* Muted string markers for strings not in barre range */}
-        {chord.frets.map((fret, si) => {
-          if (fret !== -1) return null;
-          return null; // already handled above
+          return <circle key={si} cx={x} cy={y} r={markerR} fill={`hsl(${chord.color})`} />;
         })}
       </svg>
     </div>
   );
+}
+
+// Hand-drawn wobble for circle paths
+function wobblyCirclePath(cx: number, cy: number, r: number, seed: number): string {
+  const points = 24;
+  const parts: string[] = [];
+  for (let i = 0; i <= points; i++) {
+    const angle = (i / points) * Math.PI * 2;
+    const wobble = 1 + Math.sin(angle * 3 + seed) * 0.03 + Math.cos(angle * 5 + seed * 2) * 0.02;
+    const x = cx + r * wobble * Math.cos(angle);
+    const y = cy + r * wobble * Math.sin(angle);
+    parts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`);
+  }
+  return parts.join(' ') + ' Z';
 }
 
 export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: BeginnerModeProps) {
@@ -247,6 +239,12 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
   const [activeOpenChord, setActiveOpenChord] = useState<string | null>(null);
 
   const handlePresetClick = (preset: typeof SCALE_PRESETS[0]) => {
+    if (activePreset === preset.name) {
+      // Deselect
+      setActivePreset(null);
+      onApplyPreset(null);
+      return;
+    }
     setActivePreset(preset.name);
     onApplyPreset({
       root: preset.root,
@@ -300,20 +298,22 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
       <div className="animate-fade-in">
         <button
           onClick={() => setPage('menu')}
-          className="text-[11px] font-mono text-muted-foreground hover:text-foreground mb-3 flex items-center gap-1 transition-colors"
+          className="text-[11px] font-mono text-muted-foreground hover:text-foreground mb-2 flex items-center gap-1 transition-colors"
         >
           ← Back to menu
         </button>
         <div className="text-sm font-bold text-foreground mb-1">🤘 Barre Chords</div>
-        <div className="text-[10px] font-mono text-muted-foreground mb-3">
+        <div className="text-[10px] font-mono text-muted-foreground mb-2">
           These shapes can be moved up and down the neck. The grey bar shows where to lay your index finger flat.
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex gap-2">
           {BAR_CHORDS.map(chord => (
-            <BarreChordDiagram key={chord.name} chord={chord} />
+            <div key={chord.name} className="flex-1 min-w-0">
+              <BarreChordDiagram chord={chord} />
+            </div>
           ))}
         </div>
-        <div className="mt-3 p-2 rounded-xl bg-muted/30 border border-border/40">
+        <div className="mt-2 p-2 rounded-xl bg-muted/30 border border-border/40">
           <div className="text-[10px] font-mono text-muted-foreground leading-relaxed">
             <strong className="text-foreground">How to use:</strong> Move the entire shape up or down the fretboard. The root note determines the chord name.
             E.g., the E-shape major at fret 3 = <strong>G major</strong>, at fret 5 = <strong>A major</strong>.
@@ -323,57 +323,98 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
     );
   }
 
-  // Menu page
+  // Bubble layout like the reference image
+  const bubbles = [
+    ...SCALE_PRESETS.map(p => ({ type: 'scale' as const, name: p.name, bg: p.bg, preset: p })),
+    { type: 'nav' as const, name: 'Open chords', bg: 'hsl(290, 55%, 60%)', target: 'open' as BeginnerPage },
+    { type: 'nav' as const, name: 'Bar chords', bg: 'hsl(270, 60%, 40%)', target: 'barre' as BeginnerPage },
+  ];
+
+  // Positions around a central circle (relative % coords within a container)
+  const positions = [
+    { x: 12, y: 8, size: 80 },   // Minor pentatonic - top left
+    { x: 42, y: 2, size: 75 },   // Major pentatonic - top center
+    { x: 78, y: 10, size: 72 },  // Minor - top right (was Major)
+    { x: 72, y: 52, size: 78 },  // Major - mid right (was Minor)
+    { x: 8, y: 55, size: 76 },   // Open chords - bottom left
+    { x: 40, y: 65, size: 68 },  // Bar chords - bottom center
+  ];
+
   return (
     <div className="animate-fade-in">
-      <div className="text-sm font-bold text-foreground mb-1">🎓 Beginner Mode</div>
-      <div className="text-[10px] font-mono text-muted-foreground mb-3">
-        Start here! Learn essential scales, chords and shapes.
-      </div>
+      <div className="relative" style={{ height: 280, width: '100%' }}>
+        {/* Central circle */}
+        <div className="absolute" style={{
+          left: '50%', top: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 120, height: 120,
+        }}>
+          <svg width="100%" height="100%" viewBox="0 0 120 120">
+            <defs>
+              <filter id="glow-center">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
+            <path
+              d={wobblyCirclePath(60, 60, 56, 42)}
+              fill="hsl(200, 40%, 30%)"
+              filter="url(#glow-center)"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center text-center">
+            <span className="text-white font-bold text-sm leading-tight" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+              Guitar<br/>basics!
+            </span>
+          </div>
+        </div>
 
-      {/* Scale presets */}
-      <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider font-bold mb-1.5">Scales</div>
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        {SCALE_PRESETS.map(preset => (
-          <button
-            key={preset.name}
-            onClick={() => handlePresetClick(preset)}
-            className="relative overflow-hidden rounded-2xl p-3 text-left transition-all duration-300 border-2"
-            style={{
-              borderColor: activePreset === preset.name ? preset.bg : 'hsla(var(--border), 0.3)',
-              backgroundColor: activePreset === preset.name ? `${preset.bg.replace(')', ', 0.15)')}` : 'hsla(var(--secondary), 0.5)',
-              boxShadow: activePreset === preset.name ? `0 0 20px ${preset.bg.replace(')', ', 0.3)')}` : 'none',
-            }}
-          >
-            <div className="text-2xl mb-1">{preset.emoji}</div>
-            <div className="text-xs font-bold text-foreground">{preset.name}</div>
-            <div className="text-[9px] font-mono text-muted-foreground mt-0.5 leading-tight">{preset.desc}</div>
-            {activePreset === preset.name && (
-              <div className="absolute top-2 right-2 w-3 h-3 rounded-full" style={{ backgroundColor: preset.bg }} />
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Chord sections */}
-      <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider font-bold mb-1.5">Chords</div>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={() => setPage('open')}
-          className="rounded-2xl p-3 text-left transition-all duration-300 border-2 border-border/30 hover:border-primary/50 bg-secondary/50 hover:bg-secondary/70"
-        >
-          <div className="text-2xl mb-1">🎶</div>
-          <div className="text-xs font-bold text-foreground">Open Chords</div>
-          <div className="text-[9px] font-mono text-muted-foreground mt-0.5 leading-tight">Em, E, G, Am, A, C, D — with finger guides</div>
-        </button>
-        <button
-          onClick={() => setPage('barre')}
-          className="rounded-2xl p-3 text-left transition-all duration-300 border-2 border-border/30 hover:border-primary/50 bg-secondary/50 hover:bg-secondary/70"
-        >
-          <div className="text-2xl mb-1">🤘</div>
-          <div className="text-xs font-bold text-foreground">Barre Chords</div>
-          <div className="text-[9px] font-mono text-muted-foreground mt-0.5 leading-tight">Major & minor shapes from E and A strings</div>
-        </button>
+        {/* Orbiting bubbles */}
+        {bubbles.map((bubble, i) => {
+          const pos = positions[i];
+          const isActive = bubble.type === 'scale' && activePreset === bubble.name;
+          const filterId = `glow-${i}`;
+          return (
+            <button
+              key={bubble.name}
+              onClick={() => {
+                if (bubble.type === 'scale') {
+                  handlePresetClick(bubble.preset!);
+                } else {
+                  setPage(bubble.target!);
+                }
+              }}
+              className="absolute transition-all duration-300 hover:scale-110"
+              style={{
+                left: `${pos.x}%`,
+                top: `${pos.y}%`,
+                width: pos.size,
+                height: pos.size,
+                transform: isActive ? 'scale(1.1)' : 'scale(1)',
+              }}
+            >
+              <svg width="100%" height="100%" viewBox={`0 0 ${pos.size} ${pos.size}`}>
+                <defs>
+                  <filter id={filterId}>
+                    <feGaussianBlur stdDeviation={isActive ? '6' : '3'} result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                </defs>
+                <path
+                  d={wobblyCirclePath(pos.size / 2, pos.size / 2, pos.size / 2 - 4, i * 7 + 3)}
+                  fill={bubble.bg}
+                  filter={`url(#${filterId})`}
+                  opacity={isActive ? 1 : 0.85}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center text-center px-2">
+                <span className="text-white font-bold text-xs leading-tight" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
+                  {bubble.name}
+                </span>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
