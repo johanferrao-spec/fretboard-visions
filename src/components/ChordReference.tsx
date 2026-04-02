@@ -402,22 +402,22 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   const startFret = Math.max(1, minFret - 1);
   const endFret = Math.max(startFret + 3, maxFret + 1);
   const numFrets = endFret - startFret + 1;
-  const cellSize = 16;
-  const w = 4 * cellSize + 24;
-  const h = numFrets * cellSize + 36;
+  const cellSize = 22;
+  const w = 4 * cellSize + 30;
+  const h = numFrets * cellSize + 40;
 
   return (
     <button
       onClick={onClick}
       className="flex flex-col items-center transition-all rounded-lg"
       style={{
-        border: isActive ? `2px solid hsl(${color})` : '2px solid hsla(var(--border), 0.3)',
+        border: isActive ? `3px solid hsl(${color})` : '2px solid hsla(var(--border), 0.3)',
         backgroundColor: isActive ? `hsla(${color}, 0.15)` : 'hsla(var(--secondary), 0.5)',
-        padding: 3,
+        padding: 4,
         aspectRatio: '1',
-        width: 72,
-        minWidth: 72,
-        minHeight: 72,
+        width: 110,
+        minWidth: 110,
+        minHeight: 110,
       }}
     >
       <div className="text-[9px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
