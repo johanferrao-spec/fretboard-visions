@@ -593,10 +593,10 @@ function ScaleViewPanel({
       {scaleViewMode === 'inversion' && (
         <div>
           {degreeFilter !== null && inversions.length > 0 && (
-            <div className="flex gap-1 items-start">
-              {/* Voicing diagrams - 5 across, compact */}
+            <div className="flex gap-0.5 items-stretch">
+              {/* Voicing diagrams - 5 across, tight */}
               <div
-                className="flex gap-1 flex-1 min-w-0"
+                className="flex gap-0.5 shrink-0"
                 style={{
                   backgroundColor: activeColor ? `hsla(${activeColor}, 0.08)` : 'hsla(var(--secondary), 0.3)',
                   border: activeColor ? `1px solid hsla(${activeColor}, 0.3)` : undefined,
@@ -616,35 +616,39 @@ function ScaleViewPanel({
                 ))}
               </div>
 
-              {/* Active inversion info - to the right */}
+              {/* Active inversion info - fills remaining space */}
               {inversions[Math.min(currentInvIdx, inversions.length - 1)] && (() => {
                 const activeInv = inversions[Math.min(currentInvIdx, inversions.length - 1)];
                 return (
                   <div
-                    className="rounded-xl p-2 shrink-0 w-36 transition-all"
+                    className="rounded-xl p-3 flex-1 min-w-0 transition-all flex flex-col justify-between"
                     style={{
                       backgroundColor: activeColor ? `hsla(${activeColor}, 0.12)` : 'hsla(var(--secondary), 0.3)',
                       border: activeColor ? `2px solid hsla(${activeColor}, 0.4)` : undefined,
                     }}
                   >
-                    <div className="text-[10px] font-bold" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
-                      {activeInv.slashName}
-                      {activeInv.alternateName && <span className="ml-1 opacity-70 font-normal text-[8px]">{activeInv.alternateName}</span>}
+                    <div>
+                      <div className="text-[16px] font-bold leading-tight" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
+                        {activeInv.slashName}
+                        {activeInv.alternateName && <span className="ml-2 opacity-70 font-normal text-[12px]">{activeInv.alternateName}</span>}
+                      </div>
+                      <div className="text-[12px] font-mono text-muted-foreground mt-1">
+                        {activeInv.inversionLabel}
+                      </div>
+                      <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                        {activeInv.bottomDegree}
+                      </div>
+                      <div className="text-[11px] font-mono text-muted-foreground">
+                        {activeInv.topDegree}
+                      </div>
                     </div>
-                    <div className="text-[8px] font-mono text-muted-foreground mt-0.5">
-                      {activeInv.inversionLabel}
-                    </div>
-                    <div className="text-[8px] font-mono text-muted-foreground">
-                      {activeInv.bottomDegree}
-                    </div>
-                    <div className="text-[8px] font-mono text-muted-foreground">
-                      {activeInv.topDegree}
-                    </div>
-                    <div className="text-[8px] font-mono mt-0.5 opacity-60">
-                      {activeInv.degreeOrder}
-                    </div>
-                    <div className="text-[9px] font-mono font-bold mt-1" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
-                      {activeInv.tab}
+                    <div>
+                      <div className="text-[11px] font-mono mt-1 opacity-60">
+                        {activeInv.degreeOrder}
+                      </div>
+                      <div className="text-[14px] font-mono font-bold mt-1" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
+                        {activeInv.tab}
+                      </div>
                     </div>
                   </div>
                 );
