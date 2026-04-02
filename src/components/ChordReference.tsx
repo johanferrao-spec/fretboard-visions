@@ -520,16 +520,8 @@ function ScaleViewPanel({
     setCurrentInvIdx(0);
   }, [inversions]);
 
-  useEffect(() => {
-    if (scaleViewMode === 'inversion' && inversions.length > 0) {
-      const idx = Math.min(currentInvIdx, inversions.length - 1);
-      onSetInversionVoicing?.(inversions[idx]);
-    } else {
-      onSetInversionVoicing?.(null);
-    }
-  }, [scaleViewMode, inversions, currentInvIdx, onSetInversionVoicing]);
 
-  const activeColor = degreeFilter !== null ? SCALE_DEGREE_COLORS[degreeFilter] : null;
+
 
   // Octave shift for inversions
   const [octaveShift, setOctaveShift] = useState(0);
