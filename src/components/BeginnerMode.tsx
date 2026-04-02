@@ -13,46 +13,48 @@ interface BeginnerModeProps {
   onApplyOpenChord: (frets: (number | -1)[], fingers: string[]) => void;
 }
 
+const BEGINNER_FONT = 'Fredoka, "Comic Sans MS", "Chalkboard SE", cursive';
+
 // Open chord definitions
-const OPEN_CHORDS: { name: string; frets: (number | -1)[]; fingers: string[]; color: string }[] = [
-  { name: 'Em', frets: [0, 2, 2, 0, 0, 0], fingers: ['', '2', '3', '', '', ''], color: '160, 70%, 50%' },
-  { name: 'E',  frets: [0, 2, 2, 1, 0, 0], fingers: ['', '2', '3', '1', '', ''], color: '200, 70%, 55%' },
-  { name: 'G',  frets: [3, 2, 0, 0, 0, 3], fingers: ['2', '1', '', '', '', '3'], color: '280, 65%, 55%' },
-  { name: 'Am', frets: [-1, 0, 2, 2, 1, 0], fingers: ['', '', '2', '3', '1', ''], color: '350, 70%, 55%' },
-  { name: 'A',  frets: [-1, 0, 2, 2, 2, 0], fingers: ['', '', '1', '2', '3', ''], color: '30, 75%, 55%' },
-  { name: 'C',  frets: [-1, 3, 2, 0, 1, 0], fingers: ['', '3', '2', '', '1', ''], color: '50, 75%, 50%' },
-  { name: 'D',  frets: [-1, -1, 0, 2, 3, 2], fingers: ['', '', '', '1', '3', '2'], color: '120, 60%, 45%' },
+const OPEN_CHORDS: { name: string; frets: (number | -1)[]; fingers: string[]; colorVar: string }[] = [
+  { name: 'Em', frets: [0, 2, 2, 0, 0, 0], fingers: ['', '2', '3', '', '', ''], colorVar: '--beginner-green' },
+  { name: 'E',  frets: [0, 2, 2, 1, 0, 0], fingers: ['', '2', '3', '1', '', ''], colorVar: '--beginner-blue' },
+  { name: 'G',  frets: [3, 2, 0, 0, 0, 3], fingers: ['2', '1', '', '', '', '3'], colorVar: '--beginner-purple' },
+  { name: 'Am', frets: [-1, 0, 2, 2, 1, 0], fingers: ['', '', '2', '3', '1', ''], colorVar: '--beginner-red' },
+  { name: 'A',  frets: [-1, 0, 2, 2, 2, 0], fingers: ['', '', '1', '2', '3', ''], colorVar: '--beginner-orange' },
+  { name: 'C',  frets: [-1, 3, 2, 0, 1, 0], fingers: ['', '3', '2', '', '1', ''], colorVar: '--beginner-pink' },
+  { name: 'D',  frets: [-1, -1, 0, 2, 3, 2], fingers: ['', '', '', '1', '3', '2'], colorVar: '--beginner-yellow' },
 ];
 
 // Bar chord shapes
-const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: { fret: number; from: number; to: number }; color: string }[] = [
+const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: { fret: number; from: number; to: number }; colorVar: string }[] = [
   {
     name: 'Minor (1st string)',
     description: 'Root on low E string',
     frets: [0, 2, 2, 0, 0, 0],
     barre: { fret: 0, from: 0, to: 5 },
-    color: '350, 70%, 55%',
+    colorVar: '--beginner-purple',
   },
   {
     name: 'Major (1st string)',
     description: 'Root on low E string',
     frets: [0, 2, 2, 1, 0, 0],
     barre: { fret: 0, from: 0, to: 5 },
-    color: '200, 70%, 55%',
+    colorVar: '--beginner-blue',
   },
   {
     name: 'Minor (2nd string)',
     description: 'Root on A string',
     frets: [-1, 0, 2, 2, 1, 0],
     barre: { fret: 0, from: 1, to: 5 },
-    color: '280, 65%, 55%',
+    colorVar: '--beginner-red',
   },
   {
     name: 'Major (2nd string)',
     description: 'Root on A string',
     frets: [-1, 0, 2, 2, 2, -1],
     barre: { fret: 0, from: 1, to: 4 },
-    color: '30, 75%, 55%',
+    colorVar: '--beginner-yellow',
   },
 ];
 
@@ -63,8 +65,7 @@ const SCALE_PRESETS = [
     scale: 'Pentatonic Minor',
     fretBoxStart: 5,
     fretBoxSize: 4,
-    bg: 'hsl(20, 70%, 55%)',
-    emoji: '🔥',
+    bubbleVar: '--beginner-orange',
   },
   {
     name: 'Major\npentatonic',
@@ -72,8 +73,7 @@ const SCALE_PRESETS = [
     scale: 'Pentatonic Major',
     fretBoxStart: 7,
     fretBoxSize: 4,
-    bg: 'hsl(120, 55%, 55%)',
-    emoji: '🌿',
+    bubbleVar: '--beginner-green',
   },
   {
     name: 'Minor\nscale',
@@ -81,8 +81,7 @@ const SCALE_PRESETS = [
     scale: 'Natural Minor (Aeolian)',
     fretBoxStart: 4,
     fretBoxSize: 5,
-    bg: 'hsl(0, 70%, 55%)',
-    emoji: '🌙',
+    bubbleVar: '--beginner-red',
   },
   {
     name: 'Major\nscale',
@@ -90,8 +89,7 @@ const SCALE_PRESETS = [
     scale: 'Major (Ionian)',
     fretBoxStart: 7,
     fretBoxSize: 4,
-    bg: 'hsl(55, 65%, 50%)',
-    emoji: '☀️',
+    bubbleVar: '--beginner-yellow',
   },
 ];
 
@@ -112,13 +110,13 @@ function OpenChordDiagram({ chord, isActive, onClick }: {
       onClick={onClick}
       className="flex flex-col items-center transition-all duration-300 rounded-2xl"
       style={{
-        border: isActive ? `3px solid hsl(${chord.color})` : '2px solid hsla(var(--border), 0.3)',
-        backgroundColor: isActive ? `hsla(${chord.color}, 0.12)` : 'hsla(var(--secondary), 0.5)',
+        border: isActive ? `3px solid hsl(var(${chord.colorVar}))` : '2px solid hsl(var(--border) / 0.3)',
+        backgroundColor: isActive ? `hsl(var(${chord.colorVar}) / 0.12)` : 'hsl(var(--secondary) / 0.5)',
         padding: 8,
-        boxShadow: isActive ? `0 0 20px hsla(${chord.color}, 0.3)` : 'none',
+        boxShadow: isActive ? `0 0 20px hsl(var(${chord.colorVar}) / 0.3)` : 'none',
       }}
     >
-      <div className="text-base font-bold mb-1" style={{ color: `hsl(${chord.color})`, fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>
+      <div className="text-base font-bold mb-1" style={{ color: `hsl(var(${chord.colorVar}))`, fontFamily: BEGINNER_FONT }}>
         {chord.name}
       </div>
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
@@ -148,9 +146,9 @@ function OpenChordDiagram({ chord, isActive, onClick }: {
           const y = topPad + (fret - 0.5) * cellSize;
           return (
             <g key={si}>
-              <circle cx={x} cy={y} r={11} fill={`hsl(${chord.color})`} />
+              <circle cx={x} cy={y} r={11} fill={`hsl(var(${chord.colorVar}))`} />
               {chord.fingers[si] && (
-                <text x={x} y={y + 4.5} fontSize={13} textAnchor="middle" fill="white" fontFamily="sans-serif" fontWeight="bold">
+                <text x={x} y={y + 4.5} fontSize={13} textAnchor="middle" fill="hsl(var(--beginner-bubble-foreground))" fontFamily="sans-serif" fontWeight="bold">
                   {chord.fingers[si]}
                 </text>
               )}
@@ -175,10 +173,10 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
     <div
       className="flex flex-col items-center rounded-2xl p-2"
       style={{
-        backgroundColor: `hsla(${chord.color}, 0.08)`,
+        backgroundColor: `hsl(var(${chord.colorVar}) / 0.08)`,
       }}
     >
-      <div className="text-xs font-bold mb-0.5" style={{ color: `hsl(${chord.color})`, fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>{chord.name}</div>
+      <div className="text-xs font-bold mb-0.5" style={{ color: `hsl(var(${chord.colorVar}))`, fontFamily: BEGINNER_FONT }}>{chord.name}</div>
       <div className="text-[9px] font-mono text-muted-foreground mb-1">{chord.description}</div>
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
         {Array.from({ length: numFrets + 1 }, (_, i) => (
@@ -202,8 +200,8 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
             <>
               <line x1={x1} y1={y} x2={x2} y2={y}
                 stroke="hsl(var(--muted-foreground))" strokeWidth={barThickness} strokeLinecap="round" opacity={0.5} />
-              <circle cx={x1} cy={y} r={markerR} fill={`hsl(${chord.color})`} opacity={0.9} />
-              <circle cx={x2} cy={y} r={markerR} fill={`hsl(${chord.color})`} opacity={0.9} />
+                <circle cx={x1} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} opacity={0.9} />
+                <circle cx={x2} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} opacity={0.9} />
             </>
           );
         })()}
@@ -216,7 +214,7 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
           if (fret <= 0) return null;
           const x = leftPad + si * cellSize;
           const y = topPad + (fret + 0.5) * cellSize;
-          return <circle key={si} cx={x} cy={y} r={markerR} fill={`hsl(${chord.color})`} />;
+          return <circle key={si} cx={x} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} />;
         })}
       </svg>
     </div>
@@ -244,6 +242,8 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
   };
 
   const handleOpenChordClick = (chord: typeof OPEN_CHORDS[0]) => {
+    setActivePreset(null);
+    onApplyPreset(null);
     setActiveOpenChord(activeOpenChord === chord.name ? null : chord.name);
     onApplyOpenChord(chord.frets, chord.fingers);
   };
@@ -257,11 +257,11 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
         >
           ← Back to menu
         </button>
-        <div className="text-sm font-bold text-foreground mb-1" style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>🎶 Open Chords</div>
+        <div className="text-sm font-bold text-foreground mb-1" style={{ fontFamily: BEGINNER_FONT }}>🎶 Open Chords</div>
         <div className="text-[10px] font-mono text-muted-foreground mb-3">
           Click a chord to see it on the fretboard. Numbers show which fingers to use.
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-7 gap-2">
           {OPEN_CHORDS.map(chord => (
             <OpenChordDiagram
               key={chord.name}
@@ -291,7 +291,7 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
         >
           ← Back to menu
         </button>
-        <div className="text-sm font-bold text-foreground mb-1" style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>🤘 Barre Chords</div>
+        <div className="text-sm font-bold text-foreground mb-1" style={{ fontFamily: BEGINNER_FONT }}>🤘 Barre Chords</div>
         <div className="text-[10px] font-mono text-muted-foreground mb-2">
           These shapes can be moved up and down the neck. The grey bar shows where to lay your index finger flat.
         </div>
@@ -312,120 +312,86 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
     );
   }
 
-  // Menu page — symmetrical grid of big colorful bubbles
+  const bubbleStyle = (colorVar: string, active = false, wide = false) => ({
+    minHeight: wide ? 110 : 92,
+    borderRadius: 999,
+    backgroundColor: `hsl(var(${colorVar}))`,
+    color: 'hsl(var(--beginner-bubble-foreground))',
+    boxShadow: active
+      ? `0 0 0 4px hsl(var(--card)), 0 0 22px hsl(var(${colorVar}) / 0.45)`
+      : `0 0 12px hsl(var(${colorVar}) / 0.25)`,
+    transform: active ? 'translateY(-2px) scale(1.02)' : undefined,
+  });
+
+  // Menu page — symmetrical bubble layout like the reference
   return (
     <div className="animate-fade-in">
-      <div className="text-center mb-2">
-        <div className="text-base font-bold text-foreground" style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive' }}>
-          🎸 Guitar Basics!
-        </div>
-        <div className="text-[9px] text-muted-foreground font-mono">Pick something to learn</div>
+      <div className="text-center mb-3">
+        <div className="text-[9px] font-mono uppercase tracking-[0.3em] text-muted-foreground">Beginner mode</div>
       </div>
 
-      {/* Symmetrical 3x2 grid of bubbles - constrained to fit without scrolling */}
-      <div className="grid grid-cols-3 gap-2 px-4" style={{ maxWidth: 420, margin: '0 auto' }}>
-        {SCALE_PRESETS.map((preset, i) => {
-          const isActive = activePreset === preset.name;
-          return (
-            <button
-              key={preset.name}
-              onClick={() => handlePresetClick(preset)}
-              className="transition-all duration-300 hover:scale-105 active:scale-95"
-              style={{
-                aspectRatio: '1',
-                borderRadius: '50%',
-                backgroundColor: isActive ? preset.bg : preset.bg,
-                opacity: isActive ? 1 : 0.8,
-                boxShadow: isActive
-                  ? `0 0 24px ${preset.bg}, 0 0 48px ${preset.bg}40`
-                  : `0 0 12px ${preset.bg}30`,
-                border: isActive ? '3px solid rgba(255,255,255,0.4)' : '2px solid rgba(255,255,255,0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 12,
-                transform: isActive ? 'scale(1.08)' : undefined,
-              }}
-            >
-              <span className="text-xl mb-1">{preset.emoji}</span>
-              <span
-                className="text-white font-bold text-center leading-tight"
-                style={{
-                  fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive',
-                  fontSize: 13,
-                  textShadow: '0 2px 6px rgba(0,0,0,0.4)',
-                  whiteSpace: 'pre-line',
-                }}
-              >
-                {preset.name}
-              </span>
-            </button>
-          );
-        })}
-
-        {/* Open chords bubble */}
+      <div className="mx-auto grid max-w-[960px] grid-cols-[1fr_1.25fr_1fr] items-center gap-x-8 gap-y-5 px-8">
         <button
-          onClick={() => setPage('open')}
-          className="transition-all duration-300 hover:scale-105 active:scale-95"
-          style={{
-            aspectRatio: '1',
-            borderRadius: '50%',
-            backgroundColor: 'hsl(290, 55%, 60%)',
-            opacity: 0.85,
-            boxShadow: '0 0 12px hsla(290, 55%, 60%, 0.3)',
-            border: '2px solid rgba(255,255,255,0.1)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 12,
-          }}
+          onClick={() => handlePresetClick(SCALE_PRESETS[0])}
+          className="px-6 py-5 text-center transition-transform duration-200 hover:scale-[1.02]"
+          style={bubbleStyle(SCALE_PRESETS[0].bubbleVar, activePreset === SCALE_PRESETS[0].name, true)}
         >
-          <span className="text-xl mb-1">🎶</span>
-          <span
-            className="text-white font-bold text-center leading-tight"
-            style={{
-              fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive',
-              fontSize: 13,
-              textShadow: '0 2px 6px rgba(0,0,0,0.4)',
-              whiteSpace: 'pre-line',
-            }}
-          >
-            {'Open\nchords'}
-          </span>
+          <span className="block text-[2rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT, whiteSpace: 'pre-line' }}>{SCALE_PRESETS[0].name}</span>
+        </button>
+        <div />
+        <button
+          onClick={() => handlePresetClick(SCALE_PRESETS[1])}
+          className="px-6 py-5 text-center transition-transform duration-200 hover:scale-[1.02]"
+          style={bubbleStyle(SCALE_PRESETS[1].bubbleVar, activePreset === SCALE_PRESETS[1].name, true)}
+        >
+          <span className="block text-[2rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT, whiteSpace: 'pre-line' }}>{SCALE_PRESETS[1].name}</span>
         </button>
 
-        {/* Barre chords bubble */}
         <button
-          onClick={() => setPage('barre')}
-          className="transition-all duration-300 hover:scale-105 active:scale-95"
-          style={{
-            aspectRatio: '1',
-            borderRadius: '50%',
-            backgroundColor: 'hsl(270, 60%, 40%)',
-            opacity: 0.85,
-            boxShadow: '0 0 12px hsla(270, 60%, 40%, 0.3)',
-            border: '2px solid rgba(255,255,255,0.1)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 12,
+          onClick={() => {
+            setActivePreset(null);
+            onApplyPreset(null);
+            setPage('barre');
           }}
+          className="px-6 py-5 text-center transition-transform duration-200 hover:scale-[1.02]"
+          style={bubbleStyle('--beginner-purple', false, true)}
         >
-          <span className="text-xl mb-1">🤘</span>
-          <span
-            className="text-white font-bold text-center leading-tight"
-            style={{
-              fontFamily: '"Comic Sans MS", "Chalkboard SE", cursive',
-              fontSize: 13,
-              textShadow: '0 2px 6px rgba(0,0,0,0.4)',
-              whiteSpace: 'pre-line',
-            }}
-          >
-            {'Barre\nchords'}
-          </span>
+          <span className="block text-[1.95rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT }}>Bar chords</span>
+        </button>
+
+        <div
+          className="flex items-center justify-center px-8 py-7 text-center"
+          style={bubbleStyle('--beginner-blue', false, true)}
+        >
+          <span className="block text-[2.25rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT }}>Guitar basics!</span>
+        </div>
+
+        <button
+          onClick={() => handlePresetClick(SCALE_PRESETS[2])}
+          className="px-6 py-5 text-center transition-transform duration-200 hover:scale-[1.02]"
+          style={bubbleStyle(SCALE_PRESETS[2].bubbleVar, activePreset === SCALE_PRESETS[2].name, true)}
+        >
+          <span className="block text-[2rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT, whiteSpace: 'pre-line' }}>{SCALE_PRESETS[2].name}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActivePreset(null);
+            onApplyPreset(null);
+            setPage('open');
+          }}
+          className="px-6 py-5 text-center transition-transform duration-200 hover:scale-[1.02]"
+          style={bubbleStyle('--beginner-pink', false, true)}
+        >
+          <span className="block text-[1.95rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT }}>Open chords</span>
+        </button>
+        <div />
+        <button
+          onClick={() => handlePresetClick(SCALE_PRESETS[3])}
+          className="px-6 py-5 text-center transition-transform duration-200 hover:scale-[1.02]"
+          style={bubbleStyle(SCALE_PRESETS[3].bubbleVar, activePreset === SCALE_PRESETS[3].name, true)}
+        >
+          <span className="block text-[2rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT, whiteSpace: 'pre-line' }}>{SCALE_PRESETS[3].name}</span>
         </button>
       </div>
     </div>

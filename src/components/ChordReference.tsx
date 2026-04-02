@@ -204,6 +204,7 @@ export default function ChordReference({
   const pagedVoicings = currentVoicings.slice(voicingPage * VOICINGS_PER_PAGE, (voicingPage + 1) * VOICINGS_PER_PAGE);
 
   const handleSelectChord = (chordType: string) => {
+    onSetArpeggioPosition?.(null);
     if (selectedChord === chordType) {
       setSelectedChord(null);
       setActiveChord(null);
@@ -227,6 +228,7 @@ export default function ChordReference({
   const handleVoicingTabChange = (tab: VoicingTab) => {
     setVoicingTab(tab);
     setVoicingPage(0);
+    onSetArpeggioPosition?.(null);
     if (selectedChord) {
       const voicings = getVoicingsForChord(selectedRoot, selectedChord, tab);
       if (voicings.length > 0) {
@@ -245,6 +247,7 @@ export default function ChordReference({
 
   const handleTabSwitch = (tab: MainTab) => {
     setActiveTab(tab);
+    if (tab !== 'beginner') onApplyBeginnerPreset?.(null);
     if (tab === 'caged') setShowCAGED(true);
     if (tab === 'identify') {
       setIdentifyMode(true);
@@ -372,7 +375,7 @@ export default function ChordReference({
       ) : activeTab === 'chords' ? (
         <ChordLibraryPanel
           selectedRoot={selectedRoot}
-          setSelectedRoot={(n) => { setSelectedRoot(n); setVoicingPage(0); if (selectedChord) { const voicings = getVoicingsForChord(n, selectedChord, voicingTab); if (voicings.length > 0) { setActiveChord({ root: n, chordType: selectedChord, voicingIndex: 0, voicingSource: voicingTab }); } else { setActiveChord(null); } } }}
+          setSelectedRoot={(n) => { setSelectedRoot(n); setVoicingPage(0); onSetArpeggioPosition?.(null); if (selectedChord) { const voicings = getVoicingsForChord(n, selectedChord, voicingTab); if (voicings.length > 0) { setActiveChord({ root: n, chordType: selectedChord, voicingIndex: 0, voicingSource: voicingTab }); } else { setActiveChord(null); } } }}
           selectedChord={selectedChord}
           handleSelectChord={handleSelectChord}
           voicingTab={voicingTab}
@@ -1022,12 +1025,12 @@ function ChordLibraryPanel({
 
       {/* Main layout */}
       <div className="flex gap-1.5">
-        <div className="flex gap-px shrink-0" style={{ width: '48%' }}>
+        <div className="flex gap-px shrink-0" style={{ width: '44%' }}>
           {CHORD_COLUMNS.map((col, ci) => {
             const isSus = col.label === 'Sus';
             const [col1, col2] = isSus ? [col.types, []] : splitIntoColumns(col.types);
             return (
-              <div key={col.label} className={`flex-1 min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5`}>
+              <div key={col.label} className={`min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5`} style={{ flex: isSus ? 0.5 : 1 }}>
                 <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">{col.label}</div>
                 <div className={`flex gap-px ${isSus ? 'justify-center' : ''}`}>
                   {[col1, ...(col2.length > 0 ? [col2] : [])].map((types, sci) => (
@@ -1064,21 +1067,21 @@ function ChordLibraryPanel({
         <div className="w-14 shrink-0">
           <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">Type</div>
           <div className="space-y-0.5">
-            {(['full', 'shell', 'drop2', 'drop3', 'triads'] as VoicingTab[]).map(tab => (
+            {(['full', 'shell', 'drop2', 'drop3'] as VoicingTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => handleVoicingTabChange(tab)}
                 className={`w-full px-1 py-0.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-colors leading-tight ${
                   voicingTab === tab ? 'bg-accent text-accent-foreground font-bold border-accent' : 'text-muted-foreground border-border/40 hover:bg-muted/30'
                 }`}
-              >{tab === 'drop2' ? 'Drop 2' : tab === 'drop3' ? 'Drop 3' : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
+              >{tab === 'full' ? 'Standard' : tab === 'drop2' ? 'Drop 2' : tab === 'drop3' ? 'Drop 3' : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
             ))}
           </div>
           <div className="text-[7px] font-mono text-muted-foreground mt-1.5 text-center leading-tight">
+            {voicingTab === 'full' && 'Curated shapes'}
             {voicingTab === 'shell' && 'R, 3, 7'}
             {voicingTab === 'drop2' && '2nd voice ↓8va'}
             {voicingTab === 'drop3' && '3rd voice ↓8va'}
-            {voicingTab === 'triads' && '3 adjacent strings'}
           </div>
         </div>
 
@@ -2063,12 +2066,12 @@ function ArpeggioPositionsPanel({
       {/* Main layout */}
       <div className="flex gap-1.5">
         {/* Arpeggio columns */}
-        <div className="flex gap-px shrink-0" style={{ width: '44%' }}>
+        <div className="flex gap-px shrink-0" style={{ width: '40%' }}>
           {ARPEGGIO_COLUMNS.map((col, ci) => {
             const isSus = col.label === 'Sus';
             const [col1, col2] = isSus ? [col.types, []] : splitIntoColumns(col.types);
             return (
-              <div key={col.label} className={`flex-1 min-w-0 ${ci < ARPEGGIO_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5`}>
+              <div key={col.label} className={`min-w-0 ${ci < ARPEGGIO_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5`} style={{ flex: isSus ? 0.5 : 1 }}>
                 <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">{col.label}</div>
                 <div className={`flex gap-px ${isSus ? 'justify-center' : ''}`}>
                   {[col1, ...(col2.length > 0 ? [col2] : [])].map((types, sci) => (

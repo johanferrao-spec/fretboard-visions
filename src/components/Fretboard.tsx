@@ -882,24 +882,27 @@ export default function Fretboard({
               const barreWidth = widths[bf] || 0;
               const centerX = barreLeft + barreWidth * 0.5;
               const totalH = 6 * stringH;
-              const y1 = (topRow * stringH + stringH * 0.5) / totalH * 100;
-              const y2 = (bottomRow * stringH + stringH * 0.5) / totalH * 100;
-              const barThick = noteMarkerSize * 0.9;
+              const y1 = topRow * stringH + stringH * 0.5;
+              const y2 = bottomRow * stringH + stringH * 0.5;
+              const barThick = noteMarkerSize * 0.86;
+              const markerRadius = noteMarkerSize / 2;
+              const rectY = y1 + markerRadius - barThick / 2;
+              const rectHeight = Math.max(barThick, (y2 - y1) - markerRadius * 2 + barThick);
               return (
                 <svg
-                  className="absolute inset-0 pointer-events-none z-[15]"
+                  className="absolute inset-0 pointer-events-none z-[2]"
                   style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
                   viewBox={`0 0 100 ${totalH}`}
                   preserveAspectRatio="none"
                 >
-                  <line
-                    x1={centerX} y1={y1 * totalH / 100}
-                    x2={centerX} y2={y2 * totalH / 100}
-                    stroke="hsl(var(--foreground))"
-                    strokeWidth={barThick}
-                    strokeLinecap="round"
-                    opacity={0.5}
-                    vectorEffect="non-scaling-stroke"
+                  <rect
+                    x={centerX - barThick / 2}
+                    y={rectY}
+                    width={barThick}
+                    height={rectHeight}
+                    rx={barThick / 2}
+                    fill="hsl(var(--muted-foreground))"
+                    opacity={0.62}
                   />
                 </svg>
               );
@@ -918,24 +921,27 @@ export default function Fretboard({
               const barreWidth = widths[bf] || 0;
               const centerX = barreLeft + barreWidth * 0.5;
               const totalH = 6 * stringH;
-              const y1 = (topRow * stringH + stringH * 0.5) / totalH * 100;
-              const y2 = (bottomRow * stringH + stringH * 0.5) / totalH * 100;
-              const barThick = noteMarkerSize * 0.9;
+              const y1 = topRow * stringH + stringH * 0.5;
+              const y2 = bottomRow * stringH + stringH * 0.5;
+              const barThick = noteMarkerSize * 0.86;
+              const markerRadius = noteMarkerSize / 2;
+              const rectY = y1 + markerRadius - barThick / 2;
+              const rectHeight = Math.max(barThick, (y2 - y1) - markerRadius * 2 + barThick);
               return (
                 <svg
-                  className="absolute inset-0 pointer-events-none z-[15]"
+                  className="absolute inset-0 pointer-events-none z-[2]"
                   style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
                   viewBox={`0 0 100 ${totalH}`}
                   preserveAspectRatio="none"
                 >
-                  <line
-                    x1={centerX} y1={y1 * totalH / 100}
-                    x2={centerX} y2={y2 * totalH / 100}
-                    stroke="hsl(var(--foreground))"
-                    strokeWidth={barThick}
-                    strokeLinecap="round"
-                    opacity={0.5}
-                    vectorEffect="non-scaling-stroke"
+                  <rect
+                    x={centerX - barThick / 2}
+                    y={rectY}
+                    width={barThick}
+                    height={rectHeight}
+                    rx={barThick / 2}
+                    fill="hsl(var(--muted-foreground))"
+                    opacity={0.62}
                   />
                 </svg>
               );
@@ -1102,6 +1108,21 @@ export default function Fretboard({
                       return (
                         <div key={fret} className="flex items-center justify-center relative" style={{ width: `${widths[fret]}%`, height: stringH }}>
                           <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-fretboard-nut" />
+                          <div
+                            className={`absolute z-10 rounded-full flex items-center justify-center font-mono font-bold shadow-md ${isVertical ? '-rotate-90' : ''}`}
+                            style={{
+                              width: noteMarkerSize,
+                              height: noteMarkerSize,
+                              right: -noteMarkerSize * 0.35,
+                              backgroundColor: style.greyed ? 'hsl(var(--muted))' : style.backgroundColor,
+                              opacity: style.opacity,
+                              color: 'hsl(var(--primary-foreground))',
+                              fontSize: Math.max(6, noteMarkerSize * 0.35),
+                              ...(style.ring ? { boxShadow: `0 0 0 2px ${style.ringColor}` } : {}),
+                            }}
+                          >
+                            {label}
+                          </div>
                         </div>
                       );
                     }

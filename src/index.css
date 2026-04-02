@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -66,6 +66,15 @@
     --note-a: 270 80% 60%;
     --note-as: 310 80% 55%;
     --note-b: 340 85% 58%;
+
+    --beginner-orange: 24 92% 58%;
+    --beginner-green: 100 72% 67%;
+    --beginner-purple: 273 58% 47%;
+    --beginner-blue: 199 66% 37%;
+    --beginner-red: 2 96% 50%;
+    --beginner-pink: 305 55% 61%;
+    --beginner-yellow: 60 95% 45%;
+    --beginner-bubble-foreground: 0 0% 100%;
   }
 }
 
