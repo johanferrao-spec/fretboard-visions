@@ -879,7 +879,42 @@ export default function Fretboard({
             })()
           )}
 
-          {allPaths.map((path, pathIdx) => {
+          {/* Barre bar for ArpeggioPosition (custom voicings) */}
+          {arpeggioPosition && arpeggioPosition.barreFrom != null && arpeggioPosition.barreTo != null && arpeggioPosition.barreFret != null && (
+            (() => {
+              const bf = arpeggioPosition.barreFret!;
+              const fromRow = stringOrder.indexOf(arpeggioPosition.barreFrom!);
+              const toRow = stringOrder.indexOf(arpeggioPosition.barreTo!);
+              const topRow = Math.min(fromRow, toRow);
+              const bottomRow = Math.max(fromRow, toRow);
+              const barreLeft = cumLeft[bf] || 0;
+              const barreWidth = widths[bf] || 0;
+              const centerX = barreLeft + barreWidth * 0.5;
+              const totalH = 6 * stringH;
+              const y1 = (topRow * stringH + stringH * 0.5) / totalH * 100;
+              const y2 = (bottomRow * stringH + stringH * 0.5) / totalH * 100;
+              const barThick = noteMarkerSize * 0.9;
+              return (
+                <svg
+                  className="absolute inset-0 pointer-events-none z-[15]"
+                  style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
+                  viewBox={`0 0 100 ${totalH}`}
+                  preserveAspectRatio="none"
+                >
+                  <line
+                    x1={centerX} y1={y1 * totalH / 100}
+                    x2={centerX} y2={y2 * totalH / 100}
+                    stroke="hsl(var(--foreground))"
+                    strokeWidth={barThick}
+                    strokeLinecap="round"
+                    opacity={0.5}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+              );
+            })()
+          )}
+
             const pts = getPathLinePoints(path);
             if (pts.length < 2) return null;
             const totalH = 6 * stringH;
