@@ -272,6 +272,7 @@ export default function ChordReference({
       {/* Tab switcher */}
       <div className="flex gap-1 mb-2 flex-wrap">
         {([
+          { key: 'beginner' as MainTab, label: '🎓 Beginner' },
           { key: 'scaleview' as MainTab, label: 'Scale View' },
           { key: 'chords' as MainTab, label: 'Chord Library' },
           { key: 'arpeggios' as MainTab, label: 'Arpeggio Positions' },
