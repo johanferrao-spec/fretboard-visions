@@ -141,6 +141,7 @@ export const CHORD_FORMULAS: Record<string, number[]> = {
   'Sus2': [0, 2, 7],
   'Sus4': [0, 5, 7],
   'Major 7': [0, 4, 7, 11],
+  'Major 7♭5': [0, 4, 6, 11],
   'Minor 7': [0, 3, 7, 10],
   'Dominant 7': [0, 4, 7, 10],
   'Dim 7': [0, 3, 6, 9],
