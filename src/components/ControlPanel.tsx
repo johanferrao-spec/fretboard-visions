@@ -38,7 +38,7 @@ interface ScaleCategory {
 
 const SCALE_CATEGORIES: ScaleCategory[] = [
   { label: 'Major', scales: ['Major (Ionian)'] },
-  { label: 'Minor', scales: ['Natural Minor (Aeolian)', 'Harmonic Minor', 'Melodic Minor'] },
+  { label: 'Minor', scales: ['Natural Minor (Aeolian)'] },
   {
     label: 'Pentatonics',
     scales: ['Pentatonic Major', 'Pentatonic Minor', 'Blues', 'Blues Major', 'Hirajoshi', 'In Sen', 'Kumoi'],
