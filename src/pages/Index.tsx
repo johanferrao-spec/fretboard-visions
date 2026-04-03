@@ -19,8 +19,8 @@ const Index = () => {
   const [customTuningName, setCustomTuningName] = useState('');
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
   const [volume, setVolume] = useState(0.7);
-  const [timelineKey, setTimelineKey] = useState<NoteName>('E');
-  const [keyMode, setKeyMode] = useState<KeyMode>('major');
+  const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
+  const [keyMode, setKeyMode] = useState<KeyMode>(() => scaleToKeyMode(fb.primaryScale.scale));
   const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes'>('beginner');
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
