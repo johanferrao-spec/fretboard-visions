@@ -55,6 +55,8 @@ interface FretboardProps {
   inversionVoicing?: import('@/lib/music').InversionVoicing | null;
   ghostNoteOpacity?: number;
   inversionDegreeColor?: string | null;
+  chordAddRootNote?: NoteName | null;
+  chordAddHasNotes?: boolean;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
