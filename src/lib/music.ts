@@ -141,6 +141,7 @@ export const CHORD_FORMULAS: Record<string, number[]> = {
   'Sus2': [0, 2, 7],
   'Sus4': [0, 5, 7],
   'Major 7': [0, 4, 7, 11],
+  'Major 7♭5': [0, 4, 6, 11],
   'Minor 7': [0, 3, 7, 10],
   'Dominant 7': [0, 4, 7, 10],
   'Dim 7': [0, 3, 6, 9],
@@ -154,6 +155,7 @@ export const CHORD_FORMULAS: Record<string, number[]> = {
   'Major 6': [0, 4, 7, 9],
   'Minor 6': [0, 3, 7, 9],
   '7sus4': [0, 5, 7, 10],
+  '7sus4♭9': [0, 5, 7, 10, 13],
   '7#9': [0, 4, 7, 10, 15],
   '7♭9': [0, 4, 7, 10, 13],
   '7#5': [0, 4, 8, 10],
@@ -173,6 +175,7 @@ export const ARPEGGIO_FORMULAS: Record<string, number[]> = {
   'Sus2': [0, 2, 7],
   'Sus4': [0, 5, 7],
   'Major 7': [0, 4, 7, 11],
+  'Major 7♭5': [0, 4, 6, 11],
   'Minor 7': [0, 3, 7, 10],
   'Dominant 7': [0, 4, 7, 10],
   'Dim 7': [0, 3, 6, 9],
@@ -185,6 +188,7 @@ export const ARPEGGIO_FORMULAS: Record<string, number[]> = {
   'Major 6': [0, 4, 7, 9],
   'Minor 6': [0, 3, 7, 9],
   '7sus4': [0, 5, 7, 10],
+  '7sus4♭9': [0, 5, 7, 10, 13],
   'Add9': [0, 4, 7, 14],
   '7#9': [0, 4, 7, 10, 15],
   '7♭9': [0, 4, 7, 10, 13],
@@ -1409,8 +1413,8 @@ export const DEGREE_COLORS: Record<string, string> = {
   '5':  '215 85% 55%',   // blue
   '♭6': '175 75% 50%',   // turquoise (chromatic 6th variant)
   '6':  '175 75% 50%',   // turquoise
-  '♭7': '25 85% 55%',    // orange (minor 7th = same color as 7th position)
-  '7':  '25 85% 55%',    // orange
+  '♭7': '280 75% 60%',    // magenta/violet (minor 7th = same color as 7th position)
+  '7':  '280 75% 60%',    // magenta/violet
   '9':  '0 0% 65%',      // grey (= 2nd)
   '♭9': '0 0% 65%',      // grey
   '11': '330 75% 60%',   // pink (= 4th)
@@ -1587,7 +1591,7 @@ export const SCALE_DEGREE_COLORS = [
   '330, 70%, 60%',   // IV  - pink
   '210, 85%, 55%',   // V   - blue
   '175, 65%, 45%',   // VI  - turquoise
-  '30, 90%, 55%',    // VII - orange
+  '280, 75%, 60%',    // VII - magenta/violet
 ];
 
 export const ROMAN_NUMERALS_MAJOR = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];

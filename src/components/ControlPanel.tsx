@@ -38,7 +38,7 @@ interface ScaleCategory {
 
 const SCALE_CATEGORIES: ScaleCategory[] = [
   { label: 'Major', scales: ['Major (Ionian)'] },
-  { label: 'Minor', scales: ['Natural Minor (Aeolian)', 'Harmonic Minor', 'Melodic Minor'] },
+  { label: 'Minor', scales: ['Natural Minor (Aeolian)'] },
   {
     label: 'Pentatonics',
     scales: ['Pentatonic Major', 'Pentatonic Minor', 'Blues', 'Blues Major', 'Hirajoshi', 'In Sen', 'Kumoi'],
@@ -246,17 +246,26 @@ function ModeSelector({
         <div className="flex items-center justify-between">
           <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">{label}</label>
           <div className="flex items-center gap-1.5">
-            <div className="relative">
-              <input
-                type="color"
-                value={color || '#e6a817'}
-                onChange={e => onColorChange(e.target.value)}
-                className="absolute inset-0 opacity-0 cursor-pointer w-5 h-5"
-              />
-              <div
-                className="w-5 h-5 rounded-full border border-border cursor-pointer"
-                style={{ backgroundColor: color || 'hsl(var(--primary))' }}
-              />
+            <div className="flex gap-1">
+              {[
+                'hsl(38, 90%, 55%)',   // gold
+                'hsl(270, 70%, 60%)',  // purple
+                'hsl(160, 70%, 50%)',  // teal
+                'hsl(350, 80%, 55%)', // rose
+                'hsl(200, 85%, 55%)', // sky
+                'hsl(30, 85%, 55%)',  // amber
+              ].map(c => (
+                <button
+                  key={c}
+                  onClick={() => onColorChange(c)}
+                  className="w-4 h-4 rounded-full border-2 transition-all hover:scale-110"
+                  style={{
+                    backgroundColor: c,
+                    borderColor: color === c ? 'hsl(var(--foreground))' : 'transparent',
+                    boxShadow: color === c ? `0 0 6px ${c}` : 'none',
+                  }}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -271,20 +280,29 @@ function ModeSelector({
     <div className={`p-3 rounded-lg border transition-colors ${active ? 'border-primary bg-secondary/50' : 'border-border'}`}>
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">{label}</label>
-        <div className="flex items-center gap-1.5">
-          <div className="relative">
-            <input
-              type="color"
-              value={color || '#e6a817'}
-              onChange={e => onColorChange(e.target.value)}
-              className="absolute inset-0 opacity-0 cursor-pointer w-5 h-5"
-            />
-            <div
-              className="w-5 h-5 rounded-full border border-border cursor-pointer"
-              style={{ backgroundColor: color || 'hsl(var(--primary))' }}
-            />
+          <div className="flex items-center gap-1.5">
+            <div className="flex gap-1">
+              {[
+                'hsl(38, 90%, 55%)',   // gold
+                'hsl(270, 70%, 60%)',  // purple
+                'hsl(160, 70%, 50%)',  // teal
+                'hsl(350, 80%, 55%)', // rose
+                'hsl(200, 85%, 55%)', // sky
+                'hsl(30, 85%, 55%)',  // amber
+              ].map(c => (
+                <button
+                  key={c}
+                  onClick={() => onColorChange(c)}
+                  className="w-4 h-4 rounded-full border-2 transition-all hover:scale-110"
+                  style={{
+                    backgroundColor: c,
+                    borderColor: color === c ? 'hsl(var(--foreground))' : 'transparent',
+                    boxShadow: color === c ? `0 0 6px ${c}` : 'none',
+                  }}
+                />
+              ))}
+            </div>
           </div>
-        </div>
       </div>
 
       {/* Scale / Arpeggio toggle */}

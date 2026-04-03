@@ -55,6 +55,8 @@ interface FretboardProps {
   inversionVoicing?: import('@/lib/music').InversionVoicing | null;
   ghostNoteOpacity?: number;
   inversionDegreeColor?: string | null;
+  chordAddRootNote?: NoteName | null;
+  chordAddHasNotes?: boolean;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -92,6 +94,8 @@ export default function Fretboard({
   inversionVoicing,
   ghostNoteOpacity = 0.75,
   inversionDegreeColor,
+  chordAddRootNote,
+  chordAddHasNotes,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -244,8 +248,14 @@ export default function Fretboard({
   }
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
-    // In arp add mode (custom voicing creation), hide all scale notes - fretboard should be empty
+    // In arp add mode (custom voicing creation), show faint root notes if no notes placed yet
     if (arpAddMode && !isStaticArpeggioPosition) {
+      if (chordAddRootNote && !chordAddHasNotes && fret > 0) {
+        // Show faint root note guides
+        if (note === chordAddRootNote) {
+          return { backgroundColor: 'hsl(var(--primary))', opacity: 0.2, ring: false, ringColor: '', greyed: false };
+        }
+      }
       return null;
     }
 
@@ -1082,8 +1092,8 @@ export default function Fretboard({
                     ...(identifyMode && identifyFrets[stringIdx] === -1 ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isChordMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isGlowing && !isChordMuted && !identifyMode ? {
-                      color: 'hsl(30, 100%, 55%)',
-                      textShadow: '0 0 8px hsl(30, 100%, 55%), 0 0 18px hsl(25, 100%, 45%), 0 0 30px hsl(20, 100%, 40%)',
+                      color: pColor,
+                      textShadow: `0 0 8px ${pColor}, 0 0 18px ${pColor}, 0 0 30px ${pColor}`,
                     } : {}),
                   }}
                   title={identifyMode ? "Click to toggle open string" : "Double-click to toggle string"}

@@ -19,8 +19,8 @@ const Index = () => {
   const [customTuningName, setCustomTuningName] = useState('');
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
   const [volume, setVolume] = useState(0.7);
-  const [timelineKey, setTimelineKey] = useState<NoteName>('E');
-  const [keyMode, setKeyMode] = useState<KeyMode>('major');
+  const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
+  const [keyMode, setKeyMode] = useState<KeyMode>(() => scaleToKeyMode(fb.primaryScale.scale));
   const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes'>('beginner');
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
@@ -54,6 +54,13 @@ const Index = () => {
       setActiveInversionVoicing(null);
     }
   }, [inversionActive, inversionStringGroup]);
+
+  // Sync timeline key with primary scale
+  useEffect(() => {
+    setTimelineKey(fb.primaryScale.root);
+    const km = scaleToKeyMode(fb.primaryScale.scale);
+    setKeyMode(km);
+  }, [fb.primaryScale.root, fb.primaryScale.scale]);
 
   // Compute chord tones for scaleView degree filter (used to dim non-chord-tones)
   const scaleViewChordTones = useMemo(() => {
@@ -289,7 +296,9 @@ const Index = () => {
                inversionVoicing={activeInversionVoicing}
                scaleViewChordTones={scaleViewChordTones}
                ghostNoteOpacity={fb.ghostNoteOpacity}
-               inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
+                inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
+                chordAddRootNote={fb.arpAddMode ? (activeTab === 'chords' ? null : null) : null}
+                chordAddHasNotes={false}
             />
           </div>
 

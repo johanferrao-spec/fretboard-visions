@@ -325,35 +325,35 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
 
   // Menu page — symmetrical bubble layout like the reference
   return (
-    <div className="animate-fade-in">
-      <div className="text-center mb-3">
+    <div className="animate-fade-in flex flex-col h-full">
+      <div className="text-center mb-2">
         <div className="text-[9px] font-mono uppercase tracking-[0.3em] text-muted-foreground">Beginner mode</div>
       </div>
 
-      <div className="mx-auto grid max-w-[960px] grid-cols-3 items-center gap-x-6 gap-y-3 px-6">
+      <div className="mx-auto grid grid-cols-3 items-stretch gap-3 px-4 flex-1">
         {SCALE_PRESETS.map(preset => (
           <button
             key={preset.name}
             onClick={() => handlePresetClick(preset)}
-            className="px-4 py-3 text-center transition-transform duration-200 hover:scale-[1.02]"
+            className="px-4 py-4 text-center transition-transform duration-200 hover:scale-[1.02] flex items-center justify-center"
             style={bubbleStyle(preset.bubbleVar, activePreset === preset.name)}
           >
-            <span className="block text-[1.6rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT, whiteSpace: 'pre-line' }}>{preset.name}</span>
+            <span className="block text-[1.4rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT, whiteSpace: 'pre-line' }}>{preset.name}</span>
           </button>
         ))}
         <button
           onClick={() => { setActivePreset(null); onApplyPreset(null); setPage('open'); }}
-          className="px-4 py-3 text-center transition-transform duration-200 hover:scale-[1.02]"
+          className="px-4 py-4 text-center transition-transform duration-200 hover:scale-[1.02] flex items-center justify-center"
           style={bubbleStyle('--beginner-pink')}
         >
-          <span className="block text-[1.6rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT }}>Open chords</span>
+          <span className="block text-[1.4rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT }}>Open chords</span>
         </button>
         <button
           onClick={() => { setActivePreset(null); onApplyPreset(null); setPage('barre'); }}
-          className="px-4 py-3 text-center transition-transform duration-200 hover:scale-[1.02]"
+          className="px-4 py-4 text-center transition-transform duration-200 hover:scale-[1.02] flex items-center justify-center"
           style={bubbleStyle('--beginner-purple')}
         >
-          <span className="block text-[1.6rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT }}>Bar chords</span>
+          <span className="block text-[1.4rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT }}>Bar chords</span>
         </button>
       </div>
     </div>
