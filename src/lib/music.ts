@@ -1409,8 +1409,8 @@ export const DEGREE_COLORS: Record<string, string> = {
   '5':  '215 85% 55%',   // blue
   '♭6': '175 75% 50%',   // turquoise (chromatic 6th variant)
   '6':  '175 75% 50%',   // turquoise
-  '♭7': '25 85% 55%',    // orange (minor 7th = same color as 7th position)
-  '7':  '25 85% 55%',    // orange
+  '♭7': '280 75% 60%',    // magenta/violet (minor 7th = same color as 7th position)
+  '7':  '280 75% 60%',    // magenta/violet
   '9':  '0 0% 65%',      // grey (= 2nd)
   '♭9': '0 0% 65%',      // grey
   '11': '330 75% 60%',   // pink (= 4th)
