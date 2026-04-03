@@ -188,6 +188,7 @@ export const ARPEGGIO_FORMULAS: Record<string, number[]> = {
   'Major 6': [0, 4, 7, 9],
   'Minor 6': [0, 3, 7, 9],
   '7sus4': [0, 5, 7, 10],
+  '7sus4♭9': [0, 5, 7, 10, 13],
   'Add9': [0, 4, 7, 14],
   '7#9': [0, 4, 7, 10, 15],
   '7♭9': [0, 4, 7, 10, 13],
