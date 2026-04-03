@@ -330,7 +330,7 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
         <div className="text-[9px] font-mono uppercase tracking-[0.3em] text-muted-foreground">Beginner mode</div>
       </div>
 
-      <div className="mx-auto grid max-w-[960px] grid-cols-3 items-center gap-x-6 gap-y-3 px-6">
+      <div className="mx-auto grid grid-cols-3 items-stretch gap-3 px-4 flex-1">
         {SCALE_PRESETS.map(preset => (
           <button
             key={preset.name}
