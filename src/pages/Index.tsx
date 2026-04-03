@@ -55,6 +55,13 @@ const Index = () => {
     }
   }, [inversionActive, inversionStringGroup]);
 
+  // Sync timeline key with primary scale
+  useEffect(() => {
+    setTimelineKey(fb.primaryScale.root);
+    const km = scaleToKeyMode(fb.primaryScale.scale);
+    setKeyMode(km);
+  }, [fb.primaryScale.root, fb.primaryScale.scale]);
+
   // Compute chord tones for scaleView degree filter (used to dim non-chord-tones)
   const scaleViewChordTones = useMemo(() => {
     if (scaleViewDegreeFilter === null) return null;
