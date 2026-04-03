@@ -1587,7 +1587,7 @@ export const SCALE_DEGREE_COLORS = [
   '330, 70%, 60%',   // IV  - pink
   '210, 85%, 55%',   // V   - blue
   '175, 65%, 45%',   // VI  - turquoise
-  '30, 90%, 55%',    // VII - orange
+  '280, 75%, 60%',    // VII - magenta/violet
 ];
 
 export const ROMAN_NUMERALS_MAJOR = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
