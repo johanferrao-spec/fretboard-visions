@@ -335,10 +335,10 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
           <button
             key={preset.name}
             onClick={() => handlePresetClick(preset)}
-            className="px-4 py-3 text-center transition-transform duration-200 hover:scale-[1.02]"
+            className="px-4 py-4 text-center transition-transform duration-200 hover:scale-[1.02] flex items-center justify-center"
             style={bubbleStyle(preset.bubbleVar, activePreset === preset.name)}
           >
-            <span className="block text-[1.6rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT, whiteSpace: 'pre-line' }}>{preset.name}</span>
+            <span className="block text-[1.4rem] font-semibold leading-tight" style={{ fontFamily: BEGINNER_FONT, whiteSpace: 'pre-line' }}>{preset.name}</span>
           </button>
         ))}
         <button
