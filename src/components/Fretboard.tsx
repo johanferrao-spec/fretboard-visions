@@ -248,8 +248,14 @@ export default function Fretboard({
   }
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
-    // In arp add mode (custom voicing creation), hide all scale notes - fretboard should be empty
+    // In arp add mode (custom voicing creation), show faint root notes if no notes placed yet
     if (arpAddMode && !isStaticArpeggioPosition) {
+      if (chordAddRootNote && !chordAddHasNotes && fret > 0) {
+        // Show faint root note guides
+        if (note === chordAddRootNote) {
+          return { backgroundColor: 'hsl(var(--primary))', opacity: 0.2, ring: false, ringColor: '', greyed: false };
+        }
+      }
       return null;
     }
 
