@@ -325,8 +325,8 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
 
   // Menu page — symmetrical bubble layout like the reference
   return (
-    <div className="animate-fade-in">
-      <div className="text-center mb-3">
+    <div className="animate-fade-in flex flex-col h-full">
+      <div className="text-center mb-2">
         <div className="text-[9px] font-mono uppercase tracking-[0.3em] text-muted-foreground">Beginner mode</div>
       </div>
 
