@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { NOTE_NAMES, ARPEGGIO_FORMULAS, SCALE_DESCRIPTIONS, NoteName } from '@/lib/music';
 import type { ScaleSelection } from '@/hooks/useFretboard';
 
