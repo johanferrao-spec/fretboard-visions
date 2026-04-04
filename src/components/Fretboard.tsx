@@ -238,6 +238,9 @@ export default function Fretboard({
     return set;
   }, [dragPath, persistedPaths]);
 
+  // hiddenDegrees: degrees that are completely hidden (double-clicked)
+  const [hiddenDegrees, setHiddenDegrees] = useState<Set<string>>(new Set());
+
   function getDegreeColor(root: NoteName, note: NoteName): string | null {
     const interval = getIntervalName(root, note);
     const position = INTERVAL_TO_POSITION[interval];
@@ -245,6 +248,15 @@ export default function Fretboard({
     const degColor = DEGREE_COLORS[interval];
     if (degColor) return `hsl(${degColor})`;
     return null;
+  }
+
+  // Check if a note's degree is hidden (completely removed from fretboard)
+  function isNoteHidden(root: NoteName, note: NoteName): boolean {
+    if (hiddenDegrees.size === 0) return false;
+    const interval = getIntervalName(root, note);
+    const position = INTERVAL_TO_POSITION[interval];
+    if (position !== undefined && hiddenDegrees.has(String(position))) return true;
+    return false;
   }
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
