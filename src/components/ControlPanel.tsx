@@ -377,7 +377,7 @@ function ModeSelector({
           {openCategory === null ? (
             <div className="grid grid-cols-1 gap-1">
               {SCALE_CATEGORIES.map(cat => {
-                const isDirect = cat.label === 'Major';
+                const isDirect = cat.label === 'Major' || cat.label === 'Minor';
                 return (
                   <button
                     key={cat.label}
