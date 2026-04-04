@@ -179,8 +179,9 @@ export default function Fretboard({
     return { arpPositionSet: set, arpChordToneNames: toneNames };
   }, [arpeggioPosition, tuning]);
 
-  const isStaticArpeggioPosition = arpeggioPosition?.type === 'static';
-  const shouldShowGuidedPaths = !arpAddMode && !isStaticArpeggioPosition;
+  // Static voicings from chord library have showPath explicitly set to false
+  const isChordLibraryVoicing = arpeggioPosition?.showPath === false;
+  const shouldShowGuidedPaths = !arpAddMode && !isChordLibraryVoicing;
 
   const pColor = primaryColor || 'hsl(var(--primary))';
   const sColor = secondaryColor || 'hsl(200, 80%, 60%)';
