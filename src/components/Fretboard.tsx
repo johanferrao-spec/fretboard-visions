@@ -779,15 +779,39 @@ export default function Fretboard({
           {DEGREE_LEGEND.map(d => {
             const posKey = String(d.position);
             const isOff = disabledDegrees.has(posKey);
+            const isHidden = hiddenDegrees.has(posKey);
             return (
               <button
                 key={d.label}
-                onClick={() => toggleDegree(posKey)}
-                className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${isOff ? 'opacity-30' : 'opacity-100'}`}
-                title={`Toggle ${d.label}`}
+                onClick={() => {
+                  if (isHidden) {
+                    // Click on hidden (X) degree to restore it
+                    setHiddenDegrees(prev => { const next = new Set(prev); next.delete(posKey); return next; });
+                  } else {
+                    toggleDegree(posKey);
+                  }
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  if (!isHidden) {
+                    // Double-click to completely hide this degree
+                    setHiddenDegrees(prev => { const next = new Set(prev); next.add(posKey); return next; });
+                  }
+                }}
+                className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${isHidden ? 'opacity-100' : isOff ? 'opacity-30' : 'opacity-100'}`}
+                title={isHidden ? `Click to restore ${d.label}` : `Click to toggle, double-click to hide ${d.label}`}
               >
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${d.color})` }} />
-                <span className="text-[8px] font-mono text-muted-foreground">{d.label}</span>
+                {isHidden ? (
+                  <>
+                    <div className="w-3 h-3 rounded-full flex items-center justify-center text-[7px] font-bold" style={{ backgroundColor: `hsl(${d.color})`, color: '#000' }}>✕</div>
+                    <span className="text-[8px] font-mono text-destructive line-through">{d.label}</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${d.color})` }} />
+                    <span className="text-[8px] font-mono text-muted-foreground">{d.label}</span>
+                  </>
+                )}
               </button>
             );
           })}
