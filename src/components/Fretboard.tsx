@@ -288,7 +288,7 @@ export default function Fretboard({
       return null;
     }
 
-    // Scale view degree filter: show chord tones bright, rest as ghost
+    // Scale view degree filter: show chord tones bright with glow, rest as ghost
     if (scaleViewChordTones && scaleViewChordTones.size > 0 && !inversionVoicing) {
       const noteIdx = (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note);
       const isChordTone = scaleViewChordTones.has(noteIdx);
@@ -297,11 +297,11 @@ export default function Fretboard({
       if (isChordTone) {
         let bg = inversionDegreeColor ? `hsl(${inversionDegreeColor})` : pColor;
         if (degreeColors) {
-          // Basic mode: degree colors always relative to the I chord root
           const dc = getDegreeColor(primaryScale.root, note);
           if (dc) bg = dc;
         }
-        return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
+        // Glow effect via ring
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: bg, greyed: false };
       }
       // Non-chord-tone scale notes: dimmed by ghost opacity slider
       let ghostBg = pColor;
