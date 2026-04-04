@@ -261,27 +261,7 @@ function ModeSelector({
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">{label}</label>
           <div className="flex items-center gap-1.5">
-            <div className="flex gap-1">
-              {[
-                'hsl(38, 90%, 55%)',   // gold
-                'hsl(270, 70%, 60%)',  // purple
-                'hsl(160, 70%, 50%)',  // teal
-                'hsl(350, 80%, 55%)', // rose
-                'hsl(200, 85%, 55%)', // sky
-                'hsl(30, 85%, 55%)',  // amber
-              ].map(c => (
-                <button
-                  key={c}
-                  onClick={() => onColorChange(c)}
-                  className="w-4 h-4 rounded-full border-2 transition-all hover:scale-110"
-                  style={{
-                    backgroundColor: c,
-                    borderColor: color === c ? 'hsl(var(--foreground))' : 'transparent',
-                    boxShadow: color === c ? `0 0 6px ${c}` : 'none',
-                  }}
-                />
-              ))}
-            </div>
+            <ColorDropdown color={primaryColor} onColorChange={onColorChange} />
           </div>
       </div>
 
