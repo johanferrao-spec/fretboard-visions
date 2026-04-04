@@ -466,7 +466,6 @@ export default function Fretboard({
     const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
     if (isNoteHidden(activeRoot, note)) return null;
 
-    const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
     const interval = getIntervalName(activeRoot, note);
 
     let bg = pColor;
