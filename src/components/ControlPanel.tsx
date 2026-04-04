@@ -261,7 +261,7 @@ function ModeSelector({
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">{label}</label>
           <div className="flex items-center gap-1.5">
-            <ColorDropdown color={primaryColor} onColorChange={onColorChange} />
+            <ColorDropdown color={color} onColorChange={onColorChange} />
           </div>
       </div>
 
