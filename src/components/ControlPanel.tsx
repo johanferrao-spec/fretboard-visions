@@ -246,7 +246,7 @@ function ModeSelector({
         <div className="flex items-center justify-between">
           <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">{label}</label>
           <div className="flex items-center gap-1.5">
-            <ColorDropdown color={primaryColor} onColorChange={setPrimaryColor} />
+            <ColorDropdown color={color} onColorChange={onColorChange} />
           </div>
         </div>
       <div className="mt-1.5 text-[10px] font-mono font-bold rounded px-2 py-1 border" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 12px hsl(270, 80%, 65%, 0.4), 0 0 24px hsl(270, 80%, 65%, 0.15)' }}>
