@@ -179,8 +179,9 @@ export default function Fretboard({
     return { arpPositionSet: set, arpChordToneNames: toneNames };
   }, [arpeggioPosition, tuning]);
 
-  const isStaticArpeggioPosition = arpeggioPosition?.type === 'static';
-  const shouldShowGuidedPaths = !arpAddMode && !isStaticArpeggioPosition;
+  // Static voicings from chord library have showPath explicitly set to false
+  const isChordLibraryVoicing = arpeggioPosition?.showPath === false;
+  const shouldShowGuidedPaths = !arpAddMode && !isChordLibraryVoicing;
 
   const pColor = primaryColor || 'hsl(var(--primary))';
   const sColor = secondaryColor || 'hsl(200, 80%, 60%)';
@@ -238,6 +239,9 @@ export default function Fretboard({
     return set;
   }, [dragPath, persistedPaths]);
 
+  // hiddenDegrees: degrees that are completely hidden (double-clicked)
+  const [hiddenDegrees, setHiddenDegrees] = useState<Set<string>>(new Set());
+
   function getDegreeColor(root: NoteName, note: NoteName): string | null {
     const interval = getIntervalName(root, note);
     const position = INTERVAL_TO_POSITION[interval];
@@ -247,9 +251,18 @@ export default function Fretboard({
     return null;
   }
 
+  // Check if a note's degree is hidden (completely removed from fretboard)
+  function isNoteHidden(root: NoteName, note: NoteName): boolean {
+    if (hiddenDegrees.size === 0) return false;
+    const interval = getIntervalName(root, note);
+    const position = INTERVAL_TO_POSITION[interval];
+    if (position !== undefined && hiddenDegrees.has(String(position))) return true;
+    return false;
+  }
+
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
     // In arp add mode (custom voicing creation), show faint root notes if no notes placed yet
-    if (arpAddMode && !isStaticArpeggioPosition) {
+    if (arpAddMode && !isChordLibraryVoicing) {
       if (chordAddRootNote && !chordAddHasNotes && fret > 0) {
         // Show faint root note guides
         if (note === chordAddRootNote) {
@@ -276,7 +289,7 @@ export default function Fretboard({
       return null;
     }
 
-    // Scale view degree filter: show chord tones bright, rest as ghost
+    // Scale view degree filter: show chord tones bright with glow, rest as ghost
     if (scaleViewChordTones && scaleViewChordTones.size > 0 && !inversionVoicing) {
       const noteIdx = (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note);
       const isChordTone = scaleViewChordTones.has(noteIdx);
@@ -285,11 +298,11 @@ export default function Fretboard({
       if (isChordTone) {
         let bg = inversionDegreeColor ? `hsl(${inversionDegreeColor})` : pColor;
         if (degreeColors) {
-          // Basic mode: degree colors always relative to the I chord root
           const dc = getDegreeColor(primaryScale.root, note);
           if (dc) bg = dc;
         }
-        return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
+        // Glow effect via ring
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: bg, greyed: false };
       }
       // Non-chord-tone scale notes: dimmed by ghost opacity slider
       let ghostBg = pColor;
@@ -334,7 +347,7 @@ export default function Fretboard({
       const isInPosition = arpPositionSet.has(key);
       const isChordTone = arpChordToneNames.has(note);
 
-      if (isStaticArpeggioPosition) {
+      if (isChordLibraryVoicing) {
         if (!isInPosition) return null;
 
         let bg = pColor;
@@ -450,7 +463,10 @@ export default function Fretboard({
     const inSecondary = secondaryEnabled && isNoteInSelection(note, secondaryScale.root, secondaryScale.scale, secondaryScale.mode);
     if (!inPrimary && !inSecondary) return null;
 
+    // Check if this note's degree is hidden
     const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
+    if (isNoteHidden(activeRoot, note)) return null;
+
     const interval = getIntervalName(activeRoot, note);
 
     let bg = pColor;
@@ -764,15 +780,39 @@ export default function Fretboard({
           {DEGREE_LEGEND.map(d => {
             const posKey = String(d.position);
             const isOff = disabledDegrees.has(posKey);
+            const isHidden = hiddenDegrees.has(posKey);
             return (
               <button
                 key={d.label}
-                onClick={() => toggleDegree(posKey)}
-                className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${isOff ? 'opacity-30' : 'opacity-100'}`}
-                title={`Toggle ${d.label}`}
+                onClick={() => {
+                  if (isHidden) {
+                    // Click on hidden (X) degree to restore it
+                    setHiddenDegrees(prev => { const next = new Set(prev); next.delete(posKey); return next; });
+                  } else {
+                    toggleDegree(posKey);
+                  }
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  if (!isHidden) {
+                    // Double-click to completely hide this degree
+                    setHiddenDegrees(prev => { const next = new Set(prev); next.add(posKey); return next; });
+                  }
+                }}
+                className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${isHidden ? 'opacity-100' : isOff ? 'opacity-30' : 'opacity-100'}`}
+                title={isHidden ? `Click to restore ${d.label}` : `Click to toggle, double-click to hide ${d.label}`}
               >
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${d.color})` }} />
-                <span className="text-[8px] font-mono text-muted-foreground">{d.label}</span>
+                {isHidden ? (
+                  <>
+                    <div className="w-3 h-3 rounded-full flex items-center justify-center text-[7px] font-bold" style={{ backgroundColor: `hsl(${d.color})`, color: '#000' }}>✕</div>
+                    <span className="text-[8px] font-mono text-destructive line-through">{d.label}</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${d.color})` }} />
+                    <span className="text-[8px] font-mono text-muted-foreground">{d.label}</span>
+                  </>
+                )}
               </button>
             );
           })}
@@ -991,7 +1031,7 @@ export default function Fretboard({
           })}
 
           {/* Arpeggio position path */}
-          {arpPathVisible && !arpAddMode && arpeggioPosition && arpeggioPosition.type !== 'static' && arpPositionPath.length >= 2 && (() => {
+          {arpPathVisible && !arpAddMode && arpeggioPosition && arpeggioPosition.showPath !== false && arpPositionPath.length >= 2 && (() => {
             const totalH = 6 * stringH;
             return (
               <svg
@@ -1020,50 +1060,7 @@ export default function Fretboard({
             );
           })()}
 
-          {/* Inversion voicing path - no paths for custom/static voicings */}
-          {inversionVoicing && inversionVoicing.notes.length >= 2 && !arpAddMode && (() => {
-            const totalH = 6 * stringH;
-            const sortedNotes = [...inversionVoicing.notes].sort((a, b) => {
-              const aMidi = ([40, 45, 50, 55, 59, 64][a.stringIndex] || 40) + a.fret;
-              const bMidi = ([40, 45, 50, 55, 59, 64][b.stringIndex] || 40) + b.fret;
-              return aMidi - bMidi;
-            });
-            const points = sortedNotes.map(n => {
-              const row = stringOrder.indexOf(n.stringIndex);
-              if (row < 0) return null;
-              return {
-                x: cumLeft[n.fret] + widths[n.fret] / 2,
-                y: (row * stringH + stringH / 2) / totalH * 100,
-              };
-            }).filter(Boolean) as { x: number; y: number }[];
-            if (points.length < 2) return null;
-            const strokeColor = inversionDegreeColor ? `hsl(${inversionDegreeColor})` : 'hsl(330, 70%, 60%)';
-            return (
-              <svg
-                className="absolute inset-0 pointer-events-none z-[5]"
-                style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
-                viewBox={`0 0 100 ${totalH}`}
-                preserveAspectRatio="none"
-              >
-                {points.map((pt, i, arr) => {
-                  if (i === 0) return null;
-                  const prev = arr[i - 1];
-                  return (
-                    <line
-                      key={i}
-                      x1={prev.x} y1={prev.y * totalH / 100}
-                      x2={pt.x} y2={pt.y * totalH / 100}
-                      stroke={strokeColor}
-                      strokeWidth={6}
-                      strokeLinecap="round"
-                      opacity={1}
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  );
-                })}
-              </svg>
-            );
-          })()}
+          {/* Inversion voicing — NO paths, notes glow instead */}
 
           {stringOrder.map((stringIdx, row) => {
             const isDisabled = disabledStrings.has(stringIdx);

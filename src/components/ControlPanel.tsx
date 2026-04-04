@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { NOTE_NAMES, ARPEGGIO_FORMULAS, SCALE_DESCRIPTIONS, NoteName } from '@/lib/music';
 import type { ScaleSelection } from '@/hooks/useFretboard';
 
@@ -214,6 +214,76 @@ function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: NoteName;
   );
 }
 
+const COLOR_OPTIONS = [
+  'hsl(38, 90%, 55%)',   // gold
+  'hsl(270, 70%, 60%)',  // purple
+  'hsl(160, 70%, 50%)',  // teal
+  'hsl(350, 80%, 55%)',  // rose
+  'hsl(200, 85%, 55%)',  // sky
+  'hsl(30, 85%, 55%)',   // amber
+  'hsl(90, 65%, 45%)',   // lime
+  'hsl(320, 75%, 55%)',  // magenta
+  'hsl(180, 70%, 50%)',  // cyan
+  'hsl(15, 90%, 55%)',   // vermilion
+  'hsl(55, 85%, 50%)',   // yellow
+  'hsl(240, 60%, 60%)',  // indigo
+];
+
+function ColorDropdown({ color, onColorChange }: { color: string; onColorChange: (c: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  const displayColor = color || 'hsl(var(--primary))';
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-5 h-5 rounded-full border-2 border-border/60 transition-all hover:scale-110 hover:border-foreground/40"
+        style={{
+          backgroundColor: displayColor,
+          boxShadow: `0 0 8px ${displayColor}`,
+        }}
+        title="Scale colour"
+      />
+      {open && (
+        <div
+          className="absolute z-50 right-0 top-7 rounded-xl p-2 border shadow-xl"
+          style={{
+            backgroundColor: 'hsl(var(--card))',
+            borderColor: 'hsl(var(--border))',
+            boxShadow: '0 8px 32px hsla(0, 0%, 0%, 0.5)',
+          }}
+        >
+          <div className="grid grid-cols-4 gap-1.5">
+            {COLOR_OPTIONS.map(c => (
+              <button
+                key={c}
+                onClick={() => { onColorChange(c); setOpen(false); }}
+                className="w-5 h-5 rounded-full border-2 transition-all hover:scale-125"
+                style={{
+                  backgroundColor: c,
+                  borderColor: color === c ? 'hsl(var(--foreground))' : 'transparent',
+                  boxShadow: color === c ? `0 0 8px ${c}, 0 0 2px hsl(var(--foreground))` : `0 0 4px ${c}`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ModeSelector({
   label, value, onChange, active, color, onColorChange, condensed, hideDescription,
 }: {
@@ -246,27 +316,7 @@ function ModeSelector({
         <div className="flex items-center justify-between">
           <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">{label}</label>
           <div className="flex items-center gap-1.5">
-            <div className="flex gap-1">
-              {[
-                'hsl(38, 90%, 55%)',   // gold
-                'hsl(270, 70%, 60%)',  // purple
-                'hsl(160, 70%, 50%)',  // teal
-                'hsl(350, 80%, 55%)', // rose
-                'hsl(200, 85%, 55%)', // sky
-                'hsl(30, 85%, 55%)',  // amber
-              ].map(c => (
-                <button
-                  key={c}
-                  onClick={() => onColorChange(c)}
-                  className="w-4 h-4 rounded-full border-2 transition-all hover:scale-110"
-                  style={{
-                    backgroundColor: c,
-                    borderColor: color === c ? 'hsl(var(--foreground))' : 'transparent',
-                    boxShadow: color === c ? `0 0 6px ${c}` : 'none',
-                  }}
-                />
-              ))}
-            </div>
+            <ColorDropdown color={color} onColorChange={onColorChange} />
           </div>
         </div>
       <div className="mt-1.5 text-[10px] font-mono font-bold rounded px-2 py-1 border" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 12px hsl(270, 80%, 65%, 0.4), 0 0 24px hsl(270, 80%, 65%, 0.15)' }}>
@@ -281,27 +331,7 @@ function ModeSelector({
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">{label}</label>
           <div className="flex items-center gap-1.5">
-            <div className="flex gap-1">
-              {[
-                'hsl(38, 90%, 55%)',   // gold
-                'hsl(270, 70%, 60%)',  // purple
-                'hsl(160, 70%, 50%)',  // teal
-                'hsl(350, 80%, 55%)', // rose
-                'hsl(200, 85%, 55%)', // sky
-                'hsl(30, 85%, 55%)',  // amber
-              ].map(c => (
-                <button
-                  key={c}
-                  onClick={() => onColorChange(c)}
-                  className="w-4 h-4 rounded-full border-2 transition-all hover:scale-110"
-                  style={{
-                    backgroundColor: c,
-                    borderColor: color === c ? 'hsl(var(--foreground))' : 'transparent',
-                    boxShadow: color === c ? `0 0 6px ${c}` : 'none',
-                  }}
-                />
-              ))}
-            </div>
+            <ColorDropdown color={color} onColorChange={onColorChange} />
           </div>
       </div>
 
@@ -377,7 +407,7 @@ function ModeSelector({
           {openCategory === null ? (
             <div className="grid grid-cols-1 gap-1">
               {SCALE_CATEGORIES.map(cat => {
-                const isDirect = cat.label === 'Major';
+                const isDirect = cat.label === 'Major' || cat.label === 'Minor';
                 return (
                   <button
                     key={cat.label}
