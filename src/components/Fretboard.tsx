@@ -347,7 +347,7 @@ export default function Fretboard({
       const isInPosition = arpPositionSet.has(key);
       const isChordTone = arpChordToneNames.has(note);
 
-      if (isStaticArpeggioPosition) {
+      if (isChordLibraryVoicing) {
         if (!isInPosition) return null;
 
         let bg = pColor;
