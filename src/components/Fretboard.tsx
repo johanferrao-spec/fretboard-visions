@@ -262,7 +262,7 @@ export default function Fretboard({
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
     // In arp add mode (custom voicing creation), show faint root notes if no notes placed yet
-    if (arpAddMode && !isStaticArpeggioPosition) {
+    if (arpAddMode && !isChordLibraryVoicing) {
       if (chordAddRootNote && !chordAddHasNotes && fret > 0) {
         // Show faint root note guides
         if (note === chordAddRootNote) {
