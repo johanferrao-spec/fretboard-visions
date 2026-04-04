@@ -600,10 +600,10 @@ function ScaleViewPanel({
               onClick={() => setDegreeFilter(isActive ? null : i)}
               className="rounded-xl font-bold transition-all flex flex-col items-center justify-center py-3 px-1"
               style={{
-                backgroundColor: isActive ? `hsl(${color})` : `hsla(${color}, 0.2)`,
-                border: `2px solid hsl(${color})`,
-                color: isActive ? '#fff' : `hsl(${color})`,
-                boxShadow: isActive ? `0 0 12px hsla(${color}, 0.5)` : 'none',
+                backgroundColor: isActive ? `hsla(${color}, 0.15)` : `hsl(${color})`,
+                border: isActive ? `3px solid hsl(${color})` : `2px solid hsl(${color})`,
+                color: isActive ? `hsl(${color})` : '#000',
+                boxShadow: isActive ? `0 0 14px hsla(${color}, 0.6), inset 0 0 8px hsla(${color}, 0.2)` : 'none',
                 minHeight: 60,
               }}
             >
