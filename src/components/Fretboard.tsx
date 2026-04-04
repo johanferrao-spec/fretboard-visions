@@ -462,6 +462,10 @@ export default function Fretboard({
     const inSecondary = secondaryEnabled && isNoteInSelection(note, secondaryScale.root, secondaryScale.scale, secondaryScale.mode);
     if (!inPrimary && !inSecondary) return null;
 
+    // Check if this note's degree is hidden
+    const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
+    if (isNoteHidden(activeRoot, note)) return null;
+
     const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
     const interval = getIntervalName(activeRoot, note);
 
