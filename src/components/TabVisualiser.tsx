@@ -218,10 +218,11 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
 
       {/* Digital Tab Timeline */}
       <div className="flex-1 px-3 py-3 overflow-hidden">
-        <div className="rounded-2xl p-4 h-full" style={{
+        <div className="rounded-2xl p-5 h-full" style={{
           background: 'linear-gradient(180deg, hsl(215, 50%, 12%) 0%, hsl(218, 55%, 15%) 100%)',
           border: '1px solid hsl(215, 40%, 22%)',
           boxShadow: '0 4px 20px hsl(215, 50%, 5% / 0.5), inset 0 1px 0 hsl(215, 40%, 25% / 0.3)',
+          minHeight: 200,
         }}>
           <div className="flex gap-3 h-full">
             {/* String labels column */}
