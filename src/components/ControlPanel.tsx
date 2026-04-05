@@ -248,13 +248,15 @@ function ColorDropdown({ color, onColorChange }: { color: string; onColorChange:
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="w-5 h-5 rounded-full border-2 border-border/60 transition-all hover:scale-110 hover:border-foreground/40"
+        className="w-5 h-5 rounded-full border-2 border-border/60 transition-all hover:scale-110 hover:border-foreground/40 relative"
         style={{
           backgroundColor: displayColor,
           boxShadow: `0 0 8px ${displayColor}`,
         }}
         title="Scale colour"
-      />
+      >
+        <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[6px] text-muted-foreground leading-none">▼</span>
+      </button>
       {open && (
         <div
           className="absolute z-50 right-0 top-7 rounded-xl p-2 border shadow-xl"
@@ -269,11 +271,11 @@ function ColorDropdown({ color, onColorChange }: { color: string; onColorChange:
               <button
                 key={c}
                 onClick={() => { onColorChange(c); setOpen(false); }}
-                className="w-5 h-5 rounded-full border-2 transition-all hover:scale-125"
+                className="w-6 h-6 rounded-full border-2 transition-all hover:scale-125"
                 style={{
                   backgroundColor: c,
                   borderColor: color === c ? 'hsl(var(--foreground))' : 'transparent',
-                  boxShadow: color === c ? `0 0 8px ${c}, 0 0 2px hsl(var(--foreground))` : `0 0 4px ${c}`,
+                  boxShadow: color === c ? `0 0 8px ${c}, 0 0 2px hsl(var(--foreground))` : `0 0 6px ${c}`,
                 }}
               />
             ))}
