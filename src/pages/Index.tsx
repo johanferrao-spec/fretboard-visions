@@ -308,6 +308,7 @@ const Index = () => {
                  inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
                  chordAddRootNote={chordAddRoot}
                  chordAddHasNotes={chordAddHasNotes}
+               suppressScaleNotes={activeTab === 'chords'}
                  tabVisNotes={activeTab === 'tabvis' ? (tabVisNotes || { current: [], upcoming: [] }) : null}
             />
           </div>

@@ -419,9 +419,9 @@ export default function ChordReference({
           }}
         />
       ) : activeTab === 'chords' ? (
-        <ChordLibraryPanel
+          <ChordLibraryPanel
           selectedRoot={selectedRoot}
-          setSelectedRoot={(n) => { setSelectedRoot(n); setVoicingPage(0); onSetArpeggioPosition?.(null); if (selectedChord) { const voicings = getVoicingsForChord(n, selectedChord, voicingTab); if (voicings.length > 0) { setActiveChord({ root: n, chordType: selectedChord, voicingIndex: 0, voicingSource: voicingTab }); } else { setActiveChord(null); } } }}
+          setSelectedRoot={(n) => { setSelectedRoot(n); setVoicingPage(0); onSetArpeggioPosition?.(null); }}
           selectedChord={selectedChord}
           handleSelectChord={handleSelectChord}
           voicingTab={voicingTab}
@@ -904,11 +904,8 @@ function ChordLibraryPanel({
     localStorage.setItem('mf-chord-name-overrides', JSON.stringify(updated));
   }, [chordNameOverrides, defaultChordLabels, getChordCellLabel]);
 
-  const handleHideCurated = (filteredIdx: number) => {
+  const handleHideCurated = (origIdx: number) => {
     if (!selectedChord) return;
-    // Map from filtered index back to original currentVoicings index
-    const origIdx = filteredCuratedMap[filteredIdx]?.origIdx;
-    if (origIdx == null) return;
     const key = `${selectedRoot}::${selectedChord}::${voicingTab}`;
     const existing = hiddenVoicings[key] || [];
     const updated = { ...hiddenVoicings, [key]: [...existing, origIdx] };
@@ -920,25 +917,30 @@ function ChordLibraryPanel({
 
   // Transpose custom voicings for current root — keyed by voicingTab so
   // a voicing saved under "Standard" won't appear in shell / drop2 / drop3.
-  const customForRoot = useMemo((): ChordVoicing[] => {
+  const customDisplayEntries = useMemo(() => {
     if (!selectedChord) return [];
     const tabKey = `${selectedChord}::${voicingTab}`;
-    // Also support legacy keys (no tab suffix) for backwards compat — treat as 'full'
     const legacyCustoms = voicingTab === 'full' ? (customChordVoicings[selectedChord] || []) : [];
     const tabCustoms = customChordVoicings[tabKey] || [];
-    const customs = [...legacyCustoms, ...tabCustoms];
-    return customs.map(cv => {
+    return [
+      ...legacyCustoms.map((cv, sourceIndex) => ({ cv, sourceIndex, sourceKey: selectedChord })),
+      ...tabCustoms.map((cv, sourceIndex) => ({ cv, sourceIndex, sourceKey: tabKey })),
+    ].map(({ cv, sourceIndex, sourceKey }) => {
       const refIdx = NOTE_NAMES.indexOf(cv.refRoot);
       const targetIdx = NOTE_NAMES.indexOf(selectedRoot);
       const delta = (targetIdx - refIdx + 12) % 12;
       const transposed = cv.frets.map(f => f < 0 ? -1 : f + delta);
       return {
-        frets: transposed.map(f => f < 0 ? -1 : f > 24 ? f - 12 : f),
-        fingers: null,
-        barreFrom: cv.barreFrom,
-        barreTo: cv.barreTo,
-        barreFret: cv.barreFret != null ? cv.barreFret + delta : undefined,
-      } as ChordVoicing;
+        voicing: {
+          frets: transposed.map(f => f < 0 ? -1 : f > 24 ? f - 12 : f),
+          fingers: null,
+          barreFrom: cv.barreFrom,
+          barreTo: cv.barreTo,
+          barreFret: cv.barreFret != null ? cv.barreFret + delta : undefined,
+        } as ChordVoicing,
+        sourceIndex,
+        sourceKey,
+      };
     });
   }, [selectedChord, selectedRoot, customChordVoicings, voicingTab]);
 
@@ -951,11 +953,13 @@ function ChordLibraryPanel({
     return currentVoicings.map((v, i) => ({ v, origIdx: i })).filter(({ origIdx }) => !hidden.has(origIdx));
   }, [currentVoicings, selectedRoot, selectedChord, voicingTab, hiddenVoicings]);
 
-  const filteredCurated = useMemo(() => filteredCuratedMap.map(({ v }) => v), [filteredCuratedMap]);
+  const mergedEntries = useMemo(() => [
+    ...filteredCuratedMap.map(({ v, origIdx }) => ({ kind: 'curated' as const, voicing: v, origIdx })),
+    ...customDisplayEntries.map(({ voicing, sourceIndex, sourceKey }) => ({ kind: 'custom' as const, voicing, sourceIndex, sourceKey })),
+  ], [filteredCuratedMap, customDisplayEntries]);
 
-  const mergedVoicings = useMemo(() => [...filteredCurated, ...customForRoot], [filteredCurated, customForRoot]);
-  const mergedTotalPages = Math.ceil(mergedVoicings.length / VOICINGS_PER_PAGE);
-  const mergedPagedVoicings = mergedVoicings.slice(voicingPage * VOICINGS_PER_PAGE, (voicingPage + 1) * VOICINGS_PER_PAGE);
+  const mergedTotalPages = Math.ceil(mergedEntries.length / VOICINGS_PER_PAGE);
+  const mergedPagedEntries = mergedEntries.slice(voicingPage * VOICINGS_PER_PAGE, (voicingPage + 1) * VOICINGS_PER_PAGE);
 
   const buildStaticVoicingPosition = useCallback((frets: (number | -1)[], label: string, barre: { from: number; to: number; fret: number } | null) => {
     // Fill in barre for intermediate strings
@@ -1096,14 +1100,11 @@ function ChordLibraryPanel({
     onSetArpeggioPosition?.(null);
   };
 
-  const handleDeleteCustom = (globalIdx: number) => {
-    if (!selectedChord) return;
-    const customIdx = globalIdx - filteredCurated.length;
-    if (customIdx < 0) return;
-    const key = `${selectedChord}::${voicingTab}`;
-    const custom = [...(customChordVoicings[key] || [])];
-    custom.splice(customIdx, 1);
-    const updated = { ...customChordVoicings, [key]: custom };
+  const handleDeleteCustom = (sourceKey: string, sourceIndex: number) => {
+    const custom = [...(customChordVoicings[sourceKey] || [])];
+    if (!custom[sourceIndex]) return;
+    custom.splice(sourceIndex, 1);
+    const updated = { ...customChordVoicings, [sourceKey]: custom };
     setCustomChordVoicings(updated);
     localStorage.setItem('mf-custom-chord-voicings', JSON.stringify(updated));
   };
@@ -1120,14 +1121,12 @@ function ChordLibraryPanel({
   };
 
   // Handle clicking a custom voicing (display via ArpeggioPosition)
-  const handleSelectCustomVoicing = (globalIdx: number) => {
+  const handleSelectCustomVoicing = (voicing: ChordVoicing) => {
     setChordAddMode(false);
     setAddingFrets([-1,-1,-1,-1,-1,-1]);
     setAddingBarre(null);
     setArpAddMode?.(false);
     setActiveChord(null);
-    const voicing = mergedVoicings[globalIdx];
-    if (!voicing) return;
     const position = buildStaticVoicingPosition(
       voicing.frets.map(f => f) as (number | -1)[],
       'Custom',
@@ -1139,6 +1138,42 @@ function ChordLibraryPanel({
       onSetArpeggioPosition?.(position);
     }
   };
+
+  useEffect(() => {
+    const lastPage = Math.max(0, mergedTotalPages - 1);
+    if (voicingPage > lastPage) setVoicingPage(lastPage);
+  }, [mergedTotalPages, voicingPage, setVoicingPage]);
+
+  const prevSelectionRef = useRef({ root: selectedRoot, chord: selectedChord, tab: voicingTab });
+  useEffect(() => {
+    const prev = prevSelectionRef.current;
+    const selectionChanged = prev.root !== selectedRoot || prev.chord !== selectedChord || prev.tab !== voicingTab;
+    prevSelectionRef.current = { root: selectedRoot, chord: selectedChord, tab: voicingTab };
+    if (!selectionChanged || !selectedChord || chordAddMode) return;
+
+    const firstCurated = filteredCuratedMap[0];
+    if (firstCurated) {
+      onSetArpeggioPosition?.(null);
+      setActiveChord({ root: selectedRoot, chordType: selectedChord, voicingIndex: firstCurated.origIdx, voicingSource: voicingTab });
+      return;
+    }
+
+    const firstCustom = customDisplayEntries[0]?.voicing;
+    setActiveChord(null);
+    if (!firstCustom) {
+      onSetArpeggioPosition?.(null);
+      return;
+    }
+
+    const position = buildStaticVoicingPosition(
+      firstCustom.frets.map(f => f) as (number | -1)[],
+      'Custom',
+      firstCustom.barreFrom != null && firstCustom.barreTo != null && firstCustom.barreFret != null
+        ? { from: firstCustom.barreFrom, to: firstCustom.barreTo, fret: firstCustom.barreFret }
+        : null,
+    );
+    if (position) onSetArpeggioPosition?.(position);
+  }, [selectedRoot, selectedChord, voicingTab, chordAddMode, filteredCuratedMap, customDisplayEntries, buildStaticVoicingPosition, onSetArpeggioPosition, setActiveChord]);
 
   return (
     <>
@@ -1275,13 +1310,12 @@ function ChordLibraryPanel({
                   )}
                 </div>
               </div>
-              {mergedVoicings.length > 0 ? (
+              {mergedEntries.length > 0 ? (
                 <div className="grid grid-cols-4 gap-1">
-                  {mergedPagedVoicings.map((v, i) => {
-                    const globalIdx = voicingPage * VOICINGS_PER_PAGE + i;
-                    const isCurated = globalIdx < filteredCurated.length;
-                    // For curated voicings, map back to the original index in currentVoicings
-                    const origIdx = isCurated ? filteredCuratedMap[globalIdx]?.origIdx : undefined;
+                  {mergedPagedEntries.map((entry, i) => {
+                    const v = entry.voicing;
+                    const isCurated = entry.kind === 'curated';
+                    const origIdx = isCurated ? entry.origIdx : undefined;
                     const isActive = isCurated
                       ? (activeChord?.voicingIndex === origIdx && activeChord?.voicingSource === voicingTab)
                       : false;
@@ -1292,8 +1326,8 @@ function ChordLibraryPanel({
                             if (isCurated && origIdx != null && selectedChord) {
                               setActiveChord({ root: selectedRoot, chordType: selectedChord, voicingIndex: origIdx, voicingSource: voicingTab });
                               onSetArpeggioPosition?.(null);
-                            } else if (!isCurated) {
-                              handleSelectCustomVoicing(globalIdx);
+                            } else if (entry.kind === 'custom') {
+                              handleSelectCustomVoicing(v);
                             }
                           }}
                           className={`w-full rounded p-1 transition-all border flex flex-col items-center justify-center ${
@@ -1318,10 +1352,10 @@ function ChordLibraryPanel({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (isCurated) {
-                                handleHideCurated(globalIdx);
-                              } else {
-                                handleDeleteCustom(globalIdx);
+                              if (isCurated && origIdx != null) {
+                                handleHideCurated(origIdx);
+                              } else if (entry.kind === 'custom') {
+                                handleDeleteCustom(entry.sourceKey, entry.sourceIndex);
                               }
                             }}
                             className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[8px] flex items-center justify-center hover:brightness-110 z-10"

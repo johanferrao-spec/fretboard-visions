@@ -59,6 +59,7 @@ interface FretboardProps {
   inversionDegreeColor?: string | null;
   chordAddRootNote?: NoteName | null;
   chordAddHasNotes?: boolean;
+  suppressScaleNotes?: boolean;
   tabVisNotes?: { current: Array<{string: number; fret: number}>; upcoming: Array<Array<{string: number; fret: number}>> } | null;
 }
 
@@ -99,6 +100,7 @@ export default function Fretboard({
   inversionDegreeColor,
   chordAddRootNote,
   chordAddHasNotes,
+  suppressScaleNotes = false,
   tabVisNotes,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
@@ -524,6 +526,8 @@ export default function Fretboard({
       }
       return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
     }
+
+    if (suppressScaleNotes) return null;
 
     // Playing chord tones from timeline — show chord tone notes with a bright highlight
     if (playingChordTones && playingChordTones.size > 0) {
@@ -1306,6 +1310,9 @@ export default function Fretboard({
                               style={{
                                 width: noteMarkerSize,
                                 height: noteMarkerSize,
+                                minWidth: noteMarkerSize,
+                                minHeight: noteMarkerSize,
+                                flexShrink: 0,
                                 backgroundColor: arpAddMode ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
                                 color: 'hsl(var(--muted-foreground))',
                                 fontSize: Math.max(6, noteMarkerSize * 0.35),
@@ -1385,6 +1392,9 @@ export default function Fretboard({
                               style={{
                                 width: noteMarkerSize,
                                 height: noteMarkerSize,
+                                minWidth: noteMarkerSize,
+                                minHeight: noteMarkerSize,
+                                flexShrink: 0,
                                 backgroundColor: style.greyed ? 'hsl(var(--muted))' : style.backgroundColor,
                                 opacity: style.opacity,
                                 color: style.greyed
