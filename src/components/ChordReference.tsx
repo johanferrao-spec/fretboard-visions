@@ -287,6 +287,7 @@ export default function ChordReference({
           { key: 'caged' as MainTab, label: 'CAGED' },
           { key: 'identify' as MainTab, label: "What's This?" },
           { key: 'changes' as MainTab, label: 'Progression Analyser' },
+          { key: 'tabvis' as MainTab, label: 'Tab Visualiser' },
         ]).map(tab => (
           <button
             key={tab.key}
