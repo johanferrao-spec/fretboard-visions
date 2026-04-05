@@ -290,6 +290,7 @@ export default function ChordReference({
     }
     if (tab === 'scaleview') {
       setActiveChord(null);
+      setDegreeColors(true);
     }
   };
 
