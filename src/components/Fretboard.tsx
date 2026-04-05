@@ -275,6 +275,7 @@ export default function Fretboard({
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
     // Tab visualiser mode: only show tab notes
     if (tabVisNotes) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       const isCurrent = tabVisNotes.current.some(n => n.string === stringIndex && n.fret === fret);
       if (isCurrent) {
         return { backgroundColor: 'hsl(var(--primary))', opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
@@ -289,6 +290,7 @@ export default function Fretboard({
 
     // In arp add mode (custom voicing creation), show faint root notes if no notes placed yet
     if (arpAddMode && !isChordLibraryVoicing) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       if (chordAddRootNote && !chordAddHasNotes && fret > 0) {
         // Show faint root note guides
         if (note === chordAddRootNote) {
@@ -300,6 +302,7 @@ export default function Fretboard({
 
     // In identify mode, show clicked notes + arpeggio overlay
     if (identifyMode) {
+      // Clicked notes always visible (even outside box)
       if (identifyFrets[stringIndex] === fret) {
         let bg = 'hsl(var(--primary))';
         if (degreeColors && identifyRoot) {
@@ -308,6 +311,8 @@ export default function Fretboard({
         }
         return { backgroundColor: bg, opacity: 1, ring: true, ringColor: bg, greyed: false };
       }
+      // Hide everything else outside position box
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       // Show arpeggio overlay notes in identify mode (when a chord cell is selected)
       if (arpeggioPosition && arpPositionSet.size > 0 && fret > 0) {
         const key = `${stringIndex}-${fret}`;
