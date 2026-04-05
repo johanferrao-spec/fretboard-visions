@@ -263,9 +263,19 @@ export default function Fretboard({
     return false;
   }
 
+  // Helper: check if a fret position is outside the position box
+  function isOutsidePositionBox(stringIndex: number, fret: number): boolean {
+    if (!showFretBox || fret === 0) return false;
+    const row = stringOrder.indexOf(stringIndex);
+    const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
+    const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
+    return outsideH || outsideV;
+  }
+
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
     // Tab visualiser mode: only show tab notes
     if (tabVisNotes) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       const isCurrent = tabVisNotes.current.some(n => n.string === stringIndex && n.fret === fret);
       if (isCurrent) {
         return { backgroundColor: 'hsl(var(--primary))', opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
@@ -280,6 +290,7 @@ export default function Fretboard({
 
     // In arp add mode (custom voicing creation), show faint root notes if no notes placed yet
     if (arpAddMode && !isChordLibraryVoicing) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       if (chordAddRootNote && !chordAddHasNotes && fret > 0) {
         // Show faint root note guides
         if (note === chordAddRootNote) {
@@ -291,6 +302,7 @@ export default function Fretboard({
 
     // In identify mode, show clicked notes + arpeggio overlay
     if (identifyMode) {
+      // Clicked notes always visible (even outside box)
       if (identifyFrets[stringIndex] === fret) {
         let bg = 'hsl(var(--primary))';
         if (degreeColors && identifyRoot) {
@@ -299,6 +311,8 @@ export default function Fretboard({
         }
         return { backgroundColor: bg, opacity: 1, ring: true, ringColor: bg, greyed: false };
       }
+      // Hide everything else outside position box
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       // Show arpeggio overlay notes in identify mode (when a chord cell is selected)
       if (arpeggioPosition && arpPositionSet.size > 0 && fret > 0) {
         const key = `${stringIndex}-${fret}`;
@@ -320,6 +334,7 @@ export default function Fretboard({
 
     // Scale view degree filter: show chord tones bright with glow, rest as ghost
     if (scaleViewChordTones && scaleViewChordTones.size > 0 && !inversionVoicing) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       const noteIdx = (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note);
       const isChordTone = scaleViewChordTones.has(noteIdx);
       const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
@@ -344,6 +359,7 @@ export default function Fretboard({
 
     // Inversion voicing mode: only chord notes visible, opacity dims non-voicing chord tones
     if (inversionVoicing && inversionNoteSet.size > 0) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       const noteIdx = (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note);
       const isChordTone = scaleViewChordTones && scaleViewChordTones.has(noteIdx);
       if (!isChordTone) return null; // Notes outside chord are completely invisible
@@ -372,6 +388,7 @@ export default function Fretboard({
 
 
     if (arpeggioPosition && arpPositionSet.size > 0 && !activeChord) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       const key = `${stringIndex}-${fret}`;
       const isInPosition = arpPositionSet.has(key);
       const isChordTone = arpChordToneNames.has(note);
@@ -447,6 +464,7 @@ export default function Fretboard({
 
     // Playing chord tones from timeline — show chord tone notes with a bright highlight
     if (playingChordTones && playingChordTones.size > 0) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       const noteIdx = (['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).indexOf(note);
       const inChordTones = playingChordTones.has(noteIdx);
       const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
@@ -454,36 +472,17 @@ export default function Fretboard({
       
       if (inChordTones) {
         let bg = 'hsl(130, 70%, 45%)';
-        let opacity = 1;
-        let greyed = false;
         if (degreeColors) {
           const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
           const dc = getDegreeColor(activeRoot, note);
           if (dc) bg = dc;
         }
-        // Position box: grey out notes outside
-        if (showFretBox && fret > 0) {
-          const row = stringOrder.indexOf(stringIndex);
-          const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
-          const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
-          if (outsideH || outsideV) {
-            greyed = true; opacity = 0.15;
-          }
-        }
-        return { backgroundColor: bg, opacity, ring: !greyed, ringColor: 'hsl(130, 70%, 55%)', greyed };
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(130, 70%, 55%)', greyed: false };
       }
       // Dim non-chord-tone scale notes
       if (inPrimary || inSecondary) {
         const bg = inPrimary ? pColor : sColor;
-        let opacity = 0.2;
-        let greyed = true;
-        if (showFretBox && fret > 0) {
-          const row = stringOrder.indexOf(stringIndex);
-          const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
-          const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
-          if (outsideH || outsideV) { opacity = 0.08; }
-        }
-        return { backgroundColor: bg, opacity, ring: false, ringColor: '', greyed };
+        return { backgroundColor: bg, opacity: 0.2, ring: false, ringColor: '', greyed: true };
       }
       return null;
     }
@@ -550,15 +549,8 @@ export default function Fretboard({
       }
     }
 
-    // Position box: grey out notes outside (horizontal + vertical)
-    if (showFretBox && fret > 0) {
-      const row = stringOrder.indexOf(stringIndex);
-      const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
-      const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
-      if (outsideH || outsideV) {
-        greyed = true; opacity = 0.15;
-      }
-    }
+    // Position box: completely hide notes outside
+    if (isOutsidePositionBox(stringIndex, fret)) return null;
 
     return { backgroundColor: bg, opacity, ring, ringColor, greyed };
   }
@@ -958,15 +950,16 @@ export default function Fretboard({
               const topRow = Math.min(fromRow, toRow);
               const bottomRow = Math.max(fromRow, toRow);
               const barreLeft = cumLeft[bf] || 0;
-              const barreWidth = widths[bf] || 0;
-              const centerX = barreLeft + barreWidth * 0.5;
+              const barreW = widths[bf] || 0;
+              const centerX = barreLeft + barreW * 0.5;
               const totalH = 6 * stringH;
               const y1 = topRow * stringH + stringH * 0.5;
               const y2 = bottomRow * stringH + stringH * 0.5;
-              const barThick = noteMarkerSize * 0.86;
-              const markerRadius = noteMarkerSize / 2;
-              const rectY = y1 + markerRadius - barThick / 2;
-              const rectHeight = Math.max(barThick, (y2 - y1) - markerRadius * 2 + barThick);
+              const barThickY = noteMarkerSize * 0.86;
+              const barThickX = Math.min(barreW * 0.45, 2.5);
+              const markerRadiusY = noteMarkerSize / 2;
+              const rectY = y1 + markerRadiusY - barThickY / 2;
+              const rectHeight = Math.max(barThickY, (y2 - y1) - markerRadiusY * 2 + barThickY);
               return (
                 <svg
                   className="absolute inset-0 pointer-events-none z-[2]"
@@ -975,11 +968,11 @@ export default function Fretboard({
                   preserveAspectRatio="none"
                 >
                   <rect
-                    x={centerX - barThick / 2}
+                    x={centerX - barThickX / 2}
                     y={rectY}
-                    width={barThick}
+                    width={barThickX}
                     height={rectHeight}
-                    rx={barThick / 2}
+                    rx={barThickX / 2}
                     fill="hsl(var(--muted-foreground))"
                     opacity={0.62}
                   />
@@ -997,15 +990,16 @@ export default function Fretboard({
               const topRow = Math.min(fromRow, toRow);
               const bottomRow = Math.max(fromRow, toRow);
               const barreLeft = cumLeft[bf] || 0;
-              const barreWidth = widths[bf] || 0;
-              const centerX = barreLeft + barreWidth * 0.5;
+              const barreW = widths[bf] || 0;
+              const centerX = barreLeft + barreW * 0.5;
               const totalH = 6 * stringH;
               const y1 = topRow * stringH + stringH * 0.5;
               const y2 = bottomRow * stringH + stringH * 0.5;
-              const barThick = noteMarkerSize * 0.86;
-              const markerRadius = noteMarkerSize / 2;
-              const rectY = y1 + markerRadius - barThick / 2;
-              const rectHeight = Math.max(barThick, (y2 - y1) - markerRadius * 2 + barThick);
+              const barThickY = noteMarkerSize * 0.86;
+              const barThickX = Math.min(barreW * 0.45, 2.5);
+              const markerRadiusY = noteMarkerSize / 2;
+              const rectY = y1 + markerRadiusY - barThickY / 2;
+              const rectHeight = Math.max(barThickY, (y2 - y1) - markerRadiusY * 2 + barThickY);
               return (
                 <svg
                   className="absolute inset-0 pointer-events-none z-[2]"
@@ -1014,11 +1008,11 @@ export default function Fretboard({
                   preserveAspectRatio="none"
                 >
                   <rect
-                    x={centerX - barThick / 2}
+                    x={centerX - barThickX / 2}
                     y={rectY}
-                    width={barThick}
+                    width={barThickX}
                     height={rectHeight}
-                    rx={barThick / 2}
+                    rx={barThickX / 2}
                     fill="hsl(var(--muted-foreground))"
                     opacity={0.62}
                   />
@@ -1196,9 +1190,9 @@ export default function Fretboard({
                             }}
                             onMouseUp={() => { setIdentifyDrag(null); identifyMouseDown.current = false; arpDragRef.current = null; }}
                             onMouseLeave={() => setIdentifyHover(null)}
-                            className={`absolute inset-0 z-10 flex items-center justify-center font-mono font-bold cursor-pointer select-none transition-opacity ${isVertical ? '-rotate-90' : ''}`}
+                            className={`absolute inset-0 z-10 flex items-center justify-center font-mono font-bold cursor-pointer select-none ${isVertical ? '-rotate-90' : ''}`}
                             style={{
-                              opacity: identifyHover?.stringIndex === stringIdx && identifyHover?.fret === fret ? 0.5 : 0,
+                              opacity: identifyHover?.stringIndex === stringIdx && identifyHover?.fret === fret ? 0.6 : 0.12,
                             }}
                           >
                             <div
