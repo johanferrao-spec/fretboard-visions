@@ -400,6 +400,12 @@ export default function ChordReference({
           setActiveChord={setActiveChord}
           onSetArpeggioPosition={onSetArpeggioPosition}
         />
+      ) : activeTab === 'tabvis' ? (
+        <TabVisualiser
+          tuning={tuning}
+          tuningLabels={tuningLabels}
+          onTabNotes={onTabNotes}
+        />
       ) : null}
     </div>
   );
