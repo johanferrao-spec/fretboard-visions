@@ -54,6 +54,7 @@ export function useFretboard() {
   const [cagedShape, setCagedShape] = useState<string>('E');
   const [identifyMode, setIdentifyMode] = useState(false);
   const [identifyFrets, setIdentifyFrets] = useState<(number | -1)[]>([-1, -1, -1, -1, -1, -1]);
+  const [identifyBarre, setIdentifyBarre] = useState<{ from: number; to: number; fret: number } | null>(null);
   const [identifyRoot, setIdentifyRoot] = useState<NoteName | null>(null);
   const [tuning, setTuningState] = useState<number[]>(STANDARD_TUNING);
   const [tuningName, setTuningName] = useState('Standard');
