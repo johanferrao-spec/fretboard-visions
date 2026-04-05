@@ -390,6 +390,9 @@ const Index = () => {
                     fb.setIdentifyRoot(note);
                   }
                 }}
+                onTabNotes={(current, upcoming) => {
+                  setTabVisNotes({ current, upcoming });
+                }}
             />
           </div>
         </main>
