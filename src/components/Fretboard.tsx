@@ -1198,7 +1198,7 @@ export default function Fretboard({
                   }}
                   title={identifyMode ? "Click to toggle open string" : "Double-click to toggle string"}
                 >
-                  {identifyMode && identifyFrets[stringIdx] === -1 ? '×' : isChordMuted && !identifyMode ? '×' : tuningLabels[stringIdx]}
+                  {identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? '×' : isChordMuted && !identifyMode ? '×' : tuningLabels[stringIdx]}
                 </button>
 
                 {/* String line */}
