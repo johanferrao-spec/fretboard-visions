@@ -71,6 +71,10 @@ interface ChordReferenceProps {
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
   onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
+  tabVisData: import('./TabVisualiser').TabData | null;
+  setTabVisData: (d: import('./TabVisualiser').TabData | null) => void;
+  tabVisPlayhead: number;
+  setTabVisPlayhead: (p: number | ((prev: number) => number)) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
@@ -186,6 +190,7 @@ export default function ChordReference({
   onSetInversionVoicing,
   ghostNoteOpacity, setGhostNoteOpacity,
   onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
+  tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
@@ -405,6 +410,10 @@ export default function ChordReference({
           tuning={tuning}
           tuningLabels={tuningLabels}
           onTabNotes={onTabNotes}
+          tabData={tabVisData}
+          setTabData={setTabVisData}
+          playheadPos={tabVisPlayhead}
+          setPlayheadPos={setTabVisPlayhead}
         />
       ) : null}
     </div>
@@ -1233,6 +1242,86 @@ function IdentifyPanel({
   tuningLabels: string[];
   tuning: number[];
 }) {
+  const [hoveredChord, setHoveredChord] = useState<string | null>(null);
+  const [chordOpacity, setChordOpacity] = useState(0.7);
+
+  // Get the parent/foundation chord for hover display
+  const getParentChordInfo = useCallback((chordName: string) => {
+    // Extract root and type from display name like "A9", "C#m7♭5", etc.
+    const match = chordName.match(/^([A-G]#?)(.*)/);
+    if (!match) return null;
+    const root = match[1] as NoteName;
+    const suffix = match[2];
+
+    // Map extensions to their parent 7th chord types
+    const parentMap: Record<string, string> = {
+      '9': 'Dominant 7',
+      'maj9': 'Major 7',
+      'm9': 'Minor 7',
+      '7♭9': 'Dominant 7',
+      '7#9': 'Dominant 7',
+      '11': 'Dominant 7',
+      'm11': 'Minor 7',
+      '13': 'Dominant 7',
+      'm13': 'Minor 7',
+      'add9': 'Major',
+    };
+
+    // Parse suffix to chord type
+    const suffixToType: Record<string, string> = {
+      '': 'Major', 'm': 'Minor', 'dim': 'Diminished', 'aug': 'Augmented',
+      'sus2': 'Sus2', 'sus4': 'Sus4', 'maj7': 'Major 7', 'm7': 'Minor 7',
+      '7': 'Dominant 7', 'dim7': 'Dim 7', 'm7♭5': 'Half-Dim 7',
+      'mMaj7': 'Min/Maj 7', 'aug7': 'Aug 7', '9': 'Dominant 9',
+      'maj9': 'Major 9', 'm9': 'Minor 9', '7#9': '7#9', '7♭9': '7♭9',
+      'add9': 'Add9', '6': 'Major 6', 'm6': 'Minor 6', '7sus4': '7sus4',
+      '11': '11', 'm11': 'Minor 11', '13': '13', 'm13': 'Minor 13',
+    };
+
+    const chordType = suffixToType[suffix] || null;
+    if (!chordType) return null;
+
+    const parentType = parentMap[suffix];
+    if (!parentType) return null;
+
+    // Get a standard voicing for the parent chord near the same position
+    const voicings = getVoicingsForChord(root, parentType, 'full');
+    if (voicings.length === 0) return null;
+
+    // Find the voicing closest to the played frets
+    const playedFretAvg = frets.filter(f => f >= 0).reduce((s, f) => s + f, 0) / Math.max(1, frets.filter(f => f >= 0).length);
+    let bestVoicing = voicings[0];
+    let bestDist = 999;
+    for (const v of voicings) {
+      const vAvg = v.frets.filter(f => f >= 0).reduce((s, f) => s + f, 0) / Math.max(1, v.frets.filter(f => f >= 0).length);
+      const dist = Math.abs(vAvg - playedFretAvg);
+      if (dist < bestDist) { bestDist = dist; bestVoicing = v; }
+    }
+
+    return { root, parentType, voicing: bestVoicing };
+  }, [frets]);
+
+  // Flatten all results into individual chord entries
+  const allChords = useMemo(() => {
+    const chords: { name: string; explanation: string; notes: NoteName[]; root: NoteName; altNames: string[] }[] = [];
+    for (const r of results) {
+      for (let ni = 0; ni < r.names.length; ni++) {
+        const name = r.names[ni];
+        const match = name.match(/^([A-G]#?)/);
+        const root = match ? match[1] as NoteName : r.notes[0];
+        const explanation = ni === 0 ? (r.explanations[0] || '') : (r.explanations.find(e => e.startsWith(name)) || r.explanations[0] || '');
+        chords.push({
+          name,
+          explanation,
+          notes: r.notes,
+          root,
+          altNames: [],
+        });
+      }
+    }
+    return chords;
+  }, [results]);
+
   return (
     <div>
       <div className="text-[9px] font-mono text-muted-foreground mb-2 leading-relaxed">
@@ -1258,47 +1347,130 @@ function IdentifyPanel({
           </div>
         ))}
       </div>
-      {/* Results */}
-      {results.length > 0 ? (
-        <div className="space-y-1">
-          <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Possible chords ({results.reduce((s, r) => s + r.names.length, 0)} interpretations):</div>
-          {results.map((r, i) => {
-            const primaryName = r.names?.[0] || '?';
-            const altNames = r.names?.slice(1) || [];
-            const isViewed = viewRoot === primaryName;
-            return (
-              <button
-                key={i}
-                onClick={() => setViewRoot(isViewed ? null : primaryName)}
-                draggable
-                onDragStart={(e) => {
-                  const match = primaryName.match(/^([A-G]#?)\s*(.*)/);
-                  if (match) {
-                    e.dataTransfer.setData('application/chord', JSON.stringify({ root: match[1], chordType: match[2] || 'Major' }));
-                    e.dataTransfer.effectAllowed = 'copy';
-                  }
-                }}
-                className={`w-full text-left px-2 py-1.5 rounded text-[10px] font-mono transition-all border ${
-                  isViewed
-                    ? 'bg-primary/15 border-primary/40 text-foreground'
-                    : 'bg-muted/40 border-border/30 text-foreground/80 hover:bg-muted/60'
-                }`}
-              >
-                <div className="font-bold">{primaryName}</div>
-                {altNames.length > 0 && (
-                  <div className="text-[8px] text-primary/70 mt-0.5">
-                    Also: {altNames.join(', ')}
-                  </div>
-                )}
-                {r.explanations.length > 0 && (
-                  <div className="text-[8px] text-muted-foreground mt-0.5 leading-tight">
-                    {r.explanations[0]}
-                  </div>
-                )}
-                {r.notes && <div className="text-[8px] text-muted-foreground">{r.notes.join(' — ')}</div>}
-              </button>
-            );
-          })}
+      {/* Results as individual chord cells */}
+      {allChords.length > 0 ? (
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider flex-1">
+              {allChords.length} interpretation{allChords.length !== 1 ? 's' : ''}
+            </div>
+            {/* Opacity slider */}
+            <div className="flex items-center gap-1">
+              <span className="text-[7px] font-mono text-muted-foreground">Tab opacity</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={chordOpacity * 100}
+                onChange={(e) => setChordOpacity(Number(e.target.value) / 100)}
+                className="w-14 h-2 accent-primary"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            {allChords.map((chord, i) => {
+              const isViewed = viewRoot === chord.name;
+              const isHovered = hoveredChord === chord.name;
+              const parentInfo = isHovered ? getParentChordInfo(chord.name) : null;
+
+              // Get degree color for the tab display
+              const rootIdx = NOTE_NAMES.indexOf(chord.root);
+
+              return (
+                <div
+                  key={`${chord.name}-${i}`}
+                  className="relative"
+                  onMouseEnter={() => setHoveredChord(chord.name)}
+                  onMouseLeave={() => setHoveredChord(null)}
+                >
+                  <button
+                    onClick={() => setViewRoot(isViewed ? null : chord.name)}
+                    draggable
+                    onDragStart={(e) => {
+                      const match = chord.name.match(/^([A-G]#?)\s*(.*)/);
+                      if (match) {
+                        e.dataTransfer.setData('application/chord', JSON.stringify({ root: match[1], chordType: match[2] || 'Major' }));
+                        e.dataTransfer.effectAllowed = 'copy';
+                      }
+                    }}
+                    className={`w-full text-left rounded-lg transition-all border ${
+                      isViewed
+                        ? 'border-primary/50 shadow-[0_0_8px_hsl(var(--primary)/0.2)]'
+                        : 'border-border/40 hover:border-border/60'
+                    }`}
+                    style={{
+                      background: isViewed
+                        ? 'linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.06))'
+                        : 'hsl(var(--muted) / 0.3)',
+                    }}
+                  >
+                    <div className="px-3 py-2">
+                      {/* Chord name with degree-colored tab notation */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-mono font-bold text-foreground">{chord.name}</span>
+                        {/* Mini tab display */}
+                        <div className="flex gap-px ml-auto" style={{ opacity: chordOpacity }}>
+                          {frets.map((f, si) => {
+                            const note = f >= 0 ? noteAtFret(si, f, tuning) : null;
+                            const notePC = note ? NOTE_NAMES.indexOf(note) : -1;
+                            const interval = note ? ((notePC - rootIdx + 12) % 12) : -1;
+                            const intervalName = note ? getIntervalName(chord.root, note) : '';
+                            const degColor = intervalName ? DEGREE_COLORS[intervalName] : null;
+                            return (
+                              <div
+                                key={si}
+                                className="w-4 h-4 rounded-sm flex items-center justify-center text-[7px] font-mono font-bold"
+                                style={{
+                                  backgroundColor: f === -1 ? 'transparent' : degColor ? `hsl(${degColor} / 0.25)` : 'hsl(var(--primary) / 0.15)',
+                                  color: f === -1 ? 'hsl(var(--muted-foreground) / 0.4)' : degColor ? `hsl(${degColor})` : 'hsl(var(--primary))',
+                                  border: f === -1 ? 'none' : `1px solid ${degColor ? `hsl(${degColor} / 0.4)` : 'hsl(var(--primary) / 0.3)'}`,
+                                }}
+                              >
+                                {f === -1 ? '×' : f}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {chord.explanation && (
+                        <div className="text-[8px] font-mono text-muted-foreground mt-1 leading-tight">
+                          {chord.explanation}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Hover: show parent chord */}
+                    {isHovered && parentInfo && (
+                      <div className="border-t border-border/30 px-3 py-1.5 bg-muted/20 rounded-b-lg">
+                        <div className="text-[8px] font-mono text-muted-foreground mb-0.5">
+                          Built from: <span className="text-foreground font-bold">{parentInfo.root} {parentInfo.parentType}</span>
+                        </div>
+                        <div className="flex gap-px">
+                          {parentInfo.voicing.frets.map((f, si) => {
+                            const note = f >= 0 ? noteAtFret(si, f, tuning) : null;
+                            const intervalName = note ? getIntervalName(parentInfo.root, note) : '';
+                            const degColor = intervalName ? DEGREE_COLORS[intervalName] : null;
+                            return (
+                              <div
+                                key={si}
+                                className="w-4 h-4 rounded-sm flex items-center justify-center text-[7px] font-mono font-bold"
+                                style={{
+                                  backgroundColor: f === -1 ? 'transparent' : degColor ? `hsl(${degColor} / 0.2)` : 'hsl(var(--muted) / 0.5)',
+                                  color: f === -1 ? 'hsl(var(--muted-foreground) / 0.3)' : degColor ? `hsl(${degColor})` : 'hsl(var(--muted-foreground))',
+                                }}
+                              >
+                                {f === -1 ? '×' : f}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       ) : frets.some(f => f >= 0) ? (
         <div className="text-[10px] font-mono text-muted-foreground text-center py-2">

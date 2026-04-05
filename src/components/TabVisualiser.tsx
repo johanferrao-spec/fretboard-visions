@@ -17,11 +17,14 @@ interface TabVisualiserProps {
   tuning: number[];
   tuningLabels: string[];
   onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
+  // Lifted state for persistence across tab switches
+  tabData: TabData | null;
+  setTabData: (d: TabData | null) => void;
+  playheadPos: number;
+  setPlayheadPos: (p: number | ((prev: number) => number)) => void;
 }
 
-export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabVisualiserProps) {
-  const [tabData, setTabData] = useState<TabData | null>(null);
-  const [playheadPos, setPlayheadPos] = useState(0);
+export default function TabVisualiser({ tuning, tuningLabels, onTabNotes, tabData, setTabData, playheadPos, setPlayheadPos }: TabVisualiserProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -218,10 +221,11 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
 
       {/* Digital Tab Timeline */}
       <div className="flex-1 px-3 py-3 overflow-hidden">
-        <div className="rounded-2xl p-4 h-full" style={{
+        <div className="rounded-2xl p-5 h-full" style={{
           background: 'linear-gradient(180deg, hsl(215, 50%, 12%) 0%, hsl(218, 55%, 15%) 100%)',
           border: '1px solid hsl(215, 40%, 22%)',
           boxShadow: '0 4px 20px hsl(215, 50%, 5% / 0.5), inset 0 1px 0 hsl(215, 40%, 25% / 0.3)',
+          minHeight: 200,
         }}>
           <div className="flex gap-3 h-full">
             {/* String labels column */}
@@ -239,7 +243,7 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
               className="flex-1 relative cursor-pointer select-none"
               onMouseDown={handleTimelineMouseDown}
             >
-              {/* String lines — more spaced, subtle teal tint */}
+              {/* String lines — well-spaced, subtle teal tint */}
               {[0, 1, 2, 3, 4, 5].map(si => {
                 const y = `${(si / 5) * 100}%`;
                 return (

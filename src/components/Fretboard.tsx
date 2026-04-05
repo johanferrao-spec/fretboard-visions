@@ -1141,7 +1141,7 @@ export default function Fretboard({
                         {fret === 0 && <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-fretboard-nut" />}
 
                         {/* In identify mode or arp add mode, always render a clickable/hoverable target */}
-                        {(identifyMode || arpAddMode) && !style && fret > 0 && (
+                        {(identifyMode || arpAddMode) && !style && (identifyMode || fret > 0) && (
                           <button
                             onMouseDown={(e) => {
                               e.stopPropagation();
@@ -1182,16 +1182,23 @@ export default function Fretboard({
                             }}
                             onMouseUp={() => { setIdentifyDrag(null); arpDragRef.current = null; }}
                             onMouseLeave={() => setIdentifyHover(null)}
-                            className={`relative z-10 rounded-full flex items-center justify-center font-mono font-bold cursor-pointer select-none opacity-0 hover:opacity-50 transition-opacity ${isVertical ? '-rotate-90' : ''}`}
+                            className={`absolute inset-0 z-10 flex items-center justify-center font-mono font-bold cursor-pointer select-none transition-opacity ${isVertical ? '-rotate-90' : ''}`}
                             style={{
-                              width: noteMarkerSize,
-                              height: noteMarkerSize,
-                              backgroundColor: arpAddMode ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
-                              color: 'hsl(var(--muted-foreground))',
-                              fontSize: Math.max(6, noteMarkerSize * 0.35),
+                              opacity: identifyHover?.stringIndex === stringIdx && identifyHover?.fret === fret ? 0.5 : 0,
                             }}
                           >
-                            {note}
+                            <div
+                              className="rounded-full flex items-center justify-center"
+                              style={{
+                                width: noteMarkerSize,
+                                height: noteMarkerSize,
+                                backgroundColor: arpAddMode ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+                                color: 'hsl(var(--muted-foreground))',
+                                fontSize: Math.max(6, noteMarkerSize * 0.35),
+                              }}
+                            >
+                              {note}
+                            </div>
                           </button>
                         )}
 

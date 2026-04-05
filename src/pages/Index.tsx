@@ -9,7 +9,7 @@ import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import type { NoteName } from '@/lib/music';
-import type { TabNote } from '@/components/TabVisualiser';
+import type { TabNote, TabData } from '@/components/TabVisualiser';
 import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_DEGREE_COLORS, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
@@ -24,6 +24,9 @@ const Index = () => {
   const [keyMode, setKeyMode] = useState<KeyMode>(() => scaleToKeyMode(fb.primaryScale.scale));
   const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis'>('beginner');
   const [tabVisNotes, setTabVisNotes] = useState<{ current: Array<{string: number; fret: number}>; upcoming: Array<{string: number; fret: number}[]> } | null>(null);
+  const [tabVisHasOpened, setTabVisHasOpened] = useState(false);
+  const [tabVisData, setTabVisData] = useState<TabData | null>(null);
+  const [tabVisPlayhead, setTabVisPlayhead] = useState(0);
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
   const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower'>('upper');
@@ -301,7 +304,7 @@ const Index = () => {
                 inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
                  chordAddRootNote={fb.arpAddMode ? (activeTab === 'chords' ? null : null) : null}
                  chordAddHasNotes={false}
-                 tabVisNotes={activeTab === 'tabvis' ? tabVisNotes : null}
+                 tabVisNotes={activeTab === 'tabvis' ? (tabVisNotes || { current: [], upcoming: [] }) : null}
             />
           </div>
 
@@ -393,6 +396,10 @@ const Index = () => {
                 onTabNotes={(current, upcoming) => {
                   setTabVisNotes({ current, upcoming });
                 }}
+                tabVisData={tabVisData}
+                setTabVisData={setTabVisData}
+                tabVisPlayhead={tabVisPlayhead}
+                setTabVisPlayhead={setTabVisPlayhead}
             />
           </div>
         </main>
