@@ -1498,10 +1498,10 @@ export function generateTriadVoicings(root: NoteName, chordType: string): ChordV
 // ============================================================
 
 export function getVoicingsForChord(root: NoteName, chordType: string, source: 'full' | 'shell' | 'drop2' | 'drop3' | 'triads'): ChordVoicing[] {
-  if (source === 'triads') return generateTriadVoicings(root, chordType);
+  if (source === 'triads') return deduplicateVoicings12(generateTriadVoicings(root, chordType));
   if (source === 'full') {
     const curated = CURATED_VOICINGS[root]?.[chordType];
-    return curated && curated.length > 0
+    const filtered = curated && curated.length > 0
       ? curated.filter(voicing => {
           if (!voicingStartsOnRoot(voicing, root)) return false;
           if (!voicingContainsRequiredTones(voicing, root, chordType, 'full')) return false;
@@ -1510,11 +1510,39 @@ export function getVoicingsForChord(root: NoteName, chordType: string, source: '
           return true;
         })
       : [];
+    return deduplicateVoicings12(filtered);
   }
-  if (source === 'shell') return generateShellVoicings(root, chordType);
-  if (source === 'drop2') return generateDrop2Voicings(root, chordType);
-  if (source === 'drop3') return generateDrop3Voicings(root, chordType);
+  if (source === 'shell') return deduplicateVoicings12(generateShellVoicings(root, chordType));
+  if (source === 'drop2') return deduplicateVoicings12(generateDrop2Voicings(root, chordType));
+  if (source === 'drop3') return deduplicateVoicings12(generateDrop3Voicings(root, chordType));
   return [];
+}
+
+/** Remove voicings that are identical to another voicing shifted up/down 12 frets — keep the lower one */
+function deduplicateVoicings12(voicings: ChordVoicing[]): ChordVoicing[] {
+  const kept: ChordVoicing[] = [];
+  const removedIndices = new Set<number>();
+  for (let i = 0; i < voicings.length; i++) {
+    if (removedIndices.has(i)) continue;
+    for (let j = i + 1; j < voicings.length; j++) {
+      if (removedIndices.has(j)) continue;
+      const a = voicings[i].frets;
+      const b = voicings[j].frets;
+      // Check if b = a + 12 or a = b + 12 on every string
+      let isShift12Up = true;
+      let isShift12Down = true;
+      for (let s = 0; s < 6; s++) {
+        if (a[s] < 0 && b[s] < 0) continue;
+        if (a[s] < 0 || b[s] < 0) { isShift12Up = false; isShift12Down = false; break; }
+        if (b[s] !== a[s] + 12) isShift12Up = false;
+        if (b[s] !== a[s] - 12) isShift12Down = false;
+      }
+      if (isShift12Up) removedIndices.add(j);
+      if (isShift12Down) removedIndices.add(i);
+    }
+    if (!removedIndices.has(i)) kept.push(voicings[i]);
+  }
+  return kept;
 }
 
 // ============================================================
