@@ -91,9 +91,9 @@ const ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
 ];
 
 const CHORD_COLUMNS: { label: string; types: string[] }[] = [
-  { label: 'Major', types: ['Major', 'Major 7', 'Major 7♭5', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', 'Major 9', 'Dominant 9', 'Major 6', '7#9', '7♭9', '7#5', '7♭5', '11', '13'] },
-  { label: 'Minor', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'] },
-  { label: 'Sus', types: ['Sus2', 'Sus4', '7sus4', '7sus4♭9', 'Power (5)'] },
+  { label: 'Major', types: ['Major', 'Major 7', 'Major 7♭5', 'Major 7#5', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', '6add9', 'Major 9', 'Dominant 9', 'Major 6', 'Maj11', 'Maj13', 'Maj9#11', 'Maj13#11', '7#9', '7♭9', '7#5', '7♭5', '11', '13', '9♭5', '9#5', '13#11', '13♭9', '11♭9', '7(♭5,♭9)', '7(♭5,#9)', '7(#5,♭9)', '7(#5,#9)'] },
+  { label: 'Minor', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13', 'Madd9', 'm6add9', 'mMaj9', 'm7#5'] },
+  { label: 'Sus', types: ['Sus2', 'Sus4', '7sus4', '7sus4♭9', 'Sus2Sus4', 'Power (5)', 'Dim5'] },
 ];
 
 // ============================================================
@@ -838,7 +838,7 @@ function ChordLibraryPanel({
   setActiveChord: (c: ChordSelection | null) => void;
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
 }) {
-  const VOICINGS_PER_PAGE = 12;
+  const VOICINGS_PER_PAGE = 8;
   const [libCopied, setLibCopied] = useState(false);
   const [addingBarre, setAddingBarre] = useState<{ from: number; to: number; fret: number } | null>(null);
 
@@ -930,8 +930,9 @@ function ChordLibraryPanel({
       setAddingBarre({ from, to, fret });
       setAddingFrets(prev => {
         const next = [...prev];
+        // Only set barre fret on strings that don't already have a different (higher) fret
         for (let s = from; s <= to; s += 1) {
-          if (next[s] === -1 || next[s] < fret) next[s] = fret;
+          if (next[s] === -1) next[s] = fret;
         }
         return next;
       });
@@ -1201,7 +1202,7 @@ function ChordLibraryPanel({
                               handleSelectCustomVoicing(globalIdx);
                             }
                           }}
-                          className={`w-full rounded p-0.5 transition-all border aspect-square flex flex-col items-center justify-center ${
+                          className={`w-full rounded p-1 transition-all border flex flex-col items-center justify-center ${
                             isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
                           }`}
                         >
@@ -1866,8 +1867,8 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
   const minFret = positiveFrets.length > 0 ? Math.min(...positiveFrets) : 1;
   const startFret = minFret <= 4 ? 1 : minFret;
   const numFrets = Math.max(4, maxFret - startFret + 1);
-  const w = 68;
-  const h = 82;
+  const w = 90;
+  const h = 110;
   const stringSpacing = w / 7;
   const fretSpacing = h / (numFrets + 1);
 
@@ -1906,7 +1907,7 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
           const interval = showDegrees ? getIntervalName(root, note) : getExtendedIntervalName(root, note);
           const degColor = DEGREE_COLORS[interval];
           const fillColor = showDegrees && degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
-          return <circle key={i} cx={x} cy={y} r={4.2} fill={fillColor} />;
+          return <circle key={i} cx={x} cy={y} r={5.5} fill={fillColor} />;
         })}
       </svg>
     </div>

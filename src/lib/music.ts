@@ -142,6 +142,7 @@ export const CHORD_FORMULAS: Record<string, number[]> = {
   'Sus4': [0, 5, 7],
   'Major 7': [0, 4, 7, 11],
   'Major 7♭5': [0, 4, 6, 11],
+  'Major 7#5': [0, 4, 8, 11],
   'Minor 7': [0, 3, 7, 10],
   'Dominant 7': [0, 4, 7, 10],
   'Dim 7': [0, 3, 6, 9],
@@ -165,6 +166,27 @@ export const CHORD_FORMULAS: Record<string, number[]> = {
   '13': [0, 4, 7, 10, 21],
   'Minor 13': [0, 3, 7, 10, 21],
   'Power (5)': [0, 7],
+  // Extended / altered chord types
+  'Maj11': [0, 4, 7, 11, 17],
+  'Maj13': [0, 4, 7, 11, 21],
+  'Maj9#11': [0, 4, 7, 11, 14, 18],
+  'Maj13#11': [0, 4, 7, 11, 18, 21],
+  '6add9': [0, 4, 7, 9, 14],
+  'Madd9': [0, 3, 7, 14],
+  'm6add9': [0, 3, 7, 9, 14],
+  'mMaj9': [0, 3, 7, 11, 14],
+  'm7#5': [0, 3, 8, 10],
+  '9♭5': [0, 4, 6, 10, 14],
+  '9#5': [0, 4, 8, 10, 14],
+  '13#11': [0, 4, 7, 10, 18, 21],
+  '13♭9': [0, 4, 7, 10, 13, 21],
+  '11♭9': [0, 4, 7, 10, 13, 17],
+  '7(♭5,♭9)': [0, 4, 6, 10, 13],
+  '7(♭5,#9)': [0, 4, 6, 10, 15],
+  '7(#5,♭9)': [0, 4, 8, 10, 13],
+  '7(#5,#9)': [0, 4, 8, 10, 15],
+  'Sus2Sus4': [0, 2, 5, 7],
+  'Dim5': [0, 3, 6],
 };
 
 export const ARPEGGIO_FORMULAS: Record<string, number[]> = {
@@ -176,6 +198,7 @@ export const ARPEGGIO_FORMULAS: Record<string, number[]> = {
   'Sus4': [0, 5, 7],
   'Major 7': [0, 4, 7, 11],
   'Major 7♭5': [0, 4, 6, 11],
+  'Major 7#5': [0, 4, 8, 11],
   'Minor 7': [0, 3, 7, 10],
   'Dominant 7': [0, 4, 7, 10],
   'Dim 7': [0, 3, 6, 9],
@@ -196,6 +219,27 @@ export const ARPEGGIO_FORMULAS: Record<string, number[]> = {
   'Minor 11': [0, 3, 7, 10, 17],
   '13': [0, 4, 7, 10, 21],
   'Minor 13': [0, 3, 7, 10, 21],
+  'Maj11': [0, 4, 7, 11, 17],
+  'Maj13': [0, 4, 7, 11, 21],
+  'Maj9#11': [0, 4, 7, 11, 14, 18],
+  'Maj13#11': [0, 4, 7, 11, 18, 21],
+  '6add9': [0, 4, 7, 9, 14],
+  'Madd9': [0, 3, 7, 14],
+  'm6add9': [0, 3, 7, 9, 14],
+  'mMaj9': [0, 3, 7, 11, 14],
+  'm7#5': [0, 3, 8, 10],
+  'm7♭5': [0, 3, 6, 10],
+  '9♭5': [0, 4, 6, 10, 14],
+  '9#5': [0, 4, 8, 10, 14],
+  '13#11': [0, 4, 7, 10, 18, 21],
+  '13♭9': [0, 4, 7, 10, 13, 21],
+  '11♭9': [0, 4, 7, 10, 13, 17],
+  '7(♭5,♭9)': [0, 4, 6, 10, 13],
+  '7(♭5,#9)': [0, 4, 6, 10, 15],
+  '7(#5,♭9)': [0, 4, 8, 10, 13],
+  '7(#5,#9)': [0, 4, 8, 10, 15],
+  'Sus2Sus4': [0, 2, 5, 7],
+  'Dim5': [0, 3, 6],
 };
 
 // ============================================================
@@ -1454,10 +1498,10 @@ export function generateTriadVoicings(root: NoteName, chordType: string): ChordV
 // ============================================================
 
 export function getVoicingsForChord(root: NoteName, chordType: string, source: 'full' | 'shell' | 'drop2' | 'drop3' | 'triads'): ChordVoicing[] {
-  if (source === 'triads') return generateTriadVoicings(root, chordType);
+  if (source === 'triads') return deduplicateVoicings12(generateTriadVoicings(root, chordType));
   if (source === 'full') {
     const curated = CURATED_VOICINGS[root]?.[chordType];
-    return curated && curated.length > 0
+    const filtered = curated && curated.length > 0
       ? curated.filter(voicing => {
           if (!voicingStartsOnRoot(voicing, root)) return false;
           if (!voicingContainsRequiredTones(voicing, root, chordType, 'full')) return false;
@@ -1466,11 +1510,39 @@ export function getVoicingsForChord(root: NoteName, chordType: string, source: '
           return true;
         })
       : [];
+    return deduplicateVoicings12(filtered);
   }
-  if (source === 'shell') return generateShellVoicings(root, chordType);
-  if (source === 'drop2') return generateDrop2Voicings(root, chordType);
-  if (source === 'drop3') return generateDrop3Voicings(root, chordType);
+  if (source === 'shell') return deduplicateVoicings12(generateShellVoicings(root, chordType));
+  if (source === 'drop2') return deduplicateVoicings12(generateDrop2Voicings(root, chordType));
+  if (source === 'drop3') return deduplicateVoicings12(generateDrop3Voicings(root, chordType));
   return [];
+}
+
+/** Remove voicings that are identical to another voicing shifted up/down 12 frets — keep the lower one */
+function deduplicateVoicings12(voicings: ChordVoicing[]): ChordVoicing[] {
+  const kept: ChordVoicing[] = [];
+  const removedIndices = new Set<number>();
+  for (let i = 0; i < voicings.length; i++) {
+    if (removedIndices.has(i)) continue;
+    for (let j = i + 1; j < voicings.length; j++) {
+      if (removedIndices.has(j)) continue;
+      const a = voicings[i].frets;
+      const b = voicings[j].frets;
+      // Check if b = a + 12 or a = b + 12 on every string
+      let isShift12Up = true;
+      let isShift12Down = true;
+      for (let s = 0; s < 6; s++) {
+        if (a[s] < 0 && b[s] < 0) continue;
+        if (a[s] < 0 || b[s] < 0) { isShift12Up = false; isShift12Down = false; break; }
+        if (b[s] !== a[s] + 12) isShift12Up = false;
+        if (b[s] !== a[s] - 12) isShift12Down = false;
+      }
+      if (isShift12Up) removedIndices.add(j);
+      if (isShift12Down) removedIndices.add(i);
+    }
+    if (!removedIndices.has(i)) kept.push(voicings[i]);
+  }
+  return kept;
 }
 
 // ============================================================
