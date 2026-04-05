@@ -759,7 +759,23 @@ export default function Fretboard({
   return (
     <div
       className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}
-      onMouseUp={() => { handleDragEnd(); setIdentifyDrag(null); identifyMouseDown.current = false; arpDragRef.current = null; }}
+      onMouseUp={() => {
+        handleDragEnd();
+        // Detect barre from identify drag
+        if (identifyMode && identifyDrag && identifyMouseDown.current) {
+          // Find the range of strings set to the same fret during this drag
+          const dragFret = identifyDrag.fret;
+          const stringsAtFret = identifyFrets.map((f, i) => f === dragFret ? i : -1).filter(i => i >= 0);
+          if (stringsAtFret.length >= 2) {
+            const from = Math.min(...stringsAtFret);
+            const to = Math.max(...stringsAtFret);
+            if (to > from) {
+              setIdentifyBarre({ from, to, fret: dragFret });
+            }
+          }
+        }
+        setIdentifyDrag(null); identifyMouseDown.current = false; arpDragRef.current = null;
+      }}
       onContextMenu={(e) => {
         if (persistedPaths.length > 0) {
           e.preventDefault();
