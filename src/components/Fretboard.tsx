@@ -1182,7 +1182,7 @@ export default function Fretboard({
                                 }
                               }
                             }}
-                            onMouseUp={() => { setIdentifyDrag(null); identifyMouseDown.current = false; arpDragRef.current = null; }}}
+                            onMouseUp={() => { setIdentifyDrag(null); identifyMouseDown.current = false; arpDragRef.current = null; }}
                             onMouseLeave={() => setIdentifyHover(null)}
                             className={`absolute inset-0 z-10 flex items-center justify-center font-mono font-bold cursor-pointer select-none transition-opacity ${isVertical ? '-rotate-90' : ''}`}
                             style={{
