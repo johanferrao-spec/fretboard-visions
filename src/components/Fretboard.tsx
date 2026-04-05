@@ -104,6 +104,7 @@ export default function Fretboard({
   const [hoveredDiatonic, setHoveredDiatonic] = useState<{ notes: NoteName[]; name: string; root: NoteName } | null>(null);
   const [identifyHover, setIdentifyHover] = useState<{ stringIndex: number; fret: number } | null>(null);
   const [identifyDrag, setIdentifyDrag] = useState<{ startString: number; fret: number } | null>(null);
+  const identifyMouseDown = useRef(false);
 
   // Guided drag arpeggio state
   const [isDragging, setIsDragging] = useState(false);
