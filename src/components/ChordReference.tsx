@@ -1307,6 +1307,25 @@ function ChordLibraryPanel({
                         : 'bg-accent text-accent-foreground hover:bg-accent/80'
                     }`}
                   >{chordAddMode ? '✕ Cancel' : '＋ Add Shape'}</button>
+                  {!chordAddMode && (
+                    <button
+                      onClick={() => setChordOctaveShift(chordOctaveShift + 1)}
+                      disabled={(() => {
+                        if (!activeChord) return true;
+                        const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
+                        const v = voicings[activeChord.voicingIndex];
+                        if (!v) return true;
+                        const playedFrets = v.frets.filter(f => f > 0);
+                        if (playedFrets.length === 0) return true;
+                        const minFret = Math.min(...playedFrets);
+                        const autoShift = -Math.floor(minFret / 12) * 12;
+                        const maxFret = Math.max(...playedFrets);
+                        return maxFret + autoShift + (chordOctaveShift + 1) * 12 > 24;
+                      })()}
+                      className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors font-bold"
+                      title="Move shape up 12 frets"
+                    >+12</button>
+                  )}
                   {mergedTotalPages > 1 && (
                     <>
                       <button onClick={() => setVoicingPage(Math.max(0, voicingPage - 1))} disabled={voicingPage === 0}
