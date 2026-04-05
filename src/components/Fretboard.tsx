@@ -1260,7 +1260,7 @@ export default function Fretboard({
                                 handleDragEnter(stringIdx, fret, note); handleNoteHover(note);
                               }
                             }}
-                            onMouseUp={() => { if (identifyMode) setIdentifyDrag(null); arpDragRef.current = null; }}
+                            onMouseUp={() => { if (identifyMode) { setIdentifyDrag(null); identifyMouseDown.current = false; } arpDragRef.current = null; }}}
                             onMouseLeave={() => {
                               if (identifyMode) setIdentifyHover(null);
                               else if (!isDragging) setHoveredDiatonic(null);
