@@ -289,7 +289,7 @@ export default function Fretboard({
       return null;
     }
 
-    // In identify mode, only show notes that have been clicked or hovered
+    // In identify mode, show clicked notes + arpeggio overlay
     if (identifyMode) {
       if (identifyFrets[stringIndex] === fret) {
         let bg = 'hsl(var(--primary))';
@@ -297,7 +297,19 @@ export default function Fretboard({
           const dc = getDegreeColor(identifyRoot, note);
           if (dc) bg = dc;
         }
-        return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: bg, greyed: false };
+      }
+      // Show arpeggio overlay notes in identify mode (when a chord cell is selected)
+      if (arpeggioPosition && arpPositionSet.size > 0 && fret > 0) {
+        const key = `${stringIndex}-${fret}`;
+        if (arpPositionSet.has(key)) {
+          let bg = 'hsl(var(--primary))';
+          if (degreeColors && identifyRoot) {
+            const dc = getDegreeColor(identifyRoot, note);
+            if (dc) bg = dc;
+          }
+          return { backgroundColor: bg, opacity: arpOverlayOpacity, ring: false, ringColor: '', greyed: false };
+        }
       }
       // Show greyed-out preview on hover
       if (identifyHover && identifyHover.stringIndex === stringIndex && identifyHover.fret === fret) {
