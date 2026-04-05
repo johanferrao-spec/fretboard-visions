@@ -959,7 +959,7 @@ export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = 
       { frets: [-1, 0, 1, 2, 2, 3] },
     ],
     '7sus4♭9': [
-      { frets: [-1, 0, 0, 2, 1, 1] },
+      { frets: [-1, 0, -1, 3, 3, 0] },
     ],
     '13': [
       { frets: [-1, 0, 2, 0, 2, 2] },
