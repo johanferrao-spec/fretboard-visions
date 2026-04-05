@@ -628,34 +628,37 @@ export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = 
       { frets: [-1, 3, 2, 3, 2, -1], fingers: [0, 2, 1, 3, 1, 0] },
     ],
     'Min/Maj 7': [
+      { frets: [-1, 3, 5, 4, 4, 3], barreFrom: 1, barreTo: 5, barreFret: 3 },
       { frets: [-1, 3, 1, 0, 0, 3] },
-      { frets: [-1, 3, 1, 0, 1, 3] },
     ],
     'Aug 7': [
-      { frets: [-1, -1, 10, 9, 9, 8] },
+      { frets: [-1, 3, 2, 3, 1, 0] },
       { frets: [8, -1, 8, 9, 9, -1] },
     ],
     'Major 7♭5': [
       { frets: [-1, 3, 4, 4, 0, -1] },
     ],
     '7#5': [
-      { frets: [-1, -1, 10, 9, 9, 8] },
+      { frets: [-1, 3, 2, 3, 1, 0] },
       { frets: [8, -1, 8, 9, 9, -1] },
     ],
     '7♭5': [
-      { frets: [-1, 3, 2, 3, 1, 0] },
-      { frets: [-1, 3, 4, 3, 1, 2] },
+      { frets: [-1, 3, 4, 3, 5, -1] },
+      { frets: [-1, 3, 2, 3, 1, 2] },
     ],
     '7sus4♭9': [
       { frets: [-1, 3, 3, 0, 2, 1] },
       { frets: [-1, 3, 3, 3, 2, 1] },
+    ],
+    '7sus4': [
+      { frets: [-1, 3, 3, 3, 1, 1] },
+      { frets: [-1, 3, 5, 3, 6, 3], barreFrom: 1, barreTo: 5, barreFret: 3 },
     ],
     '11': [
       { frets: [-1, 3, 2, 0, 1, 1] },
       { frets: [-1, 3, 3, 0, 1, 0] },
     ],
     'Minor 11': [
-      { frets: [-1, 3, 5, 3, 4, -1] },
       { frets: [-1, 3, 1, 3, 1, 1] },
     ],
     '13': [
@@ -665,6 +668,12 @@ export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = 
     'Minor 13': [
       { frets: [-1, 3, 1, 2, 1, 3] },
       { frets: [-1, 3, 1, 2, 4, 3] },
+    ],
+    '7#9': [
+      { frets: [-1, 3, 2, 3, 4, -1] },
+    ],
+    '7♭9': [
+      { frets: [-1, 3, 2, 3, 2, -1] },
     ],
   },
   'D': {
