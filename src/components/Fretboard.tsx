@@ -1352,7 +1352,7 @@ export default function Fretboard({
                             <div
                               className={`rounded-full flex items-center justify-center font-mono font-bold shadow-md ${
                                 style.ring ? 'ring-2' : ''
-                              } ${identifyMode && identifyFrets[stringIdx] === fret ? 'ring-2 ring-primary' : ''}`}
+                              } ${identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to && fret === identifyBarre.fret)) ? 'ring-2 ring-primary' : ''}`}
                               style={{
                                 width: noteMarkerSize,
                                 height: noteMarkerSize,
