@@ -33,6 +33,8 @@ const Index = () => {
   const [activeInversionVoicing, setActiveInversionVoicing] = useState<InversionVoicing | null>(null);
   const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
   const arpBarreDragRef = useRef<((fromSi: number, toSi: number, fret: number) => void) | null>(null);
+  const [chordAddRoot, setChordAddRoot] = useState<NoteName | null>(null);
+  const [chordAddHasNotes, setChordAddHasNotes] = useState(false);
 
   // Auto-disable strings based on inversion string group when in inversion mode
   const prevDisabledRef = useRef<Set<number> | null>(null);
