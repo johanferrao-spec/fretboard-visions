@@ -1151,6 +1151,7 @@ export default function Fretboard({
                                 arpDragRef.current = { startString: stringIdx, fret, coveredStrings: new Set([stringIdx]) };
                                 onArpAddClick(stringIdx, fret);
                               } else if (identifyMode) {
+                                identifyMouseDown.current = true;
                                 setIdentifyDrag({ startString: stringIdx, fret });
                                 const newFrets = [...identifyFrets];
                                 newFrets[stringIdx] = fret;
