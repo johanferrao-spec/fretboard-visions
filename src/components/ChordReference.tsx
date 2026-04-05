@@ -1354,7 +1354,7 @@ function ChordLibraryPanel({
                               e.stopPropagation();
                               if (isCurated && origIdx != null) {
                                 handleHideCurated(origIdx);
-                              } else {
+                              } else if (entry.kind === 'custom') {
                                 handleDeleteCustom(entry.sourceKey, entry.sourceIndex);
                               }
                             }}
