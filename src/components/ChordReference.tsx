@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import BeginnerModePanel from './BeginnerMode';
+import TabVisualiser from './TabVisualiser';
+import type { TabNote } from './TabVisualiser';
 import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
@@ -68,10 +70,11 @@ interface ChordReferenceProps {
   setGhostNoteOpacity: (v: number) => void;
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
+  onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
-type MainTab = 'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes';
+type MainTab = 'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis';
 type OctaveRange = 1 | 2 | 3;
 
 const ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
@@ -182,7 +185,7 @@ export default function ChordReference({
   scaleViewMode, setScaleViewMode, inversionStringGroup, setInversionStringGroup,
   onSetInversionVoicing,
   ghostNoteOpacity, setGhostNoteOpacity,
-  onApplyBeginnerPreset, onApplyOpenChord,
+  onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
@@ -287,6 +290,7 @@ export default function ChordReference({
           { key: 'caged' as MainTab, label: 'CAGED' },
           { key: 'identify' as MainTab, label: "What's This?" },
           { key: 'changes' as MainTab, label: 'Progression Analyser' },
+          { key: 'tabvis' as MainTab, label: 'Tab Visualiser' },
         ]).map(tab => (
           <button
             key={tab.key}
@@ -395,6 +399,12 @@ export default function ChordReference({
           arpAddMode={arpAddMode}
           setActiveChord={setActiveChord}
           onSetArpeggioPosition={onSetArpeggioPosition}
+        />
+      ) : activeTab === 'tabvis' ? (
+        <TabVisualiser
+          tuning={tuning}
+          tuningLabels={tuningLabels}
+          onTabNotes={onTabNotes}
         />
       ) : null}
     </div>

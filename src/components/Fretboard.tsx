@@ -57,6 +57,7 @@ interface FretboardProps {
   inversionDegreeColor?: string | null;
   chordAddRootNote?: NoteName | null;
   chordAddHasNotes?: boolean;
+  tabVisNotes?: { current: Array<{string: number; fret: number}>; upcoming: Array<Array<{string: number; fret: number}>> } | null;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -96,6 +97,7 @@ export default function Fretboard({
   inversionDegreeColor,
   chordAddRootNote,
   chordAddHasNotes,
+  tabVisNotes,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -261,6 +263,20 @@ export default function Fretboard({
   }
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
+    // Tab visualiser mode: only show tab notes
+    if (tabVisNotes) {
+      const isCurrent = tabVisNotes.current.some(n => n.string === stringIndex && n.fret === fret);
+      if (isCurrent) {
+        return { backgroundColor: 'hsl(var(--primary))', opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
+      }
+      for (const group of tabVisNotes.upcoming) {
+        if (group.some(n => n.string === stringIndex && n.fret === fret)) {
+          return { backgroundColor: 'hsl(var(--primary))', opacity: 0.4, ring: false, ringColor: '', greyed: false };
+        }
+      }
+      return null;
+    }
+
     // In arp add mode (custom voicing creation), show faint root notes if no notes placed yet
     if (arpAddMode && !isChordLibraryVoicing) {
       if (chordAddRootNote && !chordAddHasNotes && fret > 0) {

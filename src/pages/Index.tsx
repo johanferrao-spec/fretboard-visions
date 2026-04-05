@@ -9,6 +9,7 @@ import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import type { NoteName } from '@/lib/music';
+import type { TabNote } from '@/components/TabVisualiser';
 import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_DEGREE_COLORS, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
@@ -21,7 +22,8 @@ const Index = () => {
   const [volume, setVolume] = useState(0.7);
   const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
   const [keyMode, setKeyMode] = useState<KeyMode>(() => scaleToKeyMode(fb.primaryScale.scale));
-  const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes'>('beginner');
+  const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis'>('beginner');
+  const [tabVisNotes, setTabVisNotes] = useState<{ current: Array<{string: number; fret: number}>; upcoming: Array<{string: number; fret: number}[]> } | null>(null);
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
   const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower'>('upper');
@@ -297,8 +299,9 @@ const Index = () => {
                scaleViewChordTones={scaleViewChordTones}
                ghostNoteOpacity={fb.ghostNoteOpacity}
                 inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
-                chordAddRootNote={fb.arpAddMode ? (activeTab === 'chords' ? null : null) : null}
-                chordAddHasNotes={false}
+                 chordAddRootNote={fb.arpAddMode ? (activeTab === 'chords' ? null : null) : null}
+                 chordAddHasNotes={false}
+                 tabVisNotes={activeTab === 'tabvis' ? tabVisNotes : null}
             />
           </div>
 
@@ -386,6 +389,9 @@ const Index = () => {
                     const note = NOTE_NAMES[(fb.tuning[rootIdx] + Math.max(0, frets[rootIdx])) % 12];
                     fb.setIdentifyRoot(note);
                   }
+                }}
+                onTabNotes={(current, upcoming) => {
+                  setTabVisNotes({ current, upcoming });
                 }}
             />
           </div>
