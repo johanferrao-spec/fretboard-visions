@@ -334,6 +334,7 @@ export default function Fretboard({
 
     // Scale view degree filter: show chord tones bright with glow, rest as ghost
     if (scaleViewChordTones && scaleViewChordTones.size > 0 && !inversionVoicing) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       const noteIdx = (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note);
       const isChordTone = scaleViewChordTones.has(noteIdx);
       const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
