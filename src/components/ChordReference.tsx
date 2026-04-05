@@ -1906,7 +1906,7 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
           const interval = showDegrees ? getIntervalName(root, note) : getExtendedIntervalName(root, note);
           const degColor = DEGREE_COLORS[interval];
           const fillColor = showDegrees && degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
-          return <circle key={i} cx={x} cy={y} r={4.2} fill={fillColor} />;
+          return <circle key={i} cx={x} cy={y} r={5.5} fill={fillColor} />;
         })}
       </svg>
     </div>
