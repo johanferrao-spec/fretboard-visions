@@ -311,6 +311,7 @@ const Index = () => {
                  chordAddHasNotes={chordAddHasNotes}
                suppressScaleNotes={activeTab === 'chords'}
                  tabVisNotes={activeTab === 'tabvis' ? (tabVisNotes || { current: [], upcoming: [] }) : null}
+                 chordOctaveShift={chordOctaveShift}
             />
           </div>
 
