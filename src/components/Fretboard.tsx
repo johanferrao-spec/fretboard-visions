@@ -1226,13 +1226,17 @@ export default function Fretboard({
               <div key={stringIdx} className="flex items-center relative" style={{ height: stringH }}>
                 {/* String label */}
                 <button
-                  onDoubleClick={(e) => { e.stopPropagation(); if (!identifyMode) onToggleString(stringIdx); }}
+                  onDoubleClick={(e) => { e.stopPropagation(); if (!identifyMode && !arpAddMode) onToggleString(stringIdx); }}
                   onClick={(e) => {
                     if (identifyMode) {
                       e.stopPropagation();
                       const newFrets = [...identifyFrets];
                       newFrets[stringIdx] = newFrets[stringIdx] === -1 ? 0 : -1;
                       setIdentifyFrets(newFrets);
+                    } else if (arpAddMode && onArpAddClick) {
+                      e.stopPropagation();
+                      // Toggle open string (fret 0) in add mode
+                      onArpAddClick(stringIdx, 0);
                     }
                   }}
                   className={`shrink-0 w-7 h-full flex items-center justify-center font-mono font-bold transition-all z-10 ${
@@ -1243,12 +1247,19 @@ export default function Fretboard({
                       ...(identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isChordMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isArpAddMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
-                    ...(isGlowing && !isChordMuted && !identifyMode ? {
+                    // In arp add mode, when string IS part of chord, color by degree
+                    ...(arpAddMode && !isArpAddMuted && !identifyMode && chordAddRootNote ? (() => {
+                      const openNote = noteAtFret(stringIdx, arpeggioPosition?.frets ? (arpeggioPosition.frets as (number | -1)[])[stringIdx] || 0 : 0, tuning);
+                      const dc = getDegreeColor(chordAddRootNote, openNote);
+                      if (dc) return { color: dc, fontSize: 10, textShadow: `0 0 6px ${dc}, 0 0 12px ${dc}` };
+                      return {};
+                    })() : {}),
+                    ...(isGlowing && !isChordMuted && !isArpAddMuted && !identifyMode && !arpAddMode ? {
                       color: pColor,
                       textShadow: `0 0 8px ${pColor}, 0 0 18px ${pColor}, 0 0 30px ${pColor}`,
                     } : {}),
                   }}
-                  title={identifyMode ? "Click to toggle open string" : "Double-click to toggle string"}
+                  title={identifyMode ? "Click to toggle open string" : arpAddMode ? "Click to toggle open string" : "Double-click to toggle string"}
                 >
                   {identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? '×' : isChordMuted && !identifyMode ? '×' : isArpAddMuted && !identifyMode ? '×' : tuningLabels[stringIdx]}
                 </button>
