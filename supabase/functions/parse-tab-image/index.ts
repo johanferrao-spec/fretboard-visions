@@ -108,8 +108,10 @@ Read left to right. Output ONLY the JSON array, no explanation.`
 
     try {
       const parsed = JSON.parse(jsonStr);
+      // Filter out empty positions
+      const filtered = Array.isArray(parsed) ? parsed.filter((p: any[]) => Array.isArray(p) && p.length > 0) : parsed;
       return new Response(
-        JSON.stringify({ success: true, positions: parsed }),
+        JSON.stringify({ success: true, positions: filtered }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (parseErr) {
