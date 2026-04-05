@@ -838,7 +838,7 @@ function ChordLibraryPanel({
   setActiveChord: (c: ChordSelection | null) => void;
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
 }) {
-  const VOICINGS_PER_PAGE = 12;
+  const VOICINGS_PER_PAGE = 8;
   const [libCopied, setLibCopied] = useState(false);
   const [addingBarre, setAddingBarre] = useState<{ from: number; to: number; fret: number } | null>(null);
 
