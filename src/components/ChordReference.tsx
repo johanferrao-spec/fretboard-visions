@@ -1492,7 +1492,7 @@ function IdentifyPanel({
                       {/* Chord name */}
                       <div className="text-xs font-mono font-bold text-foreground truncate">{chord.name}</div>
                       {/* Mini tab display */}
-                      <div className="flex gap-px mt-1" style={{ opacity: chordOpacity }}>
+                      <div className="flex gap-px mt-1">
                         {frets.map((f, si) => {
                           const note = f >= 0 ? noteAtFret(si, f, tuning) : null;
                           const intervalName = note ? getIntervalName(chord.root, note) : '';
