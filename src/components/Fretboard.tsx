@@ -41,6 +41,8 @@ interface FretboardProps {
   identifyMode: boolean;
   identifyFrets: (number | -1)[];
   setIdentifyFrets: (f: (number | -1)[]) => void;
+  identifyBarre: { from: number; to: number; fret: number } | null;
+  setIdentifyBarre: (b: { from: number; to: number; fret: number } | null) => void;
   identifyRoot: NoteName | null;
   tuning: number[];
   tuningLabels: string[];
