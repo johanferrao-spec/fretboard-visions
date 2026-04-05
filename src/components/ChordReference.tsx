@@ -1261,17 +1261,18 @@ function IdentifyPanel({
       {/* Results */}
       {results.length > 0 ? (
         <div className="space-y-1">
-          <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Possible chords:</div>
+          <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Possible chords ({results.reduce((s, r) => s + r.names.length, 0)} interpretations):</div>
           {results.map((r, i) => {
-              const displayName = r.names?.[0] || '?';
-              const isViewed = viewRoot === displayName;
+            const primaryName = r.names?.[0] || '?';
+            const altNames = r.names?.slice(1) || [];
+            const isViewed = viewRoot === primaryName;
             return (
               <button
                 key={i}
-                onClick={() => setViewRoot(isViewed ? null : displayName)}
+                onClick={() => setViewRoot(isViewed ? null : primaryName)}
                 draggable
                 onDragStart={(e) => {
-                  const match = displayName.match(/^([A-G]#?)\s*(.*)/);
+                  const match = primaryName.match(/^([A-G]#?)\s*(.*)/);
                   if (match) {
                     e.dataTransfer.setData('application/chord', JSON.stringify({ root: match[1], chordType: match[2] || 'Major' }));
                     e.dataTransfer.effectAllowed = 'copy';
@@ -1283,7 +1284,17 @@ function IdentifyPanel({
                     : 'bg-muted/40 border-border/30 text-foreground/80 hover:bg-muted/60'
                 }`}
               >
-                <div className="font-bold">{displayName}</div>
+                <div className="font-bold">{primaryName}</div>
+                {altNames.length > 0 && (
+                  <div className="text-[8px] text-primary/70 mt-0.5">
+                    Also: {altNames.join(', ')}
+                  </div>
+                )}
+                {r.explanations.length > 0 && (
+                  <div className="text-[8px] text-muted-foreground mt-0.5 leading-tight">
+                    {r.explanations[0]}
+                  </div>
+                )}
                 {r.notes && <div className="text-[8px] text-muted-foreground">{r.notes.join(' — ')}</div>}
               </button>
             );

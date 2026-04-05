@@ -218,12 +218,16 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
 
       {/* Digital Tab Timeline */}
       <div className="flex-1 px-3 py-3 overflow-hidden">
-        <div className="rounded-2xl border border-border/50 bg-card/60 shadow-sm p-4 h-full">
-          <div className="flex gap-2 h-full">
+        <div className="rounded-2xl p-4 h-full" style={{
+          background: 'linear-gradient(180deg, hsl(215, 50%, 12%) 0%, hsl(218, 55%, 15%) 100%)',
+          border: '1px solid hsl(215, 40%, 22%)',
+          boxShadow: '0 4px 20px hsl(215, 50%, 5% / 0.5), inset 0 1px 0 hsl(215, 40%, 25% / 0.3)',
+        }}>
+          <div className="flex gap-3 h-full">
             {/* String labels column */}
-            <div className="flex flex-col justify-between py-2 pr-1 shrink-0">
+            <div className="flex flex-col justify-between py-1 pr-1 shrink-0">
               {displayLabels.map((label, i) => (
-                <div key={i} className="text-[11px] font-mono text-muted-foreground w-5 text-right leading-none font-semibold">
+                <div key={i} className="text-[11px] font-mono font-semibold w-5 text-right leading-none" style={{ color: 'hsl(215, 30%, 50%)' }}>
                   {label}
                 </div>
               ))}
@@ -235,14 +239,18 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
               className="flex-1 relative cursor-pointer select-none"
               onMouseDown={handleTimelineMouseDown}
             >
-              {/* String lines */}
+              {/* String lines — more spaced, subtle teal tint */}
               {[0, 1, 2, 3, 4, 5].map(si => {
                 const y = `${(si / 5) * 100}%`;
                 return (
                   <div
                     key={si}
-                    className="absolute left-0 right-0 border-t border-muted-foreground/15"
-                    style={{ top: y }}
+                    className="absolute left-0 right-0"
+                    style={{
+                      top: y,
+                      height: '1px',
+                      background: 'hsl(200, 50%, 30% / 0.5)',
+                    }}
                   />
                 );
               })}
@@ -271,10 +279,14 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
                       }}
                     >
                       <span
-                        className={`text-sm font-mono font-bold leading-none ${
-                          isCurrent ? 'text-primary' : isUpcoming ? 'text-foreground' : 'text-muted-foreground'
-                        }`}
+                        className="font-mono font-bold leading-none"
                         style={{
+                          fontSize: '14px',
+                          color: isCurrent
+                            ? 'hsl(var(--primary))'
+                            : isUpcoming
+                              ? 'hsl(200, 60%, 75%)'
+                              : 'hsl(215, 30%, 45%)',
                           textShadow: isCurrent
                             ? '0 0 8px hsl(var(--primary)), 0 0 16px hsl(var(--primary) / 0.5)'
                             : 'none',
@@ -290,9 +302,10 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
               {/* Playhead line */}
               {tabData.notes.length > 0 && (
                 <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-primary z-20 rounded-full"
+                  className="absolute top-0 bottom-0 w-0.5 z-20 rounded-full"
                   style={{
                     left: `${((playheadPos - windowStart) / (visibleWindow - 1)) * 100}%`,
+                    background: 'hsl(var(--primary))',
                     boxShadow: '0 0 6px hsl(var(--primary)), 0 0 12px hsl(var(--primary) / 0.4)',
                   }}
                 >
