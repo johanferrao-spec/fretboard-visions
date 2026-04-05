@@ -402,6 +402,7 @@ export default function ChordReference({
           setArpOverlayOpacity={setArpOverlayOpacity}
           onClearFretboard={() => {
             setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
+            setIdentifyBarre(null);
             setIdentifyRoot(null);
             setIdentifyViewName(null);
             onSetArpeggioPosition?.(null);
