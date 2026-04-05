@@ -385,6 +385,9 @@ export default function ChordReference({
           tuningLabels={tuningLabels}
           tuning={tuning}
           onSetArpeggioPosition={onSetArpeggioPosition}
+          setShowFretBox={setShowFretBox}
+          setFretBoxStart={setFretBoxStart}
+          setFretBoxSize={setFretBoxSize}
         />
       ) : activeTab === 'chords' ? (
         <ChordLibraryPanel
