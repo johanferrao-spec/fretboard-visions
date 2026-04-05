@@ -904,7 +904,14 @@ function ChordLibraryPanel({
   }, []);
 
   const buildStaticVoicingPosition = useCallback((frets: (number | -1)[], label: string, barre: { from: number; to: number; fret: number } | null) => {
-    const notes = frets.map((f, si) => f >= 0 ? { stringIndex: si, fret: f } : null).filter(Boolean) as { stringIndex: number; fret: number }[];
+    // Fill in barre for intermediate strings
+    const effectiveFrets = [...frets];
+    if (barre) {
+      for (let s = barre.from; s <= barre.to; s++) {
+        if (effectiveFrets[s] === -1) effectiveFrets[s] = barre.fret;
+      }
+    }
+    const notes = effectiveFrets.map((f, si) => f >= 0 ? { stringIndex: si, fret: f } : null).filter(Boolean) as { stringIndex: number; fret: number }[];
     if (notes.length === 0) return null;
     const playedFrets = notes.filter(n => n.fret > 0).map(n => n.fret);
     if (barre && barre.fret > 0) playedFrets.push(barre.fret);
