@@ -1009,10 +1009,17 @@ function ChordLibraryPanel({
     const hasNotes = addingFrets.some(f => f >= 0);
     if (!hasNotes) return;
     const barre = addingBarre ?? detectFallbackBarre(addingFrets);
+    // Fill in barre for intermediate strings before saving
+    const saveFrets = [...addingFrets];
+    if (barre) {
+      for (let s = barre.from; s <= barre.to; s++) {
+        if (saveFrets[s] === -1) saveFrets[s] = barre.fret;
+      }
+    }
     const key = `${selectedChord}::${voicingTab}`;
     const existing = customChordVoicings[key] || [];
     const newVoicing = {
-      frets: [...addingFrets],
+      frets: saveFrets,
       refRoot: selectedRoot,
       ...(barre ? { barreFrom: barre.from, barreTo: barre.to, barreFret: barre.fret } : {}),
     };
