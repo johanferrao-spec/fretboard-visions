@@ -334,7 +334,8 @@ export default function Fretboard({
     // In identify mode, show clicked notes + arpeggio overlay
     if (identifyMode) {
       // Clicked notes always visible (even outside box)
-      if (identifyFrets[stringIndex] === fret) {
+      const isBarreString = identifyBarre && stringIndex >= identifyBarre.from && stringIndex <= identifyBarre.to && fret === identifyBarre.fret;
+      if (identifyFrets[stringIndex] === fret || isBarreString) {
         let bg = 'hsl(var(--primary))';
         if (degreeColors && identifyRoot) {
           const dc = getDegreeColor(identifyRoot, note);
