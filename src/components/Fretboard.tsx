@@ -366,7 +366,7 @@ export default function Fretboard({
     // In arp add mode (custom voicing creation), show faint root notes if no notes placed yet
     if (arpAddMode && !isChordLibraryVoicing) {
       if (isOutsidePositionBox(stringIndex, fret)) return null;
-      if (chordAddRootNote && !chordAddHasNotes && fret > 0) {
+      if (chordAddRootNote && !chordAddHasNotes) {
         // Show faint root note guides at 30% opacity
         if (note === chordAddRootNote) {
           return { backgroundColor: 'hsl(var(--primary))', opacity: 0.3, ring: false, ringColor: '', greyed: false };
