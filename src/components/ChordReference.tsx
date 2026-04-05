@@ -93,10 +93,10 @@ const ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
 ];
 
 const CHORD_COLUMNS: { label: string; types: string[] }[] = [
-  { label: 'Tonic', types: ['Major', 'Major 7', 'Major 7♭5', 'Major 7#5', 'Add9', '6add9', 'Major 9', 'Major 6', 'Maj11', 'Maj13', 'Maj9#11', 'Maj13#11', 'Augmented'] },
-  { label: 'Dominant', types: ['Dominant 7', 'Aug 7', 'Dominant 9', '7#9', '7♭9', '7#5', '7♭5', '9♭5', '9#5', '11', '13', '13#11', '13♭9', '11♭9', '7(♭5,♭9)', '7(♭5,#9)', '7(#5,♭9)', '7(#5,#9)'] },
+  { label: 'Major', types: ['Major', 'Major 7', 'Major 7♭5', 'Major 7#5', 'Add9', '6add9', 'Major 9', 'Major 6', 'Maj11', 'Maj13', 'Maj9#11', 'Maj13#11'] },
+  { label: 'Dominant', types: ['Dominant 7', 'Dominant 9', '7#9', '7♭9', '7#5', '7♭5', '9♭5', '9#5', '11', '13', '13#11', '13♭9', '11♭9', '7(♭5,♭9)', '7(♭5,#9)', '7(#5,♭9)', '7(#5,#9)'] },
   { label: 'Minor', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13', 'Madd9', 'm6add9', 'mMaj9', 'm7#5'] },
-  { label: 'Sus', types: ['Sus2', 'Sus4', '7sus4', '7sus4♭9', 'Sus2Sus4', 'Power (5)', 'Dim5'] },
+  { label: 'Other', types: ['Augmented', 'Aug 7', 'Sus2', 'Sus4', '7sus4', '7sus4♭9', 'Sus2Sus4', 'Power (5)', 'Dim5'] },
 ];
 
 // ============================================================
@@ -865,6 +865,34 @@ function ChordLibraryPanel({
   const [hiddenVoicings, setHiddenVoicings] = useState<Record<string, number[]>>(() => {
     try { return JSON.parse(localStorage.getItem('mf-hidden-voicings') || '{}'); } catch { return {}; }
   });
+  const [chordNameOverrides, setChordNameOverrides] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem('mf-chord-name-overrides') || '{}'); } catch { return {}; }
+  });
+
+  const defaultChordLabels = useMemo<Record<string, string>>(() => ({
+    'Dominant 7': '7',
+    'Dominant 9': '9',
+  }), []);
+
+  const getChordCellLabel = useCallback((chordType: string) => {
+    return chordNameOverrides[chordType]?.trim() || defaultChordLabels[chordType] || chordType;
+  }, [chordNameOverrides, defaultChordLabels]);
+
+  const handleRenameChord = useCallback((chordType: string) => {
+    const currentLabel = getChordCellLabel(chordType);
+    const nextLabel = window.prompt('Rename chord', currentLabel);
+    if (nextLabel === null) return;
+
+    const trimmed = nextLabel.trim();
+    const defaultLabel = defaultChordLabels[chordType] || chordType;
+    const updated = { ...chordNameOverrides };
+
+    if (!trimmed || trimmed === defaultLabel) delete updated[chordType];
+    else updated[chordType] = trimmed;
+
+    setChordNameOverrides(updated);
+    localStorage.setItem('mf-chord-name-overrides', JSON.stringify(updated));
+  }, [chordNameOverrides, defaultChordLabels, getChordCellLabel]);
 
   const handleHideCurated = (globalIdx: number) => {
     if (!selectedChord) return;
@@ -912,21 +940,6 @@ function ChordLibraryPanel({
   const mergedTotalPages = Math.ceil(mergedVoicings.length / VOICINGS_PER_PAGE);
   const mergedPagedVoicings = mergedVoicings.slice(voicingPage * VOICINGS_PER_PAGE, (voicingPage + 1) * VOICINGS_PER_PAGE);
 
-  const detectFallbackBarre = useCallback((frets: (number | -1)[]) => {
-    let best: { from: number; to: number; fret: number } | null = null;
-    for (let start = 0; start < frets.length; start += 1) {
-      const fret = frets[start];
-      if (fret < 1) continue;
-      let end = start;
-      while (end + 1 < frets.length && frets[end + 1] === fret) end += 1;
-      if (end > start) {
-        const candidate = { from: start, to: end, fret };
-        if (!best || candidate.to - candidate.from > best.to - best.from) best = candidate;
-      }
-    }
-    return best;
-  }, []);
-
   const buildStaticVoicingPosition = useCallback((frets: (number | -1)[], label: string, barre: { from: number; to: number; fret: number } | null) => {
     // Fill in barre for intermediate strings
     const effectiveFrets = [...frets];
@@ -972,19 +985,12 @@ function ChordLibraryPanel({
       setAddingBarre(prevBarre => {
         setAddingFrets(prev => {
           const next = [...prev];
-          const clearDraggedMarker = (stringIndex: number) => {
-            if (stringIndex !== from && stringIndex !== to && next[stringIndex] === fret) {
-              next[stringIndex] = -1;
-            }
-          };
-
           if (prevBarre && prevBarre.fret === fret) {
-            for (let s = prevBarre.from; s <= prevBarre.to; s += 1) clearDraggedMarker(s);
+            for (let s = prevBarre.from; s <= prevBarre.to; s += 1) {
+              if (next[s] === fret) next[s] = -1;
+            }
           }
-          for (let s = from; s <= to; s += 1) clearDraggedMarker(s);
-
-          next[from] = fret;
-          next[to] = fret;
+          for (let s = from; s <= to; s += 1) next[s] = fret;
           return next;
         });
 
@@ -1014,14 +1020,14 @@ function ChordLibraryPanel({
   // Show adding notes on fretboard via ArpeggioPosition
   useEffect(() => {
     if (chordAddMode) {
-      const preview = buildStaticVoicingPosition(addingFrets, 'Adding...', addingBarre ?? detectFallbackBarre(addingFrets));
+      const preview = buildStaticVoicingPosition(addingFrets, 'Adding...', addingBarre);
       if (preview) {
         onSetArpeggioPosition?.(preview);
       } else {
         onSetArpeggioPosition?.(null);
       }
     }
-  }, [addingFrets, addingBarre, buildStaticVoicingPosition, chordAddMode, detectFallbackBarre, onSetArpeggioPosition]);
+  }, [addingFrets, addingBarre, buildStaticVoicingPosition, chordAddMode, onSetArpeggioPosition]);
 
   const handleStartAddMode = () => {
     if (chordAddMode) {
@@ -1044,7 +1050,7 @@ function ChordLibraryPanel({
     if (!selectedChord) return;
     const hasNotes = addingFrets.some(f => f >= 0);
     if (!hasNotes) return;
-    const barre = addingBarre ?? detectFallbackBarre(addingFrets);
+    const barre = addingBarre;
     // Fill in barre for intermediate strings before saving
     const saveFrets = [...addingFrets];
     if (barre) {
@@ -1071,7 +1077,7 @@ function ChordLibraryPanel({
 
   const handleDeleteCustom = (globalIdx: number) => {
     if (!selectedChord) return;
-    const customIdx = globalIdx - currentVoicings.length;
+    const customIdx = globalIdx - filteredCurated.length;
     if (customIdx < 0) return;
     const key = `${selectedChord}::${voicingTab}`;
     const custom = [...(customChordVoicings[key] || [])];
@@ -1161,14 +1167,14 @@ function ChordLibraryPanel({
       <div className="flex gap-1.5" style={{ minHeight: 0 }}>
         <div className="flex gap-px shrink-0" style={{ width: '48%' }}>
           {CHORD_COLUMNS.map((col, ci) => {
-            const isSus = col.label === 'Sus';
-            const [col1, col2] = isSus ? [col.types, []] : splitIntoColumns(col.types);
+            const isOther = col.label === 'Other';
+            const [col1, col2] = isOther ? [col.types, []] : splitIntoColumns(col.types);
             return (
-              <div key={col.label} className={`min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5 flex flex-col`} style={{ flex: isSus ? 0.5 : 1 }}>
+              <div key={col.label} className={`min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5 flex flex-col`} style={{ flex: isOther ? 0.6 : 1 }}>
                 <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">{col.label}</div>
-                <div className={`flex gap-px ${isSus ? 'justify-center' : ''} overflow-y-auto flex-1`} style={{ maxHeight: '35vh' }}>
+                <div className={`flex gap-px ${isOther ? 'justify-center' : ''} overflow-y-auto flex-1`} style={{ maxHeight: '35vh' }}>
                   {[col1, ...(col2.length > 0 ? [col2] : [])].map((types, sci) => (
-                    <div key={sci} className={`${isSus ? 'w-full' : 'flex-1'} space-y-px`}>
+                    <div key={sci} className={`${isOther ? 'w-full' : 'flex-1'} space-y-px`}>
                       {types.map(ct => {
                         if (!CHORD_FORMULAS[ct]) return null;
                         const isSelected = selectedChord === ct;
@@ -1176,6 +1182,10 @@ function ChordLibraryPanel({
                           <button
                             key={ct}
                             onClick={() => handleSelectChord(ct)}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              handleRenameChord(ct);
+                            }}
                             draggable
                             onDragStart={(e) => {
                               e.dataTransfer.setData('application/chord', JSON.stringify({ root: selectedRoot, chordType: ct }));
@@ -1186,8 +1196,8 @@ function ChordLibraryPanel({
                                 ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]'
                                 : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
                             }`}
-                            title={`${ct} — drag to timeline`}
-                          >{ct}</button>
+                            title={`${getChordCellLabel(ct)} — drag to timeline`}
+                          >{getChordCellLabel(ct)}</button>
                         );
                       })}
                     </div>
@@ -1223,7 +1233,7 @@ function ChordLibraryPanel({
           {selectedChord ? (
             <div className="bg-secondary/20 rounded p-1.5">
               <div className="flex items-center justify-between mb-1">
-                <div className="text-[10px] font-mono font-bold text-foreground truncate">{selectedRoot} {selectedChord}</div>
+                <div className="text-[10px] font-mono font-bold text-foreground truncate">{selectedRoot} {getChordCellLabel(selectedChord)}</div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={handleStartAddMode}
