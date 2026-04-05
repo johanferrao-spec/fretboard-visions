@@ -1316,7 +1316,8 @@ function IdentifyPanel({
     // Extract chord type suffix
     const match = chordName.match(/^([A-G]#?)(.*)/);
     if (!match) return;
-    const suffix = match[2];
+    // Strip slash bass note (e.g. "9/G" → "9")
+    const suffix = match[2].replace(/\/[A-G]#?$/, '');
 
     const suffixToArp: Record<string, string> = {
       '': 'Major', 'm': 'Minor', 'dim': 'Diminished', 'aug': 'Augmented',
