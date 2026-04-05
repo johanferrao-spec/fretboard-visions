@@ -70,6 +70,11 @@ const Index = () => {
     setKeyMode(km);
   }, [fb.primaryScale.root, fb.primaryScale.scale]);
 
+  // Reset octave shift when active chord changes
+  useEffect(() => {
+    setChordOctaveShift(0);
+  }, [fb.activeChord]);
+
   // Compute chord tones for scaleView degree filter (used to dim non-chord-tones)
   const scaleViewChordTones = useMemo(() => {
     if (scaleViewDegreeFilter === null) return null;
