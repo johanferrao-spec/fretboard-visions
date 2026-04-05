@@ -772,6 +772,30 @@ export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = 
     '7#9': [
       { frets: [0, 2, 0, 1, 3, 3], fingers: [0, 1, 0, 2, 3, 4] },
     ],
+    'Min/Maj 7': [
+      { frets: [0, 2, 1, 0, 0, 0] },
+    ],
+    'Aug 7': [
+      { frets: [0, 3, 0, 1, 1, 0] },
+    ],
+    '7♭5': [
+      { frets: [0, 1, 0, 1, 0, 0] },
+    ],
+    '7sus4': [
+      { frets: [0, 2, 0, 2, 0, 0] },
+    ],
+    '11': [
+      { frets: [0, 2, 0, 1, 0, 2] },
+    ],
+    '13': [
+      { frets: [0, 2, 0, 1, 2, 0] },
+    ],
+    'Minor 11': [
+      { frets: [0, 2, 0, 0, 0, 3] },
+    ],
+    'Minor 13': [
+      { frets: [0, 2, 2, 0, 2, 2] },
+    ],
   },
   'F': {
     'Major': [
