@@ -558,6 +558,180 @@ export interface ChordVoicing {
   barreFret?: number; // fret of the barre
 }
 
+type GeneratedVoicingSource = 'full' | 'shell' | 'drop2' | 'drop3';
+
+const REQUIRED_INTERVALS_BY_SOURCE: Record<GeneratedVoicingSource, Record<string, number[]>> = {
+  full: {
+    'Major': [0, 4, 7],
+    'Minor': [0, 3, 7],
+    'Diminished': [0, 3, 6],
+    'Augmented': [0, 4, 8],
+    'Sus2': [0, 2, 7],
+    'Sus4': [0, 5, 7],
+    'Major 7': [0, 4, 11],
+    'Major 7♭5': [0, 4, 6, 11],
+    'Minor 7': [0, 3, 10],
+    'Dominant 7': [0, 4, 10],
+    'Dim 7': [0, 3, 6, 9],
+    'Half-Dim 7': [0, 3, 6, 10],
+    'Min/Maj 7': [0, 3, 11],
+    'Aug 7': [0, 4, 8, 10],
+    'Add9': [0, 4, 2],
+    'Major 9': [0, 4, 11, 2],
+    'Minor 9': [0, 3, 10, 2],
+    'Dominant 9': [0, 4, 10, 2],
+    'Major 6': [0, 4, 9],
+    'Minor 6': [0, 3, 9],
+    '7sus4': [0, 5, 10],
+    '7sus4♭9': [0, 5, 10, 1],
+    '7#9': [0, 4, 10, 3],
+    '7♭9': [0, 4, 10, 1],
+    '7#5': [0, 4, 8, 10],
+    '7♭5': [0, 4, 6, 10],
+    '11': [0, 4, 10, 5],
+    'Minor 11': [0, 3, 10, 5],
+    '13': [0, 4, 10, 9],
+    'Minor 13': [0, 3, 10, 9],
+    'Power (5)': [0, 7],
+  },
+  shell: {
+    'Major': [0, 4, 7],
+    'Minor': [0, 3, 7],
+    'Diminished': [0, 3, 6],
+    'Augmented': [0, 4, 8],
+    'Sus2': [0, 2, 7],
+    'Sus4': [0, 5, 7],
+    'Major 7': [0, 4, 11],
+    'Major 7♭5': [4, 6, 11],
+    'Minor 7': [0, 3, 10],
+    'Dominant 7': [0, 4, 10],
+    'Dim 7': [3, 6, 9],
+    'Half-Dim 7': [3, 6, 10],
+    'Min/Maj 7': [0, 3, 11],
+    'Aug 7': [4, 8, 10],
+    'Add9': [0, 4, 2],
+    'Major 9': [4, 11, 2],
+    'Minor 9': [3, 10, 2],
+    'Dominant 9': [4, 10, 2],
+    'Major 6': [0, 4, 9],
+    'Minor 6': [0, 3, 9],
+    '7sus4': [5, 10, 7],
+    '7sus4♭9': [5, 10, 1],
+    '7#9': [4, 10, 3],
+    '7♭9': [4, 10, 1],
+    '7#5': [4, 8, 10],
+    '7♭5': [4, 6, 10],
+    '11': [4, 10, 5],
+    'Minor 11': [3, 10, 5],
+    '13': [4, 10, 9],
+    'Minor 13': [3, 10, 9],
+    'Power (5)': [0, 7],
+  },
+  drop2: {
+    'Major': [],
+    'Minor': [],
+    'Diminished': [],
+    'Augmented': [],
+    'Sus2': [],
+    'Sus4': [],
+    'Major 7': [0, 4, 7, 11],
+    'Major 7♭5': [0, 4, 6, 11],
+    'Minor 7': [0, 3, 7, 10],
+    'Dominant 7': [0, 4, 7, 10],
+    'Dim 7': [0, 3, 6, 9],
+    'Half-Dim 7': [0, 3, 6, 10],
+    'Min/Maj 7': [0, 3, 7, 11],
+    'Aug 7': [0, 4, 8, 10],
+    'Add9': [0, 4, 7, 2],
+    'Major 9': [0, 4, 11, 2],
+    'Minor 9': [0, 3, 10, 2],
+    'Dominant 9': [0, 4, 10, 2],
+    'Major 6': [0, 4, 7, 9],
+    'Minor 6': [0, 3, 7, 9],
+    '7sus4': [0, 5, 7, 10],
+    '7sus4♭9': [0, 5, 10, 1],
+    '7#9': [0, 4, 10, 3],
+    '7♭9': [0, 4, 10, 1],
+    '7#5': [0, 4, 8, 10],
+    '7♭5': [0, 4, 6, 10],
+    '11': [0, 4, 10, 5],
+    'Minor 11': [0, 3, 10, 5],
+    '13': [0, 4, 10, 9],
+    'Minor 13': [0, 3, 10, 9],
+    'Power (5)': [],
+  },
+  drop3: {
+    'Major': [],
+    'Minor': [],
+    'Diminished': [],
+    'Augmented': [],
+    'Sus2': [],
+    'Sus4': [],
+    'Major 7': [0, 4, 7, 11],
+    'Major 7♭5': [0, 4, 6, 11],
+    'Minor 7': [0, 3, 7, 10],
+    'Dominant 7': [0, 4, 7, 10],
+    'Dim 7': [0, 3, 6, 9],
+    'Half-Dim 7': [0, 3, 6, 10],
+    'Min/Maj 7': [0, 3, 7, 11],
+    'Aug 7': [0, 4, 8, 10],
+    'Add9': [0, 4, 7, 2],
+    'Major 9': [0, 4, 11, 2],
+    'Minor 9': [0, 3, 10, 2],
+    'Dominant 9': [0, 4, 10, 2],
+    'Major 6': [0, 4, 7, 9],
+    'Minor 6': [0, 3, 7, 9],
+    '7sus4': [0, 5, 7, 10],
+    '7sus4♭9': [0, 5, 10, 1],
+    '7#9': [0, 4, 10, 3],
+    '7♭9': [0, 4, 10, 1],
+    '7#5': [0, 4, 8, 10],
+    '7♭5': [0, 4, 6, 10],
+    '11': [0, 4, 10, 5],
+    'Minor 11': [0, 3, 10, 5],
+    '13': [0, 4, 10, 9],
+    'Minor 13': [0, 3, 10, 9],
+    'Power (5)': [],
+  },
+};
+
+function getRequiredIntervalsForVoicing(chordType: string, source: GeneratedVoicingSource): number[] {
+  const mapped = REQUIRED_INTERVALS_BY_SOURCE[source][chordType];
+  if (mapped) return [...mapped];
+  const formula = CHORD_FORMULAS[chordType];
+  return formula ? formula.map(interval => interval % 12) : [];
+}
+
+function getVoicingPitchClasses(frets: number[], tuning: number[] = STANDARD_TUNING): number[] {
+  return frets
+    .map((fret, stringIndex) => (fret >= 0 ? (tuning[stringIndex] + fret) % 12 : -1))
+    .filter((pitch): pitch is number => pitch >= 0);
+}
+
+function voicingContainsRequiredTones(voicing: ChordVoicing, root: NoteName, chordType: string, source: GeneratedVoicingSource): boolean {
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  const required = getRequiredIntervalsForVoicing(chordType, source).map(interval => (rootIdx + interval) % 12);
+  if (required.length === 0) return false;
+  const present = new Set(getVoicingPitchClasses(voicing.frets));
+  return required.every(pitch => present.has(pitch));
+}
+
+function voicingStartsOnRoot(voicing: ChordVoicing, root: NoteName): boolean {
+  const firstPlayedString = voicing.frets.findIndex(fret => fret >= 0);
+  if (firstPlayedString < 0) return false;
+  return (STANDARD_TUNING[firstPlayedString] + voicing.frets[firstPlayedString]) % 12 === NOTE_NAMES.indexOf(root);
+}
+
+function permute<T>(items: T[]): T[][] {
+  if (items.length <= 1) return [items];
+  const results: T[][] = [];
+  items.forEach((item, index) => {
+    const remaining = [...items.slice(0, index), ...items.slice(index + 1)];
+    permute(remaining).forEach(tail => results.push([item, ...tail]));
+  });
+  return results;
+}
+
 export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = {
   'C': {
     'Major': [
@@ -1283,7 +1457,9 @@ export function getVoicingsForChord(root: NoteName, chordType: string, source: '
   if (source === 'triads') return generateTriadVoicings(root, chordType);
   if (source === 'full') {
     const curated = CURATED_VOICINGS[root]?.[chordType];
-    return curated && curated.length > 0 ? curated : [];
+    return curated && curated.length > 0
+      ? curated.filter(voicing => voicingStartsOnRoot(voicing, root) && voicingContainsRequiredTones(voicing, root, chordType, 'full'))
+      : [];
   }
   if (source === 'shell') return generateShellVoicings(root, chordType);
   if (source === 'drop2') return generateDrop2Voicings(root, chordType);
@@ -1296,10 +1472,10 @@ export function getVoicingsForChord(root: NoteName, chordType: string, source: '
 // ============================================================
 
 export function generateDrop2Voicings(root: NoteName, chordType: string): ChordVoicing[] {
-  const formula = CHORD_FORMULAS[chordType];
-  if (!formula || formula.length < 4) return [];
+  const intervals = getRequiredIntervalsForVoicing(chordType, 'drop2');
+  if (intervals.length < 4) return [];
   const rootIdx = NOTE_NAMES.indexOf(root);
-  const tones = formula.slice(0, 4).map(i => (rootIdx + i) % 12);
+  const tones = intervals.map(i => (rootIdx + i) % 12);
   const results: ChordVoicing[] = [];
   const seen = new Set<string>();
   const stringGroups = [[0,1,2,3], [1,2,3,4], [2,3,4,5]];
@@ -1323,15 +1499,10 @@ export function generateDrop2Voicings(root: NoteName, chordType: string): ChordV
         if (!valid) continue;
         const playedFrets = frets.filter(f => f > 0);
         if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
-        // Verify extension notes present
-        if (formula.length > 4) {
-          const present = new Set<number>();
-          voicing.forEach((f, i) => { if (f >= 0) present.add((STANDARD_TUNING[i] + f) % 12); });
-          const extTone = (rootIdx + formula[formula.length - 1]) % 12;
-          if (!present.has(extTone)) continue;
-        }
         const key = voicing.join(',');
-        if (!seen.has(key)) { seen.add(key); results.push({ frets: [...voicing] }); }
+        const candidate = { frets: [...voicing] };
+        if (!voicingContainsRequiredTones(candidate, root, chordType, 'drop2')) continue;
+        if (!seen.has(key)) { seen.add(key); results.push(candidate); }
       }
     }
   }
@@ -1339,10 +1510,10 @@ export function generateDrop2Voicings(root: NoteName, chordType: string): ChordV
 }
 
 export function generateDrop3Voicings(root: NoteName, chordType: string): ChordVoicing[] {
-  const formula = CHORD_FORMULAS[chordType];
-  if (!formula || formula.length < 4) return [];
+  const intervals = getRequiredIntervalsForVoicing(chordType, 'drop3');
+  if (intervals.length < 4) return [];
   const rootIdx = NOTE_NAMES.indexOf(root);
-  const tones = formula.slice(0, 4).map(i => (rootIdx + i) % 12);
+  const tones = intervals.map(i => (rootIdx + i) % 12);
   const results: ChordVoicing[] = [];
   const seen = new Set<string>();
   const stringGroups = [[0,1,3,4], [1,2,4,5], [0,1,4,5]];
@@ -1367,7 +1538,9 @@ export function generateDrop3Voicings(root: NoteName, chordType: string): ChordV
         const playedFrets = frets.filter(f => f > 0);
         if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
         const key = voicing.join(',');
-        if (!seen.has(key)) { seen.add(key); results.push({ frets: [...voicing] }); }
+        const candidate = { frets: [...voicing] };
+        if (!voicingContainsRequiredTones(candidate, root, chordType, 'drop3')) continue;
+        if (!seen.has(key)) { seen.add(key); results.push(candidate); }
       }
     }
   }
@@ -1375,38 +1548,60 @@ export function generateDrop3Voicings(root: NoteName, chordType: string): ChordV
 }
 
 export function generateShellVoicings(root: NoteName, chordType: string): ChordVoicing[] {
-  const formula = CHORD_FORMULAS[chordType];
-  if (!formula) return [];
+  const intervals = getRequiredIntervalsForVoicing(chordType, 'shell');
+  if (intervals.length < 3) return [];
   const rootIdx = NOTE_NAMES.indexOf(root);
-  let shellTones: number[];
-  if (formula.length >= 4) {
-    shellTones = [formula[0], formula[1], formula[3]].map(i => (rootIdx + i) % 12);
-  } else {
-    shellTones = formula.map(i => (rootIdx + i) % 12);
-  }
-  const shellSet = new Set(shellTones);
+  const shellTones = intervals.map(i => (rootIdx + i) % 12);
   const results: ChordVoicing[] = [];
   const seen = new Set<string>();
-  for (const rootStr of [0, 1, 2]) {
-    for (let baseFret = 0; baseFret <= 14; baseFret++) {
-      if ((STANDARD_TUNING[rootStr] + baseFret) % 12 !== shellTones[0]) continue;
-      const voicing: number[] = [-1, -1, -1, -1, -1, -1];
-      voicing[rootStr] = baseFret;
-      const usedTones = new Set([shellTones[0]]);
-      for (let s = rootStr + 1; s < Math.min(rootStr + 4, 6); s++) {
-        for (let f = Math.max(0, baseFret - 2); f <= baseFret + 4; f++) {
-          const n = (STANDARD_TUNING[s] + f) % 12;
-          if (shellSet.has(n) && !usedTones.has(n)) { voicing[s] = f; usedTones.add(n); break; }
+  const stringGroups = shellTones.length === 4
+    ? [[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5]]
+    : [[0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5], [0, 1, 3], [1, 2, 4], [2, 3, 5]];
+  for (const orderedTones of permute(shellTones)) {
+    for (const strings of stringGroups) {
+      for (let baseFret = 0; baseFret <= 14; baseFret++) {
+        const voicing: number[] = [-1, -1, -1, -1, -1, -1];
+        const frets: number[] = [];
+        let valid = true;
+        for (let i = 0; i < strings.length; i++) {
+          const stringIndex = strings[i];
+          const targetTone = orderedTones[i];
+          let found = false;
+          for (let fret = Math.max(0, baseFret - 1); fret <= baseFret + 4; fret++) {
+            if ((STANDARD_TUNING[stringIndex] + fret) % 12 === targetTone) {
+              voicing[stringIndex] = fret;
+              frets.push(fret);
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            valid = false;
+            break;
+          }
+        }
+        if (!valid) continue;
+        const playedFrets = frets.filter(fret => fret > 0);
+        if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
+        const candidate = { frets: [...voicing] };
+        if (!voicingContainsRequiredTones(candidate, root, chordType, 'shell')) continue;
+        const key = voicing.join(',');
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push(candidate);
         }
       }
-      if (usedTones.size < shellTones.length) continue;
-      const playedFrets = voicing.filter(f => f > 0);
-      if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
-      const key = voicing.join(',');
-      if (!seen.has(key)) { seen.add(key); results.push({ frets: [...voicing] }); }
     }
   }
-  return results.slice(0, 16);
+  results.sort((a, b) => {
+    const aFrets = a.frets.filter(fret => fret >= 0);
+    const bFrets = b.frets.filter(fret => fret >= 0);
+    const aMin = aFrets.length ? Math.min(...aFrets) : 99;
+    const bMin = bFrets.length ? Math.min(...bFrets) : 99;
+    if (aMin !== bMin) return aMin - bMin;
+    return a.frets.join(',').localeCompare(b.frets.join(','));
+  });
+  return results.slice(0, 20);
 }
 
 // ============================================================

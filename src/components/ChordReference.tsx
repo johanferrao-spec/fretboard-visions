@@ -1866,8 +1866,8 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
   const minFret = positiveFrets.length > 0 ? Math.min(...positiveFrets) : 1;
   const startFret = minFret <= 4 ? 1 : minFret;
   const numFrets = Math.max(4, maxFret - startFret + 1);
-  const w = 44;
-  const h = 52;
+  const w = 68;
+  const h = 82;
   const stringSpacing = w / 7;
   const fretSpacing = h / (numFrets + 1);
 
@@ -1875,7 +1875,7 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
     <div className="flex justify-center">
       <svg width={w} height={h + 6} className="shrink-0">
         {startFret > 1 && (
-          <text x={2} y={fretSpacing + 6} fontSize={5} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+          <text x={2} y={fretSpacing + 7} fontSize={8} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
         )}
         {startFret === 1 && (
           <line x1={stringSpacing} y1={5} x2={stringSpacing * 6} y2={5} stroke="hsl(var(--fretboard-nut))" strokeWidth={2} />
@@ -1906,7 +1906,7 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
           const interval = showDegrees ? getIntervalName(root, note) : getExtendedIntervalName(root, note);
           const degColor = DEGREE_COLORS[interval];
           const fillColor = showDegrees && degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
-          return <circle key={i} cx={x} cy={y} r={2.5} fill={fillColor} />;
+          return <circle key={i} cx={x} cy={y} r={4.2} fill={fillColor} />;
         })}
       </svg>
     </div>
