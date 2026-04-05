@@ -71,6 +71,10 @@ interface ChordReferenceProps {
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
   onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
+  tabVisData: import('./TabVisualiser').TabData | null;
+  setTabVisData: (d: import('./TabVisualiser').TabData | null) => void;
+  tabVisPlayhead: number;
+  setTabVisPlayhead: (p: number | ((prev: number) => number)) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
