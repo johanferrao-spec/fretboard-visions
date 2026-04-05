@@ -715,6 +715,42 @@ export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = 
     'Dominant 9': [
       { frets: [-1, -1, 0, 2, 1, 0], fingers: [0, 0, 0, 2, 1, 0] },
     ],
+    'Min/Maj 7': [
+      { frets: [-1, -1, 0, 2, 2, 1] },
+    ],
+    'Aug 7': [
+      { frets: [-1, -1, 0, 3, 1, 2] },
+    ],
+    '7#5': [
+      { frets: [-1, -1, 0, 3, 1, 2] },
+    ],
+    '7♭5': [
+      { frets: [-1, -1, 0, 1, 1, 2] },
+    ],
+    '7sus4': [
+      { frets: [-1, -1, 0, 2, 1, 3] },
+    ],
+    '7sus4♭9': [
+      { frets: [-1, -1, 0, 5, 4, 3] },
+    ],
+    '11': [
+      { frets: [-1, -1, 0, 0, 1, 1] },
+    ],
+    'Minor 11': [
+      { frets: [-1, -1, 0, 0, 1, 1] },
+    ],
+    '13': [
+      { frets: [-1, -1, 0, 4, 1, 2] },
+    ],
+    'Minor 13': [
+      { frets: [-1, -1, 0, 4, 1, 1] },
+    ],
+    'Major 7♭5': [
+      { frets: [-1, -1, 0, 1, 2, 2] },
+    ],
+    'Major 9': [
+      { frets: [-1, -1, 0, 2, 2, 2] },
+    ],
   },
   'E': {
     'Major': [
@@ -833,6 +869,42 @@ export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = 
     'Half-Dim 7': [
       { frets: [1, 2, 3, 1, -1, -1], fingers: [1, 2, 4, 1, 0, 0] },
     ],
+    'Min/Maj 7': [
+      { frets: [1, -1, 2, 1, 1, 0] },
+    ],
+    'Aug 7': [
+      { frets: [1, -1, 1, 2, 2, -1] },
+    ],
+    '7#5': [
+      { frets: [1, -1, 1, 2, 2, -1] },
+    ],
+    '7♭5': [
+      { frets: [1, 0, 1, -1, 0, 1] },
+    ],
+    '7sus4': [
+      { frets: [1, 1, 1, -1, 1, 1], barreFrom: 0, barreTo: 5, barreFret: 1 },
+    ],
+    '7sus4♭9': [
+      { frets: [1, 1, 1, 3, -1, 2] },
+    ],
+    '11': [
+      { frets: [1, 1, 1, -1, 1, 1], barreFrom: 0, barreTo: 5, barreFret: 1 },
+    ],
+    'Minor 11': [
+      { frets: [1, 1, 1, 1, -1, 1] },
+    ],
+    '13': [
+      { frets: [1, -1, 1, 2, 3, 1] },
+    ],
+    'Minor 13': [
+      { frets: [1, -1, 1, 1, 3, 1] },
+    ],
+    'Major 7♭5': [
+      { frets: [1, -1, 2, 2, 0, -1] },
+    ],
+    'Major 9': [
+      { frets: [1, 0, 2, 0, -1, 0] },
+    ],
   },
   'G': {
     'Major': [
@@ -884,6 +956,43 @@ export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = 
     ],
     'Minor 6': [
       { frets: [3, 5, 5, 3, 3, 0], fingers: [1, 3, 4, 1, 1, 0], barreFrom: 0, barreTo: 4, barreFret: 3 },
+    ],
+    'Min/Maj 7': [
+      { frets: [3, -1, 0, 3, 3, 2] },
+    ],
+    'Aug 7': [
+      { frets: [3, -1, 1, 0, 0, 1] },
+    ],
+    '7#5': [
+      { frets: [3, -1, 1, 0, 0, 1] },
+    ],
+    '7♭5': [
+      { frets: [3, 2, -1, 0, 2, 1] },
+    ],
+    '7sus4': [
+      { frets: [3, -1, 0, 0, 1, 1] },
+    ],
+    '7sus4♭9': [
+      { frets: [3, -1, 3, 1, 1, 1] },
+    ],
+    '11': [
+      { frets: [3, -1, 0, 0, 1, 1] },
+    ],
+    'Minor 11': [
+      { frets: [3, -1, 3, 3, 1, -1] },
+    ],
+    '13': [
+      { frets: [3, -1, 2, 0, 0, 1] },
+      { frets: [3, -1, 3, 0, 0, 0] },
+    ],
+    'Minor 13': [
+      { frets: [3, 1, 2, 0, -1, 1] },
+    ],
+    'Major 7♭5': [
+      { frets: [3, 2, -1, 0, 2, 2] },
+    ],
+    'Major 9': [
+      { frets: [3, 0, -1, 0, 0, 2] },
     ],
   },
   'A': {
@@ -1015,6 +1124,42 @@ export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = 
     ],
     'Half-Dim 7': [
       { frets: [-1, 2, 3, 2, 3, -1], fingers: [0, 1, 3, 2, 4, 0] },
+    ],
+    'Min/Maj 7': [
+      { frets: [-1, 2, -1, 3, 3, 2] },
+    ],
+    'Aug 7': [
+      { frets: [-1, 2, 1, 2, -1, 3] },
+    ],
+    '7#5': [
+      { frets: [-1, 2, 1, 2, -1, 3] },
+    ],
+    '7♭5': [
+      { frets: [-1, 2, 1, 2, -1, 1] },
+    ],
+    '7sus4': [
+      { frets: [-1, 2, 2, 2, -1, 2] },
+    ],
+    '7sus4♭9': [
+      { frets: [-1, 2, -1, 2, 1, 0] },
+    ],
+    '11': [
+      { frets: [-1, 2, 2, 2, 0, 2] },
+    ],
+    'Minor 11': [
+      { frets: [-1, 2, 0, 2, 0, 0] },
+    ],
+    '13': [
+      { frets: [-1, 2, 1, 2, -1, 4] },
+    ],
+    'Minor 13': [
+      { frets: [-1, 2, -1, 2, 3, 4] },
+    ],
+    'Major 7♭5': [
+      { frets: [-1, 2, 1, 3, -1, 1] },
+    ],
+    'Major 9': [
+      { frets: [-1, 2, 1, 3, 2, -1] },
     ],
   },
 };
