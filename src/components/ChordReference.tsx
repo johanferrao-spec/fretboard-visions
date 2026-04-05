@@ -910,7 +910,8 @@ function ChordLibraryPanel({
     const updated = { ...hiddenVoicings, [key]: [...existing, origIdx] };
     setHiddenVoicings(updated);
     localStorage.setItem('mf-hidden-voicings', JSON.stringify(updated));
-    if (activeChord?.voicingIndex === filteredIdx) setActiveChord(null);
+    // Clear active chord if the hidden voicing was the active one
+    if (activeChord?.voicingIndex === origIdx && activeChord?.voicingSource === voicingTab) setActiveChord(null);
   };
 
   // Transpose custom voicings for current root — keyed by voicingTab so
