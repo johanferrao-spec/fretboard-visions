@@ -1521,7 +1521,7 @@ export function generateDrop3Voicings(root: NoteName, chordType: string): ChordV
     const invTones = [...tones.slice(inv), ...tones.slice(0, inv)];
     const drop3 = [invTones[1], invTones[0], invTones[2], invTones[3]];
     for (const strings of stringGroups) {
-      for (let baseFret = 0; baseFret <= 14; baseFret++) {
+      for (let baseFret = 1; baseFret <= 14; baseFret++) {
         const voicing: number[] = [-1, -1, -1, -1, -1, -1];
         let valid = true;
         const frets: number[] = [];
