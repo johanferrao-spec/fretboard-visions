@@ -9,6 +9,7 @@ import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import type { NoteName } from '@/lib/music';
+import type { TabNote } from '@/components/TabVisualiser';
 import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_DEGREE_COLORS, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
