@@ -380,6 +380,7 @@ export default function ChordReference({
           currentRoot={currentIdentifyRoot}
           tuningLabels={tuningLabels}
           tuning={tuning}
+          onSetArpeggioPosition={onSetArpeggioPosition}
         />
       ) : activeTab === 'chords' ? (
         <ChordLibraryPanel
