@@ -835,7 +835,7 @@ function ChordLibraryPanel({
   degreeColors,
   tuning,
   arpAddClickRef, arpBarreDragRef, setArpAddMode, arpAddMode,
-  setActiveChord, onSetArpeggioPosition,
+  setActiveChord, onSetArpeggioPosition, onChordAddStateChange,
 }: {
   selectedRoot: NoteName;
   setSelectedRoot: (n: NoteName) => void;
@@ -858,6 +858,7 @@ function ChordLibraryPanel({
   arpAddMode?: boolean;
   setActiveChord: (c: ChordSelection | null) => void;
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
+  onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
 }) {
   const VOICINGS_PER_PAGE = 8;
   const [libCopied, setLibCopied] = useState(false);
