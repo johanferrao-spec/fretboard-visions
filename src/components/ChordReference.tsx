@@ -1344,9 +1344,15 @@ function IdentifyPanel({
     }
 
     // Set arpeggio overlay
+    const playedFretsList = frets.filter(f => f > 0);
+    const minPlayedFret = playedFretsList.length > 0 ? Math.min(...playedFretsList) : 0;
     onSetArpeggioPosition?.({
       notes,
       showPath: false,
+      label: chordName,
+      startFret: minPlayedFret,
+      type: 'static' as const,
+      frets: [...frets] as (number | -1)[],
     });
 
     // Compute position box from played frets
