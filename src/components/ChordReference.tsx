@@ -274,6 +274,7 @@ export default function ChordReference({
       setIdentifyMode(true);
       setActiveChord(null);
       setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
+      setIdentifyBarre(null);
       setIdentifyRoot(null);
       setIdentifyViewName(null);
     } else {
