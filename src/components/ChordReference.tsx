@@ -861,6 +861,21 @@ function ChordLibraryPanel({
   const [chordAddMode, setChordAddMode] = useState(false);
   const [addingFrets, setAddingFrets] = useState<(number | -1)[]>([-1,-1,-1,-1,-1,-1]);
 
+  // Hidden curated voicings (persisted to localStorage)
+  const [hiddenVoicings, setHiddenVoicings] = useState<Record<string, number[]>>(() => {
+    try { return JSON.parse(localStorage.getItem('mf-hidden-voicings') || '{}'); } catch { return {}; }
+  });
+
+  const handleHideCurated = (globalIdx: number) => {
+    if (!selectedChord) return;
+    const key = `${selectedRoot}::${selectedChord}::${voicingTab}`;
+    const existing = hiddenVoicings[key] || [];
+    const updated = { ...hiddenVoicings, [key]: [...existing, globalIdx] };
+    setHiddenVoicings(updated);
+    localStorage.setItem('mf-hidden-voicings', JSON.stringify(updated));
+    if (activeChord?.voicingIndex === globalIdx) setActiveChord(null);
+  };
+
   // Transpose custom voicings for current root — keyed by voicingTab so
   // a voicing saved under "Standard" won't appear in shell / drop2 / drop3.
   const customForRoot = useMemo((): ChordVoicing[] => {
