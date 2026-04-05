@@ -182,7 +182,7 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
 export default function ChordReference({
   activeChord, setActiveChord, showCAGED, setShowCAGED,
   cagedShape, setCagedShape, cagedRoot,
-  identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets,
+  identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre,
   degreeColors, identifyRoot, setIdentifyRoot,
   tuning, tuningLabels,
   timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, keyMode,
