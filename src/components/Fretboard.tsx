@@ -104,6 +104,7 @@ export default function Fretboard({
   const [hoveredDiatonic, setHoveredDiatonic] = useState<{ notes: NoteName[]; name: string; root: NoteName } | null>(null);
   const [identifyHover, setIdentifyHover] = useState<{ stringIndex: number; fret: number } | null>(null);
   const [identifyDrag, setIdentifyDrag] = useState<{ startString: number; fret: number } | null>(null);
+  const identifyMouseDown = useRef(false);
 
   // Guided drag arpeggio state
   const [isDragging, setIsDragging] = useState(false);
@@ -288,7 +289,7 @@ export default function Fretboard({
       return null;
     }
 
-    // In identify mode, only show notes that have been clicked or hovered
+    // In identify mode, show clicked notes + arpeggio overlay
     if (identifyMode) {
       if (identifyFrets[stringIndex] === fret) {
         let bg = 'hsl(var(--primary))';
@@ -296,7 +297,19 @@ export default function Fretboard({
           const dc = getDegreeColor(identifyRoot, note);
           if (dc) bg = dc;
         }
-        return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: bg, greyed: false };
+      }
+      // Show arpeggio overlay notes in identify mode (when a chord cell is selected)
+      if (arpeggioPosition && arpPositionSet.size > 0 && fret > 0) {
+        const key = `${stringIndex}-${fret}`;
+        if (arpPositionSet.has(key)) {
+          let bg = 'hsl(var(--primary))';
+          if (degreeColors && identifyRoot) {
+            const dc = getDegreeColor(identifyRoot, note);
+            if (dc) bg = dc;
+          }
+          return { backgroundColor: bg, opacity: arpOverlayOpacity, ring: false, ringColor: '', greyed: false };
+        }
       }
       // Show greyed-out preview on hover
       if (identifyHover && identifyHover.stringIndex === stringIndex && identifyHover.fret === fret) {
@@ -753,7 +766,7 @@ export default function Fretboard({
   return (
     <div
       className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}
-      onMouseUp={() => { handleDragEnd(); setIdentifyDrag(null); arpDragRef.current = null; }}
+      onMouseUp={() => { handleDragEnd(); setIdentifyDrag(null); identifyMouseDown.current = false; arpDragRef.current = null; }}
       onContextMenu={(e) => {
         if (persistedPaths.length > 0) {
           e.preventDefault();
@@ -1150,6 +1163,7 @@ export default function Fretboard({
                                 arpDragRef.current = { startString: stringIdx, fret, coveredStrings: new Set([stringIdx]) };
                                 onArpAddClick(stringIdx, fret);
                               } else if (identifyMode) {
+                                identifyMouseDown.current = true;
                                 setIdentifyDrag({ startString: stringIdx, fret });
                                 const newFrets = [...identifyFrets];
                                 newFrets[stringIdx] = fret;
@@ -1169,7 +1183,7 @@ export default function Fretboard({
                                 if (maxS > minS) onArpBarreDrag?.(arpDragRef.current.startString, stringIdx, fret);
                               } else if (identifyMode) {
                                 setIdentifyHover({ stringIndex: stringIdx, fret });
-                                if (identifyDrag && identifyDrag.fret === fret) {
+                                if (identifyMouseDown.current && identifyDrag && identifyDrag.fret === fret) {
                                   const newFrets = [...identifyFrets];
                                   const minS = Math.min(identifyDrag.startString, stringIdx);
                                   const maxS = Math.max(identifyDrag.startString, stringIdx);
@@ -1180,7 +1194,7 @@ export default function Fretboard({
                                 }
                               }
                             }}
-                            onMouseUp={() => { setIdentifyDrag(null); arpDragRef.current = null; }}
+                            onMouseUp={() => { setIdentifyDrag(null); identifyMouseDown.current = false; arpDragRef.current = null; }}
                             onMouseLeave={() => setIdentifyHover(null)}
                             className={`absolute inset-0 z-10 flex items-center justify-center font-mono font-bold cursor-pointer select-none transition-opacity ${isVertical ? '-rotate-90' : ''}`}
                             style={{
@@ -1226,6 +1240,7 @@ export default function Fretboard({
                                 arpDragRef.current = { startString: stringIdx, fret, coveredStrings: new Set([stringIdx]) };
                               } else if (identifyMode) {
                                 e.preventDefault();
+                                identifyMouseDown.current = true;
                                 setIdentifyDrag({ startString: stringIdx, fret });
                               } else {
                                 e.preventDefault(); handleDragStart(stringIdx, fret, note);
@@ -1244,7 +1259,7 @@ export default function Fretboard({
                                 if (maxS > minS) onArpBarreDrag?.(arpDragRef.current.startString, stringIdx, fret);
                               } else if (identifyMode) {
                                 setIdentifyHover({ stringIndex: stringIdx, fret });
-                                if (identifyDrag && identifyDrag.fret === fret) {
+                                if (identifyMouseDown.current && identifyDrag && identifyDrag.fret === fret) {
                                   const newFrets = [...identifyFrets];
                                   const minS = Math.min(identifyDrag.startString, stringIdx);
                                   const maxS = Math.max(identifyDrag.startString, stringIdx);
@@ -1257,7 +1272,7 @@ export default function Fretboard({
                                 handleDragEnter(stringIdx, fret, note); handleNoteHover(note);
                               }
                             }}
-                            onMouseUp={() => { if (identifyMode) setIdentifyDrag(null); arpDragRef.current = null; }}
+                            onMouseUp={() => { if (identifyMode) { setIdentifyDrag(null); identifyMouseDown.current = false; } arpDragRef.current = null; }}
                             onMouseLeave={() => {
                               if (identifyMode) setIdentifyHover(null);
                               else if (!isDragging) setHoveredDiatonic(null);
