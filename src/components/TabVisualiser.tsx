@@ -17,11 +17,14 @@ interface TabVisualiserProps {
   tuning: number[];
   tuningLabels: string[];
   onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
+  // Lifted state for persistence across tab switches
+  tabData: TabData | null;
+  setTabData: (d: TabData | null) => void;
+  playheadPos: number;
+  setPlayheadPos: (p: number | ((prev: number) => number)) => void;
 }
 
-export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabVisualiserProps) {
-  const [tabData, setTabData] = useState<TabData | null>(null);
-  const [playheadPos, setPlayheadPos] = useState(0);
+export default function TabVisualiser({ tuning, tuningLabels, onTabNotes, tabData, setTabData, playheadPos, setPlayheadPos }: TabVisualiserProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
