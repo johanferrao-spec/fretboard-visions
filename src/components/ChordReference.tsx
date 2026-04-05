@@ -32,6 +32,8 @@ interface ChordReferenceProps {
   setIdentifyMode: (v: boolean) => void;
   identifyFrets: (number | -1)[];
   setIdentifyFrets: (f: (number | -1)[]) => void;
+  identifyBarre: { from: number; to: number; fret: number } | null;
+  setIdentifyBarre: (b: { from: number; to: number; fret: number } | null) => void;
   degreeColors: boolean;
   identifyRoot: NoteName | null;
   setIdentifyRoot: (v: NoteName | null) => void;
