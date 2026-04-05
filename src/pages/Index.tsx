@@ -303,9 +303,9 @@ const Index = () => {
                inversionVoicing={activeInversionVoicing}
                scaleViewChordTones={scaleViewChordTones}
                ghostNoteOpacity={fb.ghostNoteOpacity}
-                inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
-                 chordAddRootNote={fb.arpAddMode ? (activeTab === 'chords' ? null : null) : null}
-                 chordAddHasNotes={false}
+                 inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
+                 chordAddRootNote={chordAddRoot}
+                 chordAddHasNotes={chordAddHasNotes}
                  tabVisNotes={activeTab === 'tabvis' ? (tabVisNotes || { current: [], upcoming: [] }) : null}
             />
           </div>
