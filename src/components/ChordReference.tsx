@@ -1183,7 +1183,7 @@ function ChordLibraryPanel({
                 </div>
               </div>
               {mergedVoicings.length > 0 ? (
-                <div className="grid grid-cols-2 gap-1">
+                <div className="grid grid-cols-4 gap-1">
                   {mergedPagedVoicings.map((v, i) => {
                     const globalIdx = voicingPage * VOICINGS_PER_PAGE + i;
                     const isCurated = globalIdx < currentVoicings.length;
