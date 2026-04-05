@@ -1458,7 +1458,13 @@ export function getVoicingsForChord(root: NoteName, chordType: string, source: '
   if (source === 'full') {
     const curated = CURATED_VOICINGS[root]?.[chordType];
     return curated && curated.length > 0
-      ? curated.filter(voicing => voicingStartsOnRoot(voicing, root) && voicingContainsRequiredTones(voicing, root, chordType, 'full'))
+      ? curated.filter(voicing => {
+          if (!voicingStartsOnRoot(voicing, root)) return false;
+          if (!voicingContainsRequiredTones(voicing, root, chordType, 'full')) return false;
+          const played = voicing.frets.filter(f => f >= 0);
+          if (played.length > 1 && Math.max(...played) - Math.min(...played) > 4) return false;
+          return true;
+        })
       : [];
   }
   if (source === 'shell') return generateShellVoicings(root, chordType);
@@ -1483,7 +1489,7 @@ export function generateDrop2Voicings(root: NoteName, chordType: string): ChordV
     const invTones = [...tones.slice(inv), ...tones.slice(0, inv)];
     const drop2 = [invTones[2], invTones[0], invTones[1], invTones[3]];
     for (const strings of stringGroups) {
-      for (let baseFret = 0; baseFret <= 14; baseFret++) {
+      for (let baseFret = 1; baseFret <= 14; baseFret++) {
         const voicing: number[] = [-1, -1, -1, -1, -1, -1];
         let valid = true;
         const frets: number[] = [];
@@ -1491,14 +1497,14 @@ export function generateDrop2Voicings(root: NoteName, chordType: string): ChordV
           const s = strings[i];
           const target = drop2[i];
           let found = false;
-          for (let f = Math.max(0, baseFret); f <= baseFret + 4; f++) {
+          for (let f = Math.max(1, baseFret); f <= baseFret + 4; f++) {
             if ((STANDARD_TUNING[s] + f) % 12 === target) { voicing[s] = f; frets.push(f); found = true; break; }
           }
           if (!found) { valid = false; break; }
         }
         if (!valid) continue;
-        const playedFrets = frets.filter(f => f > 0);
-        if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
+        if (frets.some(f => f === 0)) continue; // No open strings in drop 2
+        if (frets.length > 1 && Math.max(...frets) - Math.min(...frets) > 4) continue;
         const key = voicing.join(',');
         const candidate = { frets: [...voicing] };
         if (!voicingContainsRequiredTones(candidate, root, chordType, 'drop2')) continue;
@@ -1521,7 +1527,7 @@ export function generateDrop3Voicings(root: NoteName, chordType: string): ChordV
     const invTones = [...tones.slice(inv), ...tones.slice(0, inv)];
     const drop3 = [invTones[1], invTones[0], invTones[2], invTones[3]];
     for (const strings of stringGroups) {
-      for (let baseFret = 0; baseFret <= 14; baseFret++) {
+      for (let baseFret = 1; baseFret <= 14; baseFret++) {
         const voicing: number[] = [-1, -1, -1, -1, -1, -1];
         let valid = true;
         const frets: number[] = [];
@@ -1529,14 +1535,14 @@ export function generateDrop3Voicings(root: NoteName, chordType: string): ChordV
           const s = strings[i];
           const target = drop3[i];
           let found = false;
-          for (let f = Math.max(0, baseFret); f <= baseFret + 4; f++) {
+          for (let f = Math.max(1, baseFret); f <= baseFret + 4; f++) {
             if ((STANDARD_TUNING[s] + f) % 12 === target) { voicing[s] = f; frets.push(f); found = true; break; }
           }
           if (!found) { valid = false; break; }
         }
         if (!valid) continue;
-        const playedFrets = frets.filter(f => f > 0);
-        if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
+        if (frets.some(f => f === 0)) continue; // No open strings in drop 3
+        if (frets.length > 1 && Math.max(...frets) - Math.min(...frets) > 4) continue;
         const key = voicing.join(',');
         const candidate = { frets: [...voicing] };
         if (!voicingContainsRequiredTones(candidate, root, chordType, 'drop3')) continue;
@@ -1559,7 +1565,7 @@ export function generateShellVoicings(root: NoteName, chordType: string): ChordV
     : [[0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5], [0, 1, 3], [1, 2, 4], [2, 3, 5]];
   for (const orderedTones of permute(shellTones)) {
     for (const strings of stringGroups) {
-      for (let baseFret = 0; baseFret <= 14; baseFret++) {
+      for (let baseFret = 1; baseFret <= 14; baseFret++) {
         const voicing: number[] = [-1, -1, -1, -1, -1, -1];
         const frets: number[] = [];
         let valid = true;
@@ -1567,7 +1573,7 @@ export function generateShellVoicings(root: NoteName, chordType: string): ChordV
           const stringIndex = strings[i];
           const targetTone = orderedTones[i];
           let found = false;
-          for (let fret = Math.max(0, baseFret - 1); fret <= baseFret + 4; fret++) {
+          for (let fret = Math.max(1, baseFret - 1); fret <= baseFret + 4; fret++) {
             if ((STANDARD_TUNING[stringIndex] + fret) % 12 === targetTone) {
               voicing[stringIndex] = fret;
               frets.push(fret);
@@ -1581,8 +1587,8 @@ export function generateShellVoicings(root: NoteName, chordType: string): ChordV
           }
         }
         if (!valid) continue;
-        const playedFrets = frets.filter(fret => fret > 0);
-        if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
+        if (frets.some(f => f === 0)) continue; // No open strings in shell voicings
+        if (frets.length > 1 && Math.max(...frets) - Math.min(...frets) > 4) continue;
         const candidate = { frets: [...voicing] };
         if (!voicingContainsRequiredTones(candidate, root, chordType, 'shell')) continue;
         const key = voicing.join(',');
