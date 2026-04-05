@@ -900,7 +900,15 @@ function ChordLibraryPanel({
     });
   }, [selectedChord, selectedRoot, customChordVoicings, voicingTab]);
 
-  const mergedVoicings = useMemo(() => [...currentVoicings, ...customForRoot], [currentVoicings, customForRoot]);
+  const filteredCurated = useMemo(() => {
+    if (!selectedChord) return currentVoicings;
+    const key = `${selectedRoot}::${selectedChord}::${voicingTab}`;
+    const hidden = new Set(hiddenVoicings[key] || []);
+    if (hidden.size === 0) return currentVoicings;
+    return currentVoicings.filter((_, i) => !hidden.has(i));
+  }, [currentVoicings, selectedRoot, selectedChord, voicingTab, hiddenVoicings]);
+
+  const mergedVoicings = useMemo(() => [...filteredCurated, ...customForRoot], [filteredCurated, customForRoot]);
   const mergedTotalPages = Math.ceil(mergedVoicings.length / VOICINGS_PER_PAGE);
   const mergedPagedVoicings = mergedVoicings.slice(voicingPage * VOICINGS_PER_PAGE, (voicingPage + 1) * VOICINGS_PER_PAGE);
 
