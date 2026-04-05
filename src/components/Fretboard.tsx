@@ -41,6 +41,8 @@ interface FretboardProps {
   identifyMode: boolean;
   identifyFrets: (number | -1)[];
   setIdentifyFrets: (f: (number | -1)[]) => void;
+  identifyBarre: { from: number; to: number; fret: number } | null;
+  setIdentifyBarre: (b: { from: number; to: number; fret: number } | null) => void;
   identifyRoot: NoteName | null;
   tuning: number[];
   tuningLabels: string[];
@@ -87,7 +89,7 @@ export default function Fretboard({
   showFretBox, fretBoxStart, fretBoxSize, setFretBoxStart, setFretBoxSize,
   fretBoxStringStart, fretBoxStringSize, setFretBoxStringStart, setFretBoxStringSize,
   noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
-  identifyMode, identifyFrets, setIdentifyFrets, identifyRoot,
+  identifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre, identifyRoot,
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
   arpOverlayOpacity = 0.3, arpPathVisible = true,
   arpAddMode = false, onArpAddClick, onArpBarreDrag,
@@ -105,7 +107,6 @@ export default function Fretboard({
   const [identifyHover, setIdentifyHover] = useState<{ stringIndex: number; fret: number } | null>(null);
   const [identifyDrag, setIdentifyDrag] = useState<{ startString: number; fret: number } | null>(null);
   const identifyMouseDown = useRef(false);
-  const [identifyBarre, setIdentifyBarre] = useState<{ from: number; to: number; fret: number } | null>(null);
   const lastIdentifyAppliedRef = useRef<string | null>(null);
 
   // Guided drag arpeggio state
@@ -292,15 +293,11 @@ export default function Fretboard({
     const newFrets = [...identifyFrets];
     const minS = Math.min(identifyDrag.startString, currentStringIndex);
     const maxS = Math.max(identifyDrag.startString, currentStringIndex);
-    // Only set the barre fret on the start and current string (endpoints)
-    // Don't fill in between — the barre visual covers it
-    for (let s = minS; s <= maxS; s++) {
-      // Only apply the barre fret if the string doesn't already have a DIFFERENT fret set
-      // (i.e., don't overwrite notes placed individually closer to the bridge)
-      if (newFrets[s] === -1 || newFrets[s] === identifyDrag.fret) {
-        newFrets[s] = identifyDrag.fret;
-      }
-    }
+    // Only set the barre fret on the start and end strings (endpoints)
+    // Don't fill intermediate strings — the barre visual covers them
+    // and user can add individual notes on those strings later
+    newFrets[identifyDrag.startString] = identifyDrag.fret;
+    newFrets[currentStringIndex] = identifyDrag.fret;
     setIdentifyFrets(newFrets);
     setIdentifyBarre(maxS > minS ? { from: minS, to: maxS, fret: identifyDrag.fret } : null);
     lastIdentifyAppliedRef.current = `barre-${minS}-${maxS}-${identifyDrag.fret}`;
@@ -337,7 +334,8 @@ export default function Fretboard({
     // In identify mode, show clicked notes + arpeggio overlay
     if (identifyMode) {
       // Clicked notes always visible (even outside box)
-      if (identifyFrets[stringIndex] === fret) {
+      const isBarreString = identifyBarre && stringIndex >= identifyBarre.from && stringIndex <= identifyBarre.to && fret === identifyBarre.fret;
+      if (identifyFrets[stringIndex] === fret || isBarreString) {
         let bg = 'hsl(var(--primary))';
         if (degreeColors && identifyRoot) {
           const dc = getDegreeColor(identifyRoot, note);
@@ -1191,7 +1189,7 @@ export default function Fretboard({
                   } ${isVertical ? '-rotate-90' : ''}`}
                   style={{
                     fontSize: 9,
-                    ...(identifyMode && identifyFrets[stringIdx] === -1 ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
+                    ...(identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isChordMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isGlowing && !isChordMuted && !identifyMode ? {
                       color: pColor,
@@ -1200,7 +1198,7 @@ export default function Fretboard({
                   }}
                   title={identifyMode ? "Click to toggle open string" : "Double-click to toggle string"}
                 >
-                  {identifyMode && identifyFrets[stringIdx] === -1 ? '×' : isChordMuted && !identifyMode ? '×' : tuningLabels[stringIdx]}
+                  {identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? '×' : isChordMuted && !identifyMode ? '×' : tuningLabels[stringIdx]}
                 </button>
 
                 {/* String line */}
@@ -1249,11 +1247,9 @@ export default function Fretboard({
                               if (arpAddMode && arpDragRef.current && arpDragRef.current.fret === fret && onArpAddClick) {
                                 const minS = Math.min(arpDragRef.current.startString, stringIdx);
                                 const maxS = Math.max(arpDragRef.current.startString, stringIdx);
-                                for (let s = minS; s <= maxS; s++) {
-                                  if (!arpDragRef.current.coveredStrings.has(s)) {
-                                    onArpAddClick(s, fret);
-                                    arpDragRef.current.coveredStrings.add(s);
-                                  }
+                                // During drag, only set endpoint markers, not intermediate strings
+                                if (!arpDragRef.current.coveredStrings.has(stringIdx)) {
+                                  arpDragRef.current.coveredStrings.add(stringIdx);
                                 }
                                 if (maxS > minS) onArpBarreDrag?.(arpDragRef.current.startString, stringIdx, fret);
                               } else if (identifyMode) {
@@ -1321,11 +1317,9 @@ export default function Fretboard({
                               if (arpAddMode && arpDragRef.current && arpDragRef.current.fret === fret && onArpAddClick) {
                                 const minS = Math.min(arpDragRef.current.startString, stringIdx);
                                 const maxS = Math.max(arpDragRef.current.startString, stringIdx);
-                                for (let s = minS; s <= maxS; s++) {
-                                  if (!arpDragRef.current.coveredStrings.has(s)) {
-                                    onArpAddClick(s, fret);
-                                    arpDragRef.current.coveredStrings.add(s);
-                                  }
+                                // During drag, only set endpoint markers, not intermediate strings
+                                if (!arpDragRef.current.coveredStrings.has(stringIdx)) {
+                                  arpDragRef.current.coveredStrings.add(stringIdx);
                                 }
                                 if (maxS > minS) onArpBarreDrag?.(arpDragRef.current.startString, stringIdx, fret);
                               } else if (identifyMode) {
@@ -1358,7 +1352,7 @@ export default function Fretboard({
                             <div
                               className={`rounded-full flex items-center justify-center font-mono font-bold shadow-md ${
                                 style.ring ? 'ring-2' : ''
-                              } ${identifyMode && identifyFrets[stringIdx] === fret ? 'ring-2 ring-primary' : ''}`}
+                              } ${identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to && fret === identifyBarre.fret)) ? 'ring-2 ring-primary' : ''}`}
                               style={{
                                 width: noteMarkerSize,
                                 height: noteMarkerSize,
@@ -1366,7 +1360,7 @@ export default function Fretboard({
                                 opacity: style.opacity,
                                 color: style.greyed
                                   ? 'hsl(var(--muted-foreground))'
-                                  : identifyMode && identifyFrets[stringIdx] === fret && !(degreeColors && identifyRoot)
+                                  : identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to && fret === identifyBarre.fret)) && !(degreeColors && identifyRoot)
                                     ? 'hsl(var(--primary-foreground))'
                                     : 'hsl(220, 20%, 8%)',
                                 fontSize: Math.max(6, noteMarkerSize * 0.35),

@@ -32,6 +32,8 @@ interface ChordReferenceProps {
   setIdentifyMode: (v: boolean) => void;
   identifyFrets: (number | -1)[];
   setIdentifyFrets: (f: (number | -1)[]) => void;
+  identifyBarre: { from: number; to: number; fret: number } | null;
+  setIdentifyBarre: (b: { from: number; to: number; fret: number } | null) => void;
   degreeColors: boolean;
   identifyRoot: NoteName | null;
   setIdentifyRoot: (v: NoteName | null) => void;
@@ -180,7 +182,7 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
 export default function ChordReference({
   activeChord, setActiveChord, showCAGED, setShowCAGED,
   cagedShape, setCagedShape, cagedRoot,
-  identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets,
+  identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre,
   degreeColors, identifyRoot, setIdentifyRoot,
   tuning, tuningLabels,
   timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, keyMode,
@@ -252,10 +254,17 @@ export default function ChordReference({
   const cagedPositions = useMemo(() => getCAGEDPositions(cagedRoot), [cagedRoot]);
 
   const identifiedChords = useMemo(() => {
-    const hasInput = identifyFrets.some(f => f >= 0);
+    // Compute effective frets: fill in barre for intermediate strings
+    const effectiveFrets = [...identifyFrets];
+    if (identifyBarre) {
+      for (let s = identifyBarre.from; s <= identifyBarre.to; s++) {
+        if (effectiveFrets[s] === -1) effectiveFrets[s] = identifyBarre.fret;
+      }
+    }
+    const hasInput = effectiveFrets.some(f => f >= 0);
     if (!hasInput) return [];
-    return identifyChord(identifyFrets);
-  }, [identifyFrets]);
+    return identifyChord(effectiveFrets);
+  }, [identifyFrets, identifyBarre]);
 
   const handleTabSwitch = (tab: MainTab) => {
     setActiveTab(tab);
@@ -265,6 +274,7 @@ export default function ChordReference({
       setIdentifyMode(true);
       setActiveChord(null);
       setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
+      setIdentifyBarre(null);
       setIdentifyRoot(null);
       setIdentifyViewName(null);
     } else {
@@ -392,6 +402,7 @@ export default function ChordReference({
           setArpOverlayOpacity={setArpOverlayOpacity}
           onClearFretboard={() => {
             setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
+            setIdentifyBarre(null);
             setIdentifyRoot(null);
             setIdentifyViewName(null);
             onSetArpeggioPosition?.(null);
@@ -893,7 +904,14 @@ function ChordLibraryPanel({
   }, []);
 
   const buildStaticVoicingPosition = useCallback((frets: (number | -1)[], label: string, barre: { from: number; to: number; fret: number } | null) => {
-    const notes = frets.map((f, si) => f >= 0 ? { stringIndex: si, fret: f } : null).filter(Boolean) as { stringIndex: number; fret: number }[];
+    // Fill in barre for intermediate strings
+    const effectiveFrets = [...frets];
+    if (barre) {
+      for (let s = barre.from; s <= barre.to; s++) {
+        if (effectiveFrets[s] === -1) effectiveFrets[s] = barre.fret;
+      }
+    }
+    const notes = effectiveFrets.map((f, si) => f >= 0 ? { stringIndex: si, fret: f } : null).filter(Boolean) as { stringIndex: number; fret: number }[];
     if (notes.length === 0) return null;
     const playedFrets = notes.filter(n => n.fret > 0).map(n => n.fret);
     if (barre && barre.fret > 0) playedFrets.push(barre.fret);
@@ -930,10 +948,10 @@ function ChordLibraryPanel({
       setAddingBarre({ from, to, fret });
       setAddingFrets(prev => {
         const next = [...prev];
-        // Only set barre fret on strings that don't already have a different (higher) fret
-        for (let s = from; s <= to; s += 1) {
-          if (next[s] === -1) next[s] = fret;
-        }
+        // Only set barre fret on endpoints, not intermediate strings
+        // This allows adding individual notes on middle strings later
+        if (next[from] === -1) next[from] = fret;
+        if (next[to] === -1) next[to] = fret;
         return next;
       });
     };
@@ -991,10 +1009,17 @@ function ChordLibraryPanel({
     const hasNotes = addingFrets.some(f => f >= 0);
     if (!hasNotes) return;
     const barre = addingBarre ?? detectFallbackBarre(addingFrets);
+    // Fill in barre for intermediate strings before saving
+    const saveFrets = [...addingFrets];
+    if (barre) {
+      for (let s = barre.from; s <= barre.to; s++) {
+        if (saveFrets[s] === -1) saveFrets[s] = barre.fret;
+      }
+    }
     const key = `${selectedChord}::${voicingTab}`;
     const existing = customChordVoicings[key] || [];
     const newVoicing = {
-      frets: [...addingFrets],
+      frets: saveFrets,
       refRoot: selectedRoot,
       ...(barre ? { barreFrom: barre.from, barreTo: barre.to, barreFret: barre.fret } : {}),
     };
