@@ -89,7 +89,7 @@ export default function Fretboard({
   showFretBox, fretBoxStart, fretBoxSize, setFretBoxStart, setFretBoxSize,
   fretBoxStringStart, fretBoxStringSize, setFretBoxStringStart, setFretBoxStringSize,
   noteMarkerSize, degreeColors, setDegreeColors, disabledDegrees, toggleDegree, setShowFretBox,
-  identifyMode, identifyFrets, setIdentifyFrets, identifyRoot,
+  identifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre, identifyRoot,
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
   arpOverlayOpacity = 0.3, arpPathVisible = true,
   arpAddMode = false, onArpAddClick, onArpBarreDrag,
