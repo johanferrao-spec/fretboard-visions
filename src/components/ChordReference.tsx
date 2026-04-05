@@ -75,6 +75,9 @@ interface ChordReferenceProps {
   setTabVisData: (d: import('./TabVisualiser').TabData | null) => void;
   tabVisPlayhead: number;
   setTabVisPlayhead: (p: number | ((prev: number) => number)) => void;
+  setShowFretBox?: (v: boolean) => void;
+  setFretBoxStart?: (v: number) => void;
+  setFretBoxSize?: (v: number) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
