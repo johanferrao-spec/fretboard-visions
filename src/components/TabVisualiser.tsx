@@ -217,94 +217,96 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
       </div>
 
       {/* Digital Tab Timeline */}
-      <div className="flex-1 px-3 py-2 overflow-hidden">
-        <div className="flex gap-1 h-full">
-          {/* String labels column */}
-          <div className="flex flex-col justify-between py-1 pr-1 shrink-0">
-            {displayLabels.map((label, i) => (
-              <div key={i} className="text-[9px] font-mono text-muted-foreground w-4 text-right leading-none">
-                {label}
-              </div>
-            ))}
-          </div>
+      <div className="flex-1 px-3 py-3 overflow-hidden">
+        <div className="rounded-2xl border border-border/50 bg-card/60 shadow-sm p-4 h-full">
+          <div className="flex gap-2 h-full">
+            {/* String labels column */}
+            <div className="flex flex-col justify-between py-2 pr-1 shrink-0">
+              {displayLabels.map((label, i) => (
+                <div key={i} className="text-[11px] font-mono text-muted-foreground w-5 text-right leading-none font-semibold">
+                  {label}
+                </div>
+              ))}
+            </div>
 
-          {/* Timeline grid */}
-          <div
-            ref={timelineRef}
-            className="flex-1 relative cursor-pointer select-none"
-            onMouseDown={handleTimelineMouseDown}
-          >
-            {/* String lines */}
-            {[0, 1, 2, 3, 4, 5].map(si => {
-              const y = `${(si / 5) * 100}%`;
-              return (
-                <div
-                  key={si}
-                  className="absolute left-0 right-0 border-t border-muted-foreground/20"
-                  style={{ top: y }}
-                />
-              );
-            })}
-
-            {/* Notes in visible window */}
-            {tabData.notes.slice(windowStart, windowEnd).map((posNotes, wi) => {
-              const posIdx = windowStart + wi;
-              const x = ((wi) / (visibleWindow - 1)) * 100;
-              const isCurrent = posIdx === playheadPos;
-              const isUpcoming = posIdx > playheadPos && posIdx <= playheadPos + 3;
-
-              return posNotes.map((note, ni) => {
-                const displaySi = 5 - note.string;
-                const y = (displaySi / 5) * 100;
-
+            {/* Timeline grid */}
+            <div
+              ref={timelineRef}
+              className="flex-1 relative cursor-pointer select-none"
+              onMouseDown={handleTimelineMouseDown}
+            >
+              {/* String lines */}
+              {[0, 1, 2, 3, 4, 5].map(si => {
+                const y = `${(si / 5) * 100}%`;
                 return (
                   <div
-                    key={`${posIdx}-${ni}`}
-                    className="absolute flex items-center justify-center"
-                    style={{
-                      left: `${x}%`,
-                      top: `${y}%`,
-                      transform: 'translate(-50%, -50%)',
-                      opacity: isCurrent ? 1 : isUpcoming ? 0.6 : 0.3,
-                      zIndex: isCurrent ? 10 : isUpcoming ? 5 : 1,
-                    }}
-                  >
-                    <span
-                      className={`text-[11px] font-mono font-bold leading-none ${
-                        isCurrent ? 'text-primary' : isUpcoming ? 'text-foreground' : 'text-muted-foreground'
-                      }`}
+                    key={si}
+                    className="absolute left-0 right-0 border-t border-muted-foreground/15"
+                    style={{ top: y }}
+                  />
+                );
+              })}
+
+              {/* Notes in visible window */}
+              {tabData.notes.slice(windowStart, windowEnd).map((posNotes, wi) => {
+                const posIdx = windowStart + wi;
+                const x = ((wi) / (visibleWindow - 1)) * 100;
+                const isCurrent = posIdx === playheadPos;
+                const isUpcoming = posIdx > playheadPos && posIdx <= playheadPos + 3;
+
+                return posNotes.map((note, ni) => {
+                  const displaySi = 5 - note.string;
+                  const y = (displaySi / 5) * 100;
+
+                  return (
+                    <div
+                      key={`${posIdx}-${ni}`}
+                      className="absolute flex items-center justify-center"
                       style={{
-                        textShadow: isCurrent
-                          ? '0 0 8px hsl(var(--primary)), 0 0 16px hsl(var(--primary) / 0.5)'
-                          : 'none',
+                        left: `${x}%`,
+                        top: `${y}%`,
+                        transform: 'translate(-50%, -50%)',
+                        opacity: isCurrent ? 1 : isUpcoming ? 0.6 : 0.3,
+                        zIndex: isCurrent ? 10 : isUpcoming ? 5 : 1,
                       }}
                     >
-                      {note.fret}
-                    </span>
-                  </div>
-                );
-              });
-            })}
+                      <span
+                        className={`text-sm font-mono font-bold leading-none ${
+                          isCurrent ? 'text-primary' : isUpcoming ? 'text-foreground' : 'text-muted-foreground'
+                        }`}
+                        style={{
+                          textShadow: isCurrent
+                            ? '0 0 8px hsl(var(--primary)), 0 0 16px hsl(var(--primary) / 0.5)'
+                            : 'none',
+                        }}
+                      >
+                        {note.fret}
+                      </span>
+                    </div>
+                  );
+                });
+              })}
 
-            {/* Playhead line */}
-            {tabData.notes.length > 0 && (
-              <div
-                className="absolute top-0 bottom-0 w-0.5 bg-primary z-20"
-                style={{
-                  left: `${((playheadPos - windowStart) / (visibleWindow - 1)) * 100}%`,
-                  boxShadow: '0 0 6px hsl(var(--primary)), 0 0 12px hsl(var(--primary) / 0.4)',
-                }}
-              >
+              {/* Playhead line */}
+              {tabData.notes.length > 0 && (
                 <div
-                  className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0"
+                  className="absolute top-0 bottom-0 w-0.5 bg-primary z-20 rounded-full"
                   style={{
-                    borderLeft: '5px solid transparent',
-                    borderRight: '5px solid transparent',
-                    borderTop: '6px solid hsl(var(--primary))',
+                    left: `${((playheadPos - windowStart) / (visibleWindow - 1)) * 100}%`,
+                    boxShadow: '0 0 6px hsl(var(--primary)), 0 0 12px hsl(var(--primary) / 0.4)',
                   }}
-                />
-              </div>
-            )}
+                >
+                  <div
+                    className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-0 h-0"
+                    style={{
+                      borderLeft: '6px solid transparent',
+                      borderRight: '6px solid transparent',
+                      borderTop: '7px solid hsl(var(--primary))',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

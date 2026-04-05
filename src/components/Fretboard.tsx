@@ -1127,7 +1127,7 @@ export default function Fretboard({
                     const label = getChordLabel(note, fret, stringIdx);
                     const isOpenString = fret === 0;
 
-                    if (isOpenString && style && !style.greyed) {
+                    if (isOpenString && style && !style.greyed && !identifyMode) {
                       return (
                         <div key={fret} className="flex items-center justify-center relative" style={{ width: `${widths[fret]}%`, height: stringH }}>
                           <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-fretboard-nut" />
