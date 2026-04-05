@@ -388,6 +388,15 @@ export default function ChordReference({
           setShowFretBox={setShowFretBox}
           setFretBoxStart={setFretBoxStart}
           setFretBoxSize={setFretBoxSize}
+          arpOverlayOpacity={arpOverlayOpacity}
+          setArpOverlayOpacity={setArpOverlayOpacity}
+          onClearFretboard={() => {
+            setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
+            setIdentifyRoot(null);
+            setIdentifyViewName(null);
+            onSetArpeggioPosition?.(null);
+            setShowFretBox?.(false);
+          }}
         />
       ) : activeTab === 'chords' ? (
         <ChordLibraryPanel
