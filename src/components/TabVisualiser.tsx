@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
-import Tesseract from 'tesseract.js';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface TabNote {
   string: number; // 0-5 (high E to low E)
@@ -23,7 +23,6 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
   const [tabData, setTabData] = useState<TabData | null>(null);
   const [playheadPos, setPlayheadPos] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -42,127 +41,67 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
     onTabNotes(current, upcoming);
   }, [tabData, playheadPos, onTabNotes]);
 
-  const parseTabFromText = useCallback((text: string): TabNote[][] => {
-    const lines = text.split('\n');
-    // Find groups of 6 consecutive lines that look like tab lines
-    // Tab lines typically start with a letter and | or - pattern, e.g. e|---0---2---|
-    const tabLinePattern = /^[eEbBgGdDaA]\|?[\s]*[-\d|hpbsrx\/\\~\s]+$/i;
-    const numberPattern = /\d+/g;
-
-    const tabGroups: string[][] = [];
-    let currentGroup: string[] = [];
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.length < 3) {
-        if (currentGroup.length >= 4) tabGroups.push([...currentGroup]);
-        currentGroup = [];
-        continue;
-      }
-      // Check if line has dashes and numbers (tab-like)
-      const dashCount = (trimmed.match(/-/g) || []).length;
-      const hasNumbers = /\d/.test(trimmed);
-      if (dashCount >= 3 || (hasNumbers && trimmed.includes('-'))) {
-        currentGroup.push(trimmed);
-      } else {
-        if (currentGroup.length >= 4) tabGroups.push([...currentGroup]);
-        currentGroup = [];
-      }
-    }
-    if (currentGroup.length >= 4) tabGroups.push([...currentGroup]);
-
-    const allPositions: TabNote[][] = [];
-
-    for (const group of tabGroups) {
-      // Take the last 6 lines if more (or fewer if less)
-      const tabLines = group.slice(-6);
-      while (tabLines.length < 6) tabLines.unshift('');
-
-      // For each column position, collect notes
-      const maxLen = Math.max(...tabLines.map(l => l.length));
-
-      let col = 0;
-      while (col < maxLen) {
-        const notesAtPos: TabNote[] = [];
-        let maxDigitLen = 1;
-
-        for (let si = 0; si < tabLines.length; si++) {
-          const line = tabLines[si];
-          if (col >= line.length) continue;
-          const ch = line[col];
-          if (/\d/.test(ch)) {
-            // Check for double-digit fret numbers
-            let numStr = ch;
-            if (col + 1 < line.length && /\d/.test(line[col + 1])) {
-              numStr += line[col + 1];
-              maxDigitLen = Math.max(maxDigitLen, 2);
-            }
-            notesAtPos.push({
-              string: si, // 0 = top line (high E), 5 = bottom line (low E)
-              fret: parseInt(numStr, 10),
-              position: allPositions.length,
-            });
-          }
-        }
-
-        if (notesAtPos.length > 0) {
-          // Update position index
-          const posIdx = allPositions.length;
-          notesAtPos.forEach(n => n.position = posIdx);
-          allPositions.push(notesAtPos);
-        }
-
-        col += maxDigitLen;
-      }
-    }
-
-    return allPositions;
-  }, []);
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove the data:...;base64, prefix
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleFileUpload = useCallback(async (file: File) => {
     setIsLoading(true);
     setError(null);
-    setLoadingProgress(0);
 
     try {
-      if (file.type === 'application/pdf') {
-        setError('PDF support requires converting to image first. Please upload an image (PNG, JPG) of the tablature.');
+      const imageBase64 = await fileToBase64(file);
+
+      const { data, error: fnError } = await supabase.functions.invoke('parse-tab-image', {
+        body: { imageBase64, mimeType: file.type || 'image/png' },
+      });
+
+      if (fnError) {
+        setError(fnError.message || 'Failed to process image.');
         setIsLoading(false);
         return;
       }
 
-      // Use Tesseract.js OCR to extract text from image
-      const result = await Tesseract.recognize(file, 'eng', {
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            setLoadingProgress(Math.round(m.progress * 100));
-          }
-        },
-      });
+      if (!data?.success || !data?.positions) {
+        setError(data?.error || 'Could not detect tablature in this image.');
+        setIsLoading(false);
+        return;
+      }
 
-      const text = result.data.text;
-      console.log('OCR Result:', text);
-
-      const positions = parseTabFromText(text);
+      // Convert AI response to TabNote format
+      const positions: TabNote[][] = data.positions.map((pos: Array<{string: number; fret: number}>, posIdx: number) => 
+        pos.map(n => ({
+          string: n.string,
+          fret: n.fret,
+          position: posIdx,
+        }))
+      );
 
       if (positions.length === 0) {
-        setError('Could not detect any tablature in this image. Try a clearer image with visible tab lines and numbers.');
+        setError('No tablature positions found in the image.');
         setIsLoading(false);
         return;
       }
 
-      setTabData({
-        notes: positions,
-        fileName: file.name,
-      });
+      setTabData({ notes: positions, fileName: file.name });
       setPlayheadPos(0);
     } catch (err) {
-      console.error('OCR Error:', err);
-      setError('Failed to process image. Please try a different file.');
+      console.error('Upload error:', err);
+      setError('Failed to process image. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  }, [parseTabFromText]);
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -214,7 +153,7 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
   const displayLabels = useMemo(() => [...tuningLabels].reverse(), [tuningLabels]);
 
   // Timeline visible window
-  const visibleWindow = 40; // show ~40 positions at a time
+  const visibleWindow = 40;
   const windowStart = Math.max(0, playheadPos - Math.floor(visibleWindow / 4));
   const windowEnd = tabData ? Math.min(tabData.notes.length, windowStart + visibleWindow) : 0;
 
@@ -224,8 +163,8 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
         <div
           onDragOver={e => e.preventDefault()}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-primary/40 rounded-xl p-10 cursor-pointer hover:border-primary/70 hover:bg-primary/5 transition-all flex flex-col items-center gap-4 max-w-md w-full"
+          onClick={() => !isLoading && fileInputRef.current?.click()}
+          className={`border-2 border-dashed border-primary/40 rounded-xl p-10 cursor-pointer hover:border-primary/70 hover:bg-primary/5 transition-all flex flex-col items-center gap-4 max-w-md w-full ${isLoading ? 'pointer-events-none opacity-70' : ''}`}
         >
           <Upload className="w-12 h-12 text-primary/60" />
           <div className="text-center">
@@ -235,12 +174,12 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
             </p>
           </div>
           {isLoading && (
-            <div className="w-full">
-              <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                <div className="h-full bg-primary transition-all" style={{ width: `${loadingProgress}%` }} />
+            <div className="w-full flex flex-col items-center gap-2">
+              <div className="h-2 bg-secondary rounded-full overflow-hidden w-full">
+                <div className="h-full bg-primary animate-pulse" style={{ width: '100%' }} />
               </div>
-              <p className="text-[9px] font-mono text-muted-foreground mt-1 text-center">
-                Scanning tablature... {loadingProgress}%
+              <p className="text-[9px] font-mono text-muted-foreground text-center">
+                AI is reading the tablature...
               </p>
             </div>
           )}
@@ -279,7 +218,6 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
 
       {/* Digital Tab Timeline */}
       <div className="flex-1 px-3 py-2 overflow-hidden">
-        {/* String labels + tab grid */}
         <div className="flex gap-1 h-full">
           {/* String labels column */}
           <div className="flex flex-col justify-between py-1 pr-1 shrink-0">
@@ -316,7 +254,6 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
               const isUpcoming = posIdx > playheadPos && posIdx <= playheadPos + 3;
 
               return posNotes.map((note, ni) => {
-                // Reverse string index for display (0=high E at top → 5=low E at bottom)
                 const displaySi = 5 - note.string;
                 const y = (displaySi / 5) * 100;
 
@@ -358,7 +295,6 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
                   boxShadow: '0 0 6px hsl(var(--primary)), 0 0 12px hsl(var(--primary) / 0.4)',
                 }}
               >
-                {/* Playhead triangle */}
                 <div
                   className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0"
                   style={{
