@@ -1201,7 +1201,7 @@ function ChordLibraryPanel({
                               handleSelectCustomVoicing(globalIdx);
                             }
                           }}
-                          className={`w-full rounded p-0.5 transition-all border ${
+                          className={`w-full rounded p-0.5 transition-all border aspect-square flex flex-col items-center justify-center ${
                             isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
                           }`}
                         >
