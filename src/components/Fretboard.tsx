@@ -292,15 +292,11 @@ export default function Fretboard({
     const newFrets = [...identifyFrets];
     const minS = Math.min(identifyDrag.startString, currentStringIndex);
     const maxS = Math.max(identifyDrag.startString, currentStringIndex);
-    // Only set the barre fret on the start and current string (endpoints)
-    // Don't fill in between — the barre visual covers it
-    for (let s = minS; s <= maxS; s++) {
-      // Only apply the barre fret if the string doesn't already have a DIFFERENT fret set
-      // (i.e., don't overwrite notes placed individually closer to the bridge)
-      if (newFrets[s] === -1 || newFrets[s] === identifyDrag.fret) {
-        newFrets[s] = identifyDrag.fret;
-      }
-    }
+    // Only set the barre fret on the start and end strings (endpoints)
+    // Don't fill intermediate strings — the barre visual covers them
+    // and user can add individual notes on those strings later
+    newFrets[identifyDrag.startString] = identifyDrag.fret;
+    newFrets[currentStringIndex] = identifyDrag.fret;
     setIdentifyFrets(newFrets);
     setIdentifyBarre(maxS > minS ? { from: minS, to: maxS, fret: identifyDrag.fret } : null);
     lastIdentifyAppliedRef.current = `barre-${minS}-${maxS}-${identifyDrag.fret}`;
