@@ -105,6 +105,7 @@ export default function Fretboard({
   const [identifyHover, setIdentifyHover] = useState<{ stringIndex: number; fret: number } | null>(null);
   const [identifyDrag, setIdentifyDrag] = useState<{ startString: number; fret: number } | null>(null);
   const identifyMouseDown = useRef(false);
+  const [identifyBarre, setIdentifyBarre] = useState<{ from: number; to: number; fret: number } | null>(null);
 
   // Guided drag arpeggio state
   const [isDragging, setIsDragging] = useState(false);
@@ -758,7 +759,23 @@ export default function Fretboard({
   return (
     <div
       className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}
-      onMouseUp={() => { handleDragEnd(); setIdentifyDrag(null); identifyMouseDown.current = false; arpDragRef.current = null; }}
+      onMouseUp={() => {
+        handleDragEnd();
+        // Detect barre from identify drag
+        if (identifyMode && identifyDrag && identifyMouseDown.current) {
+          // Find the range of strings set to the same fret during this drag
+          const dragFret = identifyDrag.fret;
+          const stringsAtFret = identifyFrets.map((f, i) => f === dragFret ? i : -1).filter(i => i >= 0);
+          if (stringsAtFret.length >= 2) {
+            const from = Math.min(...stringsAtFret);
+            const to = Math.max(...stringsAtFret);
+            if (to > from) {
+              setIdentifyBarre({ from, to, fret: dragFret });
+            }
+          }
+        }
+        setIdentifyDrag(null); identifyMouseDown.current = false; arpDragRef.current = null;
+      }}
       onContextMenu={(e) => {
         if (persistedPaths.length > 0) {
           e.preventDefault();
@@ -955,8 +972,48 @@ export default function Fretboard({
               const totalH = 6 * stringH;
               const y1 = topRow * stringH + stringH * 0.5;
               const y2 = bottomRow * stringH + stringH * 0.5;
-              const barThickY = noteMarkerSize * 0.86;
-              const barThickX = Math.min(barreW * 0.45, 2.5);
+              const barThickY = noteMarkerSize * 0.8;
+              const barThickX = noteMarkerSize * 0.08;
+              const markerRadiusY = noteMarkerSize / 2;
+              const rectY = y1 + markerRadiusY - barThickY / 2;
+              const rectHeight = Math.max(barThickY, (y2 - y1) - markerRadiusY * 2 + barThickY);
+              return (
+                <svg
+                  className="absolute inset-0 pointer-events-none z-[2]"
+                  style={{ left: 28, width: 'calc(100% - 28px)', height: '100%' }}
+                  viewBox={`0 0 100 ${totalH}`}
+                  preserveAspectRatio="none"
+                >
+                  <rect
+                    x={centerX - barThickX / 2}
+                    y={rectY}
+                    width={barThickX}
+                    height={rectHeight}
+                    rx={barThickX / 2}
+                    fill="hsl(var(--muted-foreground))"
+                    opacity={0.62}
+                  />
+                </svg>
+              );
+            })()
+          )}
+
+          {/* Identify mode barre bar */}
+          {identifyMode && identifyBarre && identifyBarre.from !== identifyBarre.to && (
+            (() => {
+              const bf = identifyBarre.fret;
+              const fromRow = stringOrder.indexOf(identifyBarre.from);
+              const toRow = stringOrder.indexOf(identifyBarre.to);
+              const topRow = Math.min(fromRow, toRow);
+              const bottomRow = Math.max(fromRow, toRow);
+              const barreLeft = cumLeft[bf] || 0;
+              const barreW = widths[bf] || 0;
+              const centerX = barreLeft + barreW * 0.5;
+              const totalH = 6 * stringH;
+              const y1 = topRow * stringH + stringH * 0.5;
+              const y2 = bottomRow * stringH + stringH * 0.5;
+              const barThickY = noteMarkerSize * 0.8;
+              const barThickX = noteMarkerSize * 0.08;
               const markerRadiusY = noteMarkerSize / 2;
               const rectY = y1 + markerRadiusY - barThickY / 2;
               const rectHeight = Math.max(barThickY, (y2 - y1) - markerRadiusY * 2 + barThickY);
@@ -995,8 +1052,8 @@ export default function Fretboard({
               const totalH = 6 * stringH;
               const y1 = topRow * stringH + stringH * 0.5;
               const y2 = bottomRow * stringH + stringH * 0.5;
-              const barThickY = noteMarkerSize * 0.86;
-              const barThickX = Math.min(barreW * 0.45, 2.5);
+              const barThickY = noteMarkerSize * 0.8;
+              const barThickX = noteMarkerSize * 0.08;
               const markerRadiusY = noteMarkerSize / 2;
               const rectY = y1 + markerRadiusY - barThickY / 2;
               const rectHeight = Math.max(barThickY, (y2 - y1) - markerRadiusY * 2 + barThickY);

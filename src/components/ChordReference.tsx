@@ -838,7 +838,7 @@ function ChordLibraryPanel({
   setActiveChord: (c: ChordSelection | null) => void;
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
 }) {
-  const VOICINGS_PER_PAGE = 4;
+  const VOICINGS_PER_PAGE = 12;
   const [libCopied, setLibCopied] = useState(false);
   const [addingBarre, setAddingBarre] = useState<{ from: number; to: number; fret: number } | null>(null);
 
@@ -1183,7 +1183,7 @@ function ChordLibraryPanel({
                 </div>
               </div>
               {mergedVoicings.length > 0 ? (
-                <div className="grid grid-cols-2 gap-1">
+                <div className="grid grid-cols-4 gap-1">
                   {mergedPagedVoicings.map((v, i) => {
                     const globalIdx = voicingPage * VOICINGS_PER_PAGE + i;
                     const isCurated = globalIdx < currentVoicings.length;
@@ -1201,7 +1201,7 @@ function ChordLibraryPanel({
                               handleSelectCustomVoicing(globalIdx);
                             }
                           }}
-                          className={`w-full rounded p-0.5 transition-all border ${
+                          className={`w-full rounded p-0.5 transition-all border aspect-square flex flex-col items-center justify-center ${
                             isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
                           }`}
                         >
