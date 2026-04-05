@@ -400,6 +400,9 @@ const Index = () => {
                 setTabVisData={setTabVisData}
                 tabVisPlayhead={tabVisPlayhead}
                 setTabVisPlayhead={setTabVisPlayhead}
+                setShowFretBox={fb.setShowFretBox}
+                setFretBoxStart={fb.setFretBoxStart}
+                setFretBoxSize={fb.setFretBoxSize}
             />
           </div>
         </main>
