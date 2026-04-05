@@ -1535,8 +1535,8 @@ export function generateDrop3Voicings(root: NoteName, chordType: string): ChordV
           if (!found) { valid = false; break; }
         }
         if (!valid) continue;
-        const playedFrets = frets.filter(f => f > 0);
-        if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
+        if (frets.some(f => f === 0)) continue; // No open strings in drop 3
+        if (frets.length > 1 && Math.max(...frets) - Math.min(...frets) > 4) continue;
         const key = voicing.join(',');
         const candidate = { frets: [...voicing] };
         if (!voicingContainsRequiredTones(candidate, root, chordType, 'drop3')) continue;
