@@ -410,6 +410,10 @@ export default function ChordReference({
           tuning={tuning}
           tuningLabels={tuningLabels}
           onTabNotes={onTabNotes}
+          tabData={tabVisData}
+          setTabData={setTabVisData}
+          playheadPos={tabVisPlayhead}
+          setPlayheadPos={setTabVisPlayhead}
         />
       ) : null}
     </div>
