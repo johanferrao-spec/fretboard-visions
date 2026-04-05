@@ -81,6 +81,7 @@ interface ChordReferenceProps {
   setShowFretBox?: (v: boolean) => void;
   setFretBoxStart?: (v: number) => void;
   setFretBoxSize?: (v: number) => void;
+  onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
