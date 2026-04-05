@@ -97,6 +97,7 @@ export default function Fretboard({
   inversionDegreeColor,
   chordAddRootNote,
   chordAddHasNotes,
+  tabVisNotes,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
