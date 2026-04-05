@@ -1559,7 +1559,7 @@ export function generateShellVoicings(root: NoteName, chordType: string): ChordV
     : [[0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5], [0, 1, 3], [1, 2, 4], [2, 3, 5]];
   for (const orderedTones of permute(shellTones)) {
     for (const strings of stringGroups) {
-      for (let baseFret = 0; baseFret <= 14; baseFret++) {
+      for (let baseFret = 1; baseFret <= 14; baseFret++) {
         const voicing: number[] = [-1, -1, -1, -1, -1, -1];
         const frets: number[] = [];
         let valid = true;
