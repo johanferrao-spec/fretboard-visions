@@ -1192,7 +1192,7 @@ export default function Fretboard({
                             onMouseLeave={() => setIdentifyHover(null)}
                             className={`absolute inset-0 z-10 flex items-center justify-center font-mono font-bold cursor-pointer select-none ${isVertical ? '-rotate-90' : ''}`}
                             style={{
-                              opacity: identifyHover?.stringIndex === stringIdx && identifyHover?.fret === fret ? 0.6 : 0.12,
+                              opacity: identifyHover?.stringIndex === stringIdx && identifyHover?.fret === fret ? 0.6 : 0,
                             }}
                           >
                             <div
