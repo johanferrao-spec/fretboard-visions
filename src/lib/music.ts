@@ -1498,7 +1498,7 @@ export function generateTriadVoicings(root: NoteName, chordType: string): ChordV
 // ============================================================
 
 export function getVoicingsForChord(root: NoteName, chordType: string, source: 'full' | 'shell' | 'drop2' | 'drop3' | 'triads'): ChordVoicing[] {
-  if (source === 'triads') return deduplicateVoicings12(generateTriadVoicings(root, chordType));
+  if (source === 'triads') return sortByStretchAscending(deduplicateVoicings12(generateTriadVoicings(root, chordType)));
   if (source === 'full') {
     const curated = CURATED_VOICINGS[root]?.[chordType];
     const filtered = curated && curated.length > 0
@@ -1510,12 +1510,27 @@ export function getVoicingsForChord(root: NoteName, chordType: string, source: '
           return true;
         })
       : [];
-    return deduplicateVoicings12(filtered);
+    return sortByStretchAscending(deduplicateVoicings12(filtered));
   }
-  if (source === 'shell') return deduplicateVoicings12(generateShellVoicings(root, chordType));
-  if (source === 'drop2') return deduplicateVoicings12(generateDrop2Voicings(root, chordType));
-  if (source === 'drop3') return deduplicateVoicings12(generateDrop3Voicings(root, chordType));
+  if (source === 'shell') return sortByStretchAscending(deduplicateVoicings12(generateShellVoicings(root, chordType)));
+  if (source === 'drop2') return sortByStretchAscending(deduplicateVoicings12(generateDrop2Voicings(root, chordType)));
+  if (source === 'drop3') return sortByStretchAscending(deduplicateVoicings12(generateDrop3Voicings(root, chordType)));
   return [];
+}
+
+/** Sort voicings so the biggest finger stretches appear last */
+function sortByStretchAscending(voicings: ChordVoicing[]): ChordVoicing[] {
+  return [...voicings].sort((a, b) => {
+    const aPlayed = a.frets.filter(f => f > 0);
+    const bPlayed = b.frets.filter(f => f > 0);
+    const aSpan = aPlayed.length > 1 ? Math.max(...aPlayed) - Math.min(...aPlayed) : 0;
+    const bSpan = bPlayed.length > 1 ? Math.max(...bPlayed) - Math.min(...bPlayed) : 0;
+    if (aSpan !== bSpan) return aSpan - bSpan;
+    // Tie-break: lower position first
+    const aMin = aPlayed.length ? Math.min(...aPlayed) : 0;
+    const bMin = bPlayed.length ? Math.min(...bPlayed) : 0;
+    return aMin - bMin;
+  });
 }
 
 /** Remove voicings that are identical to another voicing shifted up/down 12 frets — keep the lower one */
