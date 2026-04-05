@@ -446,6 +446,8 @@ export default function ChordReference({
           setActiveChord={setActiveChord}
           onSetArpeggioPosition={onSetArpeggioPosition}
           onChordAddStateChange={onChordAddStateChange}
+          chordOctaveShift={chordOctaveShift}
+          setChordOctaveShift={setChordOctaveShift}
         />
       ) : activeTab === 'tabvis' ? (
         <TabVisualiser
