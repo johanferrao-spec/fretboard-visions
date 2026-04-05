@@ -254,10 +254,17 @@ export default function ChordReference({
   const cagedPositions = useMemo(() => getCAGEDPositions(cagedRoot), [cagedRoot]);
 
   const identifiedChords = useMemo(() => {
-    const hasInput = identifyFrets.some(f => f >= 0);
+    // Compute effective frets: fill in barre for intermediate strings
+    const effectiveFrets = [...identifyFrets];
+    if (identifyBarre) {
+      for (let s = identifyBarre.from; s <= identifyBarre.to; s++) {
+        if (effectiveFrets[s] === -1) effectiveFrets[s] = identifyBarre.fret;
+      }
+    }
+    const hasInput = effectiveFrets.some(f => f >= 0);
     if (!hasInput) return [];
-    return identifyChord(identifyFrets);
-  }, [identifyFrets]);
+    return identifyChord(effectiveFrets);
+  }, [identifyFrets, identifyBarre]);
 
   const handleTabSwitch = (tab: MainTab) => {
     setActiveTab(tab);
