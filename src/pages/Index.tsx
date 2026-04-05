@@ -304,7 +304,7 @@ const Index = () => {
                 inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
                  chordAddRootNote={fb.arpAddMode ? (activeTab === 'chords' ? null : null) : null}
                  chordAddHasNotes={false}
-                 tabVisNotes={activeTab === 'tabvis' ? tabVisNotes : null}
+                 tabVisNotes={activeTab === 'tabvis' ? (tabVisNotes || { current: [], upcoming: [] }) : null}
             />
           </div>
 
