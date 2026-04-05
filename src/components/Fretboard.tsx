@@ -464,6 +464,7 @@ export default function Fretboard({
 
     // Playing chord tones from timeline — show chord tone notes with a bright highlight
     if (playingChordTones && playingChordTones.size > 0) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       const noteIdx = (['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).indexOf(note);
       const inChordTones = playingChordTones.has(noteIdx);
       const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
@@ -471,36 +472,17 @@ export default function Fretboard({
       
       if (inChordTones) {
         let bg = 'hsl(130, 70%, 45%)';
-        let opacity = 1;
-        let greyed = false;
         if (degreeColors) {
           const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
           const dc = getDegreeColor(activeRoot, note);
           if (dc) bg = dc;
         }
-        // Position box: grey out notes outside
-        if (showFretBox && fret > 0) {
-          const row = stringOrder.indexOf(stringIndex);
-          const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
-          const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
-          if (outsideH || outsideV) {
-            greyed = true; opacity = 0.15;
-          }
-        }
-        return { backgroundColor: bg, opacity, ring: !greyed, ringColor: 'hsl(130, 70%, 55%)', greyed };
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(130, 70%, 55%)', greyed: false };
       }
       // Dim non-chord-tone scale notes
       if (inPrimary || inSecondary) {
         const bg = inPrimary ? pColor : sColor;
-        let opacity = 0.2;
-        let greyed = true;
-        if (showFretBox && fret > 0) {
-          const row = stringOrder.indexOf(stringIndex);
-          const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
-          const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
-          if (outsideH || outsideV) { opacity = 0.08; }
-        }
-        return { backgroundColor: bg, opacity, ring: false, ringColor: '', greyed };
+        return { backgroundColor: bg, opacity: 0.2, ring: false, ringColor: '', greyed: true };
       }
       return null;
     }
