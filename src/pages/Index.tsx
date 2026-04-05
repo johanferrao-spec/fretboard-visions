@@ -413,6 +413,8 @@ const Index = () => {
                 setFretBoxStart={fb.setFretBoxStart}
                 setFretBoxSize={fb.setFretBoxSize}
                 onChordAddStateChange={(root, hasNotes) => { setChordAddRoot(root); setChordAddHasNotes(hasNotes); }}
+                chordOctaveShift={chordOctaveShift}
+                setChordOctaveShift={setChordOctaveShift}
             />
           </div>
         </main>
