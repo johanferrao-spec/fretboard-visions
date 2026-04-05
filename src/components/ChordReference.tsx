@@ -1271,17 +1271,19 @@ function ChordLibraryPanel({
                   {mergedPagedVoicings.map((v, i) => {
                     const globalIdx = voicingPage * VOICINGS_PER_PAGE + i;
                     const isCurated = globalIdx < filteredCurated.length;
+                    // For curated voicings, map back to the original index in currentVoicings
+                    const origIdx = isCurated ? filteredCuratedMap[globalIdx]?.origIdx : undefined;
                     const isActive = isCurated
-                      ? (activeChord?.voicingIndex === globalIdx && activeChord?.voicingSource === voicingTab)
+                      ? (activeChord?.voicingIndex === origIdx && activeChord?.voicingSource === voicingTab)
                       : false;
                     return (
                       <div key={i} className="relative">
                         <button
                           onClick={() => {
-                            if (isCurated) {
-                              handleSelectVoicing(i);
+                            if (isCurated && origIdx != null && selectedChord) {
+                              setActiveChord({ root: selectedRoot, chordType: selectedChord, voicingIndex: origIdx, voicingSource: voicingTab });
                               onSetArpeggioPosition?.(null);
-                            } else {
+                            } else if (!isCurated) {
                               handleSelectCustomVoicing(globalIdx);
                             }
                           }}
