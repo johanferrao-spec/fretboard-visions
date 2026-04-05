@@ -131,13 +131,26 @@ export default function Fretboard({
   let acc = 0;
   for (const w of widths) { cumLeft.push(acc); acc += w; }
 
-  // Get chord voicing data (including barre info)
-  const chordVoicingData = activeChord
-    ? (() => {
-        const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
-        return voicings[activeChord.voicingIndex] || null;
-      })()
-    : null;
+  // Get chord voicing data (including barre info) — auto-normalize to lowest octave + manual shift
+  const chordVoicingData = useMemo(() => {
+    if (!activeChord) return null;
+    const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
+    const raw = voicings[activeChord.voicingIndex] || null;
+    if (!raw) return null;
+    // Normalize: find min played fret and shift down by 12s
+    const playedFrets = raw.frets.filter(f => f > 0);
+    if (playedFrets.length === 0) return raw;
+    const minFret = Math.min(...playedFrets);
+    const autoShift = -Math.floor(minFret / 12) * 12;
+    const totalShift = autoShift + chordOctaveShift * 12;
+    if (totalShift === 0) return raw;
+    const shifted: ChordVoicing = {
+      ...raw,
+      frets: raw.frets.map(f => f <= 0 ? f : Math.max(0, Math.min(24, f + totalShift))),
+      ...(raw.barreFret != null ? { barreFret: Math.max(0, Math.min(24, raw.barreFret + totalShift)) } : {}),
+    };
+    return shifted;
+  }, [activeChord, chordOctaveShift]);
   const chordVoicing = chordVoicingData ? chordVoicingData.frets : null;
 
   const chordNoteSet = new Set<string>();
@@ -151,8 +164,7 @@ export default function Fretboard({
           const to = chordVoicingData.barreTo;
           const minS = Math.min(from, to);
           const maxS = Math.max(from, to);
-          // Only show if it's an endpoint or has a different fret value (higher note on same string)
-          if (si > minS && si < maxS) return; // skip middle barre notes
+          if (si > minS && si < maxS) return;
         }
         chordNoteSet.add(`${si}-${fret}`);
       }
