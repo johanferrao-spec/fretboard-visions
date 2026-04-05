@@ -292,6 +292,10 @@ export default function ChordReference({
       setActiveChord(null);
       setDegreeColors(true);
     }
+    if (tab === 'chords') {
+      setActiveChord(null);
+      onSetArpeggioPosition?.(null);
+    }
   };
 
   const currentIdentifyRoot = useMemo(() => {
