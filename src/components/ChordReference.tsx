@@ -930,8 +930,9 @@ function ChordLibraryPanel({
       setAddingBarre({ from, to, fret });
       setAddingFrets(prev => {
         const next = [...prev];
+        // Only set barre fret on strings that don't already have a different (higher) fret
         for (let s = from; s <= to; s += 1) {
-          if (next[s] === -1 || next[s] < fret) next[s] = fret;
+          if (next[s] === -1) next[s] = fret;
         }
         return next;
       });
