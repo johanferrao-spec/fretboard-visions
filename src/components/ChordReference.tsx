@@ -860,6 +860,8 @@ function ChordLibraryPanel({
   setActiveChord: (c: ChordSelection | null) => void;
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
   onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
+  chordOctaveShift: number;
+  setChordOctaveShift: (v: number) => void;
 }) {
   const VOICINGS_PER_PAGE = 8;
   const [libCopied, setLibCopied] = useState(false);
