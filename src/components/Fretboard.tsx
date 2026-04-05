@@ -567,15 +567,8 @@ export default function Fretboard({
       }
     }
 
-    // Position box: grey out notes outside (horizontal + vertical)
-    if (showFretBox && fret > 0) {
-      const row = stringOrder.indexOf(stringIndex);
-      const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
-      const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
-      if (outsideH || outsideV) {
-        greyed = true; opacity = 0.15;
-      }
-    }
+    // Position box: completely hide notes outside
+    if (isOutsidePositionBox(stringIndex, fret)) return null;
 
     return { backgroundColor: bg, opacity, ring, ringColor, greyed };
   }
