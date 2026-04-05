@@ -1581,8 +1581,8 @@ export function generateShellVoicings(root: NoteName, chordType: string): ChordV
           }
         }
         if (!valid) continue;
-        const playedFrets = frets.filter(fret => fret > 0);
-        if (playedFrets.length > 1 && Math.max(...playedFrets) - Math.min(...playedFrets) > 4) continue;
+        if (frets.some(f => f === 0)) continue; // No open strings in shell voicings
+        if (frets.length > 1 && Math.max(...frets) - Math.min(...frets) > 4) continue;
         const candidate = { frets: [...voicing] };
         if (!voicingContainsRequiredTones(candidate, root, chordType, 'shell')) continue;
         const key = voicing.join(',');
