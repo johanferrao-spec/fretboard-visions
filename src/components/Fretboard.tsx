@@ -1189,7 +1189,7 @@ export default function Fretboard({
                   } ${isVertical ? '-rotate-90' : ''}`}
                   style={{
                     fontSize: 9,
-                    ...(identifyMode && identifyFrets[stringIdx] === -1 ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
+                    ...(identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isChordMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isGlowing && !isChordMuted && !identifyMode ? {
                       color: pColor,
