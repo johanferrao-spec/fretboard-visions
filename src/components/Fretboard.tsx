@@ -388,6 +388,7 @@ export default function Fretboard({
 
 
     if (arpeggioPosition && arpPositionSet.size > 0 && !activeChord) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       const key = `${stringIndex}-${fret}`;
       const isInPosition = arpPositionSet.has(key);
       const isChordTone = arpChordToneNames.has(note);
