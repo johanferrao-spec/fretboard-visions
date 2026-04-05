@@ -200,6 +200,7 @@ export default function ChordReference({
   onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
   tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
+  onChordAddStateChange,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
