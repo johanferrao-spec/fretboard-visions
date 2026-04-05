@@ -106,6 +106,7 @@ export default function Fretboard({
   const [identifyDrag, setIdentifyDrag] = useState<{ startString: number; fret: number } | null>(null);
   const identifyMouseDown = useRef(false);
   const [identifyBarre, setIdentifyBarre] = useState<{ from: number; to: number; fret: number } | null>(null);
+  const lastIdentifyAppliedRef = useRef<string | null>(null);
 
   // Guided drag arpeggio state
   const [isDragging, setIsDragging] = useState(false);
@@ -286,6 +287,32 @@ export default function Fretboard({
           return { backgroundColor: 'hsl(var(--primary))', opacity: 0.4, ring: false, ringColor: '', greyed: false };
         }
       }
+
+  const applyIdentifySelection = useCallback((stringIndex: number, fret: number, mode: 'toggle' | 'set' = 'set') => {
+    const key = `${stringIndex}-${fret}-${mode}`;
+    if (identifyMouseDown.current && lastIdentifyAppliedRef.current === key) return;
+    const nextFrets = [...identifyFrets];
+    if (mode === 'toggle') {
+      nextFrets[stringIndex] = nextFrets[stringIndex] === fret ? -1 : fret;
+    } else {
+      nextFrets[stringIndex] = fret;
+    }
+    setIdentifyFrets(nextFrets);
+    lastIdentifyAppliedRef.current = key;
+  }, [identifyFrets, setIdentifyFrets]);
+
+  const applyIdentifyBarreDrag = useCallback((currentStringIndex: number) => {
+    if (!identifyDrag) return;
+    const newFrets = [...identifyFrets];
+    const minS = Math.min(identifyDrag.startString, currentStringIndex);
+    const maxS = Math.max(identifyDrag.startString, currentStringIndex);
+    for (let s = minS; s <= maxS; s++) {
+      newFrets[s] = identifyDrag.fret;
+    }
+    setIdentifyFrets(newFrets);
+    setIdentifyBarre(maxS > minS ? { from: minS, to: maxS, fret: identifyDrag.fret } : null);
+    lastIdentifyAppliedRef.current = `barre-${minS}-${maxS}-${identifyDrag.fret}`;
+  }, [identifyDrag, identifyFrets, setIdentifyFrets]);
       return null;
     }
 
@@ -1216,9 +1243,8 @@ export default function Fretboard({
                               } else if (identifyMode) {
                                 identifyMouseDown.current = true;
                                 setIdentifyDrag({ startString: stringIdx, fret });
-                                const newFrets = [...identifyFrets];
-                                newFrets[stringIdx] = fret;
-                                setIdentifyFrets(newFrets);
+                                setIdentifyBarre(null);
+                                applyIdentifySelection(stringIdx, fret);
                               }
                             }}
                             onMouseEnter={() => {
@@ -1235,17 +1261,16 @@ export default function Fretboard({
                               } else if (identifyMode) {
                                 setIdentifyHover({ stringIndex: stringIdx, fret });
                                 if (identifyMouseDown.current && identifyDrag && identifyDrag.fret === fret) {
-                                  const newFrets = [...identifyFrets];
-                                  const minS = Math.min(identifyDrag.startString, stringIdx);
-                                  const maxS = Math.max(identifyDrag.startString, stringIdx);
-                                  for (let s = minS; s <= maxS; s++) {
-                                    newFrets[s] = fret;
-                                  }
-                                  setIdentifyFrets(newFrets);
+                                  applyIdentifyBarreDrag(stringIdx);
                                 }
                               }
                             }}
-                            onMouseUp={() => { setIdentifyDrag(null); identifyMouseDown.current = false; arpDragRef.current = null; }}
+                            onMouseUp={() => {
+                              setIdentifyDrag(null);
+                              identifyMouseDown.current = false;
+                              arpDragRef.current = null;
+                              lastIdentifyAppliedRef.current = null;
+                            }}
                             onMouseLeave={() => setIdentifyHover(null)}
                             className={`absolute inset-0 z-10 flex items-center justify-center font-mono font-bold cursor-pointer select-none ${isVertical ? '-rotate-90' : ''}`}
                             style={{
@@ -1274,13 +1299,8 @@ export default function Fretboard({
                               if (arpAddMode && onArpAddClick && fret > 0) {
                                 onArpAddClick(stringIdx, fret);
                               } else if (identifyMode) {
-                                const newFrets = [...identifyFrets];
-                                if (newFrets[stringIdx] === fret) {
-                                  newFrets[stringIdx] = -1;
-                                } else {
-                                  newFrets[stringIdx] = fret;
-                                }
-                                setIdentifyFrets(newFrets);
+                                applyIdentifySelection(stringIdx, fret, 'toggle');
+                                setIdentifyBarre(null);
                               } else {
                                 onNoteClick(note);
                               }
@@ -1293,6 +1313,8 @@ export default function Fretboard({
                                 e.preventDefault();
                                 identifyMouseDown.current = true;
                                 setIdentifyDrag({ startString: stringIdx, fret });
+                                setIdentifyBarre(null);
+                                lastIdentifyAppliedRef.current = null;
                               } else {
                                 e.preventDefault(); handleDragStart(stringIdx, fret, note);
                               }
@@ -1311,19 +1333,20 @@ export default function Fretboard({
                               } else if (identifyMode) {
                                 setIdentifyHover({ stringIndex: stringIdx, fret });
                                 if (identifyMouseDown.current && identifyDrag && identifyDrag.fret === fret) {
-                                  const newFrets = [...identifyFrets];
-                                  const minS = Math.min(identifyDrag.startString, stringIdx);
-                                  const maxS = Math.max(identifyDrag.startString, stringIdx);
-                                  for (let s = minS; s <= maxS; s++) {
-                                    newFrets[s] = fret;
-                                  }
-                                  setIdentifyFrets(newFrets);
+                                  applyIdentifyBarreDrag(stringIdx);
                                 }
                               } else {
                                 handleDragEnter(stringIdx, fret, note); handleNoteHover(note);
                               }
                             }}
-                            onMouseUp={() => { if (identifyMode) { setIdentifyDrag(null); identifyMouseDown.current = false; } arpDragRef.current = null; }}
+                            onMouseUp={() => {
+                              if (identifyMode) {
+                                setIdentifyDrag(null);
+                                identifyMouseDown.current = false;
+                                lastIdentifyAppliedRef.current = null;
+                              }
+                              arpDragRef.current = null;
+                            }}
                             onMouseLeave={() => {
                               if (identifyMode) setIdentifyHover(null);
                               else if (!isDragging) setHoveredDiatonic(null);
