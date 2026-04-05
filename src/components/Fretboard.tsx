@@ -57,6 +57,7 @@ interface FretboardProps {
   inversionDegreeColor?: string | null;
   chordAddRootNote?: NoteName | null;
   chordAddHasNotes?: boolean;
+  tabVisNotes?: { current: Array<{string: number; fret: number}>; upcoming: Array<Array<{string: number; fret: number}>> } | null;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
