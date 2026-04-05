@@ -93,7 +93,8 @@ const ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
 ];
 
 const CHORD_COLUMNS: { label: string; types: string[] }[] = [
-  { label: 'Major', types: ['Major', 'Major 7', 'Major 7♭5', 'Major 7#5', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', '6add9', 'Major 9', 'Dominant 9', 'Major 6', 'Maj11', 'Maj13', 'Maj9#11', 'Maj13#11', '7#9', '7♭9', '7#5', '7♭5', '11', '13', '9♭5', '9#5', '13#11', '13♭9', '11♭9', '7(♭5,♭9)', '7(♭5,#9)', '7(#5,♭9)', '7(#5,#9)'] },
+  { label: 'Tonic', types: ['Major', 'Major 7', 'Major 7♭5', 'Major 7#5', 'Add9', '6add9', 'Major 9', 'Major 6', 'Maj11', 'Maj13', 'Maj9#11', 'Maj13#11', 'Augmented'] },
+  { label: 'Dominant', types: ['Dominant 7', 'Aug 7', 'Dominant 9', '7#9', '7♭9', '7#5', '7♭5', '9♭5', '9#5', '11', '13', '13#11', '13♭9', '11♭9', '7(♭5,♭9)', '7(♭5,#9)', '7(#5,♭9)', '7(#5,#9)'] },
   { label: 'Minor', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13', 'Madd9', 'm6add9', 'mMaj9', 'm7#5'] },
   { label: 'Sus', types: ['Sus2', 'Sus4', '7sus4', '7sus4♭9', 'Sus2Sus4', 'Power (5)', 'Dim5'] },
 ];
@@ -1134,15 +1135,15 @@ function ChordLibraryPanel({
       )}
 
       {/* Main layout */}
-      <div className="flex gap-1.5">
-        <div className="flex gap-px shrink-0" style={{ width: '44%' }}>
+      <div className="flex gap-1.5" style={{ minHeight: 0 }}>
+        <div className="flex gap-px shrink-0" style={{ width: '48%' }}>
           {CHORD_COLUMNS.map((col, ci) => {
             const isSus = col.label === 'Sus';
             const [col1, col2] = isSus ? [col.types, []] : splitIntoColumns(col.types);
             return (
-              <div key={col.label} className={`min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5`} style={{ flex: isSus ? 0.5 : 1 }}>
+              <div key={col.label} className={`min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5 flex flex-col`} style={{ flex: isSus ? 0.5 : 1 }}>
                 <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">{col.label}</div>
-                <div className={`flex gap-px ${isSus ? 'justify-center' : ''}`}>
+                <div className={`flex gap-px ${isSus ? 'justify-center' : ''} overflow-y-auto flex-1`} style={{ maxHeight: '35vh' }}>
                   {[col1, ...(col2.length > 0 ? [col2] : [])].map((types, sci) => (
                     <div key={sci} className={`${isSus ? 'w-full' : 'flex-1'} space-y-px`}>
                       {types.map(ct => {
@@ -1174,7 +1175,7 @@ function ChordLibraryPanel({
           })}
         </div>
 
-        <div className="w-14 shrink-0">
+        <div className="w-14 shrink-0 flex flex-col">
           <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">Type</div>
           <div className="space-y-0.5">
             {(['full', 'shell', 'drop2', 'drop3'] as VoicingTab[]).map(tab => (
@@ -1257,9 +1258,16 @@ function ChordLibraryPanel({
                             )}
                           </div>
                         </button>
-                        {!isCurated && (
+                        {(
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteCustom(globalIdx); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isCurated) {
+                                handleHideCurated(globalIdx);
+                              } else {
+                                handleDeleteCustom(globalIdx);
+                              }
+                            }}
                             className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[8px] flex items-center justify-center hover:brightness-110 z-10"
                           >×</button>
                         )}
