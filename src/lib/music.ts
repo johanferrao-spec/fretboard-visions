@@ -1458,7 +1458,13 @@ export function getVoicingsForChord(root: NoteName, chordType: string, source: '
   if (source === 'full') {
     const curated = CURATED_VOICINGS[root]?.[chordType];
     return curated && curated.length > 0
-      ? curated.filter(voicing => voicingStartsOnRoot(voicing, root) && voicingContainsRequiredTones(voicing, root, chordType, 'full'))
+      ? curated.filter(voicing => {
+          if (!voicingStartsOnRoot(voicing, root)) return false;
+          if (!voicingContainsRequiredTones(voicing, root, chordType, 'full')) return false;
+          const played = voicing.frets.filter(f => f >= 0);
+          if (played.length > 1 && Math.max(...played) - Math.min(...played) > 4) return false;
+          return true;
+        })
       : [];
   }
   if (source === 'shell') return generateShellVoicings(root, chordType);
