@@ -293,15 +293,27 @@ export default function Fretboard({
     const newFrets = [...identifyFrets];
     const minS = Math.min(identifyDrag.startString, currentStringIndex);
     const maxS = Math.max(identifyDrag.startString, currentStringIndex);
-    // Only set the barre fret on the start and end strings (endpoints)
-    // Don't fill intermediate strings — the barre visual covers them
-    // and user can add individual notes on those strings later
+    const clearDraggedMarker = (stringIndex: number) => {
+      if (
+        stringIndex !== identifyDrag.startString &&
+        stringIndex !== currentStringIndex &&
+        newFrets[stringIndex] === identifyDrag.fret
+      ) {
+        newFrets[stringIndex] = -1;
+      }
+    };
+
+    if (identifyBarre && identifyBarre.fret === identifyDrag.fret) {
+      for (let s = identifyBarre.from; s <= identifyBarre.to; s += 1) clearDraggedMarker(s);
+    }
+    for (let s = minS; s <= maxS; s += 1) clearDraggedMarker(s);
+
     newFrets[identifyDrag.startString] = identifyDrag.fret;
     newFrets[currentStringIndex] = identifyDrag.fret;
     setIdentifyFrets(newFrets);
     setIdentifyBarre(maxS > minS ? { from: minS, to: maxS, fret: identifyDrag.fret } : null);
     lastIdentifyAppliedRef.current = `barre-${minS}-${maxS}-${identifyDrag.fret}`;
-  }, [identifyDrag, identifyFrets, setIdentifyFrets]);
+  }, [identifyBarre, identifyDrag, identifyFrets, setIdentifyBarre, setIdentifyFrets]);
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
     // Tab visualiser mode: only show tab notes
@@ -334,8 +346,10 @@ export default function Fretboard({
     // In identify mode, show clicked notes + arpeggio overlay
     if (identifyMode) {
       // Clicked notes always visible (even outside box)
-      const isBarreString = identifyBarre && stringIndex >= identifyBarre.from && stringIndex <= identifyBarre.to && fret === identifyBarre.fret;
-      if (identifyFrets[stringIndex] === fret || isBarreString) {
+      const isBarreEndpoint = identifyBarre
+        && fret === identifyBarre.fret
+        && (stringIndex === identifyBarre.from || stringIndex === identifyBarre.to);
+      if (identifyFrets[stringIndex] === fret || isBarreEndpoint) {
         let bg = 'hsl(var(--primary))';
         if (degreeColors && identifyRoot) {
           const dc = getDegreeColor(identifyRoot, note);
@@ -1352,7 +1366,7 @@ export default function Fretboard({
                             <div
                               className={`rounded-full flex items-center justify-center font-mono font-bold shadow-md ${
                                 style.ring ? 'ring-2' : ''
-                              } ${identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to && fret === identifyBarre.fret)) ? 'ring-2 ring-primary' : ''}`}
+                              } ${identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && fret === identifyBarre.fret && (stringIdx === identifyBarre.from || stringIdx === identifyBarre.to))) ? 'ring-2 ring-primary' : ''}`}
                               style={{
                                 width: noteMarkerSize,
                                 height: noteMarkerSize,
@@ -1360,7 +1374,7 @@ export default function Fretboard({
                                 opacity: style.opacity,
                                 color: style.greyed
                                   ? 'hsl(var(--muted-foreground))'
-                                  : identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to && fret === identifyBarre.fret)) && !(degreeColors && identifyRoot)
+                                  : identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && fret === identifyBarre.fret && (stringIdx === identifyBarre.from || stringIdx === identifyBarre.to))) && !(degreeColors && identifyRoot)
                                     ? 'hsl(var(--primary-foreground))'
                                     : 'hsl(220, 20%, 8%)',
                                 fontSize: Math.max(6, noteMarkerSize * 0.35),

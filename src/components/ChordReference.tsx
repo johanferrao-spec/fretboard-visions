@@ -945,14 +945,26 @@ function ChordLibraryPanel({
     arpBarreDragRef.current = (fromSi: number, toSi: number, fret: number) => {
       const from = Math.min(fromSi, toSi);
       const to = Math.max(fromSi, toSi);
-      setAddingBarre({ from, to, fret });
-      setAddingFrets(prev => {
-        const next = [...prev];
-        // Only set barre fret on endpoints, not intermediate strings
-        // This allows adding individual notes on middle strings later
-        if (next[from] === -1) next[from] = fret;
-        if (next[to] === -1) next[to] = fret;
-        return next;
+      setAddingBarre(prevBarre => {
+        setAddingFrets(prev => {
+          const next = [...prev];
+          const clearDraggedMarker = (stringIndex: number) => {
+            if (stringIndex !== from && stringIndex !== to && next[stringIndex] === fret) {
+              next[stringIndex] = -1;
+            }
+          };
+
+          if (prevBarre && prevBarre.fret === fret) {
+            for (let s = prevBarre.from; s <= prevBarre.to; s += 1) clearDraggedMarker(s);
+          }
+          for (let s = from; s <= to; s += 1) clearDraggedMarker(s);
+
+          next[from] = fret;
+          next[to] = fret;
+          return next;
+        });
+
+        return { from, to, fret };
       });
     };
     return () => { if (arpBarreDragRef) arpBarreDragRef.current = null; };
