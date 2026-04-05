@@ -836,7 +836,7 @@ function ChordLibraryPanel({
   degreeColors,
   tuning,
   arpAddClickRef, arpBarreDragRef, setArpAddMode, arpAddMode,
-  setActiveChord, onSetArpeggioPosition, onChordAddStateChange,
+  setActiveChord, onSetArpeggioPosition, onChordAddStateChange, chordOctaveShift, setChordOctaveShift,
 }: {
   selectedRoot: NoteName;
   setSelectedRoot: (n: NoteName) => void;
