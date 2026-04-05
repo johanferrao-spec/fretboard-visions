@@ -1567,7 +1567,7 @@ export function generateShellVoicings(root: NoteName, chordType: string): ChordV
           const stringIndex = strings[i];
           const targetTone = orderedTones[i];
           let found = false;
-          for (let fret = Math.max(0, baseFret - 1); fret <= baseFret + 4; fret++) {
+          for (let fret = Math.max(1, baseFret - 1); fret <= baseFret + 4; fret++) {
             if ((STANDARD_TUNING[stringIndex] + fret) % 12 === targetTone) {
               voicing[stringIndex] = fret;
               frets.push(fret);
