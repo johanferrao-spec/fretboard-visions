@@ -620,6 +620,7 @@ export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = 
     ],
     '7sus4': [
       { frets: [-1, 3, 3, 3, 1, 1], fingers: [0, 2, 3, 4, 1, 1] },
+      { frets: [-1, 3, 5, 3, 6, 3], barreFrom: 1, barreTo: 5, barreFret: 3 },
     ],
     '7#9': [
       { frets: [-1, 3, 2, 3, 4, -1], fingers: [0, 2, 1, 3, 4, 0] },
@@ -650,10 +651,6 @@ export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = 
       { frets: [-1, 3, 3, 0, 2, 1] },
       { frets: [-1, 3, 3, 3, 2, 1] },
     ],
-    '7sus4': [
-      { frets: [-1, 3, 3, 3, 1, 1] },
-      { frets: [-1, 3, 5, 3, 6, 3], barreFrom: 1, barreTo: 5, barreFret: 3 },
-    ],
     '11': [
       { frets: [-1, 3, 2, 0, 1, 1] },
       { frets: [-1, 3, 3, 0, 1, 0] },
@@ -669,10 +666,6 @@ export const CURATED_VOICINGS: Record<string, Record<string, ChordVoicing[]>> = 
       { frets: [-1, 3, 1, 2, 1, 3] },
       { frets: [-1, 3, 1, 2, 4, 3] },
     ],
-    '7#9': [
-      { frets: [-1, 3, 2, 3, 4, -1] },
-    ],
-    '7♭9': [
       { frets: [-1, 3, 2, 3, 2, -1] },
     ],
   },
