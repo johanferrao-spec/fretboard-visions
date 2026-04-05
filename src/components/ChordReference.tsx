@@ -1011,7 +1011,7 @@ function ChordLibraryPanel({
     if (!selectedChord) return;
     const customIdx = globalIdx - currentVoicings.length;
     if (customIdx < 0) return;
-    const key = selectedChord;
+    const key = `${selectedChord}::${voicingTab}`;
     const custom = [...(customChordVoicings[key] || [])];
     custom.splice(customIdx, 1);
     const updated = { ...customChordVoicings, [key]: custom };
