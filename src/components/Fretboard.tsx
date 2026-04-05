@@ -1219,6 +1219,8 @@ export default function Fretboard({
             const thickness = Math.max(1, 3.5 - stringIdx * 0.5);
             const isGlowing = glowStrings.has(stringIdx);
             const isChordMuted = activeChord && chordVoicing && chordVoicing[stringIdx] === -1;
+            // In arp add mode, strings without notes show as muted (X)
+            const isArpAddMuted = arpAddMode && !activeChord && (!arpeggioPosition || !arpeggioPosition.frets || (arpeggioPosition.frets as (number | -1)[])[stringIdx] === -1);
 
             return (
               <div key={stringIdx} className="flex items-center relative" style={{ height: stringH }}>
