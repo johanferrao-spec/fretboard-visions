@@ -396,6 +396,10 @@ const Index = () => {
                 onTabNotes={(current, upcoming) => {
                   setTabVisNotes({ current, upcoming });
                 }}
+                tabVisData={tabVisData}
+                setTabVisData={setTabVisData}
+                tabVisPlayhead={tabVisPlayhead}
+                setTabVisPlayhead={setTabVisPlayhead}
             />
           </div>
         </main>
