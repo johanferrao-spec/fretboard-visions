@@ -1323,17 +1323,8 @@ export default function Fretboard({
                               if (arpAddMode && onArpAddClick && fret > 0) {
                                 onArpAddClick(stringIdx, fret);
                               } else if (identifyMode) {
-                                const isCoveredByBarre = identifyBarre
-                                  && identifyBarre.fret === fret
-                                  && stringIdx >= identifyBarre.from
-                                  && stringIdx <= identifyBarre.to;
-                                if (isCoveredByBarre && identifyFrets[stringIdx] === fret) {
-                                  const nextFrets = [...identifyFrets];
-                                  nextFrets[stringIdx] = -1;
-                                  setIdentifyFrets(nextFrets);
-                                } else {
-                                  applyIdentifySelection(stringIdx, fret, 'toggle');
-                                }
+                                // Simple toggle like chord library — barre is preserved by useEffect
+                                applyIdentifySelection(stringIdx, fret, 'toggle');
                               } else {
                                 onNoteClick(note);
                               }

@@ -894,14 +894,17 @@ function ChordLibraryPanel({
     localStorage.setItem('mf-chord-name-overrides', JSON.stringify(updated));
   }, [chordNameOverrides, defaultChordLabels, getChordCellLabel]);
 
-  const handleHideCurated = (globalIdx: number) => {
+  const handleHideCurated = (filteredIdx: number) => {
     if (!selectedChord) return;
+    // Map from filtered index back to original currentVoicings index
+    const origIdx = filteredCuratedMap[filteredIdx]?.origIdx;
+    if (origIdx == null) return;
     const key = `${selectedRoot}::${selectedChord}::${voicingTab}`;
     const existing = hiddenVoicings[key] || [];
-    const updated = { ...hiddenVoicings, [key]: [...existing, globalIdx] };
+    const updated = { ...hiddenVoicings, [key]: [...existing, origIdx] };
     setHiddenVoicings(updated);
     localStorage.setItem('mf-hidden-voicings', JSON.stringify(updated));
-    if (activeChord?.voicingIndex === globalIdx) setActiveChord(null);
+    if (activeChord?.voicingIndex === filteredIdx) setActiveChord(null);
   };
 
   // Transpose custom voicings for current root — keyed by voicingTab so
