@@ -263,6 +263,15 @@ export default function Fretboard({
     return false;
   }
 
+  // Helper: check if a fret position is outside the position box
+  function isOutsidePositionBox(stringIndex: number, fret: number): boolean {
+    if (!showFretBox || fret === 0) return false;
+    const row = stringOrder.indexOf(stringIndex);
+    const outsideH = fret < fretBoxStart || fret > fretBoxEnd;
+    const outsideV = row < fretBoxStringStart || row >= fretBoxStringStart + fretBoxStringSize;
+    return outsideH || outsideV;
+  }
+
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
     // Tab visualiser mode: only show tab notes
     if (tabVisNotes) {
