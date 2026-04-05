@@ -239,7 +239,7 @@ export default function TabVisualiser({ tuning, tuningLabels, onTabNotes }: TabV
               className="flex-1 relative cursor-pointer select-none"
               onMouseDown={handleTimelineMouseDown}
             >
-              {/* String lines — more spaced, subtle teal tint */}
+              {/* String lines — well-spaced, subtle teal tint */}
               {[0, 1, 2, 3, 4, 5].map(si => {
                 const y = `${(si / 5) * 100}%`;
                 return (
