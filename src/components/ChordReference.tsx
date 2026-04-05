@@ -1866,8 +1866,8 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
   const minFret = positiveFrets.length > 0 ? Math.min(...positiveFrets) : 1;
   const startFret = minFret <= 4 ? 1 : minFret;
   const numFrets = Math.max(4, maxFret - startFret + 1);
-  const w = 68;
-  const h = 82;
+  const w = 90;
+  const h = 110;
   const stringSpacing = w / 7;
   const fretSpacing = h / (numFrets + 1);
 
