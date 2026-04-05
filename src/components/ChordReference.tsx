@@ -35,6 +35,7 @@ interface ChordReferenceProps {
   identifyBarre: { from: number; to: number; fret: number } | null;
   setIdentifyBarre: (b: { from: number; to: number; fret: number } | null) => void;
   degreeColors: boolean;
+  setDegreeColors: (v: boolean) => void;
   identifyRoot: NoteName | null;
   setIdentifyRoot: (v: NoteName | null) => void;
   tuning: number[];
@@ -184,7 +185,7 @@ export default function ChordReference({
   activeChord, setActiveChord, showCAGED, setShowCAGED,
   cagedShape, setCagedShape, cagedRoot,
   identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre,
-  degreeColors, identifyRoot, setIdentifyRoot,
+  degreeColors, setDegreeColors, identifyRoot, setIdentifyRoot,
   tuning, tuningLabels,
   timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, keyMode,
   onSeekToChord, onSetArpeggioPosition,
@@ -289,6 +290,7 @@ export default function ChordReference({
     }
     if (tab === 'scaleview') {
       setActiveChord(null);
+      setDegreeColors(true);
     }
   };
 
