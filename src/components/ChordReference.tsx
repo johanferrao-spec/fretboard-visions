@@ -297,6 +297,7 @@ export default function ChordReference({
     if (tab === 'chords') {
       setActiveChord(null);
       onSetArpeggioPosition?.(null);
+      setDegreeColors(true);
     }
   };
 
