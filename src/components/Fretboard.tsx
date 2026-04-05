@@ -105,6 +105,7 @@ export default function Fretboard({
   const [identifyHover, setIdentifyHover] = useState<{ stringIndex: number; fret: number } | null>(null);
   const [identifyDrag, setIdentifyDrag] = useState<{ startString: number; fret: number } | null>(null);
   const identifyMouseDown = useRef(false);
+  const [identifyBarre, setIdentifyBarre] = useState<{ from: number; to: number; fret: number } | null>(null);
 
   // Guided drag arpeggio state
   const [isDragging, setIsDragging] = useState(false);
