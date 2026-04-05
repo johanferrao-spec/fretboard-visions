@@ -928,13 +928,16 @@ function ChordLibraryPanel({
     });
   }, [selectedChord, selectedRoot, customChordVoicings, voicingTab]);
 
-  const filteredCurated = useMemo(() => {
-    if (!selectedChord) return currentVoicings;
+  // Track original indices so delete/hide targets the correct voicing
+  const filteredCuratedMap = useMemo(() => {
+    if (!selectedChord) return currentVoicings.map((v, i) => ({ v, origIdx: i }));
     const key = `${selectedRoot}::${selectedChord}::${voicingTab}`;
     const hidden = new Set(hiddenVoicings[key] || []);
-    if (hidden.size === 0) return currentVoicings;
-    return currentVoicings.filter((_, i) => !hidden.has(i));
+    if (hidden.size === 0) return currentVoicings.map((v, i) => ({ v, origIdx: i }));
+    return currentVoicings.map((v, i) => ({ v, origIdx: i })).filter(({ origIdx }) => !hidden.has(origIdx));
   }, [currentVoicings, selectedRoot, selectedChord, voicingTab, hiddenVoicings]);
+
+  const filteredCurated = useMemo(() => filteredCuratedMap.map(({ v }) => v), [filteredCuratedMap]);
 
   const mergedVoicings = useMemo(() => [...filteredCurated, ...customForRoot], [filteredCurated, customForRoot]);
   const mergedTotalPages = Math.ceil(mergedVoicings.length / VOICINGS_PER_PAGE);
