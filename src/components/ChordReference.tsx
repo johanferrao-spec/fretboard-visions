@@ -190,6 +190,7 @@ export default function ChordReference({
   onSetInversionVoicing,
   ghostNoteOpacity, setGhostNoteOpacity,
   onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
+  tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
