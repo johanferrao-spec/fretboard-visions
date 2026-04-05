@@ -327,6 +327,7 @@ const Index = () => {
               identifyBarre={fb.identifyBarre}
               setIdentifyBarre={fb.setIdentifyBarre}
               degreeColors={fb.degreeColors}
+              setDegreeColors={fb.setDegreeColors}
               identifyRoot={fb.identifyRoot}
               setIdentifyRoot={fb.setIdentifyRoot}
               tuning={fb.tuning}
