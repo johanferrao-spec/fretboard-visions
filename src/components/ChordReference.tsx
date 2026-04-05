@@ -1037,6 +1037,8 @@ function ChordLibraryPanel({
   // Show adding notes on fretboard via ArpeggioPosition
   useEffect(() => {
     if (chordAddMode) {
+      const hasNotes = addingFrets.some(f => f >= 0);
+      onChordAddStateChange?.(selectedRoot, hasNotes);
       const preview = buildStaticVoicingPosition(addingFrets, 'Adding...', addingBarre);
       if (preview) {
         onSetArpeggioPosition?.(preview);
@@ -1044,7 +1046,7 @@ function ChordLibraryPanel({
         onSetArpeggioPosition?.(null);
       }
     }
-  }, [addingFrets, addingBarre, buildStaticVoicingPosition, chordAddMode, onSetArpeggioPosition]);
+  }, [addingFrets, addingBarre, buildStaticVoicingPosition, chordAddMode, onSetArpeggioPosition, onChordAddStateChange, selectedRoot]);
 
   const handleStartAddMode = () => {
     if (chordAddMode) {
@@ -1053,6 +1055,7 @@ function ChordLibraryPanel({
       setAddingBarre(null);
       setArpAddMode?.(false);
       onSetArpeggioPosition?.(null);
+      onChordAddStateChange?.(null, false);
       return;
     }
     setChordAddMode(true);
@@ -1061,6 +1064,7 @@ function ChordLibraryPanel({
     setArpAddMode?.(true);
     setActiveChord(null);
     onSetArpeggioPosition?.(null);
+    onChordAddStateChange?.(selectedRoot, false);
   };
 
   const handleSaveVoicing = () => {
