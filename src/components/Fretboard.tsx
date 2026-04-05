@@ -1036,8 +1036,8 @@ export default function Fretboard({
               const totalH = 6 * stringH;
               const y1 = topRow * stringH + stringH * 0.5;
               const y2 = bottomRow * stringH + stringH * 0.5;
-              const barThickY = noteMarkerSize * 0.86;
-              const barThickX = Math.min(barreW * 0.45, 2.5);
+              const barThickY = noteMarkerSize * 0.8;
+              const barThickX = noteMarkerSize * 0.08;
               const markerRadiusY = noteMarkerSize / 2;
               const rectY = y1 + markerRadiusY - barThickY / 2;
               const rectHeight = Math.max(barThickY, (y2 - y1) - markerRadiusY * 2 + barThickY);
