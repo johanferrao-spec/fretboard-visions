@@ -849,10 +849,15 @@ function ChordLibraryPanel({
   const [chordAddMode, setChordAddMode] = useState(false);
   const [addingFrets, setAddingFrets] = useState<(number | -1)[]>([-1,-1,-1,-1,-1,-1]);
 
-  // Transpose custom voicings for current root
+  // Transpose custom voicings for current root — keyed by voicingTab so
+  // a voicing saved under "Standard" won't appear in shell / drop2 / drop3.
   const customForRoot = useMemo((): ChordVoicing[] => {
     if (!selectedChord) return [];
-    const customs = customChordVoicings[selectedChord] || [];
+    const tabKey = `${selectedChord}::${voicingTab}`;
+    // Also support legacy keys (no tab suffix) for backwards compat — treat as 'full'
+    const legacyCustoms = voicingTab === 'full' ? (customChordVoicings[selectedChord] || []) : [];
+    const tabCustoms = customChordVoicings[tabKey] || [];
+    const customs = [...legacyCustoms, ...tabCustoms];
     return customs.map(cv => {
       const refIdx = NOTE_NAMES.indexOf(cv.refRoot);
       const targetIdx = NOTE_NAMES.indexOf(selectedRoot);
@@ -866,7 +871,7 @@ function ChordLibraryPanel({
         barreFret: cv.barreFret != null ? cv.barreFret + delta : undefined,
       } as ChordVoicing;
     });
-  }, [selectedChord, selectedRoot, customChordVoicings]);
+  }, [selectedChord, selectedRoot, customChordVoicings, voicingTab]);
 
   const mergedVoicings = useMemo(() => [...currentVoicings, ...customForRoot], [currentVoicings, customForRoot]);
   const mergedTotalPages = Math.ceil(mergedVoicings.length / VOICINGS_PER_PAGE);
