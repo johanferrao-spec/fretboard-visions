@@ -1228,6 +1228,7 @@ export default function Fretboard({
                                 arpDragRef.current = { startString: stringIdx, fret, coveredStrings: new Set([stringIdx]) };
                               } else if (identifyMode) {
                                 e.preventDefault();
+                                identifyMouseDown.current = true;
                                 setIdentifyDrag({ startString: stringIdx, fret });
                               } else {
                                 e.preventDefault(); handleDragStart(stringIdx, fret, note);
