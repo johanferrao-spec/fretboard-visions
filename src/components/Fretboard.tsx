@@ -103,6 +103,7 @@ export default function Fretboard({
   chordAddHasNotes,
   suppressScaleNotes = false,
   tabVisNotes,
+  chordOctaveShift = 0,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
