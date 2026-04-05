@@ -33,6 +33,8 @@ const Index = () => {
   const [activeInversionVoicing, setActiveInversionVoicing] = useState<InversionVoicing | null>(null);
   const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
   const arpBarreDragRef = useRef<((fromSi: number, toSi: number, fret: number) => void) | null>(null);
+  const [chordAddRoot, setChordAddRoot] = useState<NoteName | null>(null);
+  const [chordAddHasNotes, setChordAddHasNotes] = useState(false);
 
   // Auto-disable strings based on inversion string group when in inversion mode
   const prevDisabledRef = useRef<Set<number> | null>(null);
@@ -303,9 +305,9 @@ const Index = () => {
                inversionVoicing={activeInversionVoicing}
                scaleViewChordTones={scaleViewChordTones}
                ghostNoteOpacity={fb.ghostNoteOpacity}
-                inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
-                 chordAddRootNote={fb.arpAddMode ? (activeTab === 'chords' ? null : null) : null}
-                 chordAddHasNotes={false}
+                 inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
+                 chordAddRootNote={chordAddRoot}
+                 chordAddHasNotes={chordAddHasNotes}
                  tabVisNotes={activeTab === 'tabvis' ? (tabVisNotes || { current: [], upcoming: [] }) : null}
             />
           </div>
@@ -408,6 +410,7 @@ const Index = () => {
                 setShowFretBox={fb.setShowFretBox}
                 setFretBoxStart={fb.setFretBoxStart}
                 setFretBoxSize={fb.setFretBoxSize}
+                onChordAddStateChange={(root, hasNotes) => { setChordAddRoot(root); setChordAddHasNotes(hasNotes); }}
             />
           </div>
         </main>

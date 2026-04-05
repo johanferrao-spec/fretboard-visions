@@ -351,9 +351,9 @@ export default function Fretboard({
     if (arpAddMode && !isChordLibraryVoicing) {
       if (isOutsidePositionBox(stringIndex, fret)) return null;
       if (chordAddRootNote && !chordAddHasNotes && fret > 0) {
-        // Show faint root note guides
+        // Show faint root note guides at 30% opacity
         if (note === chordAddRootNote) {
-          return { backgroundColor: 'hsl(var(--primary))', opacity: 0.2, ring: false, ringColor: '', greyed: false };
+          return { backgroundColor: 'hsl(var(--primary))', opacity: 0.3, ring: false, ringColor: '', greyed: false };
         }
       }
       return null;

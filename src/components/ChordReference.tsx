@@ -81,6 +81,7 @@ interface ChordReferenceProps {
   setShowFretBox?: (v: boolean) => void;
   setFretBoxStart?: (v: number) => void;
   setFretBoxSize?: (v: number) => void;
+  onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
@@ -199,6 +200,7 @@ export default function ChordReference({
   onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
   tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
+  onChordAddStateChange,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
@@ -291,6 +293,10 @@ export default function ChordReference({
     if (tab === 'scaleview') {
       setActiveChord(null);
       setDegreeColors(true);
+    }
+    if (tab === 'chords') {
+      setActiveChord(null);
+      onSetArpeggioPosition?.(null);
     }
   };
 
@@ -435,6 +441,7 @@ export default function ChordReference({
           arpAddMode={arpAddMode}
           setActiveChord={setActiveChord}
           onSetArpeggioPosition={onSetArpeggioPosition}
+          onChordAddStateChange={onChordAddStateChange}
         />
       ) : activeTab === 'tabvis' ? (
         <TabVisualiser
@@ -828,7 +835,7 @@ function ChordLibraryPanel({
   degreeColors,
   tuning,
   arpAddClickRef, arpBarreDragRef, setArpAddMode, arpAddMode,
-  setActiveChord, onSetArpeggioPosition,
+  setActiveChord, onSetArpeggioPosition, onChordAddStateChange,
 }: {
   selectedRoot: NoteName;
   setSelectedRoot: (n: NoteName) => void;
@@ -851,6 +858,7 @@ function ChordLibraryPanel({
   arpAddMode?: boolean;
   setActiveChord: (c: ChordSelection | null) => void;
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
+  onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
 }) {
   const VOICINGS_PER_PAGE = 8;
   const [libCopied, setLibCopied] = useState(false);
@@ -906,7 +914,8 @@ function ChordLibraryPanel({
     const updated = { ...hiddenVoicings, [key]: [...existing, origIdx] };
     setHiddenVoicings(updated);
     localStorage.setItem('mf-hidden-voicings', JSON.stringify(updated));
-    if (activeChord?.voicingIndex === filteredIdx) setActiveChord(null);
+    // Clear active chord if the hidden voicing was the active one
+    if (activeChord?.voicingIndex === origIdx && activeChord?.voicingSource === voicingTab) setActiveChord(null);
   };
 
   // Transpose custom voicings for current root — keyed by voicingTab so
@@ -1028,6 +1037,8 @@ function ChordLibraryPanel({
   // Show adding notes on fretboard via ArpeggioPosition
   useEffect(() => {
     if (chordAddMode) {
+      const hasNotes = addingFrets.some(f => f >= 0);
+      onChordAddStateChange?.(selectedRoot, hasNotes);
       const preview = buildStaticVoicingPosition(addingFrets, 'Adding...', addingBarre);
       if (preview) {
         onSetArpeggioPosition?.(preview);
@@ -1035,7 +1046,7 @@ function ChordLibraryPanel({
         onSetArpeggioPosition?.(null);
       }
     }
-  }, [addingFrets, addingBarre, buildStaticVoicingPosition, chordAddMode, onSetArpeggioPosition]);
+  }, [addingFrets, addingBarre, buildStaticVoicingPosition, chordAddMode, onSetArpeggioPosition, onChordAddStateChange, selectedRoot]);
 
   const handleStartAddMode = () => {
     if (chordAddMode) {
@@ -1044,6 +1055,7 @@ function ChordLibraryPanel({
       setAddingBarre(null);
       setArpAddMode?.(false);
       onSetArpeggioPosition?.(null);
+      onChordAddStateChange?.(null, false);
       return;
     }
     setChordAddMode(true);
@@ -1052,6 +1064,7 @@ function ChordLibraryPanel({
     setArpAddMode?.(true);
     setActiveChord(null);
     onSetArpeggioPosition?.(null);
+    onChordAddStateChange?.(selectedRoot, false);
   };
 
   const handleSaveVoicing = () => {
@@ -1267,17 +1280,19 @@ function ChordLibraryPanel({
                   {mergedPagedVoicings.map((v, i) => {
                     const globalIdx = voicingPage * VOICINGS_PER_PAGE + i;
                     const isCurated = globalIdx < filteredCurated.length;
+                    // For curated voicings, map back to the original index in currentVoicings
+                    const origIdx = isCurated ? filteredCuratedMap[globalIdx]?.origIdx : undefined;
                     const isActive = isCurated
-                      ? (activeChord?.voicingIndex === globalIdx && activeChord?.voicingSource === voicingTab)
+                      ? (activeChord?.voicingIndex === origIdx && activeChord?.voicingSource === voicingTab)
                       : false;
                     return (
                       <div key={i} className="relative">
                         <button
                           onClick={() => {
-                            if (isCurated) {
-                              handleSelectVoicing(i);
+                            if (isCurated && origIdx != null && selectedChord) {
+                              setActiveChord({ root: selectedRoot, chordType: selectedChord, voicingIndex: origIdx, voicingSource: voicingTab });
                               onSetArpeggioPosition?.(null);
-                            } else {
+                            } else if (!isCurated) {
                               handleSelectCustomVoicing(globalIdx);
                             }
                           }}
