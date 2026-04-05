@@ -1319,11 +1319,9 @@ export default function Fretboard({
                               if (arpAddMode && arpDragRef.current && arpDragRef.current.fret === fret && onArpAddClick) {
                                 const minS = Math.min(arpDragRef.current.startString, stringIdx);
                                 const maxS = Math.max(arpDragRef.current.startString, stringIdx);
-                                for (let s = minS; s <= maxS; s++) {
-                                  if (!arpDragRef.current.coveredStrings.has(s)) {
-                                    onArpAddClick(s, fret);
-                                    arpDragRef.current.coveredStrings.add(s);
-                                  }
+                                // During drag, only set endpoint markers, not intermediate strings
+                                if (!arpDragRef.current.coveredStrings.has(stringIdx)) {
+                                  arpDragRef.current.coveredStrings.add(stringIdx);
                                 }
                                 if (maxS > minS) onArpBarreDrag?.(arpDragRef.current.startString, stringIdx, fret);
                               } else if (identifyMode) {
