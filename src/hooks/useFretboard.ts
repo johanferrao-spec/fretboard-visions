@@ -144,6 +144,7 @@ export function useFretboard() {
     cagedShape, setCagedShape,
     identifyMode, setIdentifyMode,
     identifyFrets, setIdentifyFrets,
+    identifyBarre, setIdentifyBarre,
     identifyRoot, setIdentifyRoot,
     tuning, tuningName, tuningLabels, setTuning,
     customTunings, setCustomTunings,
