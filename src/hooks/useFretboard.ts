@@ -105,6 +105,7 @@ export function useFretboard() {
     setDisabledDegrees(new Set());
     setIdentifyMode(false);
     setIdentifyFrets([-1, -1, -1, -1, -1, -1]);
+    setIdentifyBarre(null);
     setIdentifyRoot(null);
     setNoteMarkerSize(20);
     setArpeggioPosition(null);
