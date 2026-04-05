@@ -315,6 +315,23 @@ export default function Fretboard({
     lastIdentifyAppliedRef.current = `barre-${minS}-${maxS}-${identifyDrag.fret}`;
   }, [identifyBarre, identifyDrag, identifyFrets, setIdentifyBarre, setIdentifyFrets]);
 
+  useEffect(() => {
+    if (!identifyBarre) return;
+    const coveredStrings: number[] = [];
+    for (let s = identifyBarre.from; s <= identifyBarre.to; s += 1) {
+      if (identifyFrets[s] >= identifyBarre.fret) coveredStrings.push(s);
+    }
+    if (coveredStrings.length < 2) {
+      setIdentifyBarre(null);
+      return;
+    }
+    const nextFrom = coveredStrings[0];
+    const nextTo = coveredStrings[coveredStrings.length - 1];
+    if (nextFrom !== identifyBarre.from || nextTo !== identifyBarre.to) {
+      setIdentifyBarre({ ...identifyBarre, from: nextFrom, to: nextTo });
+    }
+  }, [identifyBarre, identifyFrets, setIdentifyBarre]);
+
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
     // Tab visualiser mode: only show tab notes
     if (tabVisNotes) {
@@ -1253,7 +1270,6 @@ export default function Fretboard({
                               } else if (identifyMode) {
                                 identifyMouseDown.current = true;
                                 setIdentifyDrag({ startString: stringIdx, fret });
-                                setIdentifyBarre(null);
                                 applyIdentifySelection(stringIdx, fret);
                               }
                             }}
@@ -1308,7 +1324,6 @@ export default function Fretboard({
                                 onArpAddClick(stringIdx, fret);
                               } else if (identifyMode) {
                                 applyIdentifySelection(stringIdx, fret, 'toggle');
-                                setIdentifyBarre(null);
                               } else {
                                 onNoteClick(note);
                               }
@@ -1321,7 +1336,6 @@ export default function Fretboard({
                                 e.preventDefault();
                                 identifyMouseDown.current = true;
                                 setIdentifyDrag({ startString: stringIdx, fret });
-                                setIdentifyBarre(null);
                                 lastIdentifyAppliedRef.current = null;
                               } else {
                                 e.preventDefault(); handleDragStart(stringIdx, fret, note);
