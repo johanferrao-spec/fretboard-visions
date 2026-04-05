@@ -82,6 +82,8 @@ interface ChordReferenceProps {
   setFretBoxStart?: (v: number) => void;
   setFretBoxSize?: (v: number) => void;
   onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
+  chordOctaveShift: number;
+  setChordOctaveShift: (v: number) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
@@ -201,6 +203,7 @@ export default function ChordReference({
   tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
   onChordAddStateChange,
+  chordOctaveShift, setChordOctaveShift,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
@@ -297,6 +300,7 @@ export default function ChordReference({
     if (tab === 'chords') {
       setActiveChord(null);
       onSetArpeggioPosition?.(null);
+      setDegreeColors(true);
     }
   };
 
@@ -442,6 +446,8 @@ export default function ChordReference({
           setActiveChord={setActiveChord}
           onSetArpeggioPosition={onSetArpeggioPosition}
           onChordAddStateChange={onChordAddStateChange}
+          chordOctaveShift={chordOctaveShift}
+          setChordOctaveShift={setChordOctaveShift}
         />
       ) : activeTab === 'tabvis' ? (
         <TabVisualiser
@@ -835,7 +841,7 @@ function ChordLibraryPanel({
   degreeColors,
   tuning,
   arpAddClickRef, arpBarreDragRef, setArpAddMode, arpAddMode,
-  setActiveChord, onSetArpeggioPosition, onChordAddStateChange,
+  setActiveChord, onSetArpeggioPosition, onChordAddStateChange, chordOctaveShift, setChordOctaveShift,
 }: {
   selectedRoot: NoteName;
   setSelectedRoot: (n: NoteName) => void;
@@ -859,6 +865,8 @@ function ChordLibraryPanel({
   setActiveChord: (c: ChordSelection | null) => void;
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
   onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
+  chordOctaveShift: number;
+  setChordOctaveShift: (v: number) => void;
 }) {
   const VOICINGS_PER_PAGE = 8;
   const [libCopied, setLibCopied] = useState(false);
@@ -1299,6 +1307,25 @@ function ChordLibraryPanel({
                         : 'bg-accent text-accent-foreground hover:bg-accent/80'
                     }`}
                   >{chordAddMode ? '✕ Cancel' : '＋ Add Shape'}</button>
+                  {!chordAddMode && (
+                    <button
+                      onClick={() => setChordOctaveShift(chordOctaveShift + 1)}
+                      disabled={(() => {
+                        if (!activeChord) return true;
+                        const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
+                        const v = voicings[activeChord.voicingIndex];
+                        if (!v) return true;
+                        const playedFrets = v.frets.filter(f => f > 0);
+                        if (playedFrets.length === 0) return true;
+                        const minFret = Math.min(...playedFrets);
+                        const autoShift = -Math.floor(minFret / 12) * 12;
+                        const maxFret = Math.max(...playedFrets);
+                        return maxFret + autoShift + (chordOctaveShift + 1) * 12 > 24;
+                      })()}
+                      className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors font-bold"
+                      title="Move shape up 12 frets"
+                    >+12</button>
+                  )}
                   {mergedTotalPages > 1 && (
                     <>
                       <button onClick={() => setVoicingPage(Math.max(0, voicingPage - 1))} disabled={voicingPage === 0}

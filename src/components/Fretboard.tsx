@@ -61,6 +61,7 @@ interface FretboardProps {
   chordAddHasNotes?: boolean;
   suppressScaleNotes?: boolean;
   tabVisNotes?: { current: Array<{string: number; fret: number}>; upcoming: Array<Array<{string: number; fret: number}>> } | null;
+  chordOctaveShift?: number;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -102,6 +103,7 @@ export default function Fretboard({
   chordAddHasNotes,
   suppressScaleNotes = false,
   tabVisNotes,
+  chordOctaveShift = 0,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -129,13 +131,26 @@ export default function Fretboard({
   let acc = 0;
   for (const w of widths) { cumLeft.push(acc); acc += w; }
 
-  // Get chord voicing data (including barre info)
-  const chordVoicingData = activeChord
-    ? (() => {
-        const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
-        return voicings[activeChord.voicingIndex] || null;
-      })()
-    : null;
+  // Get chord voicing data (including barre info) — auto-normalize to lowest octave + manual shift
+  const chordVoicingData = useMemo(() => {
+    if (!activeChord) return null;
+    const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
+    const raw = voicings[activeChord.voicingIndex] || null;
+    if (!raw) return null;
+    // Normalize: find min played fret and shift down by 12s
+    const playedFrets = raw.frets.filter(f => f > 0);
+    if (playedFrets.length === 0) return raw;
+    const minFret = Math.min(...playedFrets);
+    const autoShift = -Math.floor(minFret / 12) * 12;
+    const totalShift = autoShift + chordOctaveShift * 12;
+    if (totalShift === 0) return raw;
+    const shifted: ChordVoicing = {
+      ...raw,
+      frets: raw.frets.map(f => f <= 0 ? f : Math.max(0, Math.min(24, f + totalShift))),
+      ...(raw.barreFret != null ? { barreFret: Math.max(0, Math.min(24, raw.barreFret + totalShift)) } : {}),
+    };
+    return shifted;
+  }, [activeChord, chordOctaveShift]);
   const chordVoicing = chordVoicingData ? chordVoicingData.frets : null;
 
   const chordNoteSet = new Set<string>();
@@ -149,8 +164,7 @@ export default function Fretboard({
           const to = chordVoicingData.barreTo;
           const minS = Math.min(from, to);
           const maxS = Math.max(from, to);
-          // Only show if it's an endpoint or has a different fret value (higher note on same string)
-          if (si > minS && si < maxS) return; // skip middle barre notes
+          if (si > minS && si < maxS) return;
         }
         chordNoteSet.add(`${si}-${fret}`);
       }
@@ -1205,6 +1219,8 @@ export default function Fretboard({
             const thickness = Math.max(1, 3.5 - stringIdx * 0.5);
             const isGlowing = glowStrings.has(stringIdx);
             const isChordMuted = activeChord && chordVoicing && chordVoicing[stringIdx] === -1;
+            // In arp add mode, strings without notes show as muted (X)
+            const isArpAddMuted = arpAddMode && !activeChord && (!arpeggioPosition || !arpeggioPosition.frets || (arpeggioPosition.frets as (number | -1)[])[stringIdx] === -1);
 
             return (
               <div key={stringIdx} className="flex items-center relative" style={{ height: stringH }}>
@@ -1226,6 +1242,7 @@ export default function Fretboard({
                     fontSize: 9,
                       ...(identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isChordMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
+                    ...(isArpAddMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isGlowing && !isChordMuted && !identifyMode ? {
                       color: pColor,
                       textShadow: `0 0 8px ${pColor}, 0 0 18px ${pColor}, 0 0 30px ${pColor}`,
@@ -1233,7 +1250,7 @@ export default function Fretboard({
                   }}
                   title={identifyMode ? "Click to toggle open string" : "Double-click to toggle string"}
                 >
-                  {identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? '×' : isChordMuted && !identifyMode ? '×' : tuningLabels[stringIdx]}
+                  {identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? '×' : isChordMuted && !identifyMode ? '×' : isArpAddMuted && !identifyMode ? '×' : tuningLabels[stringIdx]}
                 </button>
 
                 {/* String line */}
