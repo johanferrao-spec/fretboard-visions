@@ -1434,18 +1434,23 @@ function IdentifyPanel({
             <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
               {allChords.length} interpretation{allChords.length !== 1 ? 's' : ''}
             </div>
-            {/* Opacity slider — left side, before tab boxes */}
+            {/* Overlay opacity slider */}
             <div className="flex items-center gap-1">
-              <span className="text-[7px] font-mono text-muted-foreground">Opacity</span>
+              <span className="text-[7px] font-mono text-muted-foreground">Overlay</span>
               <input
                 type="range"
                 min={0}
                 max={100}
-                value={chordOpacity * 100}
-                onChange={(e) => setChordOpacity(Number(e.target.value) / 100)}
+                value={arpOverlayOpacity * 100}
+                onChange={(e) => setArpOverlayOpacity(Number(e.target.value) / 100)}
                 className="w-12 h-2 accent-primary"
               />
             </div>
+            {/* Clear fretboard button */}
+            <button
+              onClick={onClearFretboard}
+              className="text-[8px] font-mono text-destructive hover:text-destructive/80 uppercase tracking-wider transition-colors"
+            >Clear</button>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             {allChords.map((chord, i) => {
