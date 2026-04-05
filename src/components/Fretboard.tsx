@@ -304,12 +304,11 @@ export default function Fretboard({
     };
 
     if (identifyBarre && identifyBarre.fret === identifyDrag.fret) {
-      for (let s = identifyBarre.from; s <= identifyBarre.to; s += 1) clearDraggedMarker(s);
+      for (let s = identifyBarre.from; s <= identifyBarre.to; s += 1) {
+        if (newFrets[s] === identifyDrag.fret) newFrets[s] = -1;
+      }
     }
-    for (let s = minS; s <= maxS; s += 1) clearDraggedMarker(s);
-
-    newFrets[identifyDrag.startString] = identifyDrag.fret;
-    newFrets[currentStringIndex] = identifyDrag.fret;
+    for (let s = minS; s <= maxS; s += 1) newFrets[s] = identifyDrag.fret;
     setIdentifyFrets(newFrets);
     setIdentifyBarre(maxS > minS ? { from: minS, to: maxS, fret: identifyDrag.fret } : null);
     lastIdentifyAppliedRef.current = `barre-${minS}-${maxS}-${identifyDrag.fret}`;
@@ -363,10 +362,11 @@ export default function Fretboard({
     // In identify mode, show clicked notes + arpeggio overlay
     if (identifyMode) {
       // Clicked notes always visible (even outside box)
-      const isBarreEndpoint = identifyBarre
+      const isBarreCovered = identifyBarre
         && fret === identifyBarre.fret
-        && (stringIndex === identifyBarre.from || stringIndex === identifyBarre.to);
-      if (identifyFrets[stringIndex] === fret || isBarreEndpoint) {
+        && stringIndex >= identifyBarre.from
+        && stringIndex <= identifyBarre.to;
+      if (identifyFrets[stringIndex] === fret || isBarreCovered) {
         let bg = 'hsl(var(--primary))';
         if (degreeColors && identifyRoot) {
           const dc = getDegreeColor(identifyRoot, note);
@@ -1220,7 +1220,7 @@ export default function Fretboard({
                   } ${isVertical ? '-rotate-90' : ''}`}
                   style={{
                     fontSize: 9,
-                    ...(identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
+                      ...(identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isChordMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isGlowing && !isChordMuted && !identifyMode ? {
                       color: pColor,
@@ -1323,7 +1323,17 @@ export default function Fretboard({
                               if (arpAddMode && onArpAddClick && fret > 0) {
                                 onArpAddClick(stringIdx, fret);
                               } else if (identifyMode) {
-                                applyIdentifySelection(stringIdx, fret, 'toggle');
+                                const isCoveredByBarre = identifyBarre
+                                  && identifyBarre.fret === fret
+                                  && stringIdx >= identifyBarre.from
+                                  && stringIdx <= identifyBarre.to;
+                                if (isCoveredByBarre && identifyFrets[stringIdx] === fret) {
+                                  const nextFrets = [...identifyFrets];
+                                  nextFrets[stringIdx] = -1;
+                                  setIdentifyFrets(nextFrets);
+                                } else {
+                                  applyIdentifySelection(stringIdx, fret, 'toggle');
+                                }
                               } else {
                                 onNoteClick(note);
                               }
@@ -1380,7 +1390,7 @@ export default function Fretboard({
                             <div
                               className={`rounded-full flex items-center justify-center font-mono font-bold shadow-md ${
                                 style.ring ? 'ring-2' : ''
-                              } ${identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && fret === identifyBarre.fret && (stringIdx === identifyBarre.from || stringIdx === identifyBarre.to))) ? 'ring-2 ring-primary' : ''}`}
+                              } ${identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && fret === identifyBarre.fret && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to)) ? 'ring-2 ring-primary' : ''}`}
                               style={{
                                 width: noteMarkerSize,
                                 height: noteMarkerSize,
@@ -1388,7 +1398,7 @@ export default function Fretboard({
                                 opacity: style.opacity,
                                 color: style.greyed
                                   ? 'hsl(var(--muted-foreground))'
-                                  : identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && fret === identifyBarre.fret && (stringIdx === identifyBarre.from || stringIdx === identifyBarre.to))) && !(degreeColors && identifyRoot)
+                                  : identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && fret === identifyBarre.fret && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to)) && !(degreeColors && identifyRoot)
                                     ? 'hsl(var(--primary-foreground))'
                                     : 'hsl(220, 20%, 8%)',
                                 fontSize: Math.max(6, noteMarkerSize * 0.35),
