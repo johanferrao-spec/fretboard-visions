@@ -1360,7 +1360,7 @@ export default function Fretboard({
                                 opacity: style.opacity,
                                 color: style.greyed
                                   ? 'hsl(var(--muted-foreground))'
-                                  : identifyMode && identifyFrets[stringIdx] === fret && !(degreeColors && identifyRoot)
+                                  : identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to && fret === identifyBarre.fret)) && !(degreeColors && identifyRoot)
                                     ? 'hsl(var(--primary-foreground))'
                                     : 'hsl(220, 20%, 8%)',
                                 fontSize: Math.max(6, noteMarkerSize * 0.35),
