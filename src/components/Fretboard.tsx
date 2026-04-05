@@ -1242,6 +1242,7 @@ export default function Fretboard({
                     fontSize: 9,
                       ...(identifyMode && identifyFrets[stringIdx] === -1 && !(identifyBarre && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to) ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isChordMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
+                    ...(isArpAddMuted && !identifyMode ? { color: 'hsl(var(--destructive))', fontSize: 10, textShadow: '0 0 4px hsl(var(--destructive))' } : {}),
                     ...(isGlowing && !isChordMuted && !identifyMode ? {
                       color: pColor,
                       textShadow: `0 0 8px ${pColor}, 0 0 18px ${pColor}, 0 0 30px ${pColor}`,
