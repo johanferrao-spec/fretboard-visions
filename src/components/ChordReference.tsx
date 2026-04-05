@@ -1249,6 +1249,7 @@ function ChordLibraryPanel({
 function IdentifyPanel({
   frets, setFrets, results, degreeColors, viewRoot, setViewRoot, currentRoot, tuningLabels, tuning,
   onSetArpeggioPosition, setShowFretBox, setFretBoxStart, setFretBoxSize,
+  arpOverlayOpacity, setArpOverlayOpacity, onClearFretboard,
 }: {
   frets: (number | -1)[];
   setFrets: (f: (number | -1)[]) => void;
@@ -1263,9 +1264,11 @@ function IdentifyPanel({
   setShowFretBox?: (v: boolean) => void;
   setFretBoxStart?: (v: number) => void;
   setFretBoxSize?: (v: number) => void;
+  arpOverlayOpacity: number;
+  setArpOverlayOpacity: (v: number) => void;
+  onClearFretboard?: () => void;
 }) {
   const [hoveredChord, setHoveredChord] = useState<string | null>(null);
-  const [chordOpacity, setChordOpacity] = useState(0.7);
 
   // Get the parent/foundation chord for hover display
   const getParentChordInfo = useCallback((chordName: string) => {
