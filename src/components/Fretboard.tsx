@@ -794,18 +794,10 @@ export default function Fretboard({
       className={`w-full relative ${isVertical ? 'flex justify-center' : ''}`}
       onMouseUp={() => {
         handleDragEnd();
-        // Detect barre from identify drag
+        // Detect barre from identify drag — only if user actually dragged across multiple strings
         if (identifyMode && identifyDrag && identifyMouseDown.current) {
-          // Find the range of strings set to the same fret during this drag
-          const dragFret = identifyDrag.fret;
-          const stringsAtFret = identifyFrets.map((f, i) => f === dragFret ? i : -1).filter(i => i >= 0);
-          if (stringsAtFret.length >= 2) {
-            const from = Math.min(...stringsAtFret);
-            const to = Math.max(...stringsAtFret);
-            if (to > from) {
-              setIdentifyBarre({ from, to, fret: dragFret });
-            }
-          }
+          // identifyBarre is already set by applyIdentifyBarreDrag during the drag
+          // Don't re-detect from fret values — that would create barres from separate clicks
         }
         setIdentifyDrag(null); identifyMouseDown.current = false; arpDragRef.current = null;
       }}
