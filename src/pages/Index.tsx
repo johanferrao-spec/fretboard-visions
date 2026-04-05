@@ -25,6 +25,8 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis'>('beginner');
   const [tabVisNotes, setTabVisNotes] = useState<{ current: Array<{string: number; fret: number}>; upcoming: Array<{string: number; fret: number}[]> } | null>(null);
   const [tabVisHasOpened, setTabVisHasOpened] = useState(false);
+  const [tabVisData, setTabVisData] = useState<TabData | null>(null);
+  const [tabVisPlayhead, setTabVisPlayhead] = useState(0);
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
   const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower'>('upper');
