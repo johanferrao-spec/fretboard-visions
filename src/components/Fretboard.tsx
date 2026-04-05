@@ -1247,7 +1247,7 @@ export default function Fretboard({
                                 if (maxS > minS) onArpBarreDrag?.(arpDragRef.current.startString, stringIdx, fret);
                               } else if (identifyMode) {
                                 setIdentifyHover({ stringIndex: stringIdx, fret });
-                                if (identifyDrag && identifyDrag.fret === fret) {
+                                if (identifyMouseDown.current && identifyDrag && identifyDrag.fret === fret) {
                                   const newFrets = [...identifyFrets];
                                   const minS = Math.min(identifyDrag.startString, stringIdx);
                                   const maxS = Math.max(identifyDrag.startString, stringIdx);
