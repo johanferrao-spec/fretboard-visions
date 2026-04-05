@@ -359,6 +359,7 @@ export default function Fretboard({
 
     // Inversion voicing mode: only chord notes visible, opacity dims non-voicing chord tones
     if (inversionVoicing && inversionNoteSet.size > 0) {
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
       const noteIdx = (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note);
       const isChordTone = scaleViewChordTones && scaleViewChordTones.has(noteIdx);
       if (!isChordTone) return null; // Notes outside chord are completely invisible
