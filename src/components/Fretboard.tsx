@@ -263,6 +263,20 @@ export default function Fretboard({
   }
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
+    // Tab visualiser mode: only show tab notes
+    if (tabVisNotes) {
+      const isCurrent = tabVisNotes.current.some(n => n.string === stringIndex && n.fret === fret);
+      if (isCurrent) {
+        return { backgroundColor: 'hsl(var(--primary))', opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
+      }
+      for (const group of tabVisNotes.upcoming) {
+        if (group.some(n => n.string === stringIndex && n.fret === fret)) {
+          return { backgroundColor: 'hsl(var(--primary))', opacity: 0.4, ring: false, ringColor: '', greyed: false };
+        }
+      }
+      return null;
+    }
+
     // In arp add mode (custom voicing creation), show faint root notes if no notes placed yet
     if (arpAddMode && !isChordLibraryVoicing) {
       if (chordAddRootNote && !chordAddHasNotes && fret > 0) {
