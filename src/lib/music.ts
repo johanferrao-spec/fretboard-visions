@@ -1529,7 +1529,7 @@ export function generateDrop3Voicings(root: NoteName, chordType: string): ChordV
           const s = strings[i];
           const target = drop3[i];
           let found = false;
-          for (let f = Math.max(0, baseFret); f <= baseFret + 4; f++) {
+          for (let f = Math.max(1, baseFret); f <= baseFret + 4; f++) {
             if ((STANDARD_TUNING[s] + f) % 12 === target) { voicing[s] = f; frets.push(f); found = true; break; }
           }
           if (!found) { valid = false; break; }
