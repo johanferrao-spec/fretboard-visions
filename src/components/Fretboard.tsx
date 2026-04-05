@@ -950,15 +950,16 @@ export default function Fretboard({
               const topRow = Math.min(fromRow, toRow);
               const bottomRow = Math.max(fromRow, toRow);
               const barreLeft = cumLeft[bf] || 0;
-              const barreWidth = widths[bf] || 0;
-              const centerX = barreLeft + barreWidth * 0.5;
+              const barreW = widths[bf] || 0;
+              const centerX = barreLeft + barreW * 0.5;
               const totalH = 6 * stringH;
               const y1 = topRow * stringH + stringH * 0.5;
               const y2 = bottomRow * stringH + stringH * 0.5;
-              const barThick = noteMarkerSize * 0.86;
-              const markerRadius = noteMarkerSize / 2;
-              const rectY = y1 + markerRadius - barThick / 2;
-              const rectHeight = Math.max(barThick, (y2 - y1) - markerRadius * 2 + barThick);
+              const barThickY = noteMarkerSize * 0.86;
+              const barThickX = Math.min(barreW * 0.45, 2.5);
+              const markerRadiusY = noteMarkerSize / 2;
+              const rectY = y1 + markerRadiusY - barThickY / 2;
+              const rectHeight = Math.max(barThickY, (y2 - y1) - markerRadiusY * 2 + barThickY);
               return (
                 <svg
                   className="absolute inset-0 pointer-events-none z-[2]"
@@ -967,11 +968,11 @@ export default function Fretboard({
                   preserveAspectRatio="none"
                 >
                   <rect
-                    x={centerX - barThick / 2}
+                    x={centerX - barThickX / 2}
                     y={rectY}
-                    width={barThick}
+                    width={barThickX}
                     height={rectHeight}
-                    rx={barThick / 2}
+                    rx={barThickX / 2}
                     fill="hsl(var(--muted-foreground))"
                     opacity={0.62}
                   />
@@ -989,15 +990,16 @@ export default function Fretboard({
               const topRow = Math.min(fromRow, toRow);
               const bottomRow = Math.max(fromRow, toRow);
               const barreLeft = cumLeft[bf] || 0;
-              const barreWidth = widths[bf] || 0;
-              const centerX = barreLeft + barreWidth * 0.5;
+              const barreW = widths[bf] || 0;
+              const centerX = barreLeft + barreW * 0.5;
               const totalH = 6 * stringH;
               const y1 = topRow * stringH + stringH * 0.5;
               const y2 = bottomRow * stringH + stringH * 0.5;
-              const barThick = noteMarkerSize * 0.86;
-              const markerRadius = noteMarkerSize / 2;
-              const rectY = y1 + markerRadius - barThick / 2;
-              const rectHeight = Math.max(barThick, (y2 - y1) - markerRadius * 2 + barThick);
+              const barThickY = noteMarkerSize * 0.86;
+              const barThickX = Math.min(barreW * 0.45, 2.5);
+              const markerRadiusY = noteMarkerSize / 2;
+              const rectY = y1 + markerRadiusY - barThickY / 2;
+              const rectHeight = Math.max(barThickY, (y2 - y1) - markerRadiusY * 2 + barThickY);
               return (
                 <svg
                   className="absolute inset-0 pointer-events-none z-[2]"
@@ -1006,11 +1008,11 @@ export default function Fretboard({
                   preserveAspectRatio="none"
                 >
                   <rect
-                    x={centerX - barThick / 2}
+                    x={centerX - barThickX / 2}
                     y={rectY}
-                    width={barThick}
+                    width={barThickX}
                     height={rectHeight}
-                    rx={barThick / 2}
+                    rx={barThickX / 2}
                     fill="hsl(var(--muted-foreground))"
                     opacity={0.62}
                   />
