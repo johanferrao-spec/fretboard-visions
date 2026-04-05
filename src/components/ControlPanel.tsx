@@ -248,30 +248,28 @@ function ColorDropdown({ color, onColorChange }: { color: string; onColorChange:
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="w-5 h-5 rounded-full border-2 border-border/60 transition-all hover:scale-110 hover:border-foreground/40 relative"
+        className="w-6 h-6 rounded-full border-2 border-border/60 transition-all hover:scale-110 hover:border-foreground/40"
         style={{
           backgroundColor: displayColor,
           boxShadow: `0 0 8px ${displayColor}`,
         }}
         title="Scale colour"
-      >
-        <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[6px] text-muted-foreground leading-none">▼</span>
-      </button>
+      />
       {open && (
         <div
-          className="absolute z-50 right-0 top-7 rounded-xl p-2 border shadow-xl"
+          className="absolute z-50 right-0 top-8 rounded-xl p-3 border shadow-xl"
           style={{
             backgroundColor: 'hsl(var(--card))',
             borderColor: 'hsl(var(--border))',
             boxShadow: '0 8px 32px hsla(0, 0%, 0%, 0.5)',
           }}
         >
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-3 gap-2 min-w-[7.5rem]">
             {COLOR_OPTIONS.map(c => (
               <button
                 key={c}
                 onClick={() => { onColorChange(c); setOpen(false); }}
-                className="w-6 h-6 rounded-full border-2 transition-all hover:scale-125"
+                className="w-8 h-8 rounded-full border-2 transition-all hover:scale-110"
                 style={{
                   backgroundColor: c,
                   borderColor: color === c ? 'hsl(var(--foreground))' : 'transparent',
