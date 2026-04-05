@@ -990,7 +990,7 @@ function ChordLibraryPanel({
     const hasNotes = addingFrets.some(f => f >= 0);
     if (!hasNotes) return;
     const barre = addingBarre ?? detectFallbackBarre(addingFrets);
-    const key = selectedChord;
+    const key = `${selectedChord}::${voicingTab}`;
     const existing = customChordVoicings[key] || [];
     const newVoicing = {
       frets: [...addingFrets],
