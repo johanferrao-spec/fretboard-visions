@@ -1494,80 +1494,123 @@ export function identifyChord(frets: (number | -1)[]): { names: string[]; explan
 
   const uniquePCs = [...new Set(playedNotes.map(n => NOTE_NAMES.indexOf(n)))];
   const bassNote = playedNotes[0];
-  const results: { names: string[]; explanations: string[]; bassNote: NoteName; notes: NoteName[]; extensions: { frets: number[]; note: NoteName }[] }[] = [];
+  const results: { names: string[]; explanations: string[]; bassNote: NoteName; notes: NoteName[]; extensions: { frets: number[]; note: NoteName }[]; score: number }[] = [];
 
-  // Try each unique pitch class as potential root
-  for (const rootPC of uniquePCs) {
+  // Try ALL 12 pitch classes as potential root — not just played notes
+  for (let rootPC = 0; rootPC < 12; rootPC++) {
     const root = NOTE_NAMES[rootPC];
     const intervals = new Set(uniquePCs.map(pc => (pc - rootPC + 12) % 12));
-    
-    // Match against chord formulas
+    const rootPresent = uniquePCs.includes(rootPC);
+
     for (const [chordName, formula] of Object.entries(CHORD_FORMULAS)) {
       const formulaIntervals = new Set(formula.map(i => i % 12));
-      // Check if played notes are a subset of (or equal to) the formula
+
+      // All played intervals must exist in the formula
       const allMatch = [...intervals].every(i => formulaIntervals.has(i));
-      // Check that key intervals are present (at least root + one other)
-      const hasEnough = intervals.size >= 2 && intervals.has(0);
-      if (allMatch && hasEnough && formulaIntervals.size >= intervals.size) {
-        const names = [formatChordSymbol(root, chordName, bassNote !== root ? bassNote : undefined)];
-        const explanations: string[] = [];
-        
-        // Check for slash chord
-        if (bassNote !== root) {
-          explanations.push(`Bass note ${bassNote} is not the root — this is a slash chord.`);
-        }
-        
-        // Find missing formula notes that could extend the chord
-        const extensions: { frets: number[]; note: NoteName }[] = [];
-        for (const fi of formulaIntervals) {
-          if (!intervals.has(fi)) {
-            const missingNote = NOTE_NAMES[(rootPC + fi) % 12];
-            // Find where this note could be played on muted strings
-            const extFrets: number[] = [];
-            for (let s = 0; s < 6; s++) {
-              if (frets[s] === -1) {
-                // Find nearest fret for this note
-                for (let f = 0; f <= 12; f++) {
-                  if (noteAtFret(s, f) === missingNote) { extFrets.push(f); break; }
-                }
+      if (!allMatch) continue;
+
+      // Need at least 2 played notes
+      if (intervals.size < 2) continue;
+
+      // Score: higher = better match
+      // - Root present is a big bonus
+      // - More formula coverage = better
+      // - Fewer missing notes = better
+      const coverage = intervals.size / formulaIntervals.size;
+      const missingCount = [...formulaIntervals].filter(i => !intervals.has(i)).length;
+      let score = coverage * 100 + (rootPresent ? 50 : 0) - missingCount * 5;
+
+      // For rootless voicings, require at least the 3rd or 7th to be present
+      if (!rootPresent) {
+        const has3rd = intervals.has(3) || intervals.has(4); // minor or major 3rd
+        const has7th = intervals.has(10) || intervals.has(11); // minor or major 7th
+        if (!has3rd && !has7th) continue;
+        // Penalize heavily if too many notes are missing
+        if (missingCount > 2) continue;
+      }
+
+      // Skip if played notes barely match (e.g. 2 notes matching a 7-note chord)
+      if (intervals.size < Math.ceil(formulaIntervals.size * 0.4)) continue;
+
+      const explanations: string[] = [];
+
+      // Inversion detection
+      if (rootPresent && bassNote !== root) {
+        const bassInterval = (NOTE_NAMES.indexOf(bassNote) - rootPC + 12) % 12;
+        const formulaArr = formula.map(i => i % 12);
+        const bassIdx = formulaArr.indexOf(bassInterval);
+        if (bassIdx === 1) explanations.push(`1st inversion — ${bassNote} (3rd) in the bass.`);
+        else if (bassIdx === 2) explanations.push(`2nd inversion — ${bassNote} (5th) in the bass.`);
+        else if (bassIdx === 3) explanations.push(`3rd inversion — ${bassNote} (7th) in the bass.`);
+        else explanations.push(`Slash chord — ${bassNote} in the bass.`);
+      } else if (!rootPresent) {
+        // Check if bass note is an inversion indicator
+        const bassInterval = (NOTE_NAMES.indexOf(bassNote) - rootPC + 12) % 12;
+        const formulaArr = formula.map(i => i % 12);
+        const bassIdx = formulaArr.indexOf(bassInterval);
+        const invLabel = bassIdx === 1 ? '1st inv.' : bassIdx === 2 ? '2nd inv.' : bassIdx === 3 ? '3rd inv.' : '';
+        explanations.push(`No root (${root}) present${invLabel ? ` — ${invLabel}` : ''}.`);
+      }
+
+      // Missing formula notes
+      const extensions: { frets: number[]; note: NoteName }[] = [];
+      for (const fi of formulaIntervals) {
+        if (!intervals.has(fi)) {
+          const missingNote = NOTE_NAMES[(rootPC + fi) % 12];
+          const extFrets: number[] = [];
+          for (let s = 0; s < 6; s++) {
+            if (frets[s] === -1) {
+              for (let f = 0; f <= 12; f++) {
+                if (noteAtFret(s, f) === missingNote) { extFrets.push(f); break; }
               }
             }
-            if (extFrets.length > 0) {
-              extensions.push({ frets: extFrets, note: missingNote });
-            }
           }
+          if (extFrets.length > 0) extensions.push({ frets: extFrets, note: missingNote });
         }
-        
-        results.push({ names, explanations, bassNote, notes: playedNotes, extensions });
       }
+
+      const displayName = formatChordSymbol(root, chordName, bassNote !== root ? bassNote : undefined);
+      results.push({ names: [displayName], explanations, bassNote, notes: playedNotes, extensions, score });
     }
   }
 
-  // Also check for enharmonic equivalents (e.g., G6 = Em7)
-  // Find pairs that share the same pitch class set
-  const seen = new Set<string>();
-  const deduped: typeof results = [];
+  // Deduplicate by name, keeping highest score
+  const byName = new Map<string, typeof results[0]>();
   for (const r of results) {
     const key = r.names[0];
-    if (!seen.has(key)) {
-      seen.add(key);
-      // Find other names for same pitch set
-      for (const r2 of results) {
-        if (r2 !== r && !r.names.includes(r2.names[0])) {
-          const pcs1 = new Set(r.notes.map(n => NOTE_NAMES.indexOf(n)));
-          const pcs2 = new Set(r2.notes.map(n => NOTE_NAMES.indexOf(n)));
-          if (pcs1.size === pcs2.size && [...pcs1].every(p => pcs2.has(p))) {
-            r.names.push(r2.names[0]);
-            r.explanations.push(`Also known as ${r2.names[0]} — same notes, different root.`);
-            seen.add(r2.names[0]);
-          }
-        }
-      }
-      deduped.push(r);
+    if (!byName.has(key) || r.score > byName.get(key)!.score) {
+      byName.set(key, r);
     }
   }
 
-  return deduped;
+  // Group by same pitch class set to show alternative names
+  const deduped = [...byName.values()].sort((a, b) => b.score - a.score);
+
+  // Merge alternatives (same pitch class set, different root interpretation)
+  const finalResults: typeof results = [];
+  const used = new Set<string>();
+  for (const r of deduped) {
+    const key = r.names[0];
+    if (used.has(key)) continue;
+    used.add(key);
+    // Find others with same played PCs but different name
+    for (const r2 of deduped) {
+      if (r2 === r || used.has(r2.names[0])) continue;
+      // Same played notes = same pitch class set
+      if (r2.notes.length === r.notes.length) {
+        const pcs1 = new Set(r.notes.map(n => NOTE_NAMES.indexOf(n)));
+        const pcs2 = new Set(r2.notes.map(n => NOTE_NAMES.indexOf(n)));
+        if (pcs1.size === pcs2.size && [...pcs1].every(p => pcs2.has(p))) {
+          r.names.push(r2.names[0]);
+          r.explanations.push(...r2.explanations.map(e => `${r2.names[0]}: ${e}`));
+          used.add(r2.names[0]);
+        }
+      }
+    }
+    finalResults.push(r);
+  }
+
+  return finalResults;
 }
 
 // Chord categories for NoteInfoPanel
