@@ -2876,18 +2876,21 @@ function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition;
           <line key={s} x1={s * stringSpacing} y1={5} x2={s * stringSpacing} y2={5 + numFrets * fretSpacing} stroke="hsl(var(--fretboard-string))" strokeWidth={0.5} opacity={0.5} />
         ))}
         {startFret > 0 && (
-          <text x={1} y={5 + fretSpacing * 0.6} fontSize={4} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+          <text x={1} y={5 + fretSpacing * 0.6} fontSize={large ? 8 : 4} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+        )}
+        {startFret <= 1 && large && (
+          <line x1={stringSpacing} y1={5} x2={stringSpacing * 6} y2={5} stroke="hsl(var(--fretboard-nut))" strokeWidth={2} />
         )}
         {/* Muted strings */}
         {[0, 1, 2, 3, 4, 5].map(s => {
           if (notesByString.has(s)) return null;
           const x = (s + 1) * stringSpacing;
-          return <text key={`m${s}`} x={x} y={3} fontSize={5} textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="monospace">×</text>;
+          return <text key={`m${s}`} x={x} y={large ? 4 : 3} fontSize={large ? 7 : 5} textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="monospace">×</text>;
         })}
         {/* Notes */}
         {position.notes.map((n, i) => {
           const x = (n.stringIndex + 1) * stringSpacing;
-          if (n.fret === 0) return <circle key={i} cx={x} cy={3} r={1.5} fill="none" stroke="hsl(var(--foreground))" strokeWidth={0.5} />;
+          if (n.fret === 0) return <circle key={i} cx={x} cy={large ? 4 : 3} r={large ? 2.5 : 1.5} fill="none" stroke="hsl(var(--foreground))" strokeWidth={large ? 1 : 0.5} />;
           const y = 5 + (n.fret - startFret + 0.5) * fretSpacing;
           const note = noteAtFret(n.stringIndex, n.fret);
           const interval = getIntervalName(root, note);
