@@ -2119,6 +2119,11 @@ function ArpeggioPositionsPanel({
     } catch { return {}; }
   });
 
+  // Hidden generated positions (persisted like chord library)
+  const [hiddenArpPositions, setHiddenArpPositions] = useState<Record<string, number[]>>(() => {
+    try { return JSON.parse(localStorage.getItem('mf-hidden-arp-positions') || '{}'); } catch { return {}; }
+  });
+
   const saveCustomArpPositions = useCallback((data: Record<string, ArpeggioPosition[]>) => {
     setCustomArpPositions(data);
     localStorage.setItem('mf-custom-arp-positions', JSON.stringify(data));
