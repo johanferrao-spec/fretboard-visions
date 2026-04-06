@@ -479,15 +479,6 @@ export default function Fretboard({
       return { backgroundColor: bg, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: false };
     }
 
-  // Reference notes for arp add mode (shows existing arpeggio at reduced opacity)
-  const arpAddRefSet = useMemo(() => {
-    const set = new Set<string>();
-    if (arpAddReferenceNotes) {
-      for (const n of arpAddReferenceNotes) set.add(`${n.stringIndex}-${n.fret}`);
-    }
-    return set;
-  }, [arpAddReferenceNotes]);
-
 
     if (arpeggioPosition && arpPositionSet.size > 0 && !activeChord) {
       if (isOutsidePositionBox(stringIndex, fret)) return null;
