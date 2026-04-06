@@ -364,6 +364,7 @@ const Index = () => {
                setArpAddMode={fb.setArpAddMode}
                arpAddClickRef={arpAddClickRef}
                arpBarreDragRef={arpBarreDragRef}
+               setArpAddReferenceNotes={fb.setArpAddReferenceNotes}
                activeTab={activeTab}
                setActiveTab={setActiveTab}
                primaryScale={fb.primaryScale}
