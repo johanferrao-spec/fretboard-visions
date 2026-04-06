@@ -202,6 +202,15 @@ export default function Fretboard({
     return { arpPositionSet: set, arpChordToneNames: toneNames };
   }, [arpeggioPosition, tuning]);
 
+  // Reference notes for arp add mode (shows existing arpeggio at reduced opacity)
+  const arpAddRefSet = useMemo(() => {
+    const set = new Set<string>();
+    if (arpAddReferenceNotes) {
+      for (const n of arpAddReferenceNotes) set.add(`${n.stringIndex}-${n.fret}`);
+    }
+    return set;
+  }, [arpAddReferenceNotes]);
+
   // Static voicings from chord library have showPath explicitly set to false
   const isChordLibraryVoicing = arpeggioPosition?.showPath === false;
   const shouldShowGuidedPaths = !arpAddMode && !isChordLibraryVoicing;
