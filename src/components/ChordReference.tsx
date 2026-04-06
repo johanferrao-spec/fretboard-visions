@@ -2746,6 +2746,11 @@ function ArpeggioPositionsPanel({
                 <div className="text-[10px] font-mono font-bold text-foreground">{selectedRoot} {selectedArp}</div>
                 <div className="flex items-center gap-1">
                   <button
+                    onClick={() => handleStartEditing(selectedPosIdx)}
+                    disabled={editingIdx !== null || addingMode || generatedPositions.length === 0}
+                    className="px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors bg-muted text-muted-foreground hover:bg-muted/80 disabled:opacity-30"
+                  >Edit</button>
+                  <button
                     onClick={handleStartAdding}
                     className={`px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
                       addingMode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
