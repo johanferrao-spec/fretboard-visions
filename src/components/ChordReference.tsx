@@ -2893,7 +2893,7 @@ function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition;
           const interval = getIntervalName(root, note);
           const degColor = DEGREE_COLORS[interval];
           const fillColor = degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
-          return <circle key={i} cx={x} cy={y} r={2.5} fill={fillColor} />;
+          return <circle key={i} cx={x} cy={y} r={large ? 5.5 : 2.5} fill={fillColor} />;
         })}
         {/* Path lines */}
         {(() => {
