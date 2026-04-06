@@ -2774,12 +2774,10 @@ function ArpeggioPositionsPanel({
                       className="flex-1 py-1.5 rounded bg-secondary text-secondary-foreground hover:bg-muted text-[11px] font-mono font-bold transition-colors"
                     >Next ▶</button>
                   </div>
-                  <div className="grid grid-cols-3 gap-1">
+                  <div className="grid grid-cols-4 gap-1">
                     {pagedPositions.map((pos, i) => {
                       const globalIdx = arpPage * ARP_PER_PAGE + i;
                       const isActive = selectedPosIdx === globalIdx;
-                      const generated = generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
-                      const isCustom = globalIdx >= generated.length;
                       const isRenaming = renamingIdx === globalIdx;
                       return (
                         <div key={globalIdx} className="relative">
@@ -2787,16 +2785,9 @@ function ArpeggioPositionsPanel({
                             onClick={() => handleSelectPosition(globalIdx)}
                             onDoubleClick={(e) => {
                               e.stopPropagation();
-                              if (isCustom) {
-                                // Double-click custom: rename
-                                setRenamingIdx(globalIdx);
-                                setRenameValue(pos.label);
-                              } else {
-                                // Double-click generated: edit
-                                handleStartEditing(globalIdx);
-                              }
+                              handleStartEditing(globalIdx);
                             }}
-                            className={`w-full rounded p-0.5 transition-all border ${
+                            className={`w-full rounded p-1 transition-all border flex flex-col items-center justify-center ${
                               isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
                             }`}
                           >
@@ -2820,12 +2811,10 @@ function ArpeggioPositionsPanel({
                               )}
                             </div>
                           </button>
-                          {isCustom && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeletePosition(globalIdx); }}
-                              className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[8px] flex items-center justify-center hover:brightness-110"
-                            >×</button>
-                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeletePosition(globalIdx); }}
+                            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[8px] flex items-center justify-center hover:brightness-110 z-10"
+                          >×</button>
                         </div>
                       );
                     })}
