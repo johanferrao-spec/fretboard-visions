@@ -51,6 +51,7 @@ interface FretboardProps {
   arpOverlayOpacity?: number;
   arpPathVisible?: boolean;
   arpAddMode?: boolean;
+  arpAddReferenceNotes?: { stringIndex: number; fret: number }[];
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   onArpBarreDrag?: (fromStringIndex: number, toStringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
