@@ -363,11 +363,25 @@ export default function Fretboard({
       return null;
     }
 
-    // In arp add mode (custom voicing creation), show faint root notes if no notes placed yet
+    // In arp add mode (custom voicing creation)
     if (arpAddMode && !isChordLibraryVoicing) {
       if (isOutsidePositionBox(stringIndex, fret)) return null;
+      // Show existing arpeggio position at reduced opacity as reference
+      if (arpeggioPosition && arpeggioPosition.notes && arpeggioPosition.label !== 'Adding...' && arpeggioPosition.label !== 'Editing...') {
+        const key = `${stringIndex}-${fret}`;
+        if (arpPositionSet.has(key)) {
+          let bg = pColor;
+          if (degreeColors) {
+            const arpRoot = arpeggioPosition.notes.length > 0
+              ? noteAtFret(arpeggioPosition.notes[0].stringIndex, arpeggioPosition.notes[0].fret, tuning)
+              : primaryScale.root;
+            const dc = getDegreeColor(arpRoot, note);
+            if (dc) bg = dc;
+          }
+          return { backgroundColor: bg, opacity: 0.25, ring: false, ringColor: '', greyed: false };
+        }
+      }
       if (chordAddRootNote && !chordAddHasNotes) {
-        // Show faint root note guides at 30% opacity
         if (note === chordAddRootNote) {
           return { backgroundColor: 'hsl(var(--primary))', opacity: 0.3, ring: false, ringColor: '', greyed: false };
         }
