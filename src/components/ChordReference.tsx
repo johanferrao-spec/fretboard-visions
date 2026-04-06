@@ -2092,6 +2092,7 @@ function ArpeggioPositionsPanel({
   arpAddMode,
   setArpAddMode,
   arpAddClickRef,
+  setArpAddReferenceNotes,
 }: {
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   tuning: number[];
@@ -2103,6 +2104,7 @@ function ArpeggioPositionsPanel({
   arpAddMode?: boolean;
   setArpAddMode?: (v: boolean) => void;
   arpAddClickRef?: React.MutableRefObject<((si: number, fret: number) => void) | null>;
+  setArpAddReferenceNotes?: (notes: { stringIndex: number; fret: number }[]) => void;
 }) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedArp, setSelectedArp] = useState<string | null>('Major');
