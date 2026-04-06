@@ -2352,16 +2352,21 @@ function ArpeggioPositionsPanel({
       setDetectedName(null);
       setDetectedRoot(null);
       setArpAddMode?.(false);
+      setArpAddReferenceNotes?.([]);
       // Re-apply current position
       if (generatedPositions[selectedPosIdx]) onSetArpeggioPosition?.(generatedPositions[selectedPosIdx]);
       return;
+    }
+    // Store current position notes as reference overlay
+    const currentPos = generatedPositions[selectedPosIdx];
+    if (currentPos?.notes) {
+      setArpAddReferenceNotes?.(currentPos.notes);
     }
     setAddingMode(true);
     setAddingNotes([]);
     setDetectedName(null);
     setDetectedRoot(null);
     setArpAddMode?.(true);
-    // Keep the current arpeggio position visible at reduced opacity (don't clear it)
   };
 
   // Toggle a note in adding mode (click on fretboard note)
