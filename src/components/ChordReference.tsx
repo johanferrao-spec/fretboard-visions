@@ -2289,16 +2289,49 @@ function ArpeggioPositionsPanel({
     setArpPage(Math.floor(newIdx / ARP_PER_PAGE));
   };
 
-  const handleDeletePosition = (idx: number) => {
+  // Hidden generated positions (persisted like chord library)
+  const [hiddenArpPositions, setHiddenArpPositions] = useState<Record<string, number[]>>(() => {
+    try { return JSON.parse(localStorage.getItem('mf-hidden-arp-positions') || '{}'); } catch { return {}; }
+  });
+
+  const hideGeneratedPosition = useCallback((idx: number) => {
+    if (!selectedArp) return;
+    const key = `${selectedRoot}-${selectedArp}-${octaveRange}`;
+    const prev = hiddenArpPositions[key] || [];
+    const next = { ...hiddenArpPositions, [key]: [...prev, idx] };
+    setHiddenArpPositions(next);
+    localStorage.setItem('mf-hidden-arp-positions', JSON.stringify(next));
+  }, [selectedRoot, selectedArp, octaveRange, hiddenArpPositions]);
+
+  const handleDeletePosition = (globalIdx: number) => {
     if (!selectedArp) return;
     const customKey = `${selectedRoot}-${selectedArp}-${octaveRange}`;
     const generated = generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
-    const customIdx = idx - generated.length;
-    if (customIdx < 0) return;
-    const custom = [...(customArpPositions[customKey] || [])];
-    custom.splice(customIdx, 1);
-    const newData = { ...customArpPositions, [customKey]: custom };
-    saveCustomArpPositions(newData);
+    const hiddenKey = `${selectedRoot}-${selectedArp}-${octaveRange}`;
+    const hidden = new Set(hiddenArpPositions[hiddenKey] || []);
+    // Build visible generated list to map back
+    const visibleGenerated: { pos: ArpeggioPosition; origIdx: number }[] = [];
+    generated.forEach((p, i) => { if (!hidden.has(i)) visibleGenerated.push({ pos: p, origIdx: i }); });
+    const customCount = (customArpPositions[customKey] || []).length;
+    const visGenCount = visibleGenerated.length;
+
+    if (globalIdx < visGenCount) {
+      // It's a visible generated position — hide it
+      hideGeneratedPosition(visibleGenerated[globalIdx].origIdx);
+    } else {
+      // Custom position
+      const customIdx = globalIdx - visGenCount;
+      const custom = [...(customArpPositions[customKey] || [])];
+      custom.splice(customIdx, 1);
+      saveCustomArpPositions({ ...customArpPositions, [customKey]: custom });
+    }
+
+    // Adjust selection
+    if (selectedPosIdx === globalIdx) {
+      setSelectedPosIdx(0);
+    } else if (selectedPosIdx > globalIdx) {
+      setSelectedPosIdx(prev => Math.max(0, prev - 1));
+    }
   };
 
   // Start adding mode — clears fretboard
