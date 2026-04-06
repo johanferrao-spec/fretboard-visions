@@ -156,6 +156,7 @@ export function useFretboard() {
     arpAddMode, setArpAddMode,
     arpAddClickHandler, setArpAddClickHandler,
     ghostNoteOpacity, setGhostNoteOpacity,
+    arpAddReferenceNotes, setArpAddReferenceNotes,
     clearFretboard,
   };
 }
