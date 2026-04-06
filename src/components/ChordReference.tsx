@@ -2356,7 +2356,7 @@ function ArpeggioPositionsPanel({
     setDetectedName(null);
     setDetectedRoot(null);
     setArpAddMode?.(true);
-    onSetArpeggioPosition?.(null);
+    // Keep the current arpeggio position visible at reduced opacity (don't clear it)
   };
 
   // Toggle a note in adding mode (click on fretboard note)
