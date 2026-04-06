@@ -306,6 +306,7 @@ const Index = () => {
               arpOverlayOpacity={fb.arpOverlayOpacity}
               arpPathVisible={fb.arpPathVisible}
               arpAddMode={fb.arpAddMode}
+              arpAddReferenceNotes={fb.arpAddReferenceNotes}
               onArpAddClick={(si, fret) => arpAddClickRef.current?.(si, fret)}
               onArpBarreDrag={(fromSi, toSi, fret) => arpBarreDragRef.current?.(fromSi, toSi, fret)}
                inversionVoicing={activeInversionVoicing}
