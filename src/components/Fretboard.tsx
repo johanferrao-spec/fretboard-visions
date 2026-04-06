@@ -376,9 +376,18 @@ export default function Fretboard({
     // In arp add mode (custom voicing creation)
     if (arpAddMode && !isChordLibraryVoicing) {
       if (isOutsidePositionBox(stringIndex, fret)) return null;
+      const key = `${stringIndex}-${fret}`;
+      // Show reference arpeggio notes at reduced opacity
+      if (arpAddRefSet.size > 0 && arpAddRefSet.has(key)) {
+        let bg = pColor;
+        if (degreeColors) {
+          const dc = getDegreeColor(primaryScale.root, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: bg, opacity: 0.25, ring: false, ringColor: '', greyed: false };
+      }
       // Show existing arpeggio position at reduced opacity as reference
       if (arpeggioPosition && arpeggioPosition.notes && arpeggioPosition.label !== 'Adding...' && arpeggioPosition.label !== 'Editing...') {
-        const key = `${stringIndex}-${fret}`;
         if (arpPositionSet.has(key)) {
           let bg = pColor;
           if (degreeColors) {
