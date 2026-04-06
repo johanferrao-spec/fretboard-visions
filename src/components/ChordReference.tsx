@@ -2139,10 +2139,13 @@ function ArpeggioPositionsPanel({
   const generatedPositions = useMemo(() => {
     if (!selectedArp) return [];
     const generated = generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
+    const hiddenKey = `${selectedRoot}-${selectedArp}-${octaveRange}`;
+    const hidden = new Set(hiddenArpPositions[hiddenKey] || []);
+    const visibleGenerated = generated.filter((_, i) => !hidden.has(i));
     const customKey = `${selectedRoot}-${selectedArp}-${octaveRange}`;
     const custom = customArpPositions[customKey] || [];
-    return [...generated, ...custom];
-  }, [selectedRoot, selectedArp, octaveRange, tuning, customArpPositions]);
+    return [...visibleGenerated, ...custom];
+  }, [selectedRoot, selectedArp, octaveRange, tuning, customArpPositions, hiddenArpPositions]);
 
   // On mount, apply default arpeggio
   useEffect(() => {
