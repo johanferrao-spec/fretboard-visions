@@ -205,6 +205,7 @@ export default function ChordReference({
   setShowFretBox, setFretBoxStart, setFretBoxSize,
   onChordAddStateChange,
   chordOctaveShift, setChordOctaveShift,
+  setArpAddReferenceNotes,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
