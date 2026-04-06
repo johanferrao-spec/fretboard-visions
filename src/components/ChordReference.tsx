@@ -84,6 +84,7 @@ interface ChordReferenceProps {
   onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
   chordOctaveShift: number;
   setChordOctaveShift: (v: number) => void;
+  setArpAddReferenceNotes?: (notes: { stringIndex: number; fret: number }[]) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
@@ -204,6 +205,7 @@ export default function ChordReference({
   setShowFretBox, setFretBoxStart, setFretBoxSize,
   onChordAddStateChange,
   chordOctaveShift, setChordOctaveShift,
+  setArpAddReferenceNotes,
 }: ChordReferenceProps) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
@@ -385,6 +387,7 @@ export default function ChordReference({
           arpAddMode={arpAddMode}
           setArpAddMode={setArpAddMode}
           arpAddClickRef={arpAddClickRef}
+          setArpAddReferenceNotes={setArpAddReferenceNotes}
         />
       ) : activeTab === 'caged' ? (
         <CAGEDPanel positions={cagedPositions} cagedShape={cagedShape} setCagedShape={setCagedShape} root={cagedRoot} />
@@ -587,8 +590,6 @@ function ScaleViewPanel({
   useEffect(() => {
     setCurrentInvIdx(0);
   }, [inversions]);
-
-
 
 
   // Octave shift for inversions
@@ -2091,6 +2092,7 @@ function ArpeggioPositionsPanel({
   arpAddMode,
   setArpAddMode,
   arpAddClickRef,
+  setArpAddReferenceNotes,
 }: {
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   tuning: number[];
@@ -2102,19 +2104,25 @@ function ArpeggioPositionsPanel({
   arpAddMode?: boolean;
   setArpAddMode?: (v: boolean) => void;
   arpAddClickRef?: React.MutableRefObject<((si: number, fret: number) => void) | null>;
+  setArpAddReferenceNotes?: (notes: { stringIndex: number; fret: number }[]) => void;
 }) {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedArp, setSelectedArp] = useState<string | null>('Major');
   const [octaveRange, setOctaveRange] = useState<OctaveRange>(1);
   const [selectedPosIdx, setSelectedPosIdx] = useState(0);
   const [arpPage, setArpPage] = useState(0);
-  const ARP_PER_PAGE = 6;
+  const ARP_PER_PAGE = 8;
 
   // Custom voicings from localStorage
   const [customArpPositions, setCustomArpPositions] = useState<Record<string, ArpeggioPosition[]>>(() => {
     try {
       return JSON.parse(localStorage.getItem('mf-custom-arp-positions') || '{}');
     } catch { return {}; }
+  });
+
+  // Hidden generated positions (persisted like chord library)
+  const [hiddenArpPositions, setHiddenArpPositions] = useState<Record<string, number[]>>(() => {
+    try { return JSON.parse(localStorage.getItem('mf-hidden-arp-positions') || '{}'); } catch { return {}; }
   });
 
   const saveCustomArpPositions = useCallback((data: Record<string, ArpeggioPosition[]>) => {
@@ -2139,10 +2147,13 @@ function ArpeggioPositionsPanel({
   const generatedPositions = useMemo(() => {
     if (!selectedArp) return [];
     const generated = generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
+    const hiddenKey = `${selectedRoot}-${selectedArp}-${octaveRange}`;
+    const hidden = new Set(hiddenArpPositions[hiddenKey] || []);
+    const visibleGenerated = generated.filter((_, i) => !hidden.has(i));
     const customKey = `${selectedRoot}-${selectedArp}-${octaveRange}`;
     const custom = customArpPositions[customKey] || [];
-    return [...generated, ...custom];
-  }, [selectedRoot, selectedArp, octaveRange, tuning, customArpPositions]);
+    return [...visibleGenerated, ...custom];
+  }, [selectedRoot, selectedArp, octaveRange, tuning, customArpPositions, hiddenArpPositions]);
 
   // On mount, apply default arpeggio
   useEffect(() => {
@@ -2289,16 +2300,47 @@ function ArpeggioPositionsPanel({
     setArpPage(Math.floor(newIdx / ARP_PER_PAGE));
   };
 
-  const handleDeletePosition = (idx: number) => {
+
+
+
+  const hideGeneratedPosition = useCallback((idx: number) => {
+    if (!selectedArp) return;
+    const key = `${selectedRoot}-${selectedArp}-${octaveRange}`;
+    const prev = hiddenArpPositions[key] || [];
+    const next = { ...hiddenArpPositions, [key]: [...prev, idx] };
+    setHiddenArpPositions(next);
+    localStorage.setItem('mf-hidden-arp-positions', JSON.stringify(next));
+  }, [selectedRoot, selectedArp, octaveRange, hiddenArpPositions]);
+
+  const handleDeletePosition = (globalIdx: number) => {
     if (!selectedArp) return;
     const customKey = `${selectedRoot}-${selectedArp}-${octaveRange}`;
     const generated = generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
-    const customIdx = idx - generated.length;
-    if (customIdx < 0) return;
-    const custom = [...(customArpPositions[customKey] || [])];
-    custom.splice(customIdx, 1);
-    const newData = { ...customArpPositions, [customKey]: custom };
-    saveCustomArpPositions(newData);
+    const hiddenKey = `${selectedRoot}-${selectedArp}-${octaveRange}`;
+    const hidden = new Set(hiddenArpPositions[hiddenKey] || []);
+    // Build visible generated list to map back
+    const visibleGenerated: { pos: ArpeggioPosition; origIdx: number }[] = [];
+    generated.forEach((p, i) => { if (!hidden.has(i)) visibleGenerated.push({ pos: p, origIdx: i }); });
+    const customCount = (customArpPositions[customKey] || []).length;
+    const visGenCount = visibleGenerated.length;
+
+    if (globalIdx < visGenCount) {
+      // It's a visible generated position — hide it
+      hideGeneratedPosition(visibleGenerated[globalIdx].origIdx);
+    } else {
+      // Custom position
+      const customIdx = globalIdx - visGenCount;
+      const custom = [...(customArpPositions[customKey] || [])];
+      custom.splice(customIdx, 1);
+      saveCustomArpPositions({ ...customArpPositions, [customKey]: custom });
+    }
+
+    // Adjust selection
+    if (selectedPosIdx === globalIdx) {
+      setSelectedPosIdx(0);
+    } else if (selectedPosIdx > globalIdx) {
+      setSelectedPosIdx(prev => Math.max(0, prev - 1));
+    }
   };
 
   // Start adding mode — clears fretboard
@@ -2310,16 +2352,21 @@ function ArpeggioPositionsPanel({
       setDetectedName(null);
       setDetectedRoot(null);
       setArpAddMode?.(false);
+      setArpAddReferenceNotes?.([]);
       // Re-apply current position
       if (generatedPositions[selectedPosIdx]) onSetArpeggioPosition?.(generatedPositions[selectedPosIdx]);
       return;
+    }
+    // Store current position notes as reference overlay
+    const currentPos = generatedPositions[selectedPosIdx];
+    if (currentPos?.notes) {
+      setArpAddReferenceNotes?.(currentPos.notes);
     }
     setAddingMode(true);
     setAddingNotes([]);
     setDetectedName(null);
     setDetectedRoot(null);
     setArpAddMode?.(true);
-    onSetArpeggioPosition?.(null);
   };
 
   // Toggle a note in adding mode (click on fretboard note)
@@ -2377,6 +2424,7 @@ function ArpeggioPositionsPanel({
     setAddingNotes([]);
     setDetectedName(null);
     setDetectedRoot(null);
+    setArpAddReferenceNotes?.([]);
   };
 
   // Edit existing position (double-click on diagram)
@@ -2698,6 +2746,11 @@ function ArpeggioPositionsPanel({
                 <div className="text-[10px] font-mono font-bold text-foreground">{selectedRoot} {selectedArp}</div>
                 <div className="flex items-center gap-1">
                   <button
+                    onClick={() => handleStartEditing(selectedPosIdx)}
+                    disabled={editingIdx !== null || addingMode || generatedPositions.length === 0}
+                    className="px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors bg-muted text-muted-foreground hover:bg-muted/80 disabled:opacity-30"
+                  >Edit</button>
+                  <button
                     onClick={handleStartAdding}
                     className={`px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
                       addingMode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -2737,12 +2790,10 @@ function ArpeggioPositionsPanel({
                       className="flex-1 py-1.5 rounded bg-secondary text-secondary-foreground hover:bg-muted text-[11px] font-mono font-bold transition-colors"
                     >Next ▶</button>
                   </div>
-                  <div className="grid grid-cols-3 gap-1">
+                  <div className="grid grid-cols-4 gap-1">
                     {pagedPositions.map((pos, i) => {
                       const globalIdx = arpPage * ARP_PER_PAGE + i;
                       const isActive = selectedPosIdx === globalIdx;
-                      const generated = generateArpeggioPositions(selectedRoot, selectedArp, octaveRange, tuning);
-                      const isCustom = globalIdx >= generated.length;
                       const isRenaming = renamingIdx === globalIdx;
                       return (
                         <div key={globalIdx} className="relative">
@@ -2750,16 +2801,9 @@ function ArpeggioPositionsPanel({
                             onClick={() => handleSelectPosition(globalIdx)}
                             onDoubleClick={(e) => {
                               e.stopPropagation();
-                              if (isCustom) {
-                                // Double-click custom: rename
-                                setRenamingIdx(globalIdx);
-                                setRenameValue(pos.label);
-                              } else {
-                                // Double-click generated: edit
-                                handleStartEditing(globalIdx);
-                              }
+                              handleStartEditing(globalIdx);
                             }}
-                            className={`w-full rounded p-0.5 transition-all border ${
+                            className={`w-full rounded p-1 transition-all border flex flex-col items-center justify-center ${
                               isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
                             }`}
                           >
@@ -2783,12 +2827,10 @@ function ArpeggioPositionsPanel({
                               )}
                             </div>
                           </button>
-                          {isCustom && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeletePosition(globalIdx); }}
-                              className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[8px] flex items-center justify-center hover:brightness-110"
-                            >×</button>
-                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeletePosition(globalIdx); }}
+                            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[8px] flex items-center justify-center hover:brightness-110 z-10"
+                          >×</button>
                         </div>
                       );
                     })}
@@ -2828,8 +2870,8 @@ function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition;
   const maxFret = Math.max(...allFrets, minFret + 4);
   const startFret = Math.max(0, minFret);
   const numFrets = Math.max(4, maxFret - startFret + 1);
-  const w = large ? 70 : 50;
-  const h = large ? 56 : 40;
+  const w = large ? 90 : 50;
+  const h = large ? 110 : 40;
   const stringSpacing = w / 7;
   const fretSpacing = (h - 5) / numFrets;
 
@@ -2842,7 +2884,7 @@ function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition;
 
   return (
     <div className="flex justify-center">
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+      <svg width={w} height={h + 6} className="shrink-0">
         {Array.from({ length: numFrets + 1 }, (_, i) => (
           <line key={i} x1={stringSpacing} y1={5 + i * fretSpacing} x2={stringSpacing * 6} y2={5 + i * fretSpacing} stroke="hsl(var(--border))" strokeWidth={0.5} />
         ))}
@@ -2850,24 +2892,27 @@ function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition;
           <line key={s} x1={s * stringSpacing} y1={5} x2={s * stringSpacing} y2={5 + numFrets * fretSpacing} stroke="hsl(var(--fretboard-string))" strokeWidth={0.5} opacity={0.5} />
         ))}
         {startFret > 0 && (
-          <text x={1} y={5 + fretSpacing * 0.6} fontSize={4} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+          <text x={1} y={5 + fretSpacing * 0.6} fontSize={large ? 8 : 4} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+        )}
+        {startFret <= 1 && large && (
+          <line x1={stringSpacing} y1={5} x2={stringSpacing * 6} y2={5} stroke="hsl(var(--fretboard-nut))" strokeWidth={2} />
         )}
         {/* Muted strings */}
         {[0, 1, 2, 3, 4, 5].map(s => {
           if (notesByString.has(s)) return null;
           const x = (s + 1) * stringSpacing;
-          return <text key={`m${s}`} x={x} y={3} fontSize={5} textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="monospace">×</text>;
+          return <text key={`m${s}`} x={x} y={large ? 4 : 3} fontSize={large ? 7 : 5} textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="monospace">×</text>;
         })}
         {/* Notes */}
         {position.notes.map((n, i) => {
           const x = (n.stringIndex + 1) * stringSpacing;
-          if (n.fret === 0) return <circle key={i} cx={x} cy={3} r={1.5} fill="none" stroke="hsl(var(--foreground))" strokeWidth={0.5} />;
+          if (n.fret === 0) return <circle key={i} cx={x} cy={large ? 4 : 3} r={large ? 2.5 : 1.5} fill="none" stroke="hsl(var(--foreground))" strokeWidth={large ? 1 : 0.5} />;
           const y = 5 + (n.fret - startFret + 0.5) * fretSpacing;
           const note = noteAtFret(n.stringIndex, n.fret);
           const interval = getIntervalName(root, note);
           const degColor = DEGREE_COLORS[interval];
           const fillColor = degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
-          return <circle key={i} cx={x} cy={y} r={2.5} fill={fillColor} />;
+          return <circle key={i} cx={x} cy={y} r={large ? 5.5 : 2.5} fill={fillColor} />;
         })}
         {/* Path lines */}
         {(() => {

@@ -51,6 +51,7 @@ interface FretboardProps {
   arpOverlayOpacity?: number;
   arpPathVisible?: boolean;
   arpAddMode?: boolean;
+  arpAddReferenceNotes?: { stringIndex: number; fret: number }[];
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   onArpBarreDrag?: (fromStringIndex: number, toStringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
@@ -94,7 +95,7 @@ export default function Fretboard({
   identifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre, identifyRoot,
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
   arpOverlayOpacity = 0.3, arpPathVisible = true,
-  arpAddMode = false, onArpAddClick, onArpBarreDrag,
+  arpAddMode = false, arpAddReferenceNotes, onArpAddClick, onArpBarreDrag,
   scaleViewChordTones,
   inversionVoicing,
   ghostNoteOpacity = 0.75,
@@ -200,6 +201,15 @@ export default function Fretboard({
     }
     return { arpPositionSet: set, arpChordToneNames: toneNames };
   }, [arpeggioPosition, tuning]);
+
+  // Reference notes for arp add mode (shows existing arpeggio at reduced opacity)
+  const arpAddRefSet = useMemo(() => {
+    const set = new Set<string>();
+    if (arpAddReferenceNotes) {
+      for (const n of arpAddReferenceNotes) set.add(`${n.stringIndex}-${n.fret}`);
+    }
+    return set;
+  }, [arpAddReferenceNotes]);
 
   // Static voicings from chord library have showPath explicitly set to false
   const isChordLibraryVoicing = arpeggioPosition?.showPath === false;
@@ -363,11 +373,34 @@ export default function Fretboard({
       return null;
     }
 
-    // In arp add mode (custom voicing creation), show faint root notes if no notes placed yet
+    // In arp add mode (custom voicing creation)
     if (arpAddMode && !isChordLibraryVoicing) {
       if (isOutsidePositionBox(stringIndex, fret)) return null;
+      const key = `${stringIndex}-${fret}`;
+      // Show reference arpeggio notes at reduced opacity
+      if (arpAddRefSet.size > 0 && arpAddRefSet.has(key)) {
+        let bg = pColor;
+        if (degreeColors) {
+          const dc = getDegreeColor(primaryScale.root, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: bg, opacity: 0.25, ring: false, ringColor: '', greyed: false };
+      }
+      // Show existing arpeggio position at reduced opacity as reference
+      if (arpeggioPosition && arpeggioPosition.notes && arpeggioPosition.label !== 'Adding...' && arpeggioPosition.label !== 'Editing...') {
+        if (arpPositionSet.has(key)) {
+          let bg = pColor;
+          if (degreeColors) {
+            const arpRoot = arpeggioPosition.notes.length > 0
+              ? noteAtFret(arpeggioPosition.notes[0].stringIndex, arpeggioPosition.notes[0].fret, tuning)
+              : primaryScale.root;
+            const dc = getDegreeColor(arpRoot, note);
+            if (dc) bg = dc;
+          }
+          return { backgroundColor: bg, opacity: 0.25, ring: false, ringColor: '', greyed: false };
+        }
+      }
       if (chordAddRootNote && !chordAddHasNotes) {
-        // Show faint root note guides at 30% opacity
         if (note === chordAddRootNote) {
           return { backgroundColor: 'hsl(var(--primary))', opacity: 0.3, ring: false, ringColor: '', greyed: false };
         }
@@ -463,7 +496,6 @@ export default function Fretboard({
       // Chord tones not in the voicing: dimmed by ghostNoteOpacity
       return { backgroundColor: bg, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: false };
     }
-
 
 
     if (arpeggioPosition && arpPositionSet.size > 0 && !activeChord) {
