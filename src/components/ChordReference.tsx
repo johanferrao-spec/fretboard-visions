@@ -590,6 +590,10 @@ function ScaleViewPanel({
 
 
 
+  // Hidden generated positions (persisted like chord library)
+  const [hiddenArpPositions, setHiddenArpPositions] = useState<Record<string, number[]>>(() => {
+    try { return JSON.parse(localStorage.getItem('mf-hidden-arp-positions') || '{}'); } catch { return {}; }
+  });
 
   // Octave shift for inversions
   const [octaveShift, setOctaveShift] = useState(0);
