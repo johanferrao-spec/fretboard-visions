@@ -2424,6 +2424,7 @@ function ArpeggioPositionsPanel({
     setAddingNotes([]);
     setDetectedName(null);
     setDetectedRoot(null);
+    setArpAddReferenceNotes?.([]);
   };
 
   // Edit existing position (double-click on diagram)
