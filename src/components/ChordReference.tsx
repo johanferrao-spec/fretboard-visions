@@ -2106,7 +2106,7 @@ function ArpeggioPositionsPanel({
   const [octaveRange, setOctaveRange] = useState<OctaveRange>(1);
   const [selectedPosIdx, setSelectedPosIdx] = useState(0);
   const [arpPage, setArpPage] = useState(0);
-  const ARP_PER_PAGE = 6;
+  const ARP_PER_PAGE = 8;
 
   // Custom voicings from localStorage
   const [customArpPositions, setCustomArpPositions] = useState<Record<string, ArpeggioPosition[]>>(() => {
