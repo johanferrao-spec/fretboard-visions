@@ -84,6 +84,7 @@ interface ChordReferenceProps {
   onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
   chordOctaveShift: number;
   setChordOctaveShift: (v: number) => void;
+  setArpAddReferenceNotes?: (notes: { stringIndex: number; fret: number }[]) => void;
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
