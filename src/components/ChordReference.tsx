@@ -2854,8 +2854,8 @@ function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition;
   const maxFret = Math.max(...allFrets, minFret + 4);
   const startFret = Math.max(0, minFret);
   const numFrets = Math.max(4, maxFret - startFret + 1);
-  const w = large ? 70 : 50;
-  const h = large ? 56 : 40;
+  const w = large ? 90 : 50;
+  const h = large ? 110 : 40;
   const stringSpacing = w / 7;
   const fretSpacing = (h - 5) / numFrets;
 
@@ -2868,7 +2868,7 @@ function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition;
 
   return (
     <div className="flex justify-center">
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+      <svg width={w} height={h + 6} className="shrink-0">
         {Array.from({ length: numFrets + 1 }, (_, i) => (
           <line key={i} x1={stringSpacing} y1={5 + i * fretSpacing} x2={stringSpacing * 6} y2={5 + i * fretSpacing} stroke="hsl(var(--border))" strokeWidth={0.5} />
         ))}
