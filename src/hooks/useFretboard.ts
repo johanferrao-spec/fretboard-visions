@@ -66,6 +66,7 @@ export function useFretboard() {
   const [arpPathVisible, setArpPathVisible] = useState(true);
   const [arpAddMode, setArpAddMode] = useState(false);
   const [arpAddClickHandler, setArpAddClickHandler] = useState<((si: number, fret: number) => void) | null>(null);
+  const [arpAddReferenceNotes, setArpAddReferenceNotes] = useState<{ stringIndex: number; fret: number }[]>([]);
 
   const setTuning = useCallback((preset: TuningPreset) => {
     setTuningState(preset.notes);
