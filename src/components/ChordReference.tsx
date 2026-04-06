@@ -2295,10 +2295,8 @@ function ArpeggioPositionsPanel({
     setArpPage(Math.floor(newIdx / ARP_PER_PAGE));
   };
 
-  // Hidden generated positions (persisted like chord library)
-  const [hiddenArpPositions, setHiddenArpPositions] = useState<Record<string, number[]>>(() => {
-    try { return JSON.parse(localStorage.getItem('mf-hidden-arp-positions') || '{}'); } catch { return {}; }
-  });
+
+
 
   const hideGeneratedPosition = useCallback((idx: number) => {
     if (!selectedArp) return;
