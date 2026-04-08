@@ -377,34 +377,27 @@ export default function Fretboard({
     if (arpAddMode && !isChordLibraryVoicing) {
       if (isOutsidePositionBox(stringIndex, fret)) return null;
       const key = `${stringIndex}-${fret}`;
-      // Show reference arpeggio notes at reduced opacity
+
+      // Notes that are part of the shape being built (Adding.../Editing...) — full opacity with glow
+      if (arpeggioPosition && (arpeggioPosition.label === 'Adding...' || arpeggioPosition.label === 'Editing...') && arpPositionSet.has(key)) {
+        let bg = pColor;
+        if (degreeColors) {
+          const dc = getDegreeColor(primaryScale.root, note);
+          if (dc) bg = dc;
+        }
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: bg, greyed: false };
+      }
+
+      // All chord tone reference notes at overlay opacity
       if (arpAddRefSet.size > 0 && arpAddRefSet.has(key)) {
         let bg = pColor;
         if (degreeColors) {
           const dc = getDegreeColor(primaryScale.root, note);
           if (dc) bg = dc;
         }
-        return { backgroundColor: bg, opacity: 0.25, ring: false, ringColor: '', greyed: false };
+        return { backgroundColor: bg, opacity: arpOverlayOpacity, ring: false, ringColor: '', greyed: false };
       }
-      // Show existing arpeggio position at reduced opacity as reference
-      if (arpeggioPosition && arpeggioPosition.notes && arpeggioPosition.label !== 'Adding...' && arpeggioPosition.label !== 'Editing...') {
-        if (arpPositionSet.has(key)) {
-          let bg = pColor;
-          if (degreeColors) {
-            const arpRoot = arpeggioPosition.notes.length > 0
-              ? noteAtFret(arpeggioPosition.notes[0].stringIndex, arpeggioPosition.notes[0].fret, tuning)
-              : primaryScale.root;
-            const dc = getDegreeColor(arpRoot, note);
-            if (dc) bg = dc;
-          }
-          return { backgroundColor: bg, opacity: 0.25, ring: false, ringColor: '', greyed: false };
-        }
-      }
-      if (chordAddRootNote && !chordAddHasNotes) {
-        if (note === chordAddRootNote) {
-          return { backgroundColor: 'hsl(var(--primary))', opacity: 0.3, ring: false, ringColor: '', greyed: false };
-        }
-      }
+
       return null;
     }
 
@@ -1215,7 +1208,7 @@ export default function Fretboard({
           })}
 
           {/* Arpeggio position path */}
-          {arpPathVisible && !arpAddMode && arpeggioPosition && arpeggioPosition.showPath !== false && arpPositionPath.length >= 2 && (() => {
+          {arpPathVisible && arpeggioPosition && arpeggioPosition.showPath !== false && arpPositionPath.length >= 2 && (() => {
             const totalH = 6 * stringH;
             return (
               <svg
