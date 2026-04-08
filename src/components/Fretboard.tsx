@@ -1208,7 +1208,7 @@ export default function Fretboard({
           })}
 
           {/* Arpeggio position path */}
-          {arpPathVisible && !arpAddMode && arpeggioPosition && arpeggioPosition.showPath !== false && arpPositionPath.length >= 2 && (() => {
+          {arpPathVisible && arpeggioPosition && arpeggioPosition.showPath !== false && arpPositionPath.length >= 2 && (() => {
             const totalH = 6 * stringH;
             return (
               <svg
