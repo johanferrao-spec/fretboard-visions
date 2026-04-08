@@ -304,6 +304,10 @@ export default function ChordReference({
       onSetArpeggioPosition?.(null);
       setDegreeColors(true);
     }
+    if (tab === 'arpeggios') {
+      setActiveChord(null);
+      setDegreeColors(true);
+    }
   };
 
   const currentIdentifyRoot = useMemo(() => {
