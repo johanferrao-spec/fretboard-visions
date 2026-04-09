@@ -2446,8 +2446,35 @@ function ArpeggioPositionsPanel({
 
   return (
     <>
-      <div className="mb-1">
+      {/* Root selector + controls in one horizontal row */}
+      <div className="flex items-center gap-2 mb-1 flex-wrap">
         <RootSelector selectedRoot={selectedRoot} setSelectedRoot={handleRootChange} />
+        <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 mr-1">
+            <span className="text-[8px] font-mono text-muted-foreground uppercase font-bold">Oct</span>
+            {([1, 2, 3] as OctaveRange[]).map(oct => (
+              <button key={oct} onClick={() => handleOctaveChange(oct)}
+                className={`px-1.5 py-1 rounded text-[9px] font-mono font-bold transition-colors ${
+                  octaveRange === oct ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
+                }`}
+              >{oct}</button>
+            ))}
+          </div>
+          <button onClick={() => handleStartEditing(selectedPosIdx)}
+            disabled={editingTarget !== null || addingMode || positionEntries.length === 0}
+            className="px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors bg-muted text-muted-foreground hover:bg-muted/80 disabled:opacity-30">Edit</button>
+          <button onClick={handleStartAdding}
+            className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${addingMode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Add</button>
+          <button onClick={() => setArpPathVisible(!arpPathVisible)}
+            className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${arpPathVisible ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Path</button>
+          <div className="flex items-center gap-1">
+            <span className="text-[7px] font-mono text-muted-foreground whitespace-nowrap">Opacity</span>
+            <input type="range" min={0} max={100} value={arpOverlayOpacity * 100}
+              onChange={(e) => setArpOverlayOpacity(Number(e.target.value) / 100)}
+              className="w-16 h-1.5 accent-primary" />
+            <span className="text-[7px] font-mono text-muted-foreground">{Math.round(arpOverlayOpacity * 100)}%</span>
+          </div>
+        </div>
       </div>
 
       {/* Adding mode UI */}
@@ -2507,34 +2534,6 @@ function ArpeggioPositionsPanel({
               </div>
             );
           })}
-        </div>
-
-        {/* Controls column */}
-        <div className="w-16 shrink-0 flex flex-col gap-1">
-          <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center font-bold">Oct</div>
-          <div className="flex gap-0.5">
-            {([1, 2, 3] as OctaveRange[]).map(oct => (
-              <button key={oct} onClick={() => handleOctaveChange(oct)}
-                className={`flex-1 py-1 rounded text-[9px] font-mono font-bold transition-colors ${
-                  octaveRange === oct ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
-                }`}
-              >{oct}</button>
-            ))}
-          </div>
-          <button onClick={() => handleStartEditing(selectedPosIdx)}
-            disabled={editingTarget !== null || addingMode || positionEntries.length === 0}
-            className="w-full py-1.5 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors bg-muted text-muted-foreground hover:bg-muted/80 disabled:opacity-30">Edit</button>
-          <button onClick={handleStartAdding}
-            className={`w-full py-1.5 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${addingMode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Add</button>
-          <button onClick={() => setArpPathVisible(!arpPathVisible)}
-            className={`w-full py-1.5 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${arpPathVisible ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Path</button>
-          <div className="flex flex-col items-center gap-0.5">
-            <span className="text-[7px] font-mono text-muted-foreground">Opacity</span>
-            <input type="range" min={0} max={100} value={arpOverlayOpacity * 100}
-              onChange={(e) => setArpOverlayOpacity(Number(e.target.value) / 100)}
-              className="w-full h-1.5 accent-primary" />
-            <span className="text-[7px] font-mono text-muted-foreground">{Math.round(arpOverlayOpacity * 100)}%</span>
-          </div>
         </div>
 
         {/* Positions panel */}
