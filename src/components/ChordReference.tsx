@@ -91,11 +91,15 @@ type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
 type MainTab = 'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis';
 type OctaveRange = 1 | 2 | 3;
 
-const ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
+const DEFAULT_ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
   { label: 'Major', types: ['Major', 'Major 7', 'Major 7♭5', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', 'Major 9', 'Dominant 9', 'Major 6', '7#9', '7♭9', '11', '13'] },
   { label: 'Minor', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'] },
   { label: 'Sus', types: ['Sus2', 'Sus4', '7sus4', '7sus4♭9'] },
 ];
+
+// Colors for static/transit categories
+const STATIC_COLOR = '210, 70%, 55%'; // blue
+const TRANSIT_COLOR = '35, 85%, 55%'; // amber/orange
 
 const CHORD_COLUMNS: { label: string; types: string[] }[] = [
   { label: 'Major', types: ['Major', 'Major 7', 'Major 7♭5', 'Major 7#5', 'Add9', '6add9', 'Major 9', 'Major 6', 'Maj11', 'Maj13', 'Maj9#11', 'Maj13#11'] },
@@ -2122,6 +2126,10 @@ function ArpeggioPositionsPanel({
   });
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'static' | 'transit'>('all');
   const [dragOverCategory, setDragOverCategory] = useState<'static' | 'transit' | null>(null);
+  const [hiddenArpTypes, setHiddenArpTypes] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('mf-hidden-arp-types') || '[]'); } catch { return []; }
+  });
+  const [showRestoreArpTypes, setShowRestoreArpTypes] = useState(false);
 
   const saveCustom = useCallback((data: Record<string, (ArpeggioPosition & { refRoot: NoteName })[]>) => {
     setCustomArpPositions(data);
@@ -2420,6 +2428,26 @@ function ArpeggioPositionsPanel({
 
   const splitIntoColumns = (types: string[]) => { const mid = Math.ceil(types.length / 2); return [types.slice(0, mid), types.slice(mid)]; };
 
+  const handleHideArpType = (type: string) => {
+    const next = [...hiddenArpTypes, type];
+    setHiddenArpTypes(next);
+    localStorage.setItem('mf-hidden-arp-types', JSON.stringify(next));
+    if (selectedArp === type) { setSelectedArp(null); onSetArpeggioPosition?.(null); }
+  };
+
+  const handleRestoreArpType = (type: string) => {
+    const next = hiddenArpTypes.filter(t => t !== type);
+    setHiddenArpTypes(next);
+    localStorage.setItem('mf-hidden-arp-types', JSON.stringify(next));
+  };
+
+  const ARPEGGIO_COLUMNS = useMemo(() => {
+    return DEFAULT_ARPEGGIO_COLUMNS.map(col => ({
+      ...col,
+      types: col.types.filter(t => !hiddenArpTypes.includes(t)),
+    }));
+  }, [hiddenArpTypes]);
+
   const handleDragStartCat = (e: React.DragEvent, catKey: string) => { e.dataTransfer.setData('text/plain', catKey); };
   const handleDropOnCategory = (cat: 'static' | 'transit', e: React.DragEvent) => {
     e.preventDefault(); setDragOverCategory(null);
@@ -2525,11 +2553,15 @@ function ArpeggioPositionsPanel({
                         if (!ARPEGGIO_FORMULAS[ct]) return null;
                         const isSelected = selectedArp === ct;
                         return (
-                          <button key={ct} onClick={() => handleSelectArp(ct)}
-                            className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
-                              isSelected ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]' : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
-                            }`}
-                          >{ct}</button>
+                          <div key={ct} className="relative group">
+                            <button onClick={() => handleSelectArp(ct)}
+                              className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
+                                isSelected ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]' : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
+                              }`}
+                            >{ct}</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleHideArpType(ct); }}
+                              className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-destructive text-destructive-foreground text-[7px] items-center justify-center hover:brightness-110 z-10 hidden group-hover:flex">×</button>
+                          </div>
                         );
                       })}
                     </div>
@@ -2538,9 +2570,27 @@ function ArpeggioPositionsPanel({
               </div>
             );
           })}
+          {hiddenArpTypes.length > 0 && (
+            <div className="mt-0.5">
+              <button onClick={() => setShowRestoreArpTypes(!showRestoreArpTypes)}
+                className="text-[7px] font-mono text-muted-foreground hover:text-foreground transition-colors">
+                {showRestoreArpTypes ? '▾' : '▸'} {hiddenArpTypes.length} hidden
+              </button>
+              {showRestoreArpTypes && (
+                <div className="flex flex-wrap gap-0.5 mt-0.5">
+                  {hiddenArpTypes.map(t => (
+                    <button key={t} onClick={() => handleRestoreArpType(t)}
+                      className="px-1 py-0.5 rounded text-[7px] font-mono bg-muted/40 text-muted-foreground hover:bg-muted border border-border/30 transition-colors">
+                      + {t}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Positions panel */}
+
         <div className="flex-1 min-w-0">
           {selectedArp ? (
             <div className="bg-secondary/20 rounded p-1">
@@ -2565,20 +2615,26 @@ function ArpeggioPositionsPanel({
                       onDragOver={(e) => { e.preventDefault(); setDragOverCategory('static'); }}
                       onDragLeave={() => setDragOverCategory(null)}
                       onDrop={(e) => handleDropOnCategory('static', e)}
+                      style={{
+                        backgroundColor: categoryFilter === 'static' ? `hsl(${STATIC_COLOR})` : dragOverCategory === 'static' ? `hsl(${STATIC_COLOR} / 0.2)` : undefined,
+                        color: categoryFilter === 'static' ? '#fff' : dragOverCategory === 'static' ? `hsl(${STATIC_COLOR})` : undefined,
+                        borderColor: categoryFilter === 'static' ? `hsl(${STATIC_COLOR})` : dragOverCategory === 'static' ? `hsl(${STATIC_COLOR} / 0.6)` : 'transparent',
+                      }}
                       className={`flex-1 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-all border-2 ${
-                        categoryFilter === 'static' ? 'bg-primary text-primary-foreground border-primary'
-                        : dragOverCategory === 'static' ? 'bg-primary/20 text-primary border-primary/60'
-                        : 'bg-secondary text-secondary-foreground border-transparent hover:bg-muted'
+                        categoryFilter !== 'static' && dragOverCategory !== 'static' ? 'bg-secondary text-secondary-foreground hover:bg-muted' : ''
                       }`}>▪ Static</button>
                     <button
                       onClick={() => setCategoryFilter(categoryFilter === 'transit' ? 'all' : 'transit')}
                       onDragOver={(e) => { e.preventDefault(); setDragOverCategory('transit'); }}
                       onDragLeave={() => setDragOverCategory(null)}
                       onDrop={(e) => handleDropOnCategory('transit', e)}
+                      style={{
+                        backgroundColor: categoryFilter === 'transit' ? `hsl(${TRANSIT_COLOR})` : dragOverCategory === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.2)` : undefined,
+                        color: categoryFilter === 'transit' ? '#fff' : dragOverCategory === 'transit' ? `hsl(${TRANSIT_COLOR})` : undefined,
+                        borderColor: categoryFilter === 'transit' ? `hsl(${TRANSIT_COLOR})` : dragOverCategory === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.6)` : 'transparent',
+                      }}
                       className={`flex-1 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-all border-2 ${
-                        categoryFilter === 'transit' ? 'bg-accent text-accent-foreground border-accent'
-                        : dragOverCategory === 'transit' ? 'bg-accent/20 text-accent-foreground border-accent/60'
-                        : 'bg-secondary text-secondary-foreground border-transparent hover:bg-muted'
+                        categoryFilter !== 'transit' && dragOverCategory !== 'transit' ? 'bg-secondary text-secondary-foreground hover:bg-muted' : ''
                       }`}>↗ Transit</button>
                   </div>
                   <div className="grid grid-cols-4 gap-1">
@@ -2595,8 +2651,14 @@ function ArpeggioPositionsPanel({
                             onClick={() => handleSelectPosition(filteredEntries.indexOf(entry))}
                             onDoubleClick={(e) => { e.stopPropagation(); handleStartEditing(globalIdx); }}
                             className={`w-full rounded p-1 transition-all border flex flex-col items-center justify-center ${
-                              isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
+                              isActive ? 'shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'hover:bg-muted/50'
                             }`}
+                            style={{
+                              borderColor: isActive ? 'hsl(var(--primary))' : posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.4)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.4)` : 'hsl(var(--border) / 0.3)',
+                              backgroundColor: isActive
+                                ? (posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.15)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.15)` : 'hsl(var(--primary) / 0.1)')
+                                : (posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.08)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.08)` : undefined),
+                            }}
                           >
                             <MiniArpDiagram position={entry.pos} root={selectedRoot} large />
                             <div className="flex items-center justify-center gap-0.5">
@@ -2609,7 +2671,7 @@ function ArpeggioPositionsPanel({
                               ) : (
                                 <>
                                   <span className="text-[7px] font-mono text-muted-foreground">{entry.pos.label}</span>
-                                  {posCat && <span className="text-[6px] font-mono text-muted-foreground/60">{posCat === 'static' ? '▪' : '↗'}</span>}
+                                  {posCat && <span className="text-[6px] font-mono font-bold" style={{ color: posCat === 'static' ? `hsl(${STATIC_COLOR})` : `hsl(${TRANSIT_COLOR})` }}>{posCat === 'static' ? '▪' : '↗'}</span>}
                                 </>
                               )}
                             </div>
