@@ -2553,11 +2553,15 @@ function ArpeggioPositionsPanel({
                         if (!ARPEGGIO_FORMULAS[ct]) return null;
                         const isSelected = selectedArp === ct;
                         return (
-                          <button key={ct} onClick={() => handleSelectArp(ct)}
-                            className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
-                              isSelected ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]' : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
-                            }`}
-                          >{ct}</button>
+                          <div key={ct} className="relative group">
+                            <button onClick={() => handleSelectArp(ct)}
+                              className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
+                                isSelected ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]' : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
+                              }`}
+                            >{ct}</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleHideArpType(ct); }}
+                              className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-destructive text-destructive-foreground text-[7px] items-center justify-center hover:brightness-110 z-10 hidden group-hover:flex">×</button>
+                          </div>
                         );
                       })}
                     </div>
