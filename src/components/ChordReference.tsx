@@ -2629,8 +2629,14 @@ function ArpeggioPositionsPanel({
                             onClick={() => handleSelectPosition(filteredEntries.indexOf(entry))}
                             onDoubleClick={(e) => { e.stopPropagation(); handleStartEditing(globalIdx); }}
                             className={`w-full rounded p-1 transition-all border flex flex-col items-center justify-center ${
-                              isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
+                              isActive ? 'shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'hover:bg-muted/50'
                             }`}
+                            style={{
+                              borderColor: isActive ? 'hsl(var(--primary))' : posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.4)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.4)` : 'hsl(var(--border) / 0.3)',
+                              backgroundColor: isActive
+                                ? (posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.15)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.15)` : 'hsl(var(--primary) / 0.1)')
+                                : (posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.08)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.08)` : undefined),
+                            }}
                           >
                             <MiniArpDiagram position={entry.pos} root={selectedRoot} large />
                             <div className="flex items-center justify-center gap-0.5">
