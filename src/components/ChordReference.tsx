@@ -2649,7 +2649,7 @@ function ArpeggioPositionsPanel({
                               ) : (
                                 <>
                                   <span className="text-[7px] font-mono text-muted-foreground">{entry.pos.label}</span>
-                                  {posCat && <span className="text-[6px] font-mono text-muted-foreground/60">{posCat === 'static' ? '▪' : '↗'}</span>}
+                                  {posCat && <span className="text-[6px] font-mono font-bold" style={{ color: posCat === 'static' ? `hsl(${STATIC_COLOR})` : `hsl(${TRANSIT_COLOR})` }}>{posCat === 'static' ? '▪' : '↗'}</span>}
                                 </>
                               )}
                             </div>
