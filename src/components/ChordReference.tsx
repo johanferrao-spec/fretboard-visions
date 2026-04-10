@@ -2428,6 +2428,26 @@ function ArpeggioPositionsPanel({
 
   const splitIntoColumns = (types: string[]) => { const mid = Math.ceil(types.length / 2); return [types.slice(0, mid), types.slice(mid)]; };
 
+  const handleHideArpType = (type: string) => {
+    const next = [...hiddenArpTypes, type];
+    setHiddenArpTypes(next);
+    localStorage.setItem('mf-hidden-arp-types', JSON.stringify(next));
+    if (selectedArp === type) { setSelectedArp(null); onSetArpeggioPosition?.(null); }
+  };
+
+  const handleRestoreArpType = (type: string) => {
+    const next = hiddenArpTypes.filter(t => t !== type);
+    setHiddenArpTypes(next);
+    localStorage.setItem('mf-hidden-arp-types', JSON.stringify(next));
+  };
+
+  const ARPEGGIO_COLUMNS = useMemo(() => {
+    return DEFAULT_ARPEGGIO_COLUMNS.map(col => ({
+      ...col,
+      types: col.types.filter(t => !hiddenArpTypes.includes(t)),
+    }));
+  }, [hiddenArpTypes]);
+
   const handleDragStartCat = (e: React.DragEvent, catKey: string) => { e.dataTransfer.setData('text/plain', catKey); };
   const handleDropOnCategory = (cat: 'static' | 'transit', e: React.DragEvent) => {
     e.preventDefault(); setDragOverCategory(null);
