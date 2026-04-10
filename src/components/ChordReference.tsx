@@ -2126,6 +2126,10 @@ function ArpeggioPositionsPanel({
   });
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'static' | 'transit'>('all');
   const [dragOverCategory, setDragOverCategory] = useState<'static' | 'transit' | null>(null);
+  const [hiddenArpTypes, setHiddenArpTypes] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('mf-hidden-arp-types') || '[]'); } catch { return []; }
+  });
+  const [showRestoreArpTypes, setShowRestoreArpTypes] = useState(false);
 
   const saveCustom = useCallback((data: Record<string, (ArpeggioPosition & { refRoot: NoteName })[]>) => {
     setCustomArpPositions(data);
