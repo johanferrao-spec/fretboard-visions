@@ -2570,9 +2570,27 @@ function ArpeggioPositionsPanel({
               </div>
             );
           })}
+          {hiddenArpTypes.length > 0 && (
+            <div className="mt-0.5">
+              <button onClick={() => setShowRestoreArpTypes(!showRestoreArpTypes)}
+                className="text-[7px] font-mono text-muted-foreground hover:text-foreground transition-colors">
+                {showRestoreArpTypes ? '▾' : '▸'} {hiddenArpTypes.length} hidden
+              </button>
+              {showRestoreArpTypes && (
+                <div className="flex flex-wrap gap-0.5 mt-0.5">
+                  {hiddenArpTypes.map(t => (
+                    <button key={t} onClick={() => handleRestoreArpType(t)}
+                      className="px-1 py-0.5 rounded text-[7px] font-mono bg-muted/40 text-muted-foreground hover:bg-muted border border-border/30 transition-colors">
+                      + {t}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Positions panel */}
+
         <div className="flex-1 min-w-0">
           {selectedArp ? (
             <div className="bg-secondary/20 rounded p-1">
