@@ -2474,6 +2474,26 @@ function ArpeggioPositionsPanel({
               className="w-16 h-1.5 accent-primary" />
             <span className="text-[7px] font-mono text-muted-foreground">{Math.round(arpOverlayOpacity * 100)}%</span>
           </div>
+          <button
+            onClick={() => setCategoryFilter(categoryFilter === 'static' ? 'all' : 'static')}
+            onDragOver={(e) => { e.preventDefault(); setDragOverCategory('static'); }}
+            onDragLeave={() => setDragOverCategory(null)}
+            onDrop={(e) => handleDropOnCategory('static', e)}
+            className={`px-2 py-1 rounded text-[9px] font-mono font-bold uppercase tracking-wider transition-all border-2 ${
+              categoryFilter === 'static' ? 'bg-primary text-primary-foreground border-primary'
+              : dragOverCategory === 'static' ? 'bg-primary/20 text-primary border-primary/60'
+              : 'bg-secondary text-secondary-foreground border-transparent hover:bg-muted'
+            }`}>▪ Static</button>
+          <button
+            onClick={() => setCategoryFilter(categoryFilter === 'transit' ? 'all' : 'transit')}
+            onDragOver={(e) => { e.preventDefault(); setDragOverCategory('transit'); }}
+            onDragLeave={() => setDragOverCategory(null)}
+            onDrop={(e) => handleDropOnCategory('transit', e)}
+            className={`px-2 py-1 rounded text-[9px] font-mono font-bold uppercase tracking-wider transition-all border-2 ${
+              categoryFilter === 'transit' ? 'bg-accent text-accent-foreground border-accent'
+              : dragOverCategory === 'transit' ? 'bg-accent/20 text-accent-foreground border-accent/60'
+              : 'bg-secondary text-secondary-foreground border-transparent hover:bg-muted'
+            }`}>↗ Transit</button>
         </div>
       </div>
 
@@ -2541,30 +2561,6 @@ function ArpeggioPositionsPanel({
           {selectedArp ? (
             <div className="bg-secondary/20 rounded p-1">
               <div className="text-[10px] font-mono font-bold text-foreground mb-1">{selectedRoot} {selectedArp}</div>
-
-              {/* Static / Transit */}
-              <div className="flex gap-1 mb-1">
-                <button
-                  onClick={() => setCategoryFilter(categoryFilter === 'static' ? 'all' : 'static')}
-                  onDragOver={(e) => { e.preventDefault(); setDragOverCategory('static'); }}
-                  onDragLeave={() => setDragOverCategory(null)}
-                  onDrop={(e) => handleDropOnCategory('static', e)}
-                  className={`flex-1 py-1 rounded text-[9px] font-mono font-bold uppercase tracking-wider transition-all border-2 ${
-                    categoryFilter === 'static' ? 'bg-primary text-primary-foreground border-primary'
-                    : dragOverCategory === 'static' ? 'bg-primary/20 text-primary border-primary/60'
-                    : 'bg-secondary text-secondary-foreground border-transparent hover:bg-muted'
-                  }`}>▪ Static</button>
-                <button
-                  onClick={() => setCategoryFilter(categoryFilter === 'transit' ? 'all' : 'transit')}
-                  onDragOver={(e) => { e.preventDefault(); setDragOverCategory('transit'); }}
-                  onDragLeave={() => setDragOverCategory(null)}
-                  onDrop={(e) => handleDropOnCategory('transit', e)}
-                  className={`flex-1 py-1 rounded text-[9px] font-mono font-bold uppercase tracking-wider transition-all border-2 ${
-                    categoryFilter === 'transit' ? 'bg-accent text-accent-foreground border-accent'
-                    : dragOverCategory === 'transit' ? 'bg-accent/20 text-accent-foreground border-accent/60'
-                    : 'bg-secondary text-secondary-foreground border-transparent hover:bg-muted'
-                  }`}>↗ Transit</button>
-              </div>
 
               {filteredEntries.length > 0 ? (
                 <div>
