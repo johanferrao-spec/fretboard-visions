@@ -2560,7 +2560,6 @@ function ArpeggioPositionsPanel({
         <div className="flex-1 min-w-0">
           {selectedArp ? (
             <div className="bg-secondary/20 rounded p-1">
-              <div className="text-[10px] font-mono font-bold text-foreground mb-1">{selectedRoot} {selectedArp}</div>
 
               {filteredEntries.length > 0 ? (
                 <div>
@@ -2645,8 +2644,8 @@ function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition;
   const maxFret = Math.max(...allFrets, minFret + 4);
   const startFret = Math.max(0, minFret);
   const numFrets = Math.max(4, maxFret - startFret + 1);
-  const w = large ? 90 : 50;
-  const h = large ? 110 : 40;
+  const w = large ? 70 : 50;
+  const h = large ? 80 : 40;
   const stringSpacing = w / 7;
   const fretSpacing = (h - 5) / numFrets;
 
