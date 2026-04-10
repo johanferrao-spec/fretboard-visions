@@ -91,11 +91,15 @@ type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
 type MainTab = 'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis';
 type OctaveRange = 1 | 2 | 3;
 
-const ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
+const DEFAULT_ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
   { label: 'Major', types: ['Major', 'Major 7', 'Major 7♭5', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', 'Major 9', 'Dominant 9', 'Major 6', '7#9', '7♭9', '11', '13'] },
   { label: 'Minor', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'] },
   { label: 'Sus', types: ['Sus2', 'Sus4', '7sus4', '7sus4♭9'] },
 ];
+
+// Colors for static/transit categories
+const STATIC_COLOR = '210, 70%, 55%'; // blue
+const TRANSIT_COLOR = '35, 85%, 55%'; // amber/orange
 
 const CHORD_COLUMNS: { label: string; types: string[] }[] = [
   { label: 'Major', types: ['Major', 'Major 7', 'Major 7♭5', 'Major 7#5', 'Add9', '6add9', 'Major 9', 'Major 6', 'Maj11', 'Maj13', 'Maj9#11', 'Maj13#11'] },
