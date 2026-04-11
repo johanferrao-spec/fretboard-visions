@@ -223,8 +223,19 @@ export default function ChordReference({
     if (!selectedChord) return [];
     const all = getVoicingsForChord(selectedRoot, selectedChord, voicingTab);
     const isStandard = tuning.every((n, i) => n === STANDARD_TUNING[i]);
-    if (isStandard) return all;
-    return all.filter(v => isVoicingPlayableInTuning(v, selectedRoot, selectedChord, tuning));
+    const filtered = isStandard ? all : all.filter(v => isVoicingPlayableInTuning(v, selectedRoot, selectedChord, tuning));
+    // Normalize: if all fretted notes are past fret 12, shift down an octave
+    return filtered.map(v => {
+      const frettedNotes = v.frets.filter(f => f > 0);
+      if (frettedNotes.length === 0) return v;
+      const minFret = Math.min(...frettedNotes);
+      if (minFret > 12) {
+        const shift = Math.floor(minFret / 12) * 12;
+        const newFrets = v.frets.map(f => f <= 0 ? f : f - shift);
+        return { ...v, frets: newFrets };
+      }
+      return v;
+    });
   }, [selectedRoot, selectedChord, voicingTab, tuning]);
 
   const totalPages = Math.ceil(currentVoicings.length / VOICINGS_PER_PAGE);
@@ -1284,21 +1295,19 @@ function ChordLibraryPanel({
         <div className="w-14 shrink-0 flex flex-col">
           <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">Type</div>
           <div className="space-y-0.5">
-            {(['full', 'shell', 'drop2', 'drop3'] as VoicingTab[]).map(tab => (
+            {(['full', 'shell'] as VoicingTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => handleVoicingTabChange(tab)}
                 className={`w-full px-1 py-0.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-colors leading-tight ${
                   voicingTab === tab ? 'bg-accent text-accent-foreground font-bold border-accent' : 'text-muted-foreground border-border/40 hover:bg-muted/30'
                 }`}
-              >{tab === 'full' ? 'Standard' : tab === 'drop2' ? 'Drop 2' : tab === 'drop3' ? 'Drop 3' : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
+              >{tab === 'full' ? 'Standard' : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
             ))}
           </div>
           <div className="text-[7px] font-mono text-muted-foreground mt-1.5 text-center leading-tight">
             {voicingTab === 'full' && 'Curated shapes'}
             {voicingTab === 'shell' && 'R, 3, 7'}
-            {voicingTab === 'drop2' && '2nd voice ↓8va'}
-            {voicingTab === 'drop3' && '3rd voice ↓8va'}
           </div>
         </div>
 
@@ -2650,10 +2659,10 @@ function ArpeggioPositionsPanel({
                               isActive ? 'shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'hover:bg-muted/50'
                             }`}
                             style={{
-                              borderColor: isActive ? 'hsl(var(--primary))' : posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.4)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.4)` : 'hsl(var(--border) / 0.3)',
+                              borderColor: isActive ? 'hsl(var(--primary))' : posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.5)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.5)` : 'hsl(var(--border) / 0.3)',
                               backgroundColor: isActive
-                                ? (posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.15)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.15)` : 'hsl(var(--primary) / 0.1)')
-                                : (posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.08)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.08)` : undefined),
+                                ? (posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.3)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.3)` : 'hsl(var(--primary) / 0.1)')
+                                : (posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.2)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.2)` : undefined),
                             }}
                           >
                             <MiniArpDiagram position={entry.pos} root={selectedRoot} large />
