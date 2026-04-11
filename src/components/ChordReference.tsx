@@ -2616,26 +2616,22 @@ function ArpeggioPositionsPanel({
                       onDragLeave={() => setDragOverCategory(null)}
                       onDrop={(e) => handleDropOnCategory('static', e)}
                       style={{
-                        backgroundColor: categoryFilter === 'static' ? `hsl(${STATIC_COLOR})` : dragOverCategory === 'static' ? `hsl(${STATIC_COLOR} / 0.2)` : undefined,
-                        color: categoryFilter === 'static' ? '#fff' : dragOverCategory === 'static' ? `hsl(${STATIC_COLOR})` : undefined,
-                        borderColor: categoryFilter === 'static' ? `hsl(${STATIC_COLOR})` : dragOverCategory === 'static' ? `hsl(${STATIC_COLOR} / 0.6)` : 'transparent',
+                        backgroundColor: categoryFilter === 'static' ? `hsl(${STATIC_COLOR})` : `hsl(${STATIC_COLOR} / 0.15)`,
+                        color: categoryFilter === 'static' ? '#fff' : `hsl(${STATIC_COLOR})`,
+                        borderColor: categoryFilter === 'static' ? `hsl(${STATIC_COLOR})` : `hsl(${STATIC_COLOR} / 0.4)`,
                       }}
-                      className={`flex-1 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-all border-2 ${
-                        categoryFilter !== 'static' && dragOverCategory !== 'static' ? 'bg-secondary text-secondary-foreground hover:bg-muted' : ''
-                      }`}>▪ Static</button>
+                      className="flex-1 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-all border-2 hover:brightness-110">▪ Static</button>
                     <button
                       onClick={() => setCategoryFilter(categoryFilter === 'transit' ? 'all' : 'transit')}
                       onDragOver={(e) => { e.preventDefault(); setDragOverCategory('transit'); }}
                       onDragLeave={() => setDragOverCategory(null)}
                       onDrop={(e) => handleDropOnCategory('transit', e)}
                       style={{
-                        backgroundColor: categoryFilter === 'transit' ? `hsl(${TRANSIT_COLOR})` : dragOverCategory === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.2)` : undefined,
-                        color: categoryFilter === 'transit' ? '#fff' : dragOverCategory === 'transit' ? `hsl(${TRANSIT_COLOR})` : undefined,
-                        borderColor: categoryFilter === 'transit' ? `hsl(${TRANSIT_COLOR})` : dragOverCategory === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.6)` : 'transparent',
+                        backgroundColor: categoryFilter === 'transit' ? `hsl(${TRANSIT_COLOR})` : `hsl(${TRANSIT_COLOR} / 0.15)`,
+                        color: categoryFilter === 'transit' ? '#fff' : `hsl(${TRANSIT_COLOR})`,
+                        borderColor: categoryFilter === 'transit' ? `hsl(${TRANSIT_COLOR})` : `hsl(${TRANSIT_COLOR} / 0.4)`,
                       }}
-                      className={`flex-1 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-all border-2 ${
-                        categoryFilter !== 'transit' && dragOverCategory !== 'transit' ? 'bg-secondary text-secondary-foreground hover:bg-muted' : ''
-                      }`}>↗ Transit</button>
+                      className="flex-1 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-all border-2 hover:brightness-110">↗ Transit</button>
                   </div>
                   <div className="grid grid-cols-4 gap-1">
                     {pagedEntries.map((entry, i) => {
