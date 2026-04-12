@@ -2769,34 +2769,56 @@ export function scaleToKeyMode(scaleName: string): KeyMode {
     'Lydian': 'lydian',
     'Mixolydian': 'mixolydian',
     'Locrian': 'locrian',
+    'Harmonic Minor': 'harmonic_minor',
+    'Locrian ♮6': 'locrian_nat6',
+    'Ionian #5': 'ionian_sharp5',
+    'Dorian #4': 'dorian_sharp4',
+    'Phrygian Dominant': 'phrygian_dominant',
+    'Lydian #2': 'lydian_sharp2',
+    'Superlocrian ♭♭7': 'superlocrian_bb7',
+    'Melodic Minor': 'melodic_minor',
+    'Dorian ♭2': 'dorian_b2',
+    'Lydian Augmented': 'lydian_augmented',
+    'Lydian Dominant': 'lydian_dominant',
+    'Mixolydian ♭6': 'mixolydian_b6',
+    'Locrian ♮2': 'locrian_nat2',
+    'Superlocrian (Altered)': 'superlocrian',
   };
   return map[scaleName] || 'major';
 }
 
+/**
+ * Get the 7th chord type for a degree by computing from the actual scale intervals.
+ * degree is 1-based (1-7).
+ */
 export function get7thChordType(baseType: string, degree: number, keyMode: KeyMode = 'major'): string {
-  if (baseType === 'Major') {
-    // V in major and VII in minor are dominant 7, not major 7
-    if ((keyMode === 'major' && degree === 5) || (keyMode === 'minor' && degree === 7)) {
-      return 'Dominant 7';
-    }
-    return 'Major 7';
+  const modeKey = keyMode === 'major' ? 'ionian' : keyMode === 'minor' ? 'aeolian' : keyMode;
+  const scale = MODE_SCALES[modeKey] || MAJOR_SCALE;
+  const degIdx = degree - 1; // convert 1-based to 0-based
+  if (degIdx < 0 || degIdx >= scale.length) {
+    // Fallback
+    if (baseType === 'Major') return 'Major 7';
+    if (baseType === 'Minor') return 'Minor 7';
+    if (baseType === 'Diminished') return 'Half-Dim 7';
+    return 'Dominant 7';
   }
-  if (baseType === 'Minor') return 'Minor 7';
-  if (baseType === 'Diminished') return 'Half-Dim 7';
-  return 'Dominant 7';
+  const q = computeSeventhQuality(scale, degIdx);
+  return q.type;
 }
 
 // Map base type to 7th chord symbol for display
 export function get7thChordSymbol(baseType: string, degree: number = 0, keyMode: KeyMode = 'major'): string {
-  if (baseType === 'Major') {
-    if ((keyMode === 'major' && degree === 5) || (keyMode === 'minor' && degree === 7)) {
-      return '7';
-    }
-    return 'maj7';
+  const modeKey = keyMode === 'major' ? 'ionian' : keyMode === 'minor' ? 'aeolian' : keyMode;
+  const scale = MODE_SCALES[modeKey] || MAJOR_SCALE;
+  const degIdx = degree - 1; // convert 1-based to 0-based
+  if (degIdx < 0 || degIdx >= scale.length) {
+    if (baseType === 'Major') return 'maj7';
+    if (baseType === 'Minor') return 'm7';
+    if (baseType === 'Diminished') return 'ø7';
+    return '7';
   }
-  if (baseType === 'Minor') return 'm7';
-  if (baseType === 'Diminished') return 'ø7';
-  return '7';
+  const q = computeSeventhQuality(scale, degIdx);
+  return q.symbol;
 }
 
 export interface InversionVoicing {
