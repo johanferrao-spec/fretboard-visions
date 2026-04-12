@@ -2165,14 +2165,20 @@ export const ROMAN_NUMERALS_MAJOR = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°']
 export const ROMAN_NUMERALS_MINOR = ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'];
 export const ROMAN_NUMERALS = ROMAN_NUMERALS_MAJOR; // backward compat
 
-export type KeyMode = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian' | 'aeolian' | 'locrian';
+export type KeyMode = 
+  | 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian' | 'aeolian' | 'locrian'
+  | 'harmonic_minor' | 'locrian_nat6' | 'ionian_sharp5' | 'dorian_sharp4' | 'phrygian_dominant' | 'lydian_sharp2' | 'superlocrian_bb7'
+  | 'melodic_minor' | 'dorian_b2' | 'lydian_augmented' | 'lydian_dominant' | 'mixolydian_b6' | 'locrian_nat2' | 'superlocrian';
 
 // Major scale intervals for building diatonic chords
 const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
 const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10];
+const HARMONIC_MINOR_SCALE = [0, 2, 3, 5, 7, 8, 11];
+const MELODIC_MINOR_SCALE = [0, 2, 3, 5, 7, 9, 11];
 
-// All 7 mode scales (built by rotating major scale intervals)
+// All mode scales
 const MODE_SCALES: Record<string, number[]> = {
+  // Major modes
   ionian: MAJOR_SCALE,
   dorian: [0, 2, 3, 5, 7, 9, 10],
   phrygian: [0, 1, 3, 5, 7, 8, 10],
@@ -2180,6 +2186,22 @@ const MODE_SCALES: Record<string, number[]> = {
   mixolydian: [0, 2, 4, 5, 7, 9, 10],
   aeolian: MINOR_SCALE,
   locrian: [0, 1, 3, 5, 6, 8, 10],
+  // Harmonic minor modes
+  harmonic_minor: HARMONIC_MINOR_SCALE,
+  locrian_nat6: [0, 1, 3, 5, 6, 9, 10],
+  ionian_sharp5: [0, 2, 4, 5, 8, 9, 11],
+  dorian_sharp4: [0, 2, 3, 6, 7, 9, 10],
+  phrygian_dominant: [0, 1, 4, 5, 7, 8, 10],
+  lydian_sharp2: [0, 3, 4, 6, 7, 9, 11],
+  superlocrian_bb7: [0, 1, 3, 4, 6, 8, 9],
+  // Melodic minor modes
+  melodic_minor: MELODIC_MINOR_SCALE,
+  dorian_b2: [0, 1, 3, 5, 7, 9, 10],
+  lydian_augmented: [0, 2, 4, 6, 8, 9, 11],
+  lydian_dominant: [0, 2, 4, 6, 7, 9, 10],
+  mixolydian_b6: [0, 2, 4, 5, 7, 8, 10],
+  locrian_nat2: [0, 2, 3, 5, 6, 8, 10],
+  superlocrian: [0, 1, 3, 4, 6, 8, 10],
 };
 
 // Diatonic chord qualities in a major key
@@ -2205,14 +2227,72 @@ const DIATONIC_QUALITIES_MINOR: { type: string; symbol: string }[] = [
 
 const DIATONIC_QUALITIES = DIATONIC_QUALITIES_MAJOR; // backward compat
 
-// Build diatonic qualities for any mode by rotating the major key pattern
+/**
+ * Compute the triad quality for a given degree of a scale by stacking thirds.
+ * Returns {type, symbol} where type matches CHORD_FORMULAS keys.
+ */
+function computeTriadQuality(scale: number[], degree: number): { type: string; symbol: string } {
+  const root = scale[degree];
+  const third = scale[(degree + 2) % 7];
+  const fifth = scale[(degree + 4) % 7];
+  const thirdInterval = ((third - root) + 12) % 12;
+  const fifthInterval = ((fifth - root) + 12) % 12;
+
+  if (thirdInterval === 4 && fifthInterval === 7) return { type: 'Major', symbol: '' };
+  if (thirdInterval === 3 && fifthInterval === 7) return { type: 'Minor', symbol: 'm' };
+  if (thirdInterval === 3 && fifthInterval === 6) return { type: 'Diminished', symbol: '°' };
+  if (thirdInterval === 4 && fifthInterval === 8) return { type: 'Augmented', symbol: '+' };
+  // Edge cases for unusual scales
+  if (thirdInterval === 2 && fifthInterval === 7) return { type: 'Sus2', symbol: 'sus2' };
+  if (thirdInterval === 5 && fifthInterval === 7) return { type: 'Sus4', symbol: 'sus4' };
+  // Default fallback
+  return { type: 'Major', symbol: '' };
+}
+
+/**
+ * Compute the 7th chord quality for a given degree of a scale by stacking thirds.
+ */
+function computeSeventhQuality(scale: number[], degree: number): { type: string; symbol: string } {
+  const root = scale[degree];
+  const third = scale[(degree + 2) % 7];
+  const fifth = scale[(degree + 4) % 7];
+  const seventh = scale[(degree + 6) % 7];
+  const thirdInterval = ((third - root) + 12) % 12;
+  const fifthInterval = ((fifth - root) + 12) % 12;
+  const seventhInterval = ((seventh - root) + 12) % 12;
+
+  // Major 7ths (interval 11)
+  if (seventhInterval === 11) {
+    if (thirdInterval === 4 && fifthInterval === 7) return { type: 'Major 7', symbol: 'maj7' };
+    if (thirdInterval === 3 && fifthInterval === 7) return { type: 'Min/Maj 7', symbol: 'mMaj7' };
+    if (thirdInterval === 4 && fifthInterval === 8) return { type: 'Major 7#5', symbol: 'maj7#5' };
+    if (thirdInterval === 4 && fifthInterval === 6) return { type: 'Major 7♭5', symbol: 'maj7♭5' };
+    if (thirdInterval === 3 && fifthInterval === 8) return { type: 'Min/Maj 7', symbol: 'mMaj7' }; // rare
+  }
+  // Minor 7ths (interval 10)
+  if (seventhInterval === 10) {
+    if (thirdInterval === 4 && fifthInterval === 7) return { type: 'Dominant 7', symbol: '7' };
+    if (thirdInterval === 3 && fifthInterval === 7) return { type: 'Minor 7', symbol: 'm7' };
+    if (thirdInterval === 3 && fifthInterval === 6) return { type: 'Half-Dim 7', symbol: 'ø7' };
+    if (thirdInterval === 4 && fifthInterval === 8) return { type: 'Aug 7', symbol: '7#5' };
+    if (thirdInterval === 4 && fifthInterval === 6) return { type: '7♭5', symbol: '7♭5' };
+    if (thirdInterval === 3 && fifthInterval === 8) return { type: 'm7#5', symbol: 'm7#5' };
+  }
+  // Diminished 7th (interval 9)
+  if (seventhInterval === 9) {
+    if (thirdInterval === 3 && fifthInterval === 6) return { type: 'Dim 7', symbol: '°7' };
+  }
+
+  // Fallback to triad-based
+  const triad = computeTriadQuality(scale, degree);
+  return triad;
+}
+
+// Build diatonic qualities for any mode by computing from scale intervals
 function getModeQualities(mode: string): { type: string; symbol: string }[] {
-  const modeOffsets: Record<string, number> = {
-    ionian: 0, dorian: 1, phrygian: 2, lydian: 3, mixolydian: 4, aeolian: 5, locrian: 6,
-  };
-  const offset = modeOffsets[mode];
-  if (offset === undefined) return DIATONIC_QUALITIES_MAJOR;
-  return DIATONIC_QUALITIES_MAJOR.map((_, i) => DIATONIC_QUALITIES_MAJOR[(i + offset) % 7]);
+  const scale = MODE_SCALES[mode];
+  if (!scale) return DIATONIC_QUALITIES_MAJOR;
+  return scale.map((_, i) => computeTriadQuality(scale, i));
 }
 
 function getModeNumerals(mode: string): string[] {
@@ -2221,8 +2301,28 @@ function getModeNumerals(mode: string): string[] {
     const base = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'][i];
     if (q.type === 'Minor') return base.toLowerCase();
     if (q.type === 'Diminished') return base.toLowerCase() + '°';
+    if (q.type === 'Augmented') return base + '+';
     return base;
   });
+}
+
+function resolveMode(keyMode: KeyMode): { scale: number[]; qualities: { type: string; symbol: string }[]; numerals: string[] } {
+  if (keyMode === 'major' || keyMode === 'ionian') {
+    const scale = MAJOR_SCALE;
+    const qualities = scale.map((_, i) => computeTriadQuality(scale, i));
+    const numerals = getModeNumerals('ionian');
+    return { scale, qualities, numerals };
+  }
+  if (keyMode === 'minor' || keyMode === 'aeolian') {
+    const scale = MINOR_SCALE;
+    const qualities = scale.map((_, i) => computeTriadQuality(scale, i));
+    const numerals = getModeNumerals('aeolian');
+    return { scale, qualities, numerals };
+  }
+  const scale = MODE_SCALES[keyMode] || MAJOR_SCALE;
+  const qualities = scale.map((_, i) => computeTriadQuality(scale, i));
+  const numerals = getModeNumerals(keyMode);
+  return { scale, qualities, numerals };
 }
 
 export interface DiatonicChord {
@@ -2231,19 +2331,6 @@ export interface DiatonicChord {
   type: string;
   roman: string;
   symbol: string; // e.g. "Em", "G", "F#°"
-}
-
-function resolveMode(keyMode: KeyMode): { scale: number[]; qualities: { type: string; symbol: string }[]; numerals: string[] } {
-  if (keyMode === 'major' || keyMode === 'ionian') {
-    return { scale: MAJOR_SCALE, qualities: DIATONIC_QUALITIES_MAJOR, numerals: ROMAN_NUMERALS_MAJOR };
-  }
-  if (keyMode === 'minor' || keyMode === 'aeolian') {
-    return { scale: MINOR_SCALE, qualities: DIATONIC_QUALITIES_MINOR, numerals: ROMAN_NUMERALS_MINOR };
-  }
-  const scale = MODE_SCALES[keyMode] || MAJOR_SCALE;
-  const qualities = getModeQualities(keyMode);
-  const numerals = getModeNumerals(keyMode);
-  return { scale, qualities, numerals };
 }
 
 export function getDiatonicChords(key: NoteName, keyMode: KeyMode = 'major'): DiatonicChord[] {
@@ -2282,37 +2369,56 @@ export function getChordVariations(key: NoteName, degree: number, keyMode: KeyMo
   // Diatonic variations
   const diatonicTypes: { type: string; label: string }[] = [];
 
+  // Use computed 7th quality to determine proper chord extensions
+  const modeKey = keyMode === 'major' ? 'ionian' : keyMode === 'minor' ? 'aeolian' : keyMode;
+  const modeScale = MODE_SCALES[modeKey] || MAJOR_SCALE;
+  const seventh = computeSeventhQuality(modeScale, degree);
+
   if (quality.type === 'Major') {
     diatonicTypes.push(
       { type: 'Major', label: `${root}` },
-      { type: 'Major 7', label: `${root}maj7` },
       { type: 'Add9', label: `${root}add9` },
       { type: 'Sus2', label: `${root}sus2` },
       { type: 'Sus4', label: `${root}sus4` },
       { type: 'Major 6', label: `${root}6` },
     );
-    // Dominant for V
-    if (degree === 4) {
+    if (seventh.type === 'Dominant 7') {
       diatonicTypes.push(
         { type: 'Dominant 7', label: `${root}7` },
         { type: 'Dominant 9', label: `${root}9` },
         { type: '7sus4', label: `${root}7sus4` },
       );
-    }
-    if (degree === 0) {
-      diatonicTypes.push({ type: 'Major 9', label: `${root}maj9` });
+    } else {
+      diatonicTypes.push(
+        { type: 'Major 7', label: `${root}maj7` },
+        { type: 'Major 9', label: `${root}maj9` },
+      );
     }
   } else if (quality.type === 'Minor') {
     diatonicTypes.push(
       { type: 'Minor', label: `${root}m` },
-      { type: 'Minor 7', label: `${root}m7` },
-      { type: 'Minor 9', label: `${root}m9` },
       { type: 'Minor 6', label: `${root}m6` },
     );
+    if (seventh.type === 'Min/Maj 7') {
+      diatonicTypes.push(
+        { type: 'Min/Maj 7', label: `${root}mMaj7` },
+        { type: 'Minor 7', label: `${root}m7` },
+      );
+    } else {
+      diatonicTypes.push(
+        { type: 'Minor 7', label: `${root}m7` },
+        { type: 'Minor 9', label: `${root}m9` },
+      );
+    }
   } else if (quality.type === 'Diminished') {
     diatonicTypes.push(
       { type: 'Diminished', label: `${root}°` },
-      { type: 'Half-Dim 7', label: `${root}ø7` },
+      { type: seventh.type, label: `${root}${seventh.symbol}` },
+    );
+  } else if (quality.type === 'Augmented') {
+    diatonicTypes.push(
+      { type: 'Augmented', label: `${root}+` },
+      { type: seventh.type, label: `${root}${seventh.symbol}` },
     );
   }
 
@@ -2682,34 +2788,56 @@ export function scaleToKeyMode(scaleName: string): KeyMode {
     'Lydian': 'lydian',
     'Mixolydian': 'mixolydian',
     'Locrian': 'locrian',
+    'Harmonic Minor': 'harmonic_minor',
+    'Locrian ♮6': 'locrian_nat6',
+    'Ionian #5': 'ionian_sharp5',
+    'Dorian #4': 'dorian_sharp4',
+    'Phrygian Dominant': 'phrygian_dominant',
+    'Lydian #2': 'lydian_sharp2',
+    'Superlocrian ♭♭7': 'superlocrian_bb7',
+    'Melodic Minor': 'melodic_minor',
+    'Dorian ♭2': 'dorian_b2',
+    'Lydian Augmented': 'lydian_augmented',
+    'Lydian Dominant': 'lydian_dominant',
+    'Mixolydian ♭6': 'mixolydian_b6',
+    'Locrian ♮2': 'locrian_nat2',
+    'Superlocrian (Altered)': 'superlocrian',
   };
   return map[scaleName] || 'major';
 }
 
+/**
+ * Get the 7th chord type for a degree by computing from the actual scale intervals.
+ * degree is 1-based (1-7).
+ */
 export function get7thChordType(baseType: string, degree: number, keyMode: KeyMode = 'major'): string {
-  if (baseType === 'Major') {
-    // V in major and VII in minor are dominant 7, not major 7
-    if ((keyMode === 'major' && degree === 5) || (keyMode === 'minor' && degree === 7)) {
-      return 'Dominant 7';
-    }
-    return 'Major 7';
+  const modeKey = keyMode === 'major' ? 'ionian' : keyMode === 'minor' ? 'aeolian' : keyMode;
+  const scale = MODE_SCALES[modeKey] || MAJOR_SCALE;
+  const degIdx = degree - 1; // convert 1-based to 0-based
+  if (degIdx < 0 || degIdx >= scale.length) {
+    // Fallback
+    if (baseType === 'Major') return 'Major 7';
+    if (baseType === 'Minor') return 'Minor 7';
+    if (baseType === 'Diminished') return 'Half-Dim 7';
+    return 'Dominant 7';
   }
-  if (baseType === 'Minor') return 'Minor 7';
-  if (baseType === 'Diminished') return 'Half-Dim 7';
-  return 'Dominant 7';
+  const q = computeSeventhQuality(scale, degIdx);
+  return q.type;
 }
 
 // Map base type to 7th chord symbol for display
 export function get7thChordSymbol(baseType: string, degree: number = 0, keyMode: KeyMode = 'major'): string {
-  if (baseType === 'Major') {
-    if ((keyMode === 'major' && degree === 5) || (keyMode === 'minor' && degree === 7)) {
-      return '7';
-    }
-    return 'maj7';
+  const modeKey = keyMode === 'major' ? 'ionian' : keyMode === 'minor' ? 'aeolian' : keyMode;
+  const scale = MODE_SCALES[modeKey] || MAJOR_SCALE;
+  const degIdx = degree - 1; // convert 1-based to 0-based
+  if (degIdx < 0 || degIdx >= scale.length) {
+    if (baseType === 'Major') return 'maj7';
+    if (baseType === 'Minor') return 'm7';
+    if (baseType === 'Diminished') return 'ø7';
+    return '7';
   }
-  if (baseType === 'Minor') return 'm7';
-  if (baseType === 'Diminished') return 'ø7';
-  return '7';
+  const q = computeSeventhQuality(scale, degIdx);
+  return q.symbol;
 }
 
 export interface InversionVoicing {

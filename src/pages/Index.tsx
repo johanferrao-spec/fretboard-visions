@@ -22,7 +22,7 @@ const Index = () => {
   const [volume, setVolume] = useState(0.7);
   const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
   const [keyMode, setKeyMode] = useState<KeyMode>(() => scaleToKeyMode(fb.primaryScale.scale));
-  const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis'>('beginner');
+  const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis' | null>(null);
   const [tabVisNotes, setTabVisNotes] = useState<{ current: Array<{string: number; fret: number}>; upcoming: Array<{string: number; fret: number}[]> } | null>(null);
   const [tabVisHasOpened, setTabVisHasOpened] = useState(false);
   const [tabVisData, setTabVisData] = useState<TabData | null>(null);
@@ -252,7 +252,7 @@ const Index = () => {
                 setActiveInversionVoicing(null);
                 setScaleViewDegreeFilter(null);
                 setScaleViewMode('basic');
-                setActiveTab('scaleview');
+                setActiveTab(null);
               }}
               className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
             >
