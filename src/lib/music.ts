@@ -2325,6 +2325,14 @@ function resolveMode(keyMode: KeyMode): { scale: number[]; qualities: { type: st
   return { scale, qualities, numerals };
 }
 
+export interface DiatonicChord {
+  degree: number; // 0-6
+  root: NoteName;
+  type: string;
+  roman: string;
+  symbol: string; // e.g. "Em", "G", "F#°"
+}
+
 export function getDiatonicChords(key: NoteName, keyMode: KeyMode = 'major'): DiatonicChord[] {
   const keyIndex = NOTE_NAMES.indexOf(key);
   const { scale, qualities, numerals } = resolveMode(keyMode);
