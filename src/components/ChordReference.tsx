@@ -88,7 +88,7 @@ interface ChordReferenceProps {
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
-type MainTab = 'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis';
+type MainTab = 'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis' | null;
 type OctaveRange = 1 | 2 | 3;
 
 const DEFAULT_ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
@@ -291,6 +291,17 @@ export default function ChordReference({
   }, [identifyFrets, identifyBarre]);
 
   const handleTabSwitch = (tab: MainTab) => {
+    // Toggle off if clicking the already-active tab
+    if (tab === activeTab) {
+      setActiveTab(null);
+      onApplyBeginnerPreset?.(null);
+      setIdentifyMode(false);
+      onSetArpeggioPosition?.(null);
+      setScaleViewDegreeFilter(null);
+      setActiveChord(null);
+      setShowFretBox?.(false);
+      return;
+    }
     setActiveTab(tab);
     if (tab !== 'beginner') onApplyBeginnerPreset?.(null);
     if (tab === 'caged') setShowCAGED(true);
@@ -337,7 +348,7 @@ export default function ChordReference({
       <div className="flex gap-1 mb-2 flex-wrap">
         {([
           { key: 'beginner' as MainTab, label: '🎓 Beginner' },
-          { key: 'scaleview' as MainTab, label: 'Scale View' },
+          { key: 'scaleview' as MainTab, label: 'Diatonic Harmony' },
           { key: 'chords' as MainTab, label: 'Chord Library' },
           { key: 'arpeggios' as MainTab, label: 'Arpeggio Positions' },
           { key: 'caged' as MainTab, label: 'CAGED' },
