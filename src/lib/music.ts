@@ -2369,37 +2369,56 @@ export function getChordVariations(key: NoteName, degree: number, keyMode: KeyMo
   // Diatonic variations
   const diatonicTypes: { type: string; label: string }[] = [];
 
+  // Use computed 7th quality to determine proper chord extensions
+  const modeKey = keyMode === 'major' ? 'ionian' : keyMode === 'minor' ? 'aeolian' : keyMode;
+  const modeScale = MODE_SCALES[modeKey] || MAJOR_SCALE;
+  const seventh = computeSeventhQuality(modeScale, degree);
+
   if (quality.type === 'Major') {
     diatonicTypes.push(
       { type: 'Major', label: `${root}` },
-      { type: 'Major 7', label: `${root}maj7` },
       { type: 'Add9', label: `${root}add9` },
       { type: 'Sus2', label: `${root}sus2` },
       { type: 'Sus4', label: `${root}sus4` },
       { type: 'Major 6', label: `${root}6` },
     );
-    // Dominant for V
-    if (degree === 4) {
+    if (seventh.type === 'Dominant 7') {
       diatonicTypes.push(
         { type: 'Dominant 7', label: `${root}7` },
         { type: 'Dominant 9', label: `${root}9` },
         { type: '7sus4', label: `${root}7sus4` },
       );
-    }
-    if (degree === 0) {
-      diatonicTypes.push({ type: 'Major 9', label: `${root}maj9` });
+    } else {
+      diatonicTypes.push(
+        { type: 'Major 7', label: `${root}maj7` },
+        { type: 'Major 9', label: `${root}maj9` },
+      );
     }
   } else if (quality.type === 'Minor') {
     diatonicTypes.push(
       { type: 'Minor', label: `${root}m` },
-      { type: 'Minor 7', label: `${root}m7` },
-      { type: 'Minor 9', label: `${root}m9` },
       { type: 'Minor 6', label: `${root}m6` },
     );
+    if (seventh.type === 'Min/Maj 7') {
+      diatonicTypes.push(
+        { type: 'Min/Maj 7', label: `${root}mMaj7` },
+        { type: 'Minor 7', label: `${root}m7` },
+      );
+    } else {
+      diatonicTypes.push(
+        { type: 'Minor 7', label: `${root}m7` },
+        { type: 'Minor 9', label: `${root}m9` },
+      );
+    }
   } else if (quality.type === 'Diminished') {
     diatonicTypes.push(
       { type: 'Diminished', label: `${root}°` },
-      { type: 'Half-Dim 7', label: `${root}ø7` },
+      { type: seventh.type, label: `${root}${seventh.symbol}` },
+    );
+  } else if (quality.type === 'Augmented') {
+    diatonicTypes.push(
+      { type: 'Augmented', label: `${root}+` },
+      { type: seventh.type, label: `${root}${seventh.symbol}` },
     );
   }
 
