@@ -498,7 +498,7 @@ export default function ChordReference({
 }
 
 // ============================================================
-// SCALE VIEW PANEL
+// DIATONIC HARMONY PANEL
 // ============================================================
 
 // Mini chord diagram for inversion voicings
