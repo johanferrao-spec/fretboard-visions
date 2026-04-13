@@ -578,32 +578,27 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
 
 function ScaleViewPanel({
   primaryScale, degreeFilter, setDegreeFilter,
-  scaleViewMode, setScaleViewMode,
   inversionStringGroup, setInversionStringGroup,
   tuning, onSetArpeggioPosition, degreeColors,
   onSetInversionVoicing,
-  ghostNoteOpacity, setGhostNoteOpacity,
+  dropMode, setDropMode,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
   setDegreeFilter: (d: number | null) => void;
-  scaleViewMode: 'basic' | 'inversion';
-  setScaleViewMode: (m: 'basic' | 'inversion') => void;
-  inversionStringGroup: StringGroup;
-  setInversionStringGroup: (g: StringGroup) => void;
+  inversionStringGroup: StringGroup | null;
+  setInversionStringGroup: (g: StringGroup | null) => void;
   tuning: number[];
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
   degreeColors: boolean;
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
-  ghostNoteOpacity: number;
-  setGhostNoteOpacity: (v: number) => void;
+  dropMode: 'drop2' | 'drop3' | null;
+  setDropMode: (m: 'drop2' | 'drop3' | null) => void;
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
 
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
-  const [dropMode, setDropMode] = useState<'drop2' | 'drop3' | null>(null);
-  const [dropStringGroup, setDropStringGroup] = useState<StringGroup | null>(null);
 
   // Persisted descriptions for drop voicings
   const [dropDescriptions, setDropDescriptions] = useState<Record<string, string>>(() => {
