@@ -394,6 +394,8 @@ const Index = () => {
                 onSetInversionVoicing={setActiveInversionVoicing}
                 ghostNoteOpacity={fb.ghostNoteOpacity}
                 setGhostNoteOpacity={fb.setGhostNoteOpacity}
+                dropMode={dropMode}
+                setDropMode={setDropMode}
                 onApplyBeginnerPreset={(preset) => {
                   if (preset === null) {
                     // Deselect: turn off focus box
