@@ -1631,18 +1631,6 @@ function IdentifyPanel({
             <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
               {allChords.length} interpretation{allChords.length !== 1 ? 's' : ''}
             </div>
-            {/* Overlay opacity slider */}
-            <div className="flex items-center gap-1">
-              <span className="text-[7px] font-mono text-muted-foreground">Overlay</span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={arpOverlayOpacity * 100}
-                onChange={(e) => setArpOverlayOpacity(Number(e.target.value) / 100)}
-                className="w-12 h-2 accent-primary"
-              />
-            </div>
             {/* Clear fretboard button */}
             <button
               onClick={onClearFretboard}
@@ -2515,13 +2503,6 @@ function ArpeggioPositionsPanel({
             className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${addingMode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Add</button>
           <button onClick={() => setArpPathVisible(!arpPathVisible)}
             className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${arpPathVisible ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Path</button>
-          <div className="flex items-center gap-1">
-            <span className="text-[7px] font-mono text-muted-foreground whitespace-nowrap">Opacity</span>
-            <input type="range" min={0} max={100} value={arpOverlayOpacity * 100}
-              onChange={(e) => setArpOverlayOpacity(Number(e.target.value) / 100)}
-              className="w-16 h-1.5 accent-primary" />
-            <span className="text-[7px] font-mono text-muted-foreground">{Math.round(arpOverlayOpacity * 100)}%</span>
-          </div>
           <button onClick={handlePrevPosition} disabled={filteredEntries.length === 0}
             className="px-2 py-1 rounded text-[9px] font-mono font-bold transition-colors bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30">◀ Prev</button>
           <button onClick={handleNextPosition} disabled={filteredEntries.length === 0}
