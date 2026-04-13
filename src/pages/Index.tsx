@@ -269,6 +269,8 @@ const Index = () => {
                 setActiveInversionVoicing(null);
                 setScaleViewDegreeFilter(null);
                 setScaleViewMode('basic');
+                setDropMode(null);
+                setInversionStringGroup(null);
                 setActiveTab(null);
               }}
               className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
