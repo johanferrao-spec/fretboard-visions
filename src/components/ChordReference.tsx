@@ -66,11 +66,13 @@ interface ChordReferenceProps {
   setScaleViewDegreeFilter: (d: number | null) => void;
   scaleViewMode: 'basic' | 'inversion';
   setScaleViewMode: (m: 'basic' | 'inversion') => void;
-  inversionStringGroup: StringGroup;
-  setInversionStringGroup: (g: StringGroup) => void;
+  inversionStringGroup: StringGroup | null;
+  setInversionStringGroup: (g: StringGroup | null) => void;
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
   ghostNoteOpacity: number;
   setGhostNoteOpacity: (v: number) => void;
+  dropMode: 'drop2' | 'drop3' | null;
+  setDropMode: (m: 'drop2' | 'drop3' | null) => void;
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
   onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
