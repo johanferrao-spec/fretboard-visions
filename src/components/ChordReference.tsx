@@ -384,16 +384,14 @@ export default function ChordReference({
           primaryScale={primaryScale}
           degreeFilter={scaleViewDegreeFilter}
           setDegreeFilter={setScaleViewDegreeFilter}
-          scaleViewMode={scaleViewMode}
-          setScaleViewMode={setScaleViewMode}
           inversionStringGroup={inversionStringGroup}
           setInversionStringGroup={setInversionStringGroup}
           tuning={tuning}
           onSetArpeggioPosition={onSetArpeggioPosition}
           degreeColors={degreeColors}
           onSetInversionVoicing={onSetInversionVoicing}
-          ghostNoteOpacity={ghostNoteOpacity}
-          setGhostNoteOpacity={setGhostNoteOpacity}
+          dropMode={dropMode}
+          setDropMode={setDropMode}
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
