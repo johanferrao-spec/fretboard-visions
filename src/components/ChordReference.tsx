@@ -620,11 +620,11 @@ function ScaleViewPanel({
 
   // Generate inversions when in drop mode with a string group and degree selected
   const inversions = useMemo(() => {
-    if (dropMode !== 'drop2' || dropStringGroup === null || degreeFilter === null) return [];
+    if (dropMode !== 'drop2' || inversionStringGroup === null || degreeFilter === null) return [];
     const chord = diatonicLabels[degreeFilter];
     if (!chord) return [];
-    return generate7thInversions(chord.root, chord.chordType7, dropStringGroup, tuning);
-  }, [dropMode, dropStringGroup, degreeFilter, diatonicLabels, tuning]);
+    return generate7thInversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
+  }, [dropMode, inversionStringGroup, degreeFilter, diatonicLabels, tuning]);
 
   useEffect(() => {
     setCurrentInvIdx(0);
@@ -635,7 +635,7 @@ function ScaleViewPanel({
 
   // Apply octave shift to inversion voicing
   useEffect(() => {
-    if (dropMode === 'drop2' && dropStringGroup !== null && inversions.length > 0) {
+    if (dropMode === 'drop2' && inversionStringGroup !== null && inversions.length > 0) {
       const idx = Math.min(currentInvIdx, inversions.length - 1);
       const baseInv = inversions[idx];
       if (octaveShift === 0) {
@@ -651,7 +651,7 @@ function ScaleViewPanel({
     } else {
       onSetInversionVoicing?.(null);
     }
-  }, [dropMode, dropStringGroup, inversions, currentInvIdx, onSetInversionVoicing, octaveShift]);
+  }, [dropMode, inversionStringGroup, inversions, currentInvIdx, onSetInversionVoicing, octaveShift]);
 
   useEffect(() => {
     setOctaveShift(0);
@@ -689,7 +689,7 @@ function ScaleViewPanel({
       {/* Drop 2 / Drop 3 buttons */}
       <div className="flex gap-2">
         <button
-          onClick={() => { setDropMode(dropMode === 'drop2' ? null : 'drop2'); setDropStringGroup(null); onSetInversionVoicing?.(null); }}
+          onClick={() => { setDropMode(dropMode === 'drop2' ? null : 'drop2'); setInversionStringGroup(null); onSetInversionVoicing?.(null); }}
           className="flex-1 py-3 rounded-xl text-sm font-mono font-black uppercase tracking-wider transition-all border-2"
           style={{
             backgroundColor: dropMode === 'drop2' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
@@ -699,7 +699,7 @@ function ScaleViewPanel({
           }}
         >Drop 2</button>
         <button
-          onClick={() => { setDropMode(dropMode === 'drop3' ? null : 'drop3'); setDropStringGroup(null); onSetInversionVoicing?.(null); }}
+          onClick={() => { setDropMode(dropMode === 'drop3' ? null : 'drop3'); setInversionStringGroup(null); onSetInversionVoicing?.(null); }}
           className="flex-1 py-3 rounded-xl text-sm font-mono font-black uppercase tracking-wider transition-all border-2"
           style={{
             backgroundColor: dropMode === 'drop3' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
@@ -725,12 +725,12 @@ function ScaleViewPanel({
               {(['upper', 'mid', 'lower'] as StringGroup[]).map(sg => (
                 <button
                   key={sg}
-                  onClick={() => setDropStringGroup(dropStringGroup === sg ? null : sg)}
+                  onClick={() => setInversionStringGroup(inversionStringGroup === sg ? null : sg)}
                   className="w-full px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border"
                   style={{
-                    backgroundColor: dropStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--secondary))',
-                    borderColor: dropStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--border))',
-                    color: dropStringGroup === sg ? 'hsl(var(--accent-foreground))' : 'hsl(var(--secondary-foreground))',
+                    backgroundColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--secondary))',
+                    borderColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--border))',
+                    color: inversionStringGroup === sg ? 'hsl(var(--accent-foreground))' : 'hsl(var(--secondary-foreground))',
                   }}
                 >{STRING_GROUP_CONFIG[sg].label}</button>
               ))}
@@ -738,7 +738,7 @@ function ScaleViewPanel({
           </div>
 
           {/* Right: voicings panel */}
-          {dropStringGroup && (
+          {inversionStringGroup && (
             <div className="flex-1 min-w-0">
               {dropMode === 'drop2' ? (
                 // Drop 2: show inversions (like old inversions tab)
@@ -757,7 +757,7 @@ function ScaleViewPanel({
                         <MiniChordDiagram
                           key={idx}
                           voicing={inv}
-                          stringGroup={dropStringGroup}
+                          stringGroup={inversionStringGroup}
                           isActive={currentInvIdx === idx}
                           color={activeColor || '0, 0%, 60%'}
                           onClick={() => setCurrentInvIdx(idx)}
