@@ -29,6 +29,7 @@ const Index = () => {
   const [tabVisPlayhead, setTabVisPlayhead] = useState(0);
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
+  const [dropMode, setDropMode] = useState<'drop2' | 'drop3' | null>(null);
   const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower'>('upper');
   const [activeInversionVoicing, setActiveInversionVoicing] = useState<InversionVoicing | null>(null);
   const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
