@@ -244,6 +244,22 @@ const Index = () => {
               <span className="text-[10px] font-mono text-muted-foreground w-5">{fb.maxFrets}</span>
             </div>
 
+            {/* Master opacity slider */}
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground uppercase">Opacity:</span>
+              <input
+                type="range" min={0} max={100} value={Math.round(fb.arpOverlayOpacity * 100)}
+                onChange={e => {
+                  const v = Number(e.target.value) / 100;
+                  fb.setArpOverlayOpacity(v);
+                  fb.setGhostNoteOpacity(v);
+                  fb.setSecondaryOpacity(v);
+                }}
+                className="w-16 accent-primary"
+              />
+              <span className="text-[10px] font-mono text-muted-foreground w-5">{Math.round(fb.arpOverlayOpacity * 100)}%</span>
+            </div>
+
             {/* Reset */}
             <button
               onClick={() => {

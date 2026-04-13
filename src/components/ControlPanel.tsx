@@ -113,16 +113,6 @@ export default function ControlPanel({
             condensed={false}
             hideDescription
           />
-          <div>
-            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-              Secondary Opacity: {Math.round(secondaryOpacity * 100)}%
-            </label>
-            <input
-              type="range" min={10} max={100} value={secondaryOpacity * 100}
-              onChange={e => setSecondaryOpacity(Number(e.target.value) / 100)}
-              className="w-full mt-1 accent-primary"
-            />
-          </div>
           {/* Single toggle button for active layer */}
           <button
             onClick={() => setActivePrimary(!activePrimary)}
