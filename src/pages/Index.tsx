@@ -39,6 +39,7 @@ const Index = () => {
   const [chordOctaveShift, setChordOctaveShift] = useState(0);
 
   // Auto-disable strings based on inversion string group when in inversion mode
+  const prevDisabledRef = useRef<Set<number> | null>(null);
   const inversionActive = activeTab === 'scaleview' && dropMode === 'drop2' && inversionStringGroup !== null && scaleViewDegreeFilter !== null;
   useEffect(() => {
     if (inversionActive) {
