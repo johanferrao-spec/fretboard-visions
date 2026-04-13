@@ -29,7 +29,8 @@ const Index = () => {
   const [tabVisPlayhead, setTabVisPlayhead] = useState(0);
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
-  const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower'>('upper');
+  const [dropMode, setDropMode] = useState<'drop2' | 'drop3' | null>(null);
+  const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower' | null>(null);
   const [activeInversionVoicing, setActiveInversionVoicing] = useState<InversionVoicing | null>(null);
   const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
   const arpBarreDragRef = useRef<((fromSi: number, toSi: number, fret: number) => void) | null>(null);
@@ -39,7 +40,7 @@ const Index = () => {
 
   // Auto-disable strings based on inversion string group when in inversion mode
   const prevDisabledRef = useRef<Set<number> | null>(null);
-  const inversionActive = activeTab === 'scaleview' && scaleViewMode === 'inversion' && scaleViewDegreeFilter !== null;
+  const inversionActive = activeTab === 'scaleview' && dropMode === 'drop2' && inversionStringGroup !== null && scaleViewDegreeFilter !== null;
   useEffect(() => {
     if (inversionActive) {
       const config = STRING_GROUP_CONFIG[inversionStringGroup];
@@ -244,6 +245,22 @@ const Index = () => {
               <span className="text-[10px] font-mono text-muted-foreground w-5">{fb.maxFrets}</span>
             </div>
 
+            {/* Master opacity slider */}
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] font-mono text-muted-foreground uppercase">Opacity:</span>
+              <input
+                type="range" min={0} max={100} value={Math.round(fb.arpOverlayOpacity * 100)}
+                onChange={e => {
+                  const v = Number(e.target.value) / 100;
+                  fb.setArpOverlayOpacity(v);
+                  fb.setGhostNoteOpacity(v);
+                  fb.setSecondaryOpacity(v);
+                }}
+                className="w-16 accent-primary"
+              />
+              <span className="text-[10px] font-mono text-muted-foreground w-5">{Math.round(fb.arpOverlayOpacity * 100)}%</span>
+            </div>
+
             {/* Reset */}
             <button
               onClick={() => {
@@ -252,6 +269,8 @@ const Index = () => {
                 setActiveInversionVoicing(null);
                 setScaleViewDegreeFilter(null);
                 setScaleViewMode('basic');
+                setDropMode(null);
+                setInversionStringGroup(null);
                 setActiveTab(null);
               }}
               className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
@@ -377,6 +396,8 @@ const Index = () => {
                 onSetInversionVoicing={setActiveInversionVoicing}
                 ghostNoteOpacity={fb.ghostNoteOpacity}
                 setGhostNoteOpacity={fb.setGhostNoteOpacity}
+                dropMode={dropMode}
+                setDropMode={setDropMode}
                 onApplyBeginnerPreset={(preset) => {
                   if (preset === null) {
                     // Deselect: turn off focus box

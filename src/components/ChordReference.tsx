@@ -66,11 +66,13 @@ interface ChordReferenceProps {
   setScaleViewDegreeFilter: (d: number | null) => void;
   scaleViewMode: 'basic' | 'inversion';
   setScaleViewMode: (m: 'basic' | 'inversion') => void;
-  inversionStringGroup: StringGroup;
-  setInversionStringGroup: (g: StringGroup) => void;
+  inversionStringGroup: StringGroup | null;
+  setInversionStringGroup: (g: StringGroup | null) => void;
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
   ghostNoteOpacity: number;
   setGhostNoteOpacity: (v: number) => void;
+  dropMode: 'drop2' | 'drop3' | null;
+  setDropMode: (m: 'drop2' | 'drop3' | null) => void;
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
   onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
@@ -204,6 +206,7 @@ export default function ChordReference({
   scaleViewMode, setScaleViewMode, inversionStringGroup, setInversionStringGroup,
   onSetInversionVoicing,
   ghostNoteOpacity, setGhostNoteOpacity,
+  dropMode, setDropMode,
   onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
   tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
@@ -384,16 +387,14 @@ export default function ChordReference({
           primaryScale={primaryScale}
           degreeFilter={scaleViewDegreeFilter}
           setDegreeFilter={setScaleViewDegreeFilter}
-          scaleViewMode={scaleViewMode}
-          setScaleViewMode={setScaleViewMode}
           inversionStringGroup={inversionStringGroup}
           setInversionStringGroup={setInversionStringGroup}
           tuning={tuning}
           onSetArpeggioPosition={onSetArpeggioPosition}
           degreeColors={degreeColors}
           onSetInversionVoicing={onSetInversionVoicing}
-          ghostNoteOpacity={ghostNoteOpacity}
-          setGhostNoteOpacity={setGhostNoteOpacity}
+          dropMode={dropMode}
+          setDropMode={setDropMode}
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
@@ -578,30 +579,38 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
 
 function ScaleViewPanel({
   primaryScale, degreeFilter, setDegreeFilter,
-  scaleViewMode, setScaleViewMode,
   inversionStringGroup, setInversionStringGroup,
   tuning, onSetArpeggioPosition, degreeColors,
   onSetInversionVoicing,
-  ghostNoteOpacity, setGhostNoteOpacity,
+  dropMode, setDropMode,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
   setDegreeFilter: (d: number | null) => void;
-  scaleViewMode: 'basic' | 'inversion';
-  setScaleViewMode: (m: 'basic' | 'inversion') => void;
-  inversionStringGroup: StringGroup;
-  setInversionStringGroup: (g: StringGroup) => void;
+  inversionStringGroup: StringGroup | null;
+  setInversionStringGroup: (g: StringGroup | null) => void;
   tuning: number[];
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
   degreeColors: boolean;
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
-  ghostNoteOpacity: number;
-  setGhostNoteOpacity: (v: number) => void;
+  dropMode: 'drop2' | 'drop3' | null;
+  setDropMode: (m: 'drop2' | 'drop3' | null) => void;
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
 
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
+
+  // Persisted descriptions for drop voicings
+  const [dropDescriptions, setDropDescriptions] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem('mf-drop-descriptions') || '{}'); } catch { return {}; }
+  });
+
+  const handleDropDescChange = (key: string, value: string) => {
+    const updated = { ...dropDescriptions, [key]: value };
+    setDropDescriptions(updated);
+    localStorage.setItem('mf-drop-descriptions', JSON.stringify(updated));
+  };
 
   // Build 7th chord labels for each diatonic chord
   const diatonicLabels = useMemo(() => diatonicChords.map((chord, i) => {
@@ -610,30 +619,29 @@ function ScaleViewPanel({
     return { ...chord, label7: `${chord.root}${suffix}`, chordType7 };
   }), [diatonicChords]);
 
+  // Generate inversions when in drop mode with a string group and degree selected
   const inversions = useMemo(() => {
-    if (scaleViewMode !== 'inversion' || degreeFilter === null) return [];
+    if (dropMode !== 'drop2' || inversionStringGroup === null || degreeFilter === null) return [];
     const chord = diatonicLabels[degreeFilter];
     if (!chord) return [];
     return generate7thInversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
-  }, [scaleViewMode, degreeFilter, diatonicLabels, inversionStringGroup, tuning]);
+  }, [dropMode, inversionStringGroup, degreeFilter, diatonicLabels, tuning]);
 
   useEffect(() => {
     setCurrentInvIdx(0);
   }, [inversions]);
-
 
   // Octave shift for inversions
   const [octaveShift, setOctaveShift] = useState(0);
 
   // Apply octave shift to inversion voicing
   useEffect(() => {
-    if (scaleViewMode === 'inversion' && inversions.length > 0) {
+    if (dropMode === 'drop2' && inversionStringGroup !== null && inversions.length > 0) {
       const idx = Math.min(currentInvIdx, inversions.length - 1);
       const baseInv = inversions[idx];
       if (octaveShift === 0) {
         onSetInversionVoicing?.(baseInv);
       } else {
-        // Shift all frets by 12 * octaveShift
         const shifted = {
           ...baseInv,
           frets: baseInv.frets.map(f => f < 0 ? f : Math.max(0, Math.min(24, f + octaveShift * 12))),
@@ -644,9 +652,8 @@ function ScaleViewPanel({
     } else {
       onSetInversionVoicing?.(null);
     }
-  }, [scaleViewMode, inversions, currentInvIdx, onSetInversionVoicing, octaveShift]);
+  }, [dropMode, inversionStringGroup, inversions, currentInvIdx, onSetInversionVoicing, octaveShift]);
 
-  // Reset octave shift when inversions change
   useEffect(() => {
     setOctaveShift(0);
   }, [inversions]);
@@ -655,34 +662,6 @@ function ScaleViewPanel({
 
   return (
     <div className="space-y-2">
-      {/* Mode buttons + Ghost slider */}
-      <div className="flex items-center gap-1 flex-wrap">
-        <button
-          onClick={() => { setScaleViewMode('basic'); onSetInversionVoicing?.(null); }}
-          className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
-            scaleViewMode === 'basic' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground'
-          }`}
-        >🎵 Basic</button>
-        <button
-          onClick={() => setScaleViewMode('inversion')}
-          className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
-            scaleViewMode === 'inversion' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground'
-          }`}
-        >🎹 Inversions</button>
-
-        {/* Ghost note slider - always visible, compact */}
-        <div className="flex items-center gap-0.5 ml-1">
-          <span className="text-[7px] font-mono text-muted-foreground">👻</span>
-          <input
-            type="range" min={0} max={100} step={1}
-            value={Math.round(ghostNoteOpacity * 100)}
-            onChange={e => setGhostNoteOpacity(Number(e.target.value) / 100)}
-            className="w-12 accent-primary h-0.5"
-          />
-          <span className="text-[7px] font-mono text-muted-foreground w-5">{Math.round(ghostNoteOpacity * 100)}%</span>
-        </div>
-      </div>
-
       {/* Degree buttons - BIG and colourful */}
       <div className="grid grid-cols-7 gap-1">
         {diatonicLabels.map((chord, i) => {
@@ -708,146 +687,177 @@ function ScaleViewPanel({
         })}
       </div>
 
-      {/* Inversion mode content */}
-      {scaleViewMode === 'inversion' && (
-        <div>
-          {/* String group buttons - below degree buttons */}
-          <div className="flex items-center gap-1 mb-2">
-            {(['upper', 'mid', 'lower'] as StringGroup[]).map(sg => (
-              <button
-                key={sg}
-                onClick={() => setInversionStringGroup(sg)}
-                className={`px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wider transition-all ${
-                  inversionStringGroup === sg
-                    ? 'bg-accent text-accent-foreground shadow-md'
-                    : 'bg-secondary text-secondary-foreground'
-                }`}
-              >{STRING_GROUP_CONFIG[sg].label}</button>
-            ))}
+      {/* Drop 2 / Drop 3 buttons */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => { setDropMode(dropMode === 'drop2' ? null : 'drop2'); setInversionStringGroup(null); onSetInversionVoicing?.(null); }}
+          className="flex-1 py-3 rounded-xl text-sm font-mono font-black uppercase tracking-wider transition-all border-2"
+          style={{
+            backgroundColor: dropMode === 'drop2' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
+            borderColor: dropMode === 'drop2' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)',
+            color: dropMode === 'drop2' ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
+            boxShadow: dropMode === 'drop2' ? '0 0 12px hsl(var(--primary) / 0.4)' : 'none',
+          }}
+        >Drop 2</button>
+        <button
+          onClick={() => { setDropMode(dropMode === 'drop3' ? null : 'drop3'); setInversionStringGroup(null); onSetInversionVoicing?.(null); }}
+          className="flex-1 py-3 rounded-xl text-sm font-mono font-black uppercase tracking-wider transition-all border-2"
+          style={{
+            backgroundColor: dropMode === 'drop3' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
+            borderColor: dropMode === 'drop3' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)',
+            color: dropMode === 'drop3' ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
+            boxShadow: dropMode === 'drop3' ? '0 0 12px hsl(var(--primary) / 0.4)' : 'none',
+          }}
+        >Drop 3</button>
+      </div>
+
+      {/* Drop mode content panel */}
+      {dropMode && (
+        <div className="flex gap-2">
+          {/* Left: description + string groups */}
+          <div className="w-36 shrink-0 space-y-2">
+            <textarea
+              value={dropDescriptions[dropMode] || ''}
+              onChange={(e) => handleDropDescChange(dropMode, e.target.value)}
+              placeholder={`Describe ${dropMode === 'drop2' ? 'Drop 2' : 'Drop 3'} voicings...`}
+              className="w-full h-20 rounded-lg border border-border bg-muted/40 text-[10px] font-mono text-foreground p-2 resize-none placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <div className="space-y-1">
+              {(['upper', 'mid', 'lower'] as StringGroup[]).map(sg => (
+                <button
+                  key={sg}
+                  onClick={() => setInversionStringGroup(inversionStringGroup === sg ? null : sg)}
+                  className="w-full px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border"
+                  style={{
+                    backgroundColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--secondary))',
+                    borderColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--border))',
+                    color: inversionStringGroup === sg ? 'hsl(var(--accent-foreground))' : 'hsl(var(--secondary-foreground))',
+                  }}
+                >{STRING_GROUP_CONFIG[sg].label}</button>
+              ))}
+            </div>
           </div>
 
-          {degreeFilter !== null && inversions.length > 0 && (
-            <div className="flex gap-0.5 items-stretch">
-              {/* Voicing diagrams - 5 across, tight */}
-              <div
-                className="flex gap-0.5 shrink-0"
-                style={{
-                  backgroundColor: activeColor ? `hsla(${activeColor}, 0.08)` : 'hsla(var(--secondary), 0.3)',
-                  border: activeColor ? `1px solid hsla(${activeColor}, 0.3)` : undefined,
-                  borderRadius: 12,
-                  padding: 4,
-                }}
-              >
-                {inversions.map((inv, idx) => (
-                  <MiniChordDiagram
-                    key={idx}
-                    voicing={inv}
-                    stringGroup={inversionStringGroup}
-                    isActive={currentInvIdx === idx}
-                    color={activeColor || '0, 0%, 60%'}
-                    onClick={() => setCurrentInvIdx(idx)}
-                  />
-                ))}
-              </div>
+          {/* Right: voicings panel */}
+          {inversionStringGroup && (
+            <div className="flex-1 min-w-0">
+              {dropMode === 'drop2' ? (
+                // Drop 2: show inversions (like old inversions tab)
+                degreeFilter !== null && inversions.length > 0 ? (
+                  <div className="flex gap-0.5 items-stretch">
+                    <div
+                      className="flex gap-0.5 shrink-0"
+                      style={{
+                        backgroundColor: activeColor ? `hsla(${activeColor}, 0.08)` : 'hsla(var(--secondary), 0.3)',
+                        border: activeColor ? `1px solid hsla(${activeColor}, 0.3)` : undefined,
+                        borderRadius: 12,
+                        padding: 4,
+                      }}
+                    >
+                      {inversions.map((inv, idx) => (
+                        <MiniChordDiagram
+                          key={idx}
+                          voicing={inv}
+                          stringGroup={inversionStringGroup}
+                          isActive={currentInvIdx === idx}
+                          color={activeColor || '0, 0%, 60%'}
+                          onClick={() => setCurrentInvIdx(idx)}
+                        />
+                      ))}
+                    </div>
 
-              {/* Active inversion info - fills remaining space */}
-              {inversions[Math.min(currentInvIdx, inversions.length - 1)] && (() => {
-                const activeInv = inversions[Math.min(currentInvIdx, inversions.length - 1)];
-                return (
-                  <div
-                    className="rounded-xl p-3 flex-1 min-w-0 transition-all flex flex-col justify-between"
-                    style={{
-                      backgroundColor: activeColor ? `hsla(${activeColor}, 0.12)` : 'hsla(var(--secondary), 0.3)',
-                      border: activeColor ? `2px solid hsla(${activeColor}, 0.4)` : undefined,
-                    }}
-                  >
-                    <div>
-                      <div className="text-[16px] font-bold leading-tight" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
-                        {activeInv.slashName}
-                        {activeInv.alternateName && <span className="ml-2 opacity-70 font-normal text-[12px]">{activeInv.alternateName}</span>}
-                      </div>
-                      <div className="text-[12px] font-mono text-muted-foreground mt-1">
-                        {activeInv.inversionLabel}
-                      </div>
-                      <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
-                        {activeInv.bottomDegree}
-                      </div>
-                      <div className="text-[11px] font-mono text-muted-foreground">
-                        {activeInv.topDegree}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] font-mono mt-1 opacity-60">
-                        {activeInv.degreeOrder}
-                      </div>
-                      <div className="flex items-center gap-1 mt-1">
-                        <div className="text-[14px] font-mono font-bold" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
-                          {activeInv.tab}
+                    {inversions[Math.min(currentInvIdx, inversions.length - 1)] && (() => {
+                      const activeInv = inversions[Math.min(currentInvIdx, inversions.length - 1)];
+                      return (
+                        <div
+                          className="rounded-xl p-3 flex-1 min-w-0 transition-all flex flex-col justify-between"
+                          style={{
+                            backgroundColor: activeColor ? `hsla(${activeColor}, 0.12)` : 'hsla(var(--secondary), 0.3)',
+                            border: activeColor ? `2px solid hsla(${activeColor}, 0.4)` : undefined,
+                          }}
+                        >
+                          <div>
+                            <div className="text-[16px] font-bold leading-tight" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
+                              {activeInv.slashName}
+                              {activeInv.alternateName && <span className="ml-2 opacity-70 font-normal text-[12px]">{activeInv.alternateName}</span>}
+                            </div>
+                            <div className="text-[12px] font-mono text-muted-foreground mt-1">{activeInv.inversionLabel}</div>
+                            <div className="text-[11px] font-mono text-muted-foreground mt-0.5">{activeInv.bottomDegree}</div>
+                            <div className="text-[11px] font-mono text-muted-foreground">{activeInv.topDegree}</div>
+                          </div>
+                          <div>
+                            <div className="text-[11px] font-mono mt-1 opacity-60">{activeInv.degreeOrder}</div>
+                            <div className="flex items-center gap-1 mt-1">
+                              <div className="text-[14px] font-mono font-bold" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
+                                {activeInv.tab}
+                              </div>
+                              <div className="flex gap-1 ml-auto">
+                                <button
+                                  onClick={() => setOctaveShift(prev => {
+                                    const next = prev - 1;
+                                    const idx = Math.min(currentInvIdx, inversions.length - 1);
+                                    const baseInv = inversions[idx];
+                                    if (baseInv) {
+                                      const minFret = Math.min(...baseInv.frets.filter(f => f >= 0));
+                                      if (minFret + next * 12 < 0) return prev;
+                                    }
+                                    return next;
+                                  })}
+                                  disabled={(() => {
+                                    const idx = Math.min(currentInvIdx, inversions.length - 1);
+                                    const baseInv = inversions[idx];
+                                    if (!baseInv) return true;
+                                    const minFret = Math.min(...baseInv.frets.filter(f => f >= 0));
+                                    return minFret + (octaveShift - 1) * 12 < 0;
+                                  })()}
+                                  className="w-7 h-7 rounded flex items-center justify-center text-[16px] font-bold bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                                  title="Octave down"
+                                >−</button>
+                                <button
+                                  onClick={() => setOctaveShift(prev => {
+                                    const next = prev + 1;
+                                    const idx = Math.min(currentInvIdx, inversions.length - 1);
+                                    const baseInv = inversions[idx];
+                                    if (baseInv) {
+                                      const maxFret = Math.max(...baseInv.frets.filter(f => f >= 0));
+                                      if (maxFret + next * 12 > 24) return prev;
+                                    }
+                                    return next;
+                                  })}
+                                  disabled={(() => {
+                                    const idx = Math.min(currentInvIdx, inversions.length - 1);
+                                    const baseInv = inversions[idx];
+                                    if (!baseInv) return true;
+                                    const maxFret = Math.max(...baseInv.frets.filter(f => f >= 0));
+                                    return maxFret + (octaveShift + 1) * 12 > 24;
+                                  })()}
+                                  className="w-7 h-7 rounded flex items-center justify-center text-[16px] font-bold bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                                  title="Octave up"
+                                >+</button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        {/* Octave up/down buttons */}
-                        <div className="flex gap-1 ml-auto">
-                          <button
-                            onClick={() => setOctaveShift(prev => {
-                              const next = prev - 1;
-                              // Check if shifting down would put any note below fret 0
-                              const idx = Math.min(currentInvIdx, inversions.length - 1);
-                              const baseInv = inversions[idx];
-                              if (baseInv) {
-                                const minFret = Math.min(...baseInv.frets.filter(f => f >= 0));
-                                if (minFret + next * 12 < 0) return prev;
-                              }
-                              return next;
-                            })}
-                            disabled={(() => {
-                              const idx = Math.min(currentInvIdx, inversions.length - 1);
-                              const baseInv = inversions[idx];
-                              if (!baseInv) return true;
-                              const minFret = Math.min(...baseInv.frets.filter(f => f >= 0));
-                              return minFret + (octaveShift - 1) * 12 < 0;
-                            })()}
-                            className="w-7 h-7 rounded flex items-center justify-center text-[16px] font-bold bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 transition-colors"
-                            title="Octave down"
-                          >−</button>
-                          <button
-                            onClick={() => setOctaveShift(prev => {
-                              const next = prev + 1;
-                              const idx = Math.min(currentInvIdx, inversions.length - 1);
-                              const baseInv = inversions[idx];
-                              if (baseInv) {
-                                const maxFret = Math.max(...baseInv.frets.filter(f => f >= 0));
-                                if (maxFret + next * 12 > 24) return prev;
-                              }
-                              return next;
-                            })}
-                            disabled={(() => {
-                              const idx = Math.min(currentInvIdx, inversions.length - 1);
-                              const baseInv = inversions[idx];
-                              if (!baseInv) return true;
-                              const maxFret = Math.max(...baseInv.frets.filter(f => f >= 0));
-                              return maxFret + (octaveShift + 1) * 12 > 24;
-                            })()}
-                            className="w-7 h-7 rounded flex items-center justify-center text-[16px] font-bold bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 transition-colors"
-                            title="Octave up"
-                          >+</button>
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
-                );
-              })()}
+                ) : degreeFilter !== null ? (
+                  <div className="text-[10px] font-mono text-muted-foreground italic p-2">No voicings available for this chord type</div>
+                ) : (
+                  <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree above to view voicings</div>
+                )
+              ) : (
+                // Drop 3: empty - user adds own
+                <div className="text-[10px] font-mono text-muted-foreground italic p-4 text-center border border-dashed border-border/40 rounded-lg">
+                  No voicings yet — add your own Drop 3 voicings here.
+                </div>
+              )}
             </div>
-          )}
-
-          {degreeFilter !== null && inversions.length === 0 && (
-            <div className="text-[10px] font-mono text-muted-foreground italic p-2">No inversions available for this chord type</div>
-          )}
-          {degreeFilter === null && (
-            <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree above to view inversions</div>
           )}
         </div>
       )}
 
-      {scaleViewMode === 'basic' && degreeFilter === null && (
+      {!dropMode && degreeFilter === null && (
         <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree to highlight its chord tones on the fretboard</div>
       )}
     </div>
@@ -1630,18 +1640,6 @@ function IdentifyPanel({
           <div className="flex items-center gap-2 mb-1.5">
             <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
               {allChords.length} interpretation{allChords.length !== 1 ? 's' : ''}
-            </div>
-            {/* Overlay opacity slider */}
-            <div className="flex items-center gap-1">
-              <span className="text-[7px] font-mono text-muted-foreground">Overlay</span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={arpOverlayOpacity * 100}
-                onChange={(e) => setArpOverlayOpacity(Number(e.target.value) / 100)}
-                className="w-12 h-2 accent-primary"
-              />
             </div>
             {/* Clear fretboard button */}
             <button
@@ -2515,13 +2513,6 @@ function ArpeggioPositionsPanel({
             className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${addingMode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Add</button>
           <button onClick={() => setArpPathVisible(!arpPathVisible)}
             className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${arpPathVisible ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Path</button>
-          <div className="flex items-center gap-1">
-            <span className="text-[7px] font-mono text-muted-foreground whitespace-nowrap">Opacity</span>
-            <input type="range" min={0} max={100} value={arpOverlayOpacity * 100}
-              onChange={(e) => setArpOverlayOpacity(Number(e.target.value) / 100)}
-              className="w-16 h-1.5 accent-primary" />
-            <span className="text-[7px] font-mono text-muted-foreground">{Math.round(arpOverlayOpacity * 100)}%</span>
-          </div>
           <button onClick={handlePrevPosition} disabled={filteredEntries.length === 0}
             className="px-2 py-1 rounded text-[9px] font-mono font-bold transition-colors bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30">◀ Prev</button>
           <button onClick={handleNextPosition} disabled={filteredEntries.length === 0}
