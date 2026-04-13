@@ -206,6 +206,7 @@ export default function ChordReference({
   scaleViewMode, setScaleViewMode, inversionStringGroup, setInversionStringGroup,
   onSetInversionVoicing,
   ghostNoteOpacity, setGhostNoteOpacity,
+  dropMode, setDropMode,
   onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
   tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
