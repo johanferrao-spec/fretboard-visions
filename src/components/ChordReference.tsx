@@ -632,10 +632,16 @@ function ScaleViewPanel({
 
   // Generate inversions when in drop mode with a string group and degree selected
   const inversions = useMemo(() => {
-    if (dropMode !== 'drop2' || inversionStringGroup === null || degreeFilter === null) return [];
+    if (inversionStringGroup === null || degreeFilter === null) return [];
     const chord = diatonicLabels[degreeFilter];
     if (!chord) return [];
-    return generate7thInversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
+    if (dropMode === 'drop2') {
+      return generate7thInversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
+    }
+    if (dropMode === 'drop3' && (inversionStringGroup === 'lower' || inversionStringGroup === 'mid')) {
+      return generateDrop3Inversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
+    }
+    return [];
   }, [dropMode, inversionStringGroup, degreeFilter, diatonicLabels, tuning]);
 
   useEffect(() => {
