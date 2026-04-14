@@ -9,7 +9,7 @@ import {
   isVoicingPlayableInTuning, getTensionSuggestions, getChordTones,
   analyzeProgression, identifyArpeggioFromNotes,
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
-  getDiatonicChords, generate7thInversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
+  getDiatonicChords, generate7thInversions, generateDrop3Inversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
   STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
   type ArpeggioPosition, type StringGroup, type InversionVoicing,
@@ -502,7 +502,7 @@ export default function ChordReference({
 // DIATONIC HARMONY PANEL
 // ============================================================
 
-// Mini chord diagram for inversion voicings
+// Mini chord diagram for inversion voicings — always shows all 6 strings
 function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   voicing: InversionVoicing;
   stringGroup: StringGroup;
@@ -511,16 +511,17 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   onClick: () => void;
 }) {
   const config = STRING_GROUP_CONFIG[stringGroup];
-  const activeStrings = config.strings;
-  const activeFrets = activeStrings.map(s => voicing.frets[s]).filter(f => f >= 0);
+  const activeStrings = new Set(config.strings);
+  const activeFrets = voicing.frets.filter(f => f >= 0);
   if (activeFrets.length === 0) return null;
   const minFret = Math.min(...activeFrets);
   const maxFret = Math.max(...activeFrets);
   const startFret = Math.max(1, minFret - 1);
   const endFret = Math.max(startFret + 3, maxFret + 1);
   const numFrets = endFret - startFret + 1;
-  const cellSize = 22;
-  const w = 4 * cellSize + 30;
+  const cellSize = 18;
+  const numStrings = 6;
+  const w = (numStrings - 1) * cellSize + 30;
   const h = numFrets * cellSize + 40;
 
   return (
@@ -547,23 +548,33 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
       )}
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="flex-1">
         <text x={4} y={20} fontSize={10} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
-        {[0, 1, 2, 3].map(si => (
-          <line key={`s${si}`} x1={22 + si * cellSize} y1={16} x2={22 + si * cellSize} y2={16 + numFrets * cellSize}
-            stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={0.5} />
+        {/* Draw all 6 strings */}
+        {Array.from({ length: numStrings }, (_, si) => (
+          <line key={`s${si}`} x1={16 + si * cellSize} y1={16} x2={16 + si * cellSize} y2={16 + numFrets * cellSize}
+            stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={activeStrings.has(si) ? 0.5 : 0.15} />
         ))}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
-          <line key={`f${i}`} x1={22} y1={16 + i * cellSize} x2={22 + 3 * cellSize} y2={16 + i * cellSize}
+          <line key={`f${i}`} x1={16} y1={16 + i * cellSize} x2={16 + (numStrings - 1) * cellSize} y2={16 + i * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.5} />
         ))}
-        {activeStrings.map((si, idx) => {
-          const fret = voicing.frets[si];
+        {/* Muted string indicators */}
+        {Array.from({ length: numStrings }, (_, si) => {
+          if (voicing.frets[si] === -1) {
+            return (
+              <text key={`m${si}`} x={16 + si * cellSize} y={12} fontSize={9} fill="hsl(var(--muted-foreground))" textAnchor="middle" fontFamily="monospace" opacity={0.5}>✕</text>
+            );
+          }
+          return null;
+        })}
+        {/* Note dots on actual string positions */}
+        {voicing.frets.map((fret, si) => {
           if (fret < 0) return null;
           const fretPos = fret - startFret;
           return (
-            <circle key={`n${idx}`}
-              cx={22 + idx * cellSize}
+            <circle key={`n${si}`}
+              cx={16 + si * cellSize}
               cy={16 + fretPos * cellSize + cellSize / 2}
-              r={8}
+              r={7}
               fill={`hsl(${color})`}
               opacity={0.9}
             />
@@ -621,10 +632,16 @@ function ScaleViewPanel({
 
   // Generate inversions when in drop mode with a string group and degree selected
   const inversions = useMemo(() => {
-    if (dropMode !== 'drop2' || inversionStringGroup === null || degreeFilter === null) return [];
+    if (inversionStringGroup === null || degreeFilter === null) return [];
     const chord = diatonicLabels[degreeFilter];
     if (!chord) return [];
-    return generate7thInversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
+    if (dropMode === 'drop2') {
+      return generate7thInversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
+    }
+    if (dropMode === 'drop3' && (inversionStringGroup === 'lower' || inversionStringGroup === 'mid')) {
+      return generateDrop3Inversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
+    }
+    return [];
   }, [dropMode, inversionStringGroup, degreeFilter, diatonicLabels, tuning]);
 
   useEffect(() => {
@@ -636,7 +653,7 @@ function ScaleViewPanel({
 
   // Apply octave shift to inversion voicing
   useEffect(() => {
-    if (dropMode === 'drop2' && inversionStringGroup !== null && inversions.length > 0) {
+    if (dropMode && inversionStringGroup !== null && inversions.length > 0) {
       const idx = Math.min(currentInvIdx, inversions.length - 1);
       const baseInv = inversions[idx];
       if (octaveShift === 0) {
@@ -687,63 +704,56 @@ function ScaleViewPanel({
         })}
       </div>
 
-      {/* Drop 2 / Drop 3 buttons */}
+      {/* Drop 2 / Drop 3 — vertical buttons with content to the right */}
       <div className="flex gap-2">
-        <button
-          onClick={() => { setDropMode(dropMode === 'drop2' ? null : 'drop2'); setInversionStringGroup(null); onSetInversionVoicing?.(null); }}
-          className="flex-1 py-3 rounded-xl text-sm font-mono font-black uppercase tracking-wider transition-all border-2"
-          style={{
-            backgroundColor: dropMode === 'drop2' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
-            borderColor: dropMode === 'drop2' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)',
-            color: dropMode === 'drop2' ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
-            boxShadow: dropMode === 'drop2' ? '0 0 12px hsl(var(--primary) / 0.4)' : 'none',
-          }}
-        >Drop 2</button>
-        <button
-          onClick={() => { setDropMode(dropMode === 'drop3' ? null : 'drop3'); setInversionStringGroup(null); onSetInversionVoicing?.(null); }}
-          className="flex-1 py-3 rounded-xl text-sm font-mono font-black uppercase tracking-wider transition-all border-2"
-          style={{
-            backgroundColor: dropMode === 'drop3' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
-            borderColor: dropMode === 'drop3' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)',
-            color: dropMode === 'drop3' ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
-            boxShadow: dropMode === 'drop3' ? '0 0 12px hsl(var(--primary) / 0.4)' : 'none',
-          }}
-        >Drop 3</button>
-      </div>
+        {/* Left column: Drop buttons stacked vertically */}
+        <div className="flex flex-col gap-1 shrink-0" style={{ width: 80 }}>
+          {(['drop2', 'drop3'] as const).map(dm => (
+            <button
+              key={dm}
+              onClick={() => { setDropMode(dropMode === dm ? null : dm); setInversionStringGroup(null); onSetInversionVoicing?.(null); }}
+              className="py-3 rounded-xl text-sm font-mono font-black uppercase tracking-wider transition-all border-2"
+              style={{
+                backgroundColor: dropMode === dm ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
+                borderColor: dropMode === dm ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)',
+                color: dropMode === dm ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
+                boxShadow: dropMode === dm ? '0 0 12px hsl(var(--primary) / 0.4)' : 'none',
+              }}
+            >{dm === 'drop2' ? 'Drop 2' : 'Drop 3'}</button>
+          ))}
+        </div>
 
-      {/* Drop mode content panel */}
-      {dropMode && (
-        <div className="flex gap-2">
-          {/* Left: description + string groups */}
-          <div className="w-36 shrink-0 space-y-2">
-            <textarea
-              value={dropDescriptions[dropMode] || ''}
-              onChange={(e) => handleDropDescChange(dropMode, e.target.value)}
-              placeholder={`Describe ${dropMode === 'drop2' ? 'Drop 2' : 'Drop 3'} voicings...`}
-              className="w-full h-20 rounded-lg border border-border bg-muted/40 text-[10px] font-mono text-foreground p-2 resize-none placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <div className="space-y-1">
-              {(['upper', 'mid', 'lower'] as StringGroup[]).map(sg => (
-                <button
-                  key={sg}
-                  onClick={() => setInversionStringGroup(inversionStringGroup === sg ? null : sg)}
-                  className="w-full px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border"
-                  style={{
-                    backgroundColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--secondary))',
-                    borderColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--border))',
-                    color: inversionStringGroup === sg ? 'hsl(var(--accent-foreground))' : 'hsl(var(--secondary-foreground))',
-                  }}
-                >{STRING_GROUP_CONFIG[sg].label}</button>
-              ))}
+        {/* Right: drop mode content panel */}
+        {dropMode && (
+          <div className="flex gap-2 flex-1 min-w-0">
+            {/* Description + string groups */}
+            <div className="w-32 shrink-0 space-y-2">
+              <textarea
+                value={dropDescriptions[dropMode] || ''}
+                onChange={(e) => handleDropDescChange(dropMode, e.target.value)}
+                placeholder={`Describe ${dropMode === 'drop2' ? 'Drop 2' : 'Drop 3'} voicings...`}
+                className="w-full h-20 rounded-lg border border-border bg-muted/40 text-[10px] font-mono text-foreground p-2 resize-none placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <div className="space-y-1">
+                {(dropMode === 'drop3' ? (['lower', 'mid'] as StringGroup[]) : (['upper', 'mid', 'lower'] as StringGroup[])).map(sg => (
+                  <button
+                    key={sg}
+                    onClick={() => setInversionStringGroup(inversionStringGroup === sg ? null : sg)}
+                    className="w-full px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border"
+                    style={{
+                      backgroundColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--secondary))',
+                      borderColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--border))',
+                      color: inversionStringGroup === sg ? 'hsl(var(--accent-foreground))' : 'hsl(var(--secondary-foreground))',
+                    }}
+                  >{STRING_GROUP_CONFIG[sg].label}</button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Right: voicings panel */}
-          {inversionStringGroup && (
-            <div className="flex-1 min-w-0">
-              {dropMode === 'drop2' ? (
-                // Drop 2: show inversions (like old inversions tab)
-                degreeFilter !== null && inversions.length > 0 ? (
+            {/* Voicings panel */}
+            {inversionStringGroup && (
+              <div className="flex-1 min-w-0">
+                {degreeFilter !== null && inversions.length > 0 ? (
                   <div className="flex gap-0.5 items-stretch">
                     <div
                       className="flex gap-0.5 shrink-0"
@@ -845,17 +855,12 @@ function ScaleViewPanel({
                   <div className="text-[10px] font-mono text-muted-foreground italic p-2">No voicings available for this chord type</div>
                 ) : (
                   <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree above to view voicings</div>
-                )
-              ) : (
-                // Drop 3: empty - user adds own
-                <div className="text-[10px] font-mono text-muted-foreground italic p-4 text-center border border-dashed border-border/40 rounded-lg">
-                  No voicings yet — add your own Drop 3 voicings here.
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {!dropMode && degreeFilter === null && (
         <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree to highlight its chord tones on the fretboard</div>
