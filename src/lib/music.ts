@@ -2774,9 +2774,9 @@ export function getChordTones(root: NoteName, chordType: string): number[] {
 export type StringGroup = 'upper' | 'mid' | 'lower';
 
 export const STRING_GROUP_CONFIG: Record<StringGroup, { label: string; strings: number[]; disabled: number[] }> = {
-  upper: { label: 'Upper (DGBe)', strings: [2, 3, 4, 5], disabled: [0, 1] },
-  mid: { label: 'Mid (ADGB)', strings: [1, 2, 3, 4], disabled: [0, 5] },
-  lower: { label: 'Lower (EADG)', strings: [0, 1, 2, 3], disabled: [4, 5] },
+  upper: { label: 'D String Root', strings: [2, 3, 4, 5], disabled: [0, 1] },
+  mid: { label: 'A String Root', strings: [1, 2, 3, 4], disabled: [0, 5] },
+  lower: { label: 'E String Root', strings: [0, 1, 2, 3], disabled: [4, 5] },
 };
 
 export function scaleToKeyMode(scaleName: string): KeyMode {
@@ -2951,11 +2951,78 @@ const CHORD_TYPE_TO_TEMPLATE_KEY: Record<string, string> = {
   'Min/Maj 7': 'maj7', // fallback
 };
 
-// Template reference roots per string group
+// Template reference roots per string group (Drop 2)
 const TEMPLATE_REF_ROOTS: Record<StringGroup, { templates: Record<string, Record<string, string>>; rootNote: NoteName }> = {
   upper: { templates: UPPER_E_ROOT_TEMPLATES, rootNote: 'E' },
   mid: { templates: MID_C_ROOT_TEMPLATES, rootNote: 'C' },
   lower: { templates: LOWER_G_ROOT_TEMPLATES, rootNote: 'G' },
+};
+
+// ============================================================
+// DROP 3 VOICING TEMPLATES (skip one string in the middle)
+// Stored as arrays of 6 values (-1 for muted)
+// ============================================================
+
+// Drop 3 E string root: G-root reference, strings 0,2,3,4 (skip string 1)
+const DROP3_E_ROOT_TEMPLATES: Record<string, Record<string, number[]>> = {
+  'maj7': {
+    'Root': [3, -1, 4, 4, 3, -1],
+    '1st':  [7, -1, 5, 7, 7, -1],
+    '2nd':  [10, -1, 9, 11, 8, -1],
+    '3rd':  [14, -1, 12, 12, 12, -1],
+  },
+  'm7': {
+    'Root': [3, -1, 3, 3, 3, -1],
+    '1st':  [6, -1, 5, 7, 6, -1],
+    '2nd':  [10, -1, 8, 10, 8, -1],
+    '3rd':  [13, -1, 12, 12, 11, -1],
+  },
+  'dom7': {
+    'Root': [3, -1, 3, 4, 3, -1],
+    '1st':  [7, -1, 5, 7, 6, -1],
+    '2nd':  [10, -1, 9, 10, 8, -1],
+    '3rd':  [13, -1, 12, 12, 12, -1],
+  },
+  'm7b5': {
+    'Root': [3, -1, 3, 3, 2, -1],
+    '1st':  [6, -1, 5, 6, 6, -1],
+    '2nd':  [9, -1, 8, 10, 8, -1],
+    '3rd':  [13, -1, 11, 12, 11, -1],
+  },
+};
+
+// Drop 3 A string root: C-root reference, strings 1,3,4,5 (skip string 2)
+const DROP3_A_ROOT_TEMPLATES: Record<string, Record<string, number[]>> = {
+  'maj7': {
+    'Root': [-1, 3, -1, 4, 5, 3],
+    '1st':  [-1, 7, -1, 5, 8, 7],
+    '2nd':  [-1, 10, -1, 9, 12, 8],
+    '3rd':  [-1, 14, -1, 12, 13, 12],
+  },
+  'm7': {
+    'Root': [-1, 3, -1, 3, 4, 3],
+    '1st':  [-1, 6, -1, 5, 8, 6],
+    '2nd':  [-1, 10, -1, 8, 11, 8],
+    '3rd':  [-1, 13, -1, 12, 13, 11],
+  },
+  'dom7': {
+    'Root': [-1, 3, -1, 3, 5, 3],
+    '1st':  [-1, 7, -1, 5, 8, 6],
+    '2nd':  [-1, 10, -1, 9, 11, 8],
+    '3rd':  [-1, 13, -1, 12, 13, 12],
+  },
+  'm7b5': {
+    'Root': [-1, 3, -1, 3, 4, 2],
+    '1st':  [-1, 6, -1, 5, 7, 6],
+    '2nd':  [-1, 9, -1, 8, 11, 8],
+    '3rd':  [-1, 13, -1, 11, 13, 11],
+  },
+};
+
+// Drop 3 template reference roots per string group
+const DROP3_TEMPLATE_REF_ROOTS: Record<'lower' | 'mid', { templates: Record<string, Record<string, number[]>>; rootNote: NoteName; strings: number[] }> = {
+  lower: { templates: DROP3_E_ROOT_TEMPLATES, rootNote: 'G', strings: [0, 2, 3, 4] },
+  mid: { templates: DROP3_A_ROOT_TEMPLATES, rootNote: 'C', strings: [1, 3, 4, 5] },
 };
 
 // Parse shape string like "XX2433", "X3534X", "3533XX" into 6 tokens
