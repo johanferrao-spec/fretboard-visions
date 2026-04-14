@@ -502,7 +502,7 @@ export default function ChordReference({
 // DIATONIC HARMONY PANEL
 // ============================================================
 
-// Mini chord diagram for inversion voicings
+// Mini chord diagram for inversion voicings — always shows all 6 strings
 function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   voicing: InversionVoicing;
   stringGroup: StringGroup;
@@ -511,16 +511,17 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   onClick: () => void;
 }) {
   const config = STRING_GROUP_CONFIG[stringGroup];
-  const activeStrings = config.strings;
-  const activeFrets = activeStrings.map(s => voicing.frets[s]).filter(f => f >= 0);
+  const activeStrings = new Set(config.strings);
+  const activeFrets = voicing.frets.filter(f => f >= 0);
   if (activeFrets.length === 0) return null;
   const minFret = Math.min(...activeFrets);
   const maxFret = Math.max(...activeFrets);
   const startFret = Math.max(1, minFret - 1);
   const endFret = Math.max(startFret + 3, maxFret + 1);
   const numFrets = endFret - startFret + 1;
-  const cellSize = 22;
-  const w = 4 * cellSize + 30;
+  const cellSize = 18;
+  const numStrings = 6;
+  const w = (numStrings - 1) * cellSize + 30;
   const h = numFrets * cellSize + 40;
 
   return (
@@ -547,23 +548,33 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
       )}
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="flex-1">
         <text x={4} y={20} fontSize={10} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
-        {[0, 1, 2, 3].map(si => (
-          <line key={`s${si}`} x1={22 + si * cellSize} y1={16} x2={22 + si * cellSize} y2={16 + numFrets * cellSize}
-            stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={0.5} />
+        {/* Draw all 6 strings */}
+        {Array.from({ length: numStrings }, (_, si) => (
+          <line key={`s${si}`} x1={16 + si * cellSize} y1={16} x2={16 + si * cellSize} y2={16 + numFrets * cellSize}
+            stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={activeStrings.has(si) ? 0.5 : 0.15} />
         ))}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
-          <line key={`f${i}`} x1={22} y1={16 + i * cellSize} x2={22 + 3 * cellSize} y2={16 + i * cellSize}
+          <line key={`f${i}`} x1={16} y1={16 + i * cellSize} x2={16 + (numStrings - 1) * cellSize} y2={16 + i * cellSize}
             stroke="hsl(var(--muted-foreground))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.5} />
         ))}
-        {activeStrings.map((si, idx) => {
-          const fret = voicing.frets[si];
+        {/* Muted string indicators */}
+        {Array.from({ length: numStrings }, (_, si) => {
+          if (voicing.frets[si] === -1) {
+            return (
+              <text key={`m${si}`} x={16 + si * cellSize} y={12} fontSize={9} fill="hsl(var(--muted-foreground))" textAnchor="middle" fontFamily="monospace" opacity={0.5}>✕</text>
+            );
+          }
+          return null;
+        })}
+        {/* Note dots on actual string positions */}
+        {voicing.frets.map((fret, si) => {
           if (fret < 0) return null;
           const fretPos = fret - startFret;
           return (
-            <circle key={`n${idx}`}
-              cx={22 + idx * cellSize}
+            <circle key={`n${si}`}
+              cx={16 + si * cellSize}
               cy={16 + fretPos * cellSize + cellSize / 2}
-              r={8}
+              r={7}
               fill={`hsl(${color})`}
               opacity={0.9}
             />
