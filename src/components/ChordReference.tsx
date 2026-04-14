@@ -704,63 +704,56 @@ function ScaleViewPanel({
         })}
       </div>
 
-      {/* Drop 2 / Drop 3 buttons */}
+      {/* Drop 2 / Drop 3 — vertical buttons with content to the right */}
       <div className="flex gap-2">
-        <button
-          onClick={() => { setDropMode(dropMode === 'drop2' ? null : 'drop2'); setInversionStringGroup(null); onSetInversionVoicing?.(null); }}
-          className="flex-1 py-3 rounded-xl text-sm font-mono font-black uppercase tracking-wider transition-all border-2"
-          style={{
-            backgroundColor: dropMode === 'drop2' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
-            borderColor: dropMode === 'drop2' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)',
-            color: dropMode === 'drop2' ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
-            boxShadow: dropMode === 'drop2' ? '0 0 12px hsl(var(--primary) / 0.4)' : 'none',
-          }}
-        >Drop 2</button>
-        <button
-          onClick={() => { setDropMode(dropMode === 'drop3' ? null : 'drop3'); setInversionStringGroup(null); onSetInversionVoicing?.(null); }}
-          className="flex-1 py-3 rounded-xl text-sm font-mono font-black uppercase tracking-wider transition-all border-2"
-          style={{
-            backgroundColor: dropMode === 'drop3' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
-            borderColor: dropMode === 'drop3' ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)',
-            color: dropMode === 'drop3' ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
-            boxShadow: dropMode === 'drop3' ? '0 0 12px hsl(var(--primary) / 0.4)' : 'none',
-          }}
-        >Drop 3</button>
-      </div>
+        {/* Left column: Drop buttons stacked vertically */}
+        <div className="flex flex-col gap-1 shrink-0" style={{ width: 80 }}>
+          {(['drop2', 'drop3'] as const).map(dm => (
+            <button
+              key={dm}
+              onClick={() => { setDropMode(dropMode === dm ? null : dm); setInversionStringGroup(null); onSetInversionVoicing?.(null); }}
+              className="py-3 rounded-xl text-sm font-mono font-black uppercase tracking-wider transition-all border-2"
+              style={{
+                backgroundColor: dropMode === dm ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
+                borderColor: dropMode === dm ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)',
+                color: dropMode === dm ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
+                boxShadow: dropMode === dm ? '0 0 12px hsl(var(--primary) / 0.4)' : 'none',
+              }}
+            >{dm === 'drop2' ? 'Drop 2' : 'Drop 3'}</button>
+          ))}
+        </div>
 
-      {/* Drop mode content panel */}
-      {dropMode && (
-        <div className="flex gap-2">
-          {/* Left: description + string groups */}
-          <div className="w-36 shrink-0 space-y-2">
-            <textarea
-              value={dropDescriptions[dropMode] || ''}
-              onChange={(e) => handleDropDescChange(dropMode, e.target.value)}
-              placeholder={`Describe ${dropMode === 'drop2' ? 'Drop 2' : 'Drop 3'} voicings...`}
-              className="w-full h-20 rounded-lg border border-border bg-muted/40 text-[10px] font-mono text-foreground p-2 resize-none placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <div className="space-y-1">
-              {(['upper', 'mid', 'lower'] as StringGroup[]).map(sg => (
-                <button
-                  key={sg}
-                  onClick={() => setInversionStringGroup(inversionStringGroup === sg ? null : sg)}
-                  className="w-full px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border"
-                  style={{
-                    backgroundColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--secondary))',
-                    borderColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--border))',
-                    color: inversionStringGroup === sg ? 'hsl(var(--accent-foreground))' : 'hsl(var(--secondary-foreground))',
-                  }}
-                >{STRING_GROUP_CONFIG[sg].label}</button>
-              ))}
+        {/* Right: drop mode content panel */}
+        {dropMode && (
+          <div className="flex gap-2 flex-1 min-w-0">
+            {/* Description + string groups */}
+            <div className="w-32 shrink-0 space-y-2">
+              <textarea
+                value={dropDescriptions[dropMode] || ''}
+                onChange={(e) => handleDropDescChange(dropMode, e.target.value)}
+                placeholder={`Describe ${dropMode === 'drop2' ? 'Drop 2' : 'Drop 3'} voicings...`}
+                className="w-full h-20 rounded-lg border border-border bg-muted/40 text-[10px] font-mono text-foreground p-2 resize-none placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <div className="space-y-1">
+                {(dropMode === 'drop3' ? (['lower', 'mid'] as StringGroup[]) : (['upper', 'mid', 'lower'] as StringGroup[])).map(sg => (
+                  <button
+                    key={sg}
+                    onClick={() => setInversionStringGroup(inversionStringGroup === sg ? null : sg)}
+                    className="w-full px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border"
+                    style={{
+                      backgroundColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--secondary))',
+                      borderColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--border))',
+                      color: inversionStringGroup === sg ? 'hsl(var(--accent-foreground))' : 'hsl(var(--secondary-foreground))',
+                    }}
+                  >{STRING_GROUP_CONFIG[sg].label}</button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Right: voicings panel */}
-          {inversionStringGroup && (
-            <div className="flex-1 min-w-0">
-              {dropMode === 'drop2' ? (
-                // Drop 2: show inversions (like old inversions tab)
-                degreeFilter !== null && inversions.length > 0 ? (
+            {/* Voicings panel */}
+            {inversionStringGroup && (
+              <div className="flex-1 min-w-0">
+                {degreeFilter !== null && inversions.length > 0 ? (
                   <div className="flex gap-0.5 items-stretch">
                     <div
                       className="flex gap-0.5 shrink-0"
@@ -862,17 +855,12 @@ function ScaleViewPanel({
                   <div className="text-[10px] font-mono text-muted-foreground italic p-2">No voicings available for this chord type</div>
                 ) : (
                   <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree above to view voicings</div>
-                )
-              ) : (
-                // Drop 3: empty - user adds own
-                <div className="text-[10px] font-mono text-muted-foreground italic p-4 text-center border border-dashed border-border/40 rounded-lg">
-                  No voicings yet — add your own Drop 3 voicings here.
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {!dropMode && degreeFilter === null && (
         <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree to highlight its chord tones on the fretboard</div>
