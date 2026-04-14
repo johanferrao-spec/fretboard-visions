@@ -653,7 +653,7 @@ function ScaleViewPanel({
 
   // Apply octave shift to inversion voicing
   useEffect(() => {
-    if (dropMode === 'drop2' && inversionStringGroup !== null && inversions.length > 0) {
+    if (dropMode && inversionStringGroup !== null && inversions.length > 0) {
       const idx = Math.min(currentInvIdx, inversions.length - 1);
       const baseInv = inversions[idx];
       if (octaveShift === 0) {
