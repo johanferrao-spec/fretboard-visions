@@ -289,6 +289,27 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [activeOpenChord, setActiveOpenChord] = useState<string | null>(null);
 
+  // Editable barre chord fingers (persisted to localStorage)
+  const [barreFingers, setBarreFingers] = useState<Record<string, string[]>>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(BARRE_FINGERS_KEY) || '{}');
+      return saved;
+    } catch { return {}; }
+  });
+
+  const getBarreFingers = (chord: typeof BAR_CHORDS[0]): string[] => {
+    return barreFingers[chord.name] || chord.fingers;
+  };
+
+  const handleBarreFingerEdit = (chordName: string, defaultFingers: string[], si: number, value: string) => {
+    const current = barreFingers[chordName] || [...defaultFingers];
+    const updated = [...current];
+    updated[si] = value;
+    const next = { ...barreFingers, [chordName]: updated };
+    setBarreFingers(next);
+    localStorage.setItem(BARRE_FINGERS_KEY, JSON.stringify(next));
+  };
+
   const handlePresetClick = (preset: typeof SCALE_PRESETS[0]) => {
     if (activePreset === preset.name) {
       setActivePreset(null);
