@@ -15,6 +15,9 @@ interface BeginnerModeProps {
 
 const BEGINNER_FONT = 'Fredoka, "Comic Sans MS", "Chalkboard SE", cursive';
 
+// Helper to load/save editable barre chord fingers from localStorage
+const BARRE_FINGERS_KEY = 'mf-barre-fingers';
+
 // Open chord definitions
 const OPEN_CHORDS: { name: string; frets: (number | -1)[]; fingers: string[]; colorVar: string }[] = [
   { name: 'Em', frets: [0, 2, 2, 0, 0, 0], fingers: ['', '2', '3', '', '', ''], colorVar: '--beginner-green' },
@@ -27,12 +30,13 @@ const OPEN_CHORDS: { name: string; frets: (number | -1)[]; fingers: string[]; co
 ];
 
 // Bar chord shapes
-const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: { fret: number; from: number; to: number }; colorVar: string }[] = [
+const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: { fret: number; from: number; to: number }; fingers: string[]; colorVar: string }[] = [
   {
     name: 'Minor (1st string)',
     description: 'Root on low E string',
     frets: [0, 2, 2, 0, 0, 0],
     barre: { fret: 0, from: 0, to: 5 },
+    fingers: ['1', '3', '4', '1', '1', '1'],
     colorVar: '--beginner-purple',
   },
   {
@@ -40,6 +44,7 @@ const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: {
     description: 'Root on low E string',
     frets: [0, 2, 2, 1, 0, 0],
     barre: { fret: 0, from: 0, to: 5 },
+    fingers: ['1', '3', '4', '2', '1', '1'],
     colorVar: '--beginner-blue',
   },
   {
@@ -47,13 +52,15 @@ const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: {
     description: 'Root on A string',
     frets: [-1, 0, 2, 2, 1, 0],
     barre: { fret: 0, from: 1, to: 5 },
+    fingers: ['', '1', '3', '4', '2', '1'],
     colorVar: '--beginner-red',
   },
   {
     name: 'Major (2nd string)',
     description: 'Root on A string',
     frets: [-1, 0, 2, 2, 2, -1],
-    barre: { fret: 0, from: 1, to: 4 },
+    barre: { fret: 0, from: 2, to: 4 },
+    fingers: ['', '1', '2', '3', '4', ''],
     colorVar: '--beginner-yellow',
   },
 ];
