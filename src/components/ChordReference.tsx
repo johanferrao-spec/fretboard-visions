@@ -793,8 +793,7 @@ function ScaleViewPanel({
                         >
                           <div>
                             <div className="text-[16px] font-bold leading-tight" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
-                              {activeInv.slashName}
-                              {activeInv.alternateName && <span className="ml-2 opacity-70 font-normal text-[12px]">{activeInv.alternateName}</span>}
+                              {activeInv.slashName?.split('=')[0]?.trim() || activeInv.slashName}
                             </div>
                             <div className="text-[12px] font-mono text-muted-foreground mt-1">{activeInv.inversionLabel}</div>
                             <div className="text-[11px] font-mono text-muted-foreground mt-0.5">{activeInv.bottomDegree}</div>
