@@ -345,6 +345,27 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
     );
   }
 
+  // Editable barre chord fingers (persisted to localStorage)
+  const [barreFingers, setBarreFingers] = useState<Record<string, string[]>>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(BARRE_FINGERS_KEY) || '{}');
+      return saved;
+    } catch { return {}; }
+  });
+
+  const getBarreFingers = (chord: typeof BAR_CHORDS[0]): string[] => {
+    return barreFingers[chord.name] || chord.fingers;
+  };
+
+  const handleBarreFingerEdit = (chordName: string, defaultFingers: string[], si: number, value: string) => {
+    const current = barreFingers[chordName] || [...defaultFingers];
+    const updated = [...current];
+    updated[si] = value;
+    const next = { ...barreFingers, [chordName]: updated };
+    setBarreFingers(next);
+    localStorage.setItem(BARRE_FINGERS_KEY, JSON.stringify(next));
+  };
+
   if (page === 'barre') {
     return (
       <div className="animate-fade-in">
@@ -356,12 +377,16 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
         </button>
         <div className="text-sm font-bold text-foreground mb-1" style={{ fontFamily: BEGINNER_FONT }}>🤘 Barre Chords</div>
         <div className="text-[10px] font-mono text-muted-foreground mb-2">
-          These shapes can be moved up and down the neck. The grey bar shows where to lay your index finger flat.
+          These shapes can be moved up and down the neck. The grey bar shows where to lay your index finger flat. Numbers on the markers show which fingers to use. Double-click a marker to correct the finger number.
         </div>
         <div className="flex gap-1.5">
           {BAR_CHORDS.map(chord => (
             <div key={chord.name} className="flex-1 min-w-0">
-              <BarreChordDiagram chord={chord} />
+              <BarreChordDiagram
+                chord={chord}
+                editableFingers={getBarreFingers(chord)}
+                onFingerEdit={(si, value) => handleBarreFingerEdit(chord.name, chord.fingers, si, value)}
+              />
             </div>
           ))}
         </div>
@@ -369,6 +394,7 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
           <div className="text-[10px] font-mono text-muted-foreground leading-relaxed">
             <strong className="text-foreground">How to use:</strong> Move the entire shape up or down the fretboard. The root note determines the chord name.
             E.g., the E-shape major at fret 3 = <strong>G major</strong>, at fret 5 = <strong>A major</strong>.
+            <br /><strong className="text-foreground">Finger guide:</strong> 1 = Index, 2 = Middle, 3 = Ring, 4 = Pinky.
           </div>
         </div>
       </div>
