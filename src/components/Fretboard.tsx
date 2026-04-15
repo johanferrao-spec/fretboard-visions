@@ -1283,6 +1283,19 @@ export default function Fretboard({
                       color: pColor,
                       textShadow: `0 0 8px ${pColor}, 0 0 18px ${pColor}, 0 0 30px ${pColor}`,
                     } : {}),
+                    // In identify mode, glow open strings that are part of the chord (fret 0)
+                    ...(!isChordMuted && !isArpAddMuted && identifyMode && identifyFrets[stringIdx] === 0 ? (() => {
+                      const openNote = noteAtFret(stringIdx, 0, tuning);
+                      let glowColor = 'hsl(var(--primary))';
+                      if (degreeColors && identifyRoot) {
+                        const dc = getDegreeColor(identifyRoot, openNote);
+                        if (dc) glowColor = dc;
+                      }
+                      return {
+                        color: glowColor,
+                        textShadow: `0 0 8px ${glowColor}, 0 0 18px ${glowColor}, 0 0 30px ${glowColor}`,
+                      };
+                    })() : {}),
                   }}
                   title={identifyMode ? "Click to toggle open string" : arpAddMode ? "Click to toggle open string" : "Double-click to toggle string"}
                 >
