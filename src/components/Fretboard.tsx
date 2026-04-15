@@ -755,7 +755,12 @@ export default function Fretboard({
       if (disabledStrings.has(si)) continue;
       const note = noteAtFret(si, 0, tuning);
       const style = getNoteStyle(note, si, 0);
-      if (style && !style.greyed) glowSet.add(si);
+      if (!style || style.greyed) continue;
+      // For inversion voicings, only glow if the open string is actually IN the voicing
+      if (inversionVoicing && inversionNoteSet.size > 0) {
+        if (!inversionNoteSet.has(`${si}-0`)) continue;
+      }
+      glowSet.add(si);
     }
     return glowSet;
   };
