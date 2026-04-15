@@ -502,7 +502,7 @@ export default function ChordReference({
 // DIATONIC HARMONY PANEL
 // ============================================================
 
-// Mini chord diagram for inversion voicings — always shows all 6 strings
+// Mini chord diagram for inversion voicings — always shows all 6 strings, uniform sizing
 function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   voicing: InversionVoicing;
   stringGroup: StringGroup;
@@ -512,17 +512,22 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
 }) {
   const config = STRING_GROUP_CONFIG[stringGroup];
   const activeStrings = new Set(config.strings);
-  const activeFrets = voicing.frets.filter(f => f >= 0);
-  if (activeFrets.length === 0) return null;
-  const minFret = Math.min(...activeFrets);
-  const maxFret = Math.max(...activeFrets);
+  const activeFrets = voicing.frets.filter(f => f > 0);
+  if (activeFrets.length === 0 && !voicing.frets.some(f => f === 0)) return null;
+  const frettedNotes = voicing.frets.filter(f => f > 0);
+  const minFret = frettedNotes.length > 0 ? Math.min(...frettedNotes) : 1;
   const startFret = Math.max(1, minFret - 1);
-  const endFret = Math.max(startFret + 3, maxFret + 1);
-  const numFrets = endFret - startFret + 1;
-  const cellSize = 18;
+  const numFrets = 5; // Fixed number of frets for uniform sizing
+  const cellW = 16;
+  const cellH = 22;
   const numStrings = 6;
-  const w = (numStrings - 1) * cellSize + 30;
-  const h = numFrets * cellSize + 40;
+  const leftPad = 18;
+  const topPad = 16;
+  const w = leftPad + (numStrings - 1) * cellW + 14;
+  const h = topPad + numFrets * cellH + 14;
+
+  // Only show primary name (no alternate)
+  const displayName = voicing.slashName?.split('=')[0]?.trim() || voicing.slashName;
 
   return (
     <button
@@ -532,56 +537,56 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
         border: isActive ? `3px solid hsl(${color})` : '2px solid hsla(var(--border), 0.3)',
         backgroundColor: isActive ? `hsla(${color}, 0.15)` : 'hsla(var(--secondary), 0.5)',
         padding: 4,
-        aspectRatio: '1',
-        width: 110,
-        minWidth: 110,
-        minHeight: 110,
+        width: 100,
+        minWidth: 100,
       }}
     >
-      <div className="text-[11px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
-        {voicing.slashName}
+      <div className="text-[10px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
+        {displayName}
       </div>
-      {voicing.alternateName && (
-        <div className="text-[9px] font-mono opacity-70 mb-0.5" style={{ color: `hsl(${color})` }}>
-          {voicing.alternateName}
-        </div>
-      )}
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="flex-1">
-        <text x={4} y={20} fontSize={10} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+        <text x={4} y={topPad + 10} fontSize={9} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
         {/* Draw all 6 strings */}
         {Array.from({ length: numStrings }, (_, si) => (
-          <line key={`s${si}`} x1={16 + si * cellSize} y1={16} x2={16 + si * cellSize} y2={16 + numFrets * cellSize}
+          <line key={`s${si}`} x1={leftPad + si * cellW} y1={topPad} x2={leftPad + si * cellW} y2={topPad + numFrets * cellH}
             stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={activeStrings.has(si) ? 0.5 : 0.15} />
         ))}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
-          <line key={`f${i}`} x1={16} y1={16 + i * cellSize} x2={16 + (numStrings - 1) * cellSize} y2={16 + i * cellSize}
+          <line key={`f${i}`} x1={leftPad} y1={topPad + i * cellH} x2={leftPad + (numStrings - 1) * cellW} y2={topPad + i * cellH}
             stroke="hsl(var(--muted-foreground))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.5} />
         ))}
         {/* Muted string indicators */}
         {Array.from({ length: numStrings }, (_, si) => {
           if (voicing.frets[si] === -1) {
             return (
-              <text key={`m${si}`} x={16 + si * cellSize} y={12} fontSize={9} fill="hsl(var(--muted-foreground))" textAnchor="middle" fontFamily="monospace" opacity={0.5}>✕</text>
+              <text key={`m${si}`} x={leftPad + si * cellW} y={topPad - 4} fontSize={9} fill="hsl(var(--muted-foreground))" textAnchor="middle" fontFamily="monospace" opacity={0.5}>✕</text>
+            );
+          }
+          // Open string ring
+          if (voicing.frets[si] === 0) {
+            return (
+              <circle key={`o${si}`} cx={leftPad + si * cellW} cy={topPad - 6} r={4} fill="none" stroke="hsl(var(--foreground))" strokeWidth={1.5} />
             );
           }
           return null;
         })}
         {/* Note dots on actual string positions */}
         {voicing.frets.map((fret, si) => {
-          if (fret < 0) return null;
+          if (fret <= 0) return null;
           const fretPos = fret - startFret;
+          if (fretPos < 0 || fretPos >= numFrets) return null;
           return (
             <circle key={`n${si}`}
-              cx={16 + si * cellSize}
-              cy={16 + fretPos * cellSize + cellSize / 2}
-              r={7}
+              cx={leftPad + si * cellW}
+              cy={topPad + fretPos * cellH + cellH / 2}
+              r={6}
               fill={`hsl(${color})`}
               opacity={0.9}
             />
           );
         })}
       </svg>
-      <div className="text-[9px] font-mono mt-0.5 leading-tight text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
+      <div className="text-[8px] font-mono mt-0.5 leading-tight text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
         {voicing.degreeOrder}
       </div>
     </button>
@@ -788,8 +793,7 @@ function ScaleViewPanel({
                         >
                           <div>
                             <div className="text-[16px] font-bold leading-tight" style={{ color: activeColor ? `hsl(${activeColor})` : undefined }}>
-                              {activeInv.slashName}
-                              {activeInv.alternateName && <span className="ml-2 opacity-70 font-normal text-[12px]">{activeInv.alternateName}</span>}
+                              {activeInv.slashName?.split('=')[0]?.trim() || activeInv.slashName}
                             </div>
                             <div className="text-[12px] font-mono text-muted-foreground mt-1">{activeInv.inversionLabel}</div>
                             <div className="text-[11px] font-mono text-muted-foreground mt-0.5">{activeInv.bottomDegree}</div>

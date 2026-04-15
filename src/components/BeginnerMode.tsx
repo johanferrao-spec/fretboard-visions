@@ -15,6 +15,9 @@ interface BeginnerModeProps {
 
 const BEGINNER_FONT = 'Fredoka, "Comic Sans MS", "Chalkboard SE", cursive';
 
+// Helper to load/save editable barre chord fingers from localStorage
+const BARRE_FINGERS_KEY = 'mf-barre-fingers';
+
 // Open chord definitions
 const OPEN_CHORDS: { name: string; frets: (number | -1)[]; fingers: string[]; colorVar: string }[] = [
   { name: 'Em', frets: [0, 2, 2, 0, 0, 0], fingers: ['', '2', '3', '', '', ''], colorVar: '--beginner-green' },
@@ -27,12 +30,13 @@ const OPEN_CHORDS: { name: string; frets: (number | -1)[]; fingers: string[]; co
 ];
 
 // Bar chord shapes
-const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: { fret: number; from: number; to: number }; colorVar: string }[] = [
+const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: { fret: number; from: number; to: number }; fingers: string[]; colorVar: string }[] = [
   {
     name: 'Minor (1st string)',
     description: 'Root on low E string',
     frets: [0, 2, 2, 0, 0, 0],
     barre: { fret: 0, from: 0, to: 5 },
+    fingers: ['1', '3', '4', '1', '1', '1'],
     colorVar: '--beginner-purple',
   },
   {
@@ -40,6 +44,7 @@ const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: {
     description: 'Root on low E string',
     frets: [0, 2, 2, 1, 0, 0],
     barre: { fret: 0, from: 0, to: 5 },
+    fingers: ['1', '3', '4', '2', '1', '1'],
     colorVar: '--beginner-blue',
   },
   {
@@ -47,13 +52,15 @@ const BAR_CHORDS: { name: string; description: string; frets: number[]; barre: {
     description: 'Root on A string',
     frets: [-1, 0, 2, 2, 1, 0],
     barre: { fret: 0, from: 1, to: 5 },
+    fingers: ['', '1', '3', '4', '2', '1'],
     colorVar: '--beginner-red',
   },
   {
     name: 'Major (2nd string)',
     description: 'Root on A string',
     frets: [-1, 0, 2, 2, 2, -1],
-    barre: { fret: 0, from: 1, to: 4 },
+    barre: { fret: 0, from: 2, to: 4 },
+    fingers: ['', '1', '2', '3', '4', ''],
     colorVar: '--beginner-yellow',
   },
 ];
@@ -160,7 +167,12 @@ function OpenChordDiagram({ chord, isActive, onClick }: {
   );
 }
 
-function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
+function BarreChordDiagram({ chord, editableFingers, onFingerEdit }: { 
+  chord: typeof BAR_CHORDS[0];
+  editableFingers: string[];
+  onFingerEdit: (stringIdx: number, value: string) => void;
+}) {
+  const [editingString, setEditingString] = useState<number | null>(null);
   const cellSize = 32;
   const numFrets = 4;
   const leftPad = 12;
@@ -168,6 +180,14 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
   const w = leftPad + 5 * cellSize + 12;
   const h = topPad + numFrets * cellSize + 12;
   const markerR = 12;
+
+  const fingers = editableFingers;
+
+  const handleDoubleClick = (e: React.MouseEvent, si: number) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setEditingString(si);
+  };
 
   return (
     <div
@@ -200,8 +220,14 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
             <>
               <line x1={x1} y1={y} x2={x2} y2={y}
                 stroke="hsl(var(--muted-foreground))" strokeWidth={barThickness} strokeLinecap="round" opacity={0.5} />
-                <circle cx={x1} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} opacity={0.9} />
-                <circle cx={x2} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} opacity={0.9} />
+              <circle cx={x1} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} opacity={0.9} />
+              {fingers[from] && (
+                <text x={x1} y={y + 4.5} fontSize={12} textAnchor="middle" fill="hsl(var(--beginner-bubble-foreground))" fontFamily="sans-serif" fontWeight="bold">{fingers[from]}</text>
+              )}
+              <circle cx={x2} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} opacity={0.9} />
+              {fingers[to] && (
+                <text x={x2} y={y + 4.5} fontSize={12} textAnchor="middle" fill="hsl(var(--beginner-bubble-foreground))" fontFamily="sans-serif" fontWeight="bold">{fingers[to]}</text>
+              )}
             </>
           );
         })()}
@@ -214,9 +240,46 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
           if (fret <= 0) return null;
           const x = leftPad + si * cellSize;
           const y = topPad + (fret + 0.5) * cellSize;
-          return <circle key={si} cx={x} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} />;
+          return (
+            <g key={si}>
+              <circle cx={x} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} />
+              {fingers[si] && (
+                <text x={x} y={y + 4.5} fontSize={12} textAnchor="middle" fill="hsl(var(--beginner-bubble-foreground))" fontFamily="sans-serif" fontWeight="bold">{fingers[si]}</text>
+              )}
+            </g>
+          );
         })}
       </svg>
+      {/* Editable finger overlay using foreignObject would be complex in SVG, use positioned inputs */}
+      <div className="flex gap-[8px] mt-1" style={{ paddingLeft: leftPad - 4 }}>
+        {[0,1,2,3,4,5].map(si => {
+          const fret = chord.frets[si];
+          const isInBarre = si >= chord.barre.from && si <= chord.barre.to && fret <= 0;
+          const hasMarker = fret > 0 || (isInBarre && (si === chord.barre.from || si === chord.barre.to));
+          if (!hasMarker && fret !== 0) return <div key={si} style={{ width: cellSize - 8 }} />;
+          return (
+            <div key={si} style={{ width: cellSize - 8 }}>
+              {editingString === si ? (
+                <input
+                  autoFocus
+                  className="w-full text-center text-[10px] font-mono bg-muted border border-primary rounded px-0.5"
+                  defaultValue={fingers[si]}
+                  onBlur={(e) => { onFingerEdit(si, e.target.value); setEditingString(null); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { onFingerEdit(si, (e.target as HTMLInputElement).value); setEditingString(null); } }}
+                  maxLength={1}
+                  style={{ width: 20, height: 16 }}
+                />
+              ) : (
+                <div
+                  className="text-center text-[8px] font-mono text-muted-foreground cursor-pointer hover:text-foreground"
+                  onDoubleClick={(e) => handleDoubleClick(e, si)}
+                  title="Double-click to edit finger"
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -225,6 +288,27 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
   const [page, setPage] = useState<BeginnerPage>('menu');
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [activeOpenChord, setActiveOpenChord] = useState<string | null>(null);
+
+  // Editable barre chord fingers (persisted to localStorage)
+  const [barreFingers, setBarreFingers] = useState<Record<string, string[]>>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(BARRE_FINGERS_KEY) || '{}');
+      return saved;
+    } catch { return {}; }
+  });
+
+  const getBarreFingers = (chord: typeof BAR_CHORDS[0]): string[] => {
+    return barreFingers[chord.name] || chord.fingers;
+  };
+
+  const handleBarreFingerEdit = (chordName: string, defaultFingers: string[], si: number, value: string) => {
+    const current = barreFingers[chordName] || [...defaultFingers];
+    const updated = [...current];
+    updated[si] = value;
+    const next = { ...barreFingers, [chordName]: updated };
+    setBarreFingers(next);
+    localStorage.setItem(BARRE_FINGERS_KEY, JSON.stringify(next));
+  };
 
   const handlePresetClick = (preset: typeof SCALE_PRESETS[0]) => {
     if (activePreset === preset.name) {
@@ -282,6 +366,8 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
     );
   }
 
+
+
   if (page === 'barre') {
     return (
       <div className="animate-fade-in">
@@ -293,12 +379,16 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
         </button>
         <div className="text-sm font-bold text-foreground mb-1" style={{ fontFamily: BEGINNER_FONT }}>🤘 Barre Chords</div>
         <div className="text-[10px] font-mono text-muted-foreground mb-2">
-          These shapes can be moved up and down the neck. The grey bar shows where to lay your index finger flat.
+          These shapes can be moved up and down the neck. The grey bar shows where to lay your index finger flat. Numbers on the markers show which fingers to use. Double-click a marker to correct the finger number.
         </div>
         <div className="flex gap-1.5">
           {BAR_CHORDS.map(chord => (
             <div key={chord.name} className="flex-1 min-w-0">
-              <BarreChordDiagram chord={chord} />
+              <BarreChordDiagram
+                chord={chord}
+                editableFingers={getBarreFingers(chord)}
+                onFingerEdit={(si, value) => handleBarreFingerEdit(chord.name, chord.fingers, si, value)}
+              />
             </div>
           ))}
         </div>
@@ -306,6 +396,7 @@ export default function BeginnerMode({ onApplyPreset, onApplyOpenChord }: Beginn
           <div className="text-[10px] font-mono text-muted-foreground leading-relaxed">
             <strong className="text-foreground">How to use:</strong> Move the entire shape up or down the fretboard. The root note determines the chord name.
             E.g., the E-shape major at fret 3 = <strong>G major</strong>, at fret 5 = <strong>A major</strong>.
+            <br /><strong className="text-foreground">Finger guide:</strong> 1 = Index, 2 = Middle, 3 = Ring, 4 = Pinky.
           </div>
         </div>
       </div>

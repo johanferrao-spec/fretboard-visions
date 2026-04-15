@@ -755,7 +755,12 @@ export default function Fretboard({
       if (disabledStrings.has(si)) continue;
       const note = noteAtFret(si, 0, tuning);
       const style = getNoteStyle(note, si, 0);
-      if (style && !style.greyed) glowSet.add(si);
+      if (!style || style.greyed) continue;
+      // For inversion voicings, only glow if the open string is actually IN the voicing
+      if (inversionVoicing && inversionNoteSet.size > 0) {
+        if (!inversionNoteSet.has(`${si}-0`)) continue;
+      }
+      glowSet.add(si);
     }
     return glowSet;
   };
@@ -1283,6 +1288,19 @@ export default function Fretboard({
                       color: pColor,
                       textShadow: `0 0 8px ${pColor}, 0 0 18px ${pColor}, 0 0 30px ${pColor}`,
                     } : {}),
+                    // In identify mode, glow open strings that are part of the chord (fret 0)
+                    ...(!isChordMuted && !isArpAddMuted && identifyMode && identifyFrets[stringIdx] === 0 ? (() => {
+                      const openNote = noteAtFret(stringIdx, 0, tuning);
+                      let glowColor = 'hsl(var(--primary))';
+                      if (degreeColors && identifyRoot) {
+                        const dc = getDegreeColor(identifyRoot, openNote);
+                        if (dc) glowColor = dc;
+                      }
+                      return {
+                        color: glowColor,
+                        textShadow: `0 0 8px ${glowColor}, 0 0 18px ${glowColor}, 0 0 30px ${glowColor}`,
+                      };
+                    })() : {}),
                   }}
                   title={identifyMode ? "Click to toggle open string" : arpAddMode ? "Click to toggle open string" : "Double-click to toggle string"}
                 >
