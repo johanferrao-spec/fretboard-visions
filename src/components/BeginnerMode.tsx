@@ -167,7 +167,12 @@ function OpenChordDiagram({ chord, isActive, onClick }: {
   );
 }
 
-function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
+function BarreChordDiagram({ chord, editableFingers, onFingerEdit }: { 
+  chord: typeof BAR_CHORDS[0];
+  editableFingers: string[];
+  onFingerEdit: (stringIdx: number, value: string) => void;
+}) {
+  const [editingString, setEditingString] = useState<number | null>(null);
   const cellSize = 32;
   const numFrets = 4;
   const leftPad = 12;
@@ -175,6 +180,14 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
   const w = leftPad + 5 * cellSize + 12;
   const h = topPad + numFrets * cellSize + 12;
   const markerR = 12;
+
+  const fingers = editableFingers;
+
+  const handleDoubleClick = (e: React.MouseEvent, si: number) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setEditingString(si);
+  };
 
   return (
     <div
@@ -207,8 +220,14 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
             <>
               <line x1={x1} y1={y} x2={x2} y2={y}
                 stroke="hsl(var(--muted-foreground))" strokeWidth={barThickness} strokeLinecap="round" opacity={0.5} />
-                <circle cx={x1} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} opacity={0.9} />
-                <circle cx={x2} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} opacity={0.9} />
+              <circle cx={x1} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} opacity={0.9} />
+              {fingers[from] && (
+                <text x={x1} y={y + 4.5} fontSize={12} textAnchor="middle" fill="hsl(var(--beginner-bubble-foreground))" fontFamily="sans-serif" fontWeight="bold">{fingers[from]}</text>
+              )}
+              <circle cx={x2} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} opacity={0.9} />
+              {fingers[to] && (
+                <text x={x2} y={y + 4.5} fontSize={12} textAnchor="middle" fill="hsl(var(--beginner-bubble-foreground))" fontFamily="sans-serif" fontWeight="bold">{fingers[to]}</text>
+              )}
             </>
           );
         })()}
@@ -221,9 +240,46 @@ function BarreChordDiagram({ chord }: { chord: typeof BAR_CHORDS[0] }) {
           if (fret <= 0) return null;
           const x = leftPad + si * cellSize;
           const y = topPad + (fret + 0.5) * cellSize;
-          return <circle key={si} cx={x} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} />;
+          return (
+            <g key={si}>
+              <circle cx={x} cy={y} r={markerR} fill={`hsl(var(${chord.colorVar}))`} />
+              {fingers[si] && (
+                <text x={x} y={y + 4.5} fontSize={12} textAnchor="middle" fill="hsl(var(--beginner-bubble-foreground))" fontFamily="sans-serif" fontWeight="bold">{fingers[si]}</text>
+              )}
+            </g>
+          );
         })}
       </svg>
+      {/* Editable finger overlay using foreignObject would be complex in SVG, use positioned inputs */}
+      <div className="flex gap-[8px] mt-1" style={{ paddingLeft: leftPad - 4 }}>
+        {[0,1,2,3,4,5].map(si => {
+          const fret = chord.frets[si];
+          const isInBarre = si >= chord.barre.from && si <= chord.barre.to && fret <= 0;
+          const hasMarker = fret > 0 || (isInBarre && (si === chord.barre.from || si === chord.barre.to));
+          if (!hasMarker && fret !== 0) return <div key={si} style={{ width: cellSize - 8 }} />;
+          return (
+            <div key={si} style={{ width: cellSize - 8 }}>
+              {editingString === si ? (
+                <input
+                  autoFocus
+                  className="w-full text-center text-[10px] font-mono bg-muted border border-primary rounded px-0.5"
+                  defaultValue={fingers[si]}
+                  onBlur={(e) => { onFingerEdit(si, e.target.value); setEditingString(null); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { onFingerEdit(si, (e.target as HTMLInputElement).value); setEditingString(null); } }}
+                  maxLength={1}
+                  style={{ width: 20, height: 16 }}
+                />
+              ) : (
+                <div
+                  className="text-center text-[8px] font-mono text-muted-foreground cursor-pointer hover:text-foreground"
+                  onDoubleClick={(e) => handleDoubleClick(e, si)}
+                  title="Double-click to edit finger"
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
