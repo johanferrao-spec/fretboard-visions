@@ -97,7 +97,7 @@ export default function TrackHeader({ track, onChange, onRegenerate, onAIRegener
       </div>
 
       {track.manuallyEdited && (
-        <div className="text-[7px] font-mono text-amber-500 uppercase tracking-wider">● edited</div>
+        <div className="text-[7px] font-mono uppercase tracking-wider" style={{ color: 'hsl(40, 90%, 60%)' }}>● edited</div>
       )}
     </div>
   );
