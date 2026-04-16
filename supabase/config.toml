@@ -1,1 +1,4 @@
 project_id = "cfpadpfgmuqxvoqmaztb"
+
+[functions.generate-backing-midi]
+verify_jwt = false

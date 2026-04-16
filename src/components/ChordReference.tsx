@@ -90,7 +90,7 @@ interface ChordReferenceProps {
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
-type MainTab = 'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis' | null;
+type MainTab = 'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tabvis' | null;
 type OctaveRange = 1 | 2 | 3;
 
 const DEFAULT_ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
@@ -357,6 +357,7 @@ export default function ChordReference({
           { key: 'caged' as MainTab, label: 'CAGED' },
           { key: 'identify' as MainTab, label: "What's This?" },
           { key: 'changes' as MainTab, label: 'Progression Analyser' },
+          { key: 'backing' as MainTab, label: '🎹 Backing Track' },
           { key: 'tabvis' as MainTab, label: 'Tab Visualiser' },
         ]).map(tab => (
           <button

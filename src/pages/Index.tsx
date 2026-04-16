@@ -8,6 +8,7 @@ import ControlPanel from '@/components/ControlPanel';
 import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
+import BackingTrackView from '@/components/BackingTrack/BackingTrackView';
 import type { NoteName } from '@/lib/music';
 import type { TabNote, TabData } from '@/components/TabVisualiser';
 import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_DEGREE_COLORS, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
@@ -22,7 +23,7 @@ const Index = () => {
   const [volume, setVolume] = useState(0.7);
   const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
   const [keyMode, setKeyMode] = useState<KeyMode>(() => scaleToKeyMode(fb.primaryScale.scale));
-  const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'tabvis' | null>(null);
+  const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tabvis' | null>(null);
   const [tabVisNotes, setTabVisNotes] = useState<{ current: Array<{string: number; fret: number}>; upcoming: Array<{string: number; fret: number}[]> } | null>(null);
   const [tabVisHasOpened, setTabVisHasOpened] = useState(false);
   const [tabVisData, setTabVisData] = useState<TabData | null>(null);
@@ -449,38 +450,67 @@ const Index = () => {
         </main>
       </div>
 
-      {/* Song Timeline — fixed at bottom */}
-      <SongTimeline
-        chords={timeline.chords}
-        measures={timeline.measures}
-        setMeasures={timeline.setMeasures}
-        bpm={timeline.bpm}
-        setBpm={timeline.setBpm}
-        genre={timeline.genre}
-        setGenre={timeline.setGenre}
-        snap={timeline.snap}
-        setSnap={timeline.setSnap}
-        isPlaying={timeline.isPlaying}
-        currentBeat={timeline.currentBeat}
-        panelHeight={timeline.panelHeight}
-        setPanelHeight={timeline.setPanelHeight}
-        onPlay={handlePlay}
-        onStop={handleStop}
-        onAddChord={timeline.addChord}
-        onMoveChord={timeline.moveChord}
-        onResizeChord={timeline.resizeChord}
-        onRemoveChord={timeline.removeChord}
-        onClearTimeline={timeline.clearTimeline}
-        onTrimOverlaps={timeline.trimOverlaps}
-        volume={volume}
-        onVolumeChange={handleVolumeChange}
-        timelineKey={timelineKey}
-        setTimelineKey={setTimelineKey}
-        keyMode={keyMode}
-        setKeyMode={setKeyMode}
-        onSeek={handleSeek}
-        onSetChordBass={timeline.setChordBass}
-      />
+      {/* Bottom area — Song Timeline always visible; expands with Backing Track when active */}
+      <div
+        className={`flex flex-col shrink-0 transition-[max-height] duration-500 ease-out`}
+        style={{
+          maxHeight: activeTab === 'backing' ? '70vh' : '180px',
+        }}
+      >
+        {/* Timeline — order shifts when backing is active so it slides up to top of this region */}
+        <div className="transition-all duration-500 ease-out">
+          <SongTimeline
+            chords={timeline.chords}
+            measures={timeline.measures}
+            setMeasures={timeline.setMeasures}
+            bpm={timeline.bpm}
+            setBpm={timeline.setBpm}
+            genre={timeline.genre}
+            setGenre={timeline.setGenre}
+            snap={timeline.snap}
+            setSnap={timeline.setSnap}
+            isPlaying={timeline.isPlaying}
+            currentBeat={timeline.currentBeat}
+            panelHeight={timeline.panelHeight}
+            setPanelHeight={timeline.setPanelHeight}
+            onPlay={handlePlay}
+            onStop={handleStop}
+            onAddChord={timeline.addChord}
+            onMoveChord={timeline.moveChord}
+            onResizeChord={timeline.resizeChord}
+            onRemoveChord={timeline.removeChord}
+            onClearTimeline={timeline.clearTimeline}
+            onTrimOverlaps={timeline.trimOverlaps}
+            volume={volume}
+            onVolumeChange={handleVolumeChange}
+            timelineKey={timelineKey}
+            setTimelineKey={setTimelineKey}
+            keyMode={keyMode}
+            setKeyMode={setKeyMode}
+            onSeek={handleSeek}
+            onSetChordBass={timeline.setChordBass}
+          />
+        </div>
+
+        {/* Backing Track DAW — slides down from below the timeline with smooth animation */}
+        <div
+          className={`overflow-hidden transition-all duration-500 ease-out ${
+            activeTab === 'backing' ? 'flex-1 opacity-100' : 'flex-[0] opacity-0'
+          }`}
+          style={{
+            maxHeight: activeTab === 'backing' ? '60vh' : '0px',
+          }}
+        >
+          {activeTab === 'backing' && (
+            <BackingTrackView
+              chords={timeline.chords}
+              measures={timeline.measures}
+              bpm={timeline.bpm}
+              genre={timeline.genre}
+            />
+          )}
+        </div>
+      </div>
 
       <NoteInfoPanel
         note={fb.selectedNote}
