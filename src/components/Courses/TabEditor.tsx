@@ -510,16 +510,16 @@ export function TabEditor({
             className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
               gridMode === '16th' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}
-            title="Show 16th-note subdivision grid"
+            title="Show subdivision grid lines"
           >
-            <Grid3x3 className="size-3" /> 16ths
+            <Grid3x3 className="size-3" /> Grid
           </button>
           <button
             onClick={() => setGridMode('rests')}
             className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
               gridMode === 'rests' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}
-            title="Hide grid; show rests in gaps"
+            title="Hide grid; show rest symbols in gaps"
           >
             <Music className="size-3" /> Rests
           </button>
