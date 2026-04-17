@@ -5,6 +5,7 @@ import { NOTE_NAMES, SCALE_FORMULAS, SCALE_DEGREE_COLORS } from '@/lib/music';
 import { KEY_QUALITY_SCALE, type KeyQuality } from '@/lib/courseTypes';
 import type { NoteName } from '@/lib/music';
 import { Trash2, Grid3x3, Music, ChevronDown, Palette } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 /** Subdivision options. Step = grid units between consecutive snap points. */
 export type Subdivision = '1/4' | '1/6' | '1/8' | '1/12' | '1/16' | '1/24';
@@ -52,6 +53,15 @@ interface Props {
   chordTrack: ChordTrackEntry[];
   /** Hide the local bar-marker row (when parent renders a shared one above). */
   hideBarRow?: boolean;
+  /** Optional global tracks (chord/key/tempo) rendered inside the editor below the bar row. */
+  tracksSlot?: React.ReactNode;
+  /** Visibility toggles for chord / key / tempo lanes (controlled by parent). */
+  showChordTrack?: boolean;
+  setShowChordTrack?: (v: boolean) => void;
+  showKeyTrack?: boolean;
+  setShowKeyTrack?: (v: boolean) => void;
+  showTempoTrack?: boolean;
+  setShowTempoTrack?: (v: boolean) => void;
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
@@ -68,6 +78,8 @@ export function TabEditor({
   selectedIds, setSelectedIds, startGrid = 0, visibleGrids, playheadGrid,
   pickedFretboardNote, deleteMode, cursorGrid, setCursorGrid,
   subdivision, setSubdivision, cellW, setCellW, chordTrack, hideBarRow,
+  tracksSlot, showChordTrack = true, setShowChordTrack,
+  showKeyTrack = true, setShowKeyTrack, showTempoTrack = true, setShowTempoTrack,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingFret, setEditingFret] = useState<{ id: string; value: string } | null>(null);
@@ -429,7 +441,7 @@ export function TabEditor({
       const hits: string[] = [];
       for (const n of visibleNotes) {
         const localCell = n.beatIndex - startGrid;
-        const noteX = 24 + localCell * CELL_W;
+        const noteX = LABEL_W + localCell * CELL_W;
         const noteW = Math.max(CELL_W, n.durationGrid * CELL_W);
         const visibleRowIdx = [5, 4, 3, 2, 1, 0].indexOf(n.stringIndex);
         const noteY = BAR_ROW_H + visibleRowIdx * ROW_H;
@@ -510,10 +522,10 @@ export function TabEditor({
     visibleNotes.forEach(n => {
       if (!n.technique) return;
       const t = n.technique;
-      const xStart = 24 + (n.beatIndex - startGrid) * CELL_W + CELL_W / 2;
+      const xStart = LABEL_W + (n.beatIndex - startGrid) * CELL_W + CELL_W / 2;
       const y = stringRowY(n.stringIndex);
       const next = nextOnString(n);
-      const xEnd = next ? 24 + (next.beatIndex - startGrid) * CELL_W + CELL_W / 2 : xStart + CELL_W;
+      const xEnd = next ? LABEL_W + (next.beatIndex - startGrid) * CELL_W + CELL_W / 2 : xStart + CELL_W;
 
       if (t === 'hammer' || t === 'pull') {
         // Slur: arc above the two fret numbers, with 'h' or 'p' label
@@ -567,7 +579,7 @@ export function TabEditor({
         );
       } else if (t === 'palm-mute') {
         // P.M. with dashed line over the duration
-        const x2 = 24 + (n.beatIndex + n.durationGrid - startGrid) * CELL_W;
+        const x2 = LABEL_W + (n.beatIndex + n.durationGrid - startGrid) * CELL_W;
         elems.push(
           <g key={`tech-${n.id}`}>
             <text x={xStart - 4} y={y - 12} fontSize={8} fontFamily="monospace" fill="rgb(20,20,20)">P.M.</text>
@@ -634,6 +646,44 @@ export function TabEditor({
           >
             <Palette className="size-3" /> Degree colours
           </button>
+          {/* Lane visibility toggles — only render if parent provides setters */}
+          {(setShowChordTrack || setShowKeyTrack || setShowTempoTrack) && (
+            <div className="ml-2 flex items-center gap-1 pl-2 border-l border-border">
+              {setShowChordTrack && (
+                <button
+                  onClick={() => setShowChordTrack(!showChordTrack)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                    showChordTrack ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'bg-muted/40 text-muted-foreground'
+                  }`}
+                  title="Toggle chord lane"
+                >
+                  {showChordTrack ? <Eye className="size-3" /> : <EyeOff className="size-3" />} Chord
+                </button>
+              )}
+              {setShowKeyTrack && (
+                <button
+                  onClick={() => setShowKeyTrack(!showKeyTrack)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                    showKeyTrack ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'bg-muted/40 text-muted-foreground'
+                  }`}
+                  title="Toggle key lane"
+                >
+                  {showKeyTrack ? <Eye className="size-3" /> : <EyeOff className="size-3" />} Key
+                </button>
+              )}
+              {setShowTempoTrack && (
+                <button
+                  onClick={() => setShowTempoTrack(!showTempoTrack)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                    showTempoTrack ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'bg-muted/40 text-muted-foreground'
+                  }`}
+                  title="Toggle tempo lane"
+                >
+                  {showTempoTrack ? <Eye className="size-3" /> : <EyeOff className="size-3" />} Tempo
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3 relative">
           <span className="text-[10px] font-mono text-muted-foreground">Default duration · ⌘/Ctrl+scroll = zoom</span>
@@ -707,6 +757,13 @@ export function TabEditor({
           </div>
         )}
 
+        {/* Embedded global tracks (chord/key/tempo) — sit between bar row and string rows */}
+        {tracksSlot && (
+          <div className="relative" style={{ borderBottom: '2px solid rgba(0,0,0,0.4)' }}>
+            {tracksSlot}
+          </div>
+        )}
+
         {/* String rows */}
         <div className="relative">
           {[5, 4, 3, 2, 1, 0].map((stringIndex) => (
@@ -755,7 +812,7 @@ export function TabEditor({
           </div>
 
           {/* Note markers (fret numbers) — absolute over string rows */}
-          <div className="absolute inset-0 pointer-events-none" style={{ left: 24 }}>
+          <div className="absolute inset-0 pointer-events-none" style={{ left: LABEL_W }}>
             {visibleNotes.map(n => {
               const localCell = n.beatIndex - startGrid;
               const tech = n.technique;

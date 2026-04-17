@@ -25,6 +25,16 @@ interface Props {
   /** Optional draggable insertion cursor in absolute grid units. */
   cursorGrid?: number;
   setCursorGrid?: (g: number) => void;
+  /** Hide the bar-marker row (when the parent already renders one above). */
+  hideBarRow?: boolean;
+  /** Hide the help/footer bar (used when embedded inside TabEditor). */
+  hideFooter?: boolean;
+  /** Hide the outer card chrome (border + bg) — used when embedded. */
+  embedded?: boolean;
+  /** Per-lane visibility (defaults: all true). */
+  showChords?: boolean;
+  showKey?: boolean;
+  showTempo?: boolean;
 }
 
 const ROW_H = 28;
@@ -36,6 +46,7 @@ export function GlobalTracksEditor({
   chordTrack, setChordTrack, keyTrack, setKeyTrack, tempoTrack, setTempoTrack,
   startGrid, visibleGrids, beatsPerBar, isOwner, defaultKeyRoot, defaultKeyQuality, defaultTempo, pendingKey,
   deleteMode, playheadGrid, cellW, cursorGrid, setCursorGrid,
+  hideBarRow, hideFooter, embedded, showChords = true, showKey = true, showTempo = true,
 }: Props) {
   const [editingChordId, setEditingChordId] = useState<string | null>(null);
   const [chordInput, setChordInput] = useState('');
@@ -230,10 +241,10 @@ export function GlobalTracksEditor({
   const tryDeleteTempo = (id: string) => deleteMode && id !== '__implicit' && setTempoTrack(tempoTrack.filter(x => x.id !== id));
 
   return (
-    <div className="border border-border rounded-lg bg-card overflow-x-auto relative">
+    <div className={embedded ? 'relative' : 'border border-border rounded-lg bg-card overflow-x-auto relative'}>
       <div className="relative" style={{ width: totalCells * CELL_W + LANE_LABEL_W, minWidth: '100%' }}>
         {/* ============ Top bar-marker row — clickable to set the cursor ============ */}
-        <div
+        {!hideBarRow && (<div
           className="relative cursor-pointer"
           style={{ height: BAR_ROW_H, borderBottom: '1px solid hsl(var(--border))' }}
           onMouseDown={(e) => {
@@ -254,10 +265,10 @@ export function GlobalTracksEditor({
               >{barNumber}</div>
             ))}
           </div>
-        </div>
+        </div>)}
 
         {/* ============ Chord lane ============ */}
-        <Lane label="Chords" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
+        {showChords && (<Lane label="Chords" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
           onCellDoubleClick={startTypeChord}
           onCellDrop={handleChordDrop} allowDrop>
           {visChords.map(c => {
@@ -309,10 +320,10 @@ export function GlobalTracksEditor({
               </div>
             );
           })}
-        </Lane>
+        </Lane>)}
 
         {/* ============ Key lane (infinite segments) ============ */}
-        <Lane label="Key" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
+        {showKey && (<Lane label="Key" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
           onCellClick={handleKeyLaneClick}>
           {keySegments.map(seg => {
             const localFrom = Math.max(0, seg.from - startGrid);
@@ -338,10 +349,10 @@ export function GlobalTracksEditor({
               </div>
             );
           })}
-        </Lane>
+        </Lane>)}
 
         {/* ============ Tempo lane (infinite segments) ============ */}
-        <Lane label="Tempo" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
+        {showTempo && (<Lane label="Tempo" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
           onCellClick={handleTempoCellClick}>
           {tempoSegments.map(seg => {
             const localFrom = Math.max(0, seg.from - startGrid);
@@ -381,7 +392,7 @@ export function GlobalTracksEditor({
               </div>
             );
           })}
-        </Lane>
+        </Lane>)}
 
         {/* Playhead spanning all lanes */}
         {playheadGrid != null && playheadGrid >= startGrid && playheadGrid < startGrid + totalCells && (
@@ -400,7 +411,7 @@ export function GlobalTracksEditor({
         )}
       </div>
 
-      {isOwner && (
+      {isOwner && !hideFooter && (
         <div className="flex items-center gap-3 px-3 py-2 border-t border-border bg-muted/10 text-[10px] font-mono text-muted-foreground flex-wrap">
           <button
             onClick={() => setSplitMode(s => !s)}

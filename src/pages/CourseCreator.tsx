@@ -69,6 +69,10 @@ export default function CourseCreator() {
   const [cursorGrid, setCursorGrid] = useState<number>(0);
   /** Tab cell width — shared between TabEditor and GlobalTracksEditor for column alignment. */
   const [cellW, setCellW] = useState<number>(28);
+  // Embedded track-lane visibility toggles (live in the tab editor toolbar)
+  const [showChordTrack, setShowChordTrack] = useState(true);
+  const [showKeyTrack, setShowKeyTrack] = useState(true);
+  const [showTempoTrack, setShowTempoTrack] = useState(true);
 
   // Bar window: viewport over the timeline. Indexed in MUSICAL bars (bar 1 = the first "real" bar).
   // Default: start AT bar 1 (windowStartBar = 0). User can scroll back ONE bar (-1) to view anacrusis.
@@ -445,27 +449,7 @@ export default function CourseCreator() {
             </Button>
           </div>
 
-          {/* Global tracks (chords + key + tempo) */}
-          <GlobalTracksEditor
-            chordTrack={chordTrack} setChordTrack={setChordTrack}
-            keyTrack={keyTrack} setKeyTrack={setKeyTrack}
-            tempoTrack={tempoTrack} setTempoTrack={setTempoTrack}
-            startGrid={windowStartBar * gridPerBar}
-            visibleGrids={VISIBLE_BARS * gridPerBar}
-            beatsPerBar={beatsPerBar}
-            isOwner
-            defaultKeyRoot={keyRoot}
-            defaultKeyQuality={keyQuality}
-            defaultTempo={tempo}
-            pendingKey={{ root: keyRoot, quality: keyQuality }}
-            deleteMode={deleteMode}
-            playheadGrid={isPlaying ? playheadGrid : null}
-            cellW={cellW}
-            cursorGrid={cursorGrid}
-            setCursorGrid={setCursorGrid}
-          />
-
-          {/* Tab editor with bar window */}
+          {/* Tab editor with embedded global tracks (chord / key / tempo) */}
           <TabEditor
             phrase={phrase}
             setPhrase={setPhrase}
@@ -487,7 +471,35 @@ export default function CourseCreator() {
             cellW={cellW}
             setCellW={setCellW}
             chordTrack={chordTrack}
-            hideBarRow
+            showChordTrack={showChordTrack} setShowChordTrack={setShowChordTrack}
+            showKeyTrack={showKeyTrack} setShowKeyTrack={setShowKeyTrack}
+            showTempoTrack={showTempoTrack} setShowTempoTrack={setShowTempoTrack}
+            tracksSlot={(showChordTrack || showKeyTrack || showTempoTrack) ? (
+              <GlobalTracksEditor
+                chordTrack={chordTrack} setChordTrack={setChordTrack}
+                keyTrack={keyTrack} setKeyTrack={setKeyTrack}
+                tempoTrack={tempoTrack} setTempoTrack={setTempoTrack}
+                startGrid={windowStartBar * gridPerBar}
+                visibleGrids={VISIBLE_BARS * gridPerBar}
+                beatsPerBar={beatsPerBar}
+                isOwner
+                defaultKeyRoot={keyRoot}
+                defaultKeyQuality={keyQuality}
+                defaultTempo={tempo}
+                pendingKey={{ root: keyRoot, quality: keyQuality }}
+                deleteMode={deleteMode}
+                playheadGrid={isPlaying ? playheadGrid : null}
+                cellW={cellW}
+                cursorGrid={cursorGrid}
+                setCursorGrid={setCursorGrid}
+                hideBarRow
+                hideFooter
+                embedded
+                showChords={showChordTrack}
+                showKey={showKeyTrack}
+                showTempo={showTempoTrack}
+              />
+            ) : null}
           />
 
           {/* Legend */}
