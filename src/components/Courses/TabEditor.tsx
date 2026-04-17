@@ -695,12 +695,11 @@ export function TabEditor({
 
           {/* Rest glyphs in 'rests' mode — show ♪ rest icons in empty beat cells per string */}
           {gridMode === 'rests' && (
-            <div className="absolute inset-0 pointer-events-none" style={{ left: 24 }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ left: LABEL_W }}>
               {[5, 4, 3, 2, 1, 0].map((stringIndex, visIdx) => {
                 const rests: React.ReactNode[] = [];
                 for (let beat = 0; beat < totalCells; beat += GRID_PER_BEAT) {
                   const absBeat = startGrid + beat;
-                  // is there a note covering this beat on this string?
                   const covered = phrase.notes.some(n =>
                     n.stringIndex === stringIndex &&
                     n.beatIndex <= absBeat &&
