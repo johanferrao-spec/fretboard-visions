@@ -23,9 +23,9 @@ export default function CoursePlayer() {
   const pitch = usePitchDetector();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { if (!data.session) nav('/auth'); });
+    // Auth disabled for now — preview without sign-in.
     requestAnimationFrame(() => requestAnimationFrame(() => setAnimateIn(true)));
-  }, [nav]);
+  }, []);
 
   useEffect(() => {
     if (!tabId) return;

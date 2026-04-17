@@ -4,7 +4,26 @@ import { GRID_PER_BEAT, NOTE_KIND_COLOR } from '@/lib/courseTypes';
 import { NOTE_NAMES, SCALE_FORMULAS } from '@/lib/music';
 import { KEY_QUALITY_SCALE, type KeyQuality } from '@/lib/courseTypes';
 import type { NoteName } from '@/lib/music';
-import { Trash2, Grid3x3, Music } from 'lucide-react';
+import { Trash2, Grid3x3, Music, ChevronDown } from 'lucide-react';
+
+/** Subdivision options. Step = grid units between consecutive snap points. */
+export type Subdivision = '1/4' | '1/6' | '1/8' | '1/12' | '1/16' | '1/24';
+const SUBDIVISION_STEP: Record<Subdivision, number> = {
+  '1/4': GRID_PER_BEAT,           // 4
+  '1/6': GRID_PER_BEAT * 2 / 3,   // 8/3 ≈ 2.667 (triplet half-beat)
+  '1/8': GRID_PER_BEAT / 2,       // 2
+  '1/12': GRID_PER_BEAT / 3,      // 4/3 ≈ 1.333 (eighth-note triplet)
+  '1/16': 1,                       // 1
+  '1/24': GRID_PER_BEAT / 6,      // 2/3 ≈ 0.667 (sixteenth triplet)
+};
+const SUBDIVISION_LABEL: Record<Subdivision, string> = {
+  '1/4': 'Quarter',
+  '1/6': 'Quarter triplet',
+  '1/8': 'Eighth',
+  '1/12': 'Eighth triplet',
+  '1/16': 'Sixteenth',
+  '1/24': 'Sixteenth triplet',
+};
 
 interface Props {
   phrase: CoursePhrase;
@@ -20,27 +39,35 @@ interface Props {
   playheadGrid?: number | null;
   pickedFretboardNote?: { stringIndex: number; fret: number; nonce: number } | null;
   deleteMode: boolean;
+  /** Draggable playhead position in grid units (parent-controlled). */
+  cursorGrid: number;
+  setCursorGrid: (g: number) => void;
+  /** Currently selected subdivision (lifted to parent for shared default duration). */
+  subdivision: Subdivision;
+  setSubdivision: (s: Subdivision) => void;
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
 const CELL_W = 28;
 const ROW_H = 26;
 const BAR_ROW_H = 18;
-/** Default duration = 1/8 note = 2 grid units (since GRID_PER_BEAT=4 → 1/16=1, 1/8=2, 1/4=4). */
-const DEFAULT_DUR = GRID_PER_BEAT / 2;
+const LABEL_W = 24; // left gutter (string labels / bar number gutter)
 
 export function TabEditor({
   phrase, setPhrase, tuning, keyRoot, keyQuality, beatsPerBar,
   selectedIds, setSelectedIds, startGrid = 0, visibleGrids, playheadGrid,
-  pickedFretboardNote, deleteMode,
+  pickedFretboardNote, deleteMode, cursorGrid, setCursorGrid,
+  subdivision, setSubdivision,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingFret, setEditingFret] = useState<{ id: string; value: string } | null>(null);
   const lastPickRef = useRef<number>(0);
-  /** Remember the most recently used note duration so subsequent inserts inherit it. */
-  const [lastDuration, setLastDuration] = useState<number>(DEFAULT_DUR);
-  /** Display mode: '16th' = full subdivision grid; 'rests' = only beat lines, with rest glyphs in gaps. */
+  /** Grid display mode: '16th' = subdivision lines per current subdivision; 'rests' = no subdivisions. */
   const [gridMode, setGridMode] = useState<'16th' | 'rests'>('16th');
+  const [subOpen, setSubOpen] = useState(false);
+
+  /** The default duration of a new note equals the current subdivision length. */
+  const defaultDur = SUBDIVISION_STEP[subdivision];
 
   const diatonicPC = useMemo(() => {
     const formula = SCALE_FORMULAS[KEY_QUALITY_SCALE[keyQuality]] ?? [];
@@ -55,7 +82,12 @@ export function TabEditor({
     setPhrase({ ...phrase, notes: phrase.notes.map(n => n.id === id ? { ...n, ...patch } : n) });
   };
 
-  /** Trim/delete duration bars on this string that overlap [start, start+dur). */
+  /**
+   * Trim notes that overlap [start, start+dur).
+   * If `crossString` is true, trims notes on ANY string that start AFTER `start` but before `start+dur`,
+   * shortening the new note (returned) to end exactly at the next note's start.
+   * Always trims same-string overlaps as before.
+   */
   const trimOverlaps = (notes: CourseNote[], stringIndex: number, start: number, dur: number, ignoreId?: string): CourseNote[] => {
     const end = start + dur;
     const out: CourseNote[] = [];
@@ -82,27 +114,44 @@ export function TabEditor({
     return out;
   };
 
-  /** Snap an absolute grid index to the active grid (16th = 1, rests = beat). */
+  /**
+   * Trim any earlier note (any string) whose duration crosses into `start`,
+   * shortening it to end exactly at `start`. Used to prevent visual chord bars
+   * when consecutive notes are entered close together on different strings.
+   */
+  const shortenPreviousAtStart = (notes: CourseNote[], start: number, ignoreId?: string): CourseNote[] => {
+    return notes.map(n => {
+      if (n.id === ignoreId) return n;
+      const nEnd = n.beatIndex + n.durationGrid;
+      if (n.beatIndex < start && nEnd > start) {
+        return { ...n, durationGrid: start - n.beatIndex };
+      }
+      return n;
+    });
+  };
+
+  /** Snap an absolute grid index to the active subdivision. */
   const snapGrid = (g: number) => {
-    if (gridMode === 'rests') return Math.round(g / GRID_PER_BEAT) * GRID_PER_BEAT;
-    return Math.round(g);
+    const step = SUBDIVISION_STEP[subdivision];
+    return Math.round(g / step) * step;
   };
 
   const addNoteAt = (stringIndex: number, cellInWindow: number) => {
     const beatIndex = snapGrid(startGrid + cellInWindow);
     // Block: no two notes may share the same string at the same beat instant
-    const collision = phrase.notes.find(n => n.stringIndex === stringIndex && n.beatIndex === beatIndex);
+    const collision = phrase.notes.find(n => n.stringIndex === stringIndex && Math.abs(n.beatIndex - beatIndex) < 0.001);
     if (collision) {
       setSelectedIds([collision.id]);
       setEditingFret({ id: collision.id, value: String(collision.fret) });
       return;
     }
     const id = `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const dur = lastDuration;
+    const dur = defaultDur;
     const note: CourseNote = { id, stringIndex, fret: 0, beatIndex, durationGrid: dur };
-    const trimmed = trimOverlaps(phrase.notes, stringIndex, beatIndex, dur);
+    let next = trimOverlaps(phrase.notes, stringIndex, beatIndex, dur);
+    next = shortenPreviousAtStart(next, beatIndex);
     const newLen = Math.max(phrase.lengthGrid, beatIndex + dur * 2);
-    setPhrase({ notes: [...trimmed, note], lengthGrid: newLen });
+    setPhrase({ notes: [...next, note], lengthGrid: newLen });
     setSelectedIds([id]);
     setEditingFret({ id, value: '0' });
   };
@@ -165,33 +214,29 @@ export function TabEditor({
   }), [phrase.notes, startGrid, totalCells]);
 
   /**
-   * Group notes for the duration bar row. CRITICAL: at any given beat instant
-   * only ONE bar may be visible. So we cluster overlapping notes (across all
-   * strings) into a single group spanning the union of their durations.
+   * Group notes for the duration bar row.
+   * Chord = notes that share the EXACT same start beat. Notes that merely overlap
+   * (e.g. an 1/8 followed by a 1/16 on a different string) must NOT be merged into
+   * a chord — instead the earlier note will be trimmed by the insertion logic.
    */
   const beatGroups = useMemo(() => {
-    const sorted = [...visibleNotes].sort((a, b) => a.beatIndex - b.beatIndex);
-    const clusters: { start: number; end: number; notes: CourseNote[] }[] = [];
-    for (const n of sorted) {
-      const nEnd = n.beatIndex + n.durationGrid;
-      const last = clusters[clusters.length - 1];
-      if (last && n.beatIndex < last.end) {
-        last.notes.push(n);
-        last.end = Math.max(last.end, nEnd);
-      } else {
-        clusters.push({ start: n.beatIndex, end: nEnd, notes: [n] });
-      }
+    const groups = new Map<number, CourseNote[]>();
+    for (const n of visibleNotes) {
+      const key = Math.round(n.beatIndex * 1000) / 1000; // float-safe key
+      const arr = groups.get(key) ?? [];
+      arr.push(n);
+      groups.set(key, arr);
     }
-    return clusters.map(c => [c.start, c.notes, c.end - c.start] as [number, CourseNote[], number]);
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([start, notes]) => {
+        const dur = Math.max(...notes.map(n => n.durationGrid));
+        return [start, notes, dur] as [number, CourseNote[], number];
+      });
   }, [visibleNotes]);
 
-  /** Track last duration whenever a single note is selected. */
-  useEffect(() => {
-    if (selectedIds.length === 1) {
-      const n = phrase.notes.find(x => x.id === selectedIds[0]);
-      if (n) setLastDuration(n.durationGrid);
-    }
-  }, [selectedIds, phrase.notes]);
+  // (Default duration is now driven by the lifted `subdivision` prop. Selecting a single
+  // note no longer mutates the default — the subdivision dropdown is the source of truth.)
 
   const gridStyle: React.CSSProperties = { width: totalCells * CELL_W, minWidth: '100%' };
 
@@ -244,11 +289,10 @@ export function TabEditor({
       setPhrase({ ...phrase, notes: next });
     };
     const onUp = () => {
-      window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
-      // Update remembered duration
-      const sel = phrase.notes.find(n => ids.includes(n.id));
-      if (sel) setLastDuration(sel.durationGrid);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
     };
+
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   };
@@ -310,26 +354,47 @@ export function TabEditor({
 
   // ===== Bar number markers (drawn at the SAME x as bar gridlines for perfect alignment) =====
   const barMarkers = useMemo(() => {
-    const out: Array<{ cellOffset: number; barNumber: number }> = [];
-    for (let cell = 0; cell < totalCells; cell++) {
+    const out: Array<{ x: number; barNumber: number }> = [];
+    for (let cell = 0; cell <= totalCells; cell++) {
       const abs = startGrid + cell;
       if (abs % gridPerBar === 0) {
-        out.push({ cellOffset: cell, barNumber: Math.floor(abs / gridPerBar) + 1 });
+        out.push({ x: cell * CELL_W, barNumber: Math.floor(abs / gridPerBar) + 1 });
       }
     }
     return out;
   }, [startGrid, totalCells, gridPerBar]);
 
-  /** Vertical lines (bar + beat) drawn as absolute overlays so positions are exact. */
+  /**
+   * Vertical lines (bar + beat + subdivision) drawn as absolute overlays so positions are exact.
+   * In '16th' mode we also draw subdivision lines according to the current subdivision.
+   * Subdivision step can be fractional (triplets), so we generate from absolute time, not cells.
+   */
   const verticalLines = useMemo(() => {
-    const lines: Array<{ x: number; kind: 'bar' | 'beat' }> = [];
+    const lines: Array<{ x: number; kind: 'bar' | 'beat' | 'sub' }> = [];
+    const step = SUBDIVISION_STEP[subdivision];
+    // First, draw bar + beat lines (always integer cells)
     for (let cell = 0; cell <= totalCells; cell++) {
       const abs = startGrid + cell;
       if (abs % gridPerBar === 0) lines.push({ x: cell * CELL_W, kind: 'bar' });
       else if (abs % GRID_PER_BEAT === 0) lines.push({ x: cell * CELL_W, kind: 'beat' });
     }
+    // Then subdivision lines (skip if they coincide with bar/beat). Only in 16th-grid mode.
+    if (gridMode === '16th') {
+      const startAbs = startGrid;
+      const endAbs = startGrid + totalCells;
+      // Snap start to nearest subdivision tick at or after startAbs
+      const firstTick = Math.ceil(startAbs / step) * step;
+      for (let t = firstTick; t < endAbs + 0.0001; t += step) {
+        const cellPos = t - startAbs;
+        // Skip if this coincides with an integer cell that's already a bar/beat
+        const onBar = Math.abs((startAbs + cellPos) % gridPerBar) < 0.0001;
+        const onBeat = Math.abs((startAbs + cellPos) % GRID_PER_BEAT) < 0.0001;
+        if (onBar || onBeat) continue;
+        lines.push({ x: cellPos * CELL_W, kind: 'sub' });
+      }
+    }
     return lines;
-  }, [totalCells, startGrid, gridPerBar]);
+  }, [totalCells, startGrid, gridPerBar, gridMode, subdivision]);
 
   // ===== Tab-style technique notation rendering (slurs, slides, bends, etc.) =====
   /** Find the next note on the same string after a given note. */
@@ -459,9 +524,30 @@ export function TabEditor({
             <Music className="size-3" /> Rests
           </button>
         </div>
-        <span className="text-[10px] font-mono text-muted-foreground">
-          Default duration: {lastDuration === 1 ? '1/16' : lastDuration === 2 ? '1/8' : lastDuration === 4 ? '1/4' : lastDuration === 8 ? '1/2' : `${lastDuration}/16`}
-        </span>
+        <div className="flex items-center gap-3 relative">
+          <span className="text-[10px] font-mono text-muted-foreground">Default duration:</span>
+          <button
+            onClick={() => setSubOpen(o => !o)}
+            className="inline-flex items-center gap-1 bg-secondary text-secondary-foreground rounded px-2 py-1 text-[10px] font-mono uppercase tracking-wider hover:bg-secondary/80"
+          >
+            {subdivision} <ChevronDown className="size-3" />
+          </button>
+          {subOpen && (
+            <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-md shadow-lg min-w-[10rem] py-1">
+              {(Object.keys(SUBDIVISION_LABEL) as Subdivision[]).map(s => (
+                <button
+                  key={s}
+                  onClick={() => { setSubdivision(s); setSubOpen(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-accent ${s === subdivision ? 'bg-accent text-accent-foreground' : 'text-popover-foreground'}`}
+                >
+                  <span className="font-bold mr-2">{s}</span>
+                  <span className="text-muted-foreground">{SUBDIVISION_LABEL[s]}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
       <div className="overflow-x-auto">
       <div ref={gridRef} className="relative" style={gridStyle} onMouseDown={startMarquee}>
@@ -477,15 +563,16 @@ export function TabEditor({
           </defs>
         </svg>
 
-        {/* Bar numbers row */}
+        {/* Bar numbers row — bar numbers anchored at the EXACT same x as the bar gridlines below. */}
         <div className="relative" style={{ height: BAR_ROW_H, borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
-          <div className="absolute left-0 top-0 h-full w-6 z-10" style={{ background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
-          <div className="absolute inset-0" style={{ left: 24 }}>
-            {barMarkers.map(({ cellOffset, barNumber }) => (
-              <div key={cellOffset}
+          <div className="absolute left-0 top-0 h-full z-10" style={{ width: LABEL_W, background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
+          <div className="absolute inset-0" style={{ left: LABEL_W }}>
+            {barMarkers.map(({ x, barNumber }) => (
+              <div key={`bar-${barNumber}`}
                 className="absolute top-0 bottom-0 flex items-center text-[10px] font-mono font-bold pointer-events-none"
                 style={{
-                  left: cellOffset * CELL_W + 3,
+                  left: x,
+                  paddingLeft: 3,
                   color: 'rgb(0,0,0)',
                 }}
               >{barNumber}</div>
@@ -497,13 +584,14 @@ export function TabEditor({
         <div className="relative">
           {[5, 4, 3, 2, 1, 0].map((stringIndex) => (
             <div key={stringIndex} className="relative" style={{ height: ROW_H }}>
-              <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[10px] font-mono z-10"
-                style={{ color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>
+              <div className="absolute left-0 top-0 h-full flex items-center justify-center text-[10px] font-mono z-10"
+                style={{ width: LABEL_W, color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>
                 {STRING_LABELS[stringIndex]}
               </div>
-              <div className="absolute left-6 right-0 pointer-events-none"
-                style={{ top: '50%', height: 1, background: stringLineColor, transform: 'translateY(-0.5px)' }} />
-              <div className="absolute inset-0 left-6 flex">
+              <div className="absolute pointer-events-none"
+                style={{ left: LABEL_W, right: 0, top: '50%', height: 1, background: stringLineColor, transform: 'translateY(-0.5px)' }} />
+              {/* Hit-test cells (no per-cell border — gridlines come from the absolute overlay below) */}
+              <div className="absolute inset-0 flex" style={{ left: LABEL_W }}>
                 {Array.from({ length: totalCells }).map((_, cellIdx) => (
                   <button
                     key={cellIdx}
@@ -513,10 +601,6 @@ export function TabEditor({
                       width: CELL_W,
                       height: ROW_H,
                       background: isAnacrusis(cellIdx) ? 'rgba(0,0,0,0.04)' : 'transparent',
-                      // Subdivision lines only in 16ths mode (very subtle)
-                      borderRight: gridMode === '16th'
-                        ? '1px solid rgba(0,0,0,0.05)'
-                        : 'none',
                     }}
                   />
                 ))}
@@ -524,8 +608,8 @@ export function TabEditor({
             </div>
           ))}
 
-          {/* Vertical bar/beat lines drawn as overlay (perfectly aligned with bar numbers above) */}
-          <div className="absolute inset-0 pointer-events-none" style={{ left: 24 }}>
+          {/* Vertical bar/beat/subdivision lines — single source of truth for gridlines */}
+          <div className="absolute inset-0 pointer-events-none" style={{ left: LABEL_W }}>
             {verticalLines.map((l, i) => (
               <div key={i}
                 className="absolute top-0 bottom-0"
@@ -533,7 +617,11 @@ export function TabEditor({
                   left: l.x,
                   width: l.kind === 'bar' ? 2 : 1,
                   marginLeft: l.kind === 'bar' ? -1 : 0,
-                  background: l.kind === 'bar' ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.18)',
+                  background: l.kind === 'bar'
+                    ? 'rgba(0,0,0,0.7)'
+                    : l.kind === 'beat'
+                      ? 'rgba(0,0,0,0.22)'
+                      : 'rgba(0,0,0,0.07)',
                 }}
               />
             ))}
@@ -607,12 +695,11 @@ export function TabEditor({
 
           {/* Rest glyphs in 'rests' mode — show ♪ rest icons in empty beat cells per string */}
           {gridMode === 'rests' && (
-            <div className="absolute inset-0 pointer-events-none" style={{ left: 24 }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ left: LABEL_W }}>
               {[5, 4, 3, 2, 1, 0].map((stringIndex, visIdx) => {
                 const rests: React.ReactNode[] = [];
                 for (let beat = 0; beat < totalCells; beat += GRID_PER_BEAT) {
                   const absBeat = startGrid + beat;
-                  // is there a note covering this beat on this string?
                   const covered = phrase.notes.some(n =>
                     n.stringIndex === stringIndex &&
                     n.beatIndex <= absBeat &&
@@ -645,19 +732,18 @@ export function TabEditor({
           onDoubleClick={(e) => {
             if (deleteMode) return;
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            const x = e.clientX - rect.left - 24;
+            const x = e.clientX - rect.left - LABEL_W;
             if (x < 0) return;
             const cellIdx = Math.floor(x / CELL_W);
-            // Default to highest string (high e = stringIndex 5) if no selection context
             const targetString = selectedIds.length === 1
               ? (phrase.notes.find(n => n.id === selectedIds[0])?.stringIndex ?? 5)
               : 5;
             addNoteAt(targetString, cellIdx);
           }}
         >
-          <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[9px] font-mono z-10"
-            style={{ color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>♪</div>
-          <div className="absolute inset-0 left-6">
+          <div className="absolute left-0 top-0 h-full flex items-center justify-center text-[9px] font-mono z-10"
+            style={{ width: LABEL_W, color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>♪</div>
+          <div className="absolute inset-0" style={{ left: LABEL_W }}>
             {beatGroups.map(([beatIdx, notes, clusterDur]) => {
               const dur = clusterDur;
               const kind: NoteKind = notes.length > 1
@@ -718,10 +804,55 @@ export function TabEditor({
           />
         )}
 
-        {/* Playhead */}
+        {/* Playhead (live during playback) */}
         {playheadGrid != null && playheadGrid >= startGrid && playheadGrid < startGrid + totalCells && (
           <div className="absolute top-0 bottom-0 w-0.5 bg-primary z-30 pointer-events-none transition-[left] duration-150"
-            style={{ left: 24 + (playheadGrid - startGrid) * CELL_W, boxShadow: '0 0 8px hsl(var(--primary))' }} />
+            style={{ left: LABEL_W + (playheadGrid - startGrid) * CELL_W, boxShadow: '0 0 8px hsl(var(--primary))' }} />
+        )}
+
+        {/* Insertion cursor (draggable when stopped) — orange triangle + dotted line */}
+        {(playheadGrid == null) && cursorGrid >= startGrid && cursorGrid <= startGrid + totalCells && (
+          <>
+            <div
+              className="absolute z-40 cursor-ew-resize"
+              style={{
+                left: LABEL_W + (cursorGrid - startGrid) * CELL_W - 6,
+                top: 0,
+                width: 12,
+                height: BAR_ROW_H,
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const rect = gridRef.current?.getBoundingClientRect();
+                if (!rect) return;
+                const onMove = (mv: MouseEvent) => {
+                  const x = mv.clientX - rect.left - LABEL_W;
+                  const cell = Math.max(0, x / CELL_W);
+                  setCursorGrid(snapGrid(startGrid + cell));
+                };
+                const onUp = () => {
+                  window.removeEventListener('mousemove', onMove);
+                  window.removeEventListener('mouseup', onUp);
+                };
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+              }}
+              title="Drag to move insertion cursor"
+            >
+              <svg viewBox="0 0 12 18" width="12" height={BAR_ROW_H}>
+                <polygon points="6,18 0,4 12,4" fill="hsl(28, 90%, 55%)" stroke="rgb(0,0,0)" strokeWidth="0.5" />
+              </svg>
+            </div>
+            <div className="absolute top-0 bottom-0 pointer-events-none z-30"
+              style={{
+                left: LABEL_W + (cursorGrid - startGrid) * CELL_W,
+                width: 1,
+                background: 'hsl(28, 90%, 55%)',
+                opacity: 0.7,
+                borderLeft: '1px dashed hsl(28, 90%, 55%)',
+              }} />
+          </>
         )}
       </div>
       </div>

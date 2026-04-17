@@ -18,6 +18,17 @@ import { useCourseGuitarPlayer } from '@/hooks/useCourseGuitarPlayer';
 import type { CoursePhrase, CourseTabRow, KeyQuality, ChordTrackEntry, KeyChangeEntry, TempoChangeEntry, CourseNote, Technique } from '@/lib/courseTypes';
 import { GRID_PER_BEAT, KEY_QUALITY_SCALE } from '@/lib/courseTypes';
 import { STANDARD_TUNING, type NoteName } from '@/lib/music';
+import type { Subdivision } from '@/components/Courses/TabEditor';
+
+/** Subdivision → grid units. Triplets produce non-integer steps (LCM is fractional). */
+const SUB_STEP: Record<Subdivision, number> = {
+  '1/4': GRID_PER_BEAT,
+  '1/6': GRID_PER_BEAT * 2 / 3,
+  '1/8': GRID_PER_BEAT / 2,
+  '1/12': GRID_PER_BEAT / 3,
+  '1/16': 1,
+  '1/24': GRID_PER_BEAT / 6,
+};
 
 const TIME_SIGS = ['4/4', '3/4', '6/8', '2/4'];
 /** Show one bar of anacrusis before bar 1, plus 3 bars after = 4 bars visible. */
@@ -52,10 +63,10 @@ export default function CourseCreator() {
 
   // Staged input note from interactive fretboard (preview before commit via Enter)
   const [stagedNote, setStagedNote] = useState<{ stringIndex: number; fret: number } | null>(null);
-  /** Last duration used for new note inserts (defaults to 1/8 = 2 grid units). */
-  const lastDurationRef = useRef<number>(GRID_PER_BEAT / 2);
-  /** Cursor: where the next inserted note will go. Advances after each insert. */
-  const cursorRef = useRef<number>(0);
+  /** Subdivision drives BOTH grid snapping and default new-note duration. */
+  const [subdivision, setSubdivision] = useState<Subdivision>('1/8');
+  /** Insertion cursor (state, not ref) — also acts as the draggable playhead when stopped. */
+  const [cursorGrid, setCursorGrid] = useState<number>(0);
 
   // Bar window: viewport over the timeline. Indexed in MUSICAL bars (bar 1 = the first "real" bar).
   // Default: start AT bar 1 (windowStartBar = 0). User can scroll back ONE bar (-1) to view anacrusis.
@@ -67,12 +78,10 @@ export default function CourseCreator() {
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setAuthChecked(true);
-      if (!data.session) nav('/auth');
-    });
+    // Auth disabled for now — preview without sign-in.
+    setAuthChecked(true);
     requestAnimationFrame(() => requestAnimationFrame(() => setAnimateIn(true)));
-  }, [nav]);
+  }, []);
 
   useEffect(() => {
     if (!tabId) return;
@@ -116,24 +125,36 @@ export default function CourseCreator() {
     else toast.success('Saved');
   };
 
-  /** Insert one note at the current cursor with last-used duration; advance cursor. */
+  /**
+   * Insert one note at the current cursor with the subdivision-derived duration; advance cursor.
+   * Also trims any earlier overlapping note (any string) so consecutive notes don't form
+   * a chord-bar visually when they sit close together.
+   */
   const insertNoteAtCursor = (stringIndex: number, fret: number) => {
-    const dur = lastDurationRef.current;
-    const beatIndex = cursorRef.current;
-    // Block: no two notes may share the same string at the same beat instant
-    const collision = phrase.notes.find(n => n.stringIndex === stringIndex && n.beatIndex === beatIndex);
+    const dur = SUB_STEP[subdivision];
+    const beatIndex = cursorGrid;
+    const collision = phrase.notes.find(n => n.stringIndex === stringIndex && Math.abs(n.beatIndex - beatIndex) < 0.001);
     if (collision) {
       toast.info('A note already exists on that string at this position');
       return;
     }
     const id = `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${stringIndex}`;
     const note: CourseNote = { id, stringIndex, fret, beatIndex, durationGrid: dur };
+    // Trim ANY earlier note (any string) whose duration crosses into beatIndex.
+    const trimmed = phrase.notes.map(n => {
+      const nEnd = n.beatIndex + n.durationGrid;
+      if (n.beatIndex < beatIndex && nEnd > beatIndex) {
+        return { ...n, durationGrid: beatIndex - n.beatIndex };
+      }
+      return n;
+    });
     const newLen = Math.max(phrase.lengthGrid, beatIndex + dur * 2);
-    setPhrase({ notes: [...phrase.notes, note], lengthGrid: newLen });
-    cursorRef.current = beatIndex + dur;
+    setPhrase({ notes: [...trimmed, note], lengthGrid: newLen });
+    const nextCursor = beatIndex + dur;
+    setCursorGrid(nextCursor);
     setStagedNote(null);
     fb.setArpAddReferenceNotes([]);
-    const newBarIdx = Math.floor(cursorRef.current / gridPerBar);
+    const newBarIdx = Math.floor(nextCursor / gridPerBar);
     if (newBarIdx >= windowStartBar + VISIBLE_BARS - 1) {
       setWindowStartBar(Math.max(-ANACRUSIS_BARS, newBarIdx - 1));
     }
@@ -170,18 +191,13 @@ export default function CourseCreator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, phrase.notes, phrase.lengthGrid, tempo, stagedNote]);
 
-  // When a tab note is selected, sync cursor + lastDuration to that note's end
+  // When a tab note is selected, sync cursor to the end of that note (so the next insert
+  // continues from there). Subdivision/duration are NOT changed by selection — the
+  // dropdown is the source of truth.
   useEffect(() => {
     if (selectedIds.length === 1) {
       const n = phrase.notes.find(x => x.id === selectedIds[0]);
-      if (n) {
-        cursorRef.current = n.beatIndex + n.durationGrid;
-        lastDurationRef.current = n.durationGrid;
-      }
-    } else if (selectedIds.length === 0 && phrase.notes.length > 0) {
-      // Cursor stays at the end of the last note
-      const end = Math.max(...phrase.notes.map(n => n.beatIndex + n.durationGrid));
-      cursorRef.current = end;
+      if (n) setCursorGrid(n.beatIndex + n.durationGrid);
     }
   }, [selectedIds, phrase.notes]);
 
@@ -194,25 +210,23 @@ export default function CourseCreator() {
   selectedIdsRef.current = selectedIds;
   const stagedNoteRef = useRef<{ stringIndex: number; fret: number } | null>(null);
   stagedNoteRef.current = stagedNote;
+  // Always-fresh insert function (avoids stale closures inside the fretboard callback).
+  const insertRef = useRef(insertNoteAtCursor);
+  insertRef.current = insertNoteAtCursor;
   useEffect(() => {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
       if (selectedIdsRef.current.length === 1) {
-        // Move the selected note to picked string/fret
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
         return;
       }
-      // Rapid sequential input: if a note is already staged, commit it first then stage the new pick.
       if (stagedNoteRef.current) {
         const prev = stagedNoteRef.current;
-        // Commit previous, then stage new (advance cursor inside insertNoteAtCursor).
-        insertNoteAtCursor(prev.stringIndex, prev.fret);
-        // After commit, cursor has advanced. Stage the new pick.
+        insertRef.current(prev.stringIndex, prev.fret);
         setStagedNote({ stringIndex: si, fret });
         fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
         return;
       }
-      // First click: just stage. Press Enter or click another fret to commit.
       setStagedNote({ stringIndex: si, fret });
       fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
     });
@@ -453,6 +467,10 @@ export default function CourseCreator() {
             playheadGrid={isPlaying ? playheadGrid : null}
             pickedFretboardNote={pickedFretboardNote}
             deleteMode={deleteMode}
+            cursorGrid={cursorGrid}
+            setCursorGrid={setCursorGrid}
+            subdivision={subdivision}
+            setSubdivision={setSubdivision}
           />
 
           {/* Legend */}
