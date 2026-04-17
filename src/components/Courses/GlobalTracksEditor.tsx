@@ -312,7 +312,7 @@ export function GlobalTracksEditor({
         </Lane>
 
         {/* ============ Key lane (infinite segments) ============ */}
-        <Lane label="Key" totalCells={totalCells} isBarLine={isBarLine}
+        <Lane label="Key" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
           onCellClick={handleKeyLaneClick}>
           {keySegments.map(seg => {
             const localFrom = Math.max(0, seg.from - startGrid);
@@ -341,7 +341,7 @@ export function GlobalTracksEditor({
         </Lane>
 
         {/* ============ Tempo lane (infinite segments) ============ */}
-        <Lane label="Tempo" totalCells={totalCells} isBarLine={isBarLine}
+        <Lane label="Tempo" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
           onCellClick={handleTempoCellClick}>
           {tempoSegments.map(seg => {
             const localFrom = Math.max(0, seg.from - startGrid);
