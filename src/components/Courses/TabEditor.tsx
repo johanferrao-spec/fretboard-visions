@@ -646,6 +646,44 @@ export function TabEditor({
           >
             <Palette className="size-3" /> Degree colours
           </button>
+          {/* Lane visibility toggles — only render if parent provides setters */}
+          {(setShowChordTrack || setShowKeyTrack || setShowTempoTrack) && (
+            <div className="ml-2 flex items-center gap-1 pl-2 border-l border-border">
+              {setShowChordTrack && (
+                <button
+                  onClick={() => setShowChordTrack(!showChordTrack)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                    showChordTrack ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'bg-muted/40 text-muted-foreground'
+                  }`}
+                  title="Toggle chord lane"
+                >
+                  {showChordTrack ? <Eye className="size-3" /> : <EyeOff className="size-3" />} Chord
+                </button>
+              )}
+              {setShowKeyTrack && (
+                <button
+                  onClick={() => setShowKeyTrack(!showKeyTrack)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                    showKeyTrack ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'bg-muted/40 text-muted-foreground'
+                  }`}
+                  title="Toggle key lane"
+                >
+                  {showKeyTrack ? <Eye className="size-3" /> : <EyeOff className="size-3" />} Key
+                </button>
+              )}
+              {setShowTempoTrack && (
+                <button
+                  onClick={() => setShowTempoTrack(!showTempoTrack)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                    showTempoTrack ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'bg-muted/40 text-muted-foreground'
+                  }`}
+                  title="Toggle tempo lane"
+                >
+                  {showTempoTrack ? <Eye className="size-3" /> : <EyeOff className="size-3" />} Tempo
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3 relative">
           <span className="text-[10px] font-mono text-muted-foreground">Default duration · ⌘/Ctrl+scroll = zoom</span>
