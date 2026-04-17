@@ -344,11 +344,17 @@ export default function CourseCreator() {
           {/* Interactive fretboard (input + visualizer) */}
           <section className="border border-border rounded-2xl bg-card p-4">
             <div className="flex items-center justify-between mb-2">
-              <div /> {/* hint removed per request */}
+              <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                {selectedIds.length === 1
+                  ? 'Click a fret to move the selected note'
+                  : stagedNote
+                    ? `Staged: string ${stagedNote.stringIndex + 1}, fret ${stagedNote.fret} — press Enter or click another fret to insert`
+                    : 'Click a fret to stage; Enter inserts at cursor'}
+              </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={clearStaged} disabled={stagedNotes.length === 0}>Clear</Button>
-                <Button size="sm" onClick={onInsert} disabled={stagedNotes.length === 0}>
-                  <Plus className="size-4 mr-1" /> Insert ({stagedNotes.length})
+                <Button size="sm" variant="outline" onClick={clearStaged} disabled={!stagedNote}>Clear</Button>
+                <Button size="sm" onClick={commitStaged} disabled={!stagedNote}>
+                  <Plus className="size-4 mr-1" /> Insert
                 </Button>
               </div>
             </div>
