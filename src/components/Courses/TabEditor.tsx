@@ -297,18 +297,17 @@ export function TabEditor({
     <div ref={containerRef} className="border border-border rounded-lg bg-white text-black">
       <div className="overflow-x-auto">
       <div ref={gridRef} className="relative" style={gridStyle} onMouseDown={startMarquee}>
-        {/* Bar numbers row */}
+        {/* Bar numbers row — aligned exactly with bar gridlines below */}
         <div className="relative" style={{ height: BAR_ROW_H, borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
           <div className="absolute left-0 top-0 h-full w-6 z-10" style={{ background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
           <div className="absolute inset-0 left-6">
             {barMarkers.map(({ cellOffset, barNumber }) => (
               <div key={cellOffset}
-                className="absolute top-0 bottom-0 flex items-center px-1 text-[10px] font-mono font-bold pointer-events-none"
+                className="absolute top-0 bottom-0 flex items-center text-[10px] font-mono font-bold pointer-events-none"
                 style={{
                   left: cellOffset * CELL_W,
-                  color: barNumber === 1 ? 'rgb(0,0,0)' : 'rgba(0,0,0,0.55)',
-                  borderLeft: '2px solid rgba(0,0,0,0.4)',
-                  paddingLeft: 4,
+                  paddingLeft: 3,
+                  color: 'rgb(0,0,0)',
                 }}
               >{barNumber}</div>
             ))}
