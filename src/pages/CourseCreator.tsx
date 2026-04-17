@@ -125,24 +125,36 @@ export default function CourseCreator() {
     else toast.success('Saved');
   };
 
-  /** Insert one note at the current cursor with last-used duration; advance cursor. */
+  /**
+   * Insert one note at the current cursor with the subdivision-derived duration; advance cursor.
+   * Also trims any earlier overlapping note (any string) so consecutive notes don't form
+   * a chord-bar visually when they sit close together.
+   */
   const insertNoteAtCursor = (stringIndex: number, fret: number) => {
-    const dur = lastDurationRef.current;
-    const beatIndex = cursorRef.current;
-    // Block: no two notes may share the same string at the same beat instant
-    const collision = phrase.notes.find(n => n.stringIndex === stringIndex && n.beatIndex === beatIndex);
+    const dur = SUB_STEP[subdivision];
+    const beatIndex = cursorGrid;
+    const collision = phrase.notes.find(n => n.stringIndex === stringIndex && Math.abs(n.beatIndex - beatIndex) < 0.001);
     if (collision) {
       toast.info('A note already exists on that string at this position');
       return;
     }
     const id = `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${stringIndex}`;
     const note: CourseNote = { id, stringIndex, fret, beatIndex, durationGrid: dur };
+    // Trim ANY earlier note (any string) whose duration crosses into beatIndex.
+    const trimmed = phrase.notes.map(n => {
+      const nEnd = n.beatIndex + n.durationGrid;
+      if (n.beatIndex < beatIndex && nEnd > beatIndex) {
+        return { ...n, durationGrid: beatIndex - n.beatIndex };
+      }
+      return n;
+    });
     const newLen = Math.max(phrase.lengthGrid, beatIndex + dur * 2);
-    setPhrase({ notes: [...phrase.notes, note], lengthGrid: newLen });
-    cursorRef.current = beatIndex + dur;
+    setPhrase({ notes: [...trimmed, note], lengthGrid: newLen });
+    const nextCursor = beatIndex + dur;
+    setCursorGrid(nextCursor);
     setStagedNote(null);
     fb.setArpAddReferenceNotes([]);
-    const newBarIdx = Math.floor(cursorRef.current / gridPerBar);
+    const newBarIdx = Math.floor(nextCursor / gridPerBar);
     if (newBarIdx >= windowStartBar + VISIBLE_BARS - 1) {
       setWindowStartBar(Math.max(-ANACRUSIS_BARS, newBarIdx - 1));
     }
@@ -179,18 +191,13 @@ export default function CourseCreator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, phrase.notes, phrase.lengthGrid, tempo, stagedNote]);
 
-  // When a tab note is selected, sync cursor + lastDuration to that note's end
+  // When a tab note is selected, sync cursor to the end of that note (so the next insert
+  // continues from there). Subdivision/duration are NOT changed by selection — the
+  // dropdown is the source of truth.
   useEffect(() => {
     if (selectedIds.length === 1) {
       const n = phrase.notes.find(x => x.id === selectedIds[0]);
-      if (n) {
-        cursorRef.current = n.beatIndex + n.durationGrid;
-        lastDurationRef.current = n.durationGrid;
-      }
-    } else if (selectedIds.length === 0 && phrase.notes.length > 0) {
-      // Cursor stays at the end of the last note
-      const end = Math.max(...phrase.notes.map(n => n.beatIndex + n.durationGrid));
-      cursorRef.current = end;
+      if (n) setCursorGrid(n.beatIndex + n.durationGrid);
     }
   }, [selectedIds, phrase.notes]);
 
