@@ -210,25 +210,23 @@ export default function CourseCreator() {
   selectedIdsRef.current = selectedIds;
   const stagedNoteRef = useRef<{ stringIndex: number; fret: number } | null>(null);
   stagedNoteRef.current = stagedNote;
+  // Always-fresh insert function (avoids stale closures inside the fretboard callback).
+  const insertRef = useRef(insertNoteAtCursor);
+  insertRef.current = insertNoteAtCursor;
   useEffect(() => {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
       if (selectedIdsRef.current.length === 1) {
-        // Move the selected note to picked string/fret
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
         return;
       }
-      // Rapid sequential input: if a note is already staged, commit it first then stage the new pick.
       if (stagedNoteRef.current) {
         const prev = stagedNoteRef.current;
-        // Commit previous, then stage new (advance cursor inside insertNoteAtCursor).
-        insertNoteAtCursor(prev.stringIndex, prev.fret);
-        // After commit, cursor has advanced. Stage the new pick.
+        insertRef.current(prev.stringIndex, prev.fret);
         setStagedNote({ stringIndex: si, fret });
         fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
         return;
       }
-      // First click: just stage. Press Enter or click another fret to commit.
       setStagedNote({ stringIndex: si, fret });
       fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
     });
