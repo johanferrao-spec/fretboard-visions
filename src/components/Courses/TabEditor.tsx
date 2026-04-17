@@ -91,6 +91,14 @@ export function TabEditor({
 
   const addNoteAt = (stringIndex: number, cellInWindow: number) => {
     const beatIndex = startGrid + cellInWindow;
+    // Block: do not allow another note at the exact same beatIndex on any string
+    // (no two notes can be played at the same instant on the same string slot).
+    const collision = phrase.notes.find(n => n.stringIndex === stringIndex && n.beatIndex === beatIndex);
+    if (collision) {
+      setSelectedIds([collision.id]);
+      setEditingFret({ id: collision.id, value: String(collision.fret) });
+      return;
+    }
     const id = `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const note: CourseNote = { id, stringIndex, fret: 0, beatIndex, durationGrid: DEFAULT_DUR };
     const trimmed = trimOverlaps(phrase.notes, stringIndex, beatIndex, DEFAULT_DUR);
