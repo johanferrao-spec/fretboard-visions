@@ -45,19 +45,29 @@ interface Props {
   /** Currently selected subdivision (lifted to parent for shared default duration). */
   subdivision: Subdivision;
   setSubdivision: (s: Subdivision) => void;
+  /** Cell width in px (controlled by parent so global tracks can match). */
+  cellW: number;
+  setCellW: (w: number) => void;
+  /** Chord lane entries — used for degree-colour mode. */
+  chordTrack: ChordTrackEntry[];
+  /** Hide the local bar-marker row (when parent renders a shared one above). */
+  hideBarRow?: boolean;
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
-const CELL_W = 28;
 const ROW_H = 26;
 const BAR_ROW_H = 18;
-const LABEL_W = 24; // left gutter (string labels / bar number gutter)
+/** Shared gutter width across TabEditor + GlobalTracksEditor so columns align. */
+export const TAB_LABEL_W = 64;
+export const MIN_CELL_W = 14;
+export const MAX_CELL_W = 56;
+const LABEL_W = TAB_LABEL_W;
 
 export function TabEditor({
   phrase, setPhrase, tuning, keyRoot, keyQuality, beatsPerBar,
   selectedIds, setSelectedIds, startGrid = 0, visibleGrids, playheadGrid,
   pickedFretboardNote, deleteMode, cursorGrid, setCursorGrid,
-  subdivision, setSubdivision,
+  subdivision, setSubdivision, cellW, setCellW, chordTrack, hideBarRow,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingFret, setEditingFret] = useState<{ id: string; value: string } | null>(null);
@@ -65,6 +75,9 @@ export function TabEditor({
   /** Grid display mode: '16th' = subdivision lines per current subdivision; 'rests' = no subdivisions. */
   const [gridMode, setGridMode] = useState<'16th' | 'rests'>('16th');
   const [subOpen, setSubOpen] = useState(false);
+  /** Degree-colour mode: tints fret-number cells by their scale degree relative to the chord at that beat. */
+  const [degreeColours, setDegreeColours] = useState(false);
+  const CELL_W = cellW;
 
   /** The default duration of a new note equals the current subdivision length. */
   const defaultDur = SUBDIVISION_STEP[subdivision];
