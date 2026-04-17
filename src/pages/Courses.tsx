@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useCourses } from '@/hooks/useCourses';
 import { Button } from '@/components/ui/button';
@@ -9,19 +9,16 @@ import { toast } from 'sonner';
 export default function Courses() {
   const nav = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
-  const [authed, setAuthed] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
-  const { courses, loading, deleteCourse } = useCourses();
-  const enterRef = useRef<HTMLDivElement>(null);
+  const { courses, loading, deleteCourse, createCourse } = useCourses();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setAuthed(!!data.session);
       setAuthChecked(true);
       if (!data.session) nav('/auth');
     });
-    // trigger slide-in
-    requestAnimationFrame(() => setAnimateIn(true));
+    // start hidden, slide in next frame
+    requestAnimationFrame(() => requestAnimationFrame(() => setAnimateIn(true)));
   }, [nav]);
 
   const onLogout = async () => { await supabase.auth.signOut(); nav('/'); };
@@ -31,11 +28,25 @@ export default function Courses() {
     setTimeout(() => nav('/'), 300);
   };
 
+  const onNewCourse = async () => {
+    const title = prompt('New course title?', 'Untitled course');
+    if (!title) return;
+    const { data, error } = await createCourse({
+      title,
+      description: '',
+      key_root: 'A',
+      key_quality: 'Minor',
+      time_signature: '4/4',
+      tempo: 100,
+    });
+    if (error || !data) { toast.error(error?.message ?? 'Failed'); return; }
+    nav(`/courses/${data.id}`);
+  };
+
   if (!authChecked) return null;
 
   return (
     <div
-      ref={enterRef}
       className="fixed inset-0 z-50 bg-background text-foreground transition-transform duration-300 ease-out"
       style={{ transform: animateIn ? 'translateX(0)' : 'translateX(100%)' }}
     >
@@ -46,7 +57,7 @@ export default function Courses() {
         <h1 className="text-xl font-semibold">Courses</h1>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={onLogout}><LogOut className="size-4 mr-1" /> Sign out</Button>
-          <Button size="sm" onClick={() => nav('/courses/new')}><Plus className="size-4 mr-1" /> New course</Button>
+          <Button size="sm" onClick={onNewCourse}><Plus className="size-4 mr-1" /> New course</Button>
         </div>
       </header>
 
@@ -56,7 +67,7 @@ export default function Courses() {
         ) : courses.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center gap-3">
             <p className="text-lg text-muted-foreground">No courses yet.</p>
-            <Button onClick={() => nav('/courses/new')}><Plus className="size-4 mr-2" /> Create your first course</Button>
+            <Button onClick={onNewCourse}><Plus className="size-4 mr-2" /> Create your first course</Button>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -65,11 +76,11 @@ export default function Courses() {
                    onClick={() => nav(`/courses/${c.id}`)}>
                 <h2 className="font-semibold truncate">{c.title}</h2>
                 <p className="text-xs text-muted-foreground mt-1">{c.key_root} {c.key_quality} · {c.tempo} bpm · {c.time_signature}</p>
-                <p className="text-xs text-muted-foreground mt-2">{c.phrase?.notes?.length ?? 0} notes</p>
+                {c.description && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{c.description}</p>}
                 <button
                   onClick={async (e) => {
                     e.stopPropagation();
-                    if (!confirm('Delete this course?')) return;
+                    if (!confirm('Delete this course and all its lessons?')) return;
                     const { error } = await deleteCourse(c.id);
                     if (error) toast.error(error.message); else toast.success('Deleted');
                   }}
