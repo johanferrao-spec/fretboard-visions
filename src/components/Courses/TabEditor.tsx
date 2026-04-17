@@ -320,7 +320,6 @@ export function TabEditor({
               {Array.from({ length: totalCells }).map((_, cellIdx) => (
                 <button
                   key={cellIdx}
-                  onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => { if (deleteMode) return; addNoteAt(stringIndex, cellIdx); }}
                   className="transition-colors hover:bg-primary/10"
                   style={{
