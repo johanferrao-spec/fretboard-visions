@@ -153,8 +153,8 @@ export default function CourseCreator() {
   useEffect(() => {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
-      if (selectedIdsRef.current.length >= 1) {
-        // Move the (first) selected note to picked string/fret
+      if (selectedIdsRef.current.length === 1) {
+        // Move the selected note to picked string/fret
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
         return;
       }
