@@ -50,8 +50,12 @@ export default function CourseCreator() {
   const [deleteMode, setDeleteMode] = useState(false);
   const [pickedFretboardNote, setPickedFretboardNote] = useState<{ stringIndex: number; fret: number; nonce: number } | null>(null);
 
-  // Staged input notes (from interactive fretboard)
-  const [stagedNotes, setStagedNotes] = useState<{ stringIndex: number; fret: number }[]>([]);
+  // Staged input note from interactive fretboard (preview before commit via Enter)
+  const [stagedNote, setStagedNote] = useState<{ stringIndex: number; fret: number } | null>(null);
+  /** Last duration used for new note inserts (defaults to 1/8 = 2 grid units). */
+  const lastDurationRef = useRef<number>(GRID_PER_BEAT / 2);
+  /** Cursor: where the next inserted note will go. Advances after each insert. */
+  const cursorRef = useRef<number>(0);
 
   // Bar window: viewport over the timeline. Indexed in MUSICAL bars (bar 1 = the first "real" bar).
   // Default: start AT bar 1 (windowStartBar = 0). User can scroll back ONE bar (-1) to view anacrusis.
