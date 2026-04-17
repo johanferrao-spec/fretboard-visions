@@ -46,7 +46,9 @@ export default function CourseCreator() {
   const [chordTrack, setChordTrack] = useState<ChordTrackEntry[]>([]);
   const [keyTrack, setKeyTrack] = useState<KeyChangeEntry[]>([]);
   const [tempoTrack, setTempoTrack] = useState<TempoChangeEntry[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [pickedFretboardNote, setPickedFretboardNote] = useState<{ stringIndex: number; fret: number; nonce: number } | null>(null);
 
   // Staged input notes (from interactive fretboard)
   const [stagedNotes, setStagedNotes] = useState<{ stringIndex: number; fret: number }[]>([]);
