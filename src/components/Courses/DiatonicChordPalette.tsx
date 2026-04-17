@@ -15,15 +15,21 @@ function extensionsFor(type: string): string[] {
   return [''];
 }
 
+/** Harmonic function name per scale degree (0-indexed) for major and minor keys.
+ * These are the standard Western tonal functions taught in theory class. */
+const FUNCTION_MAJOR = ['Tonic', 'Supertonic', 'Mediant', 'Subdominant', 'Dominant', 'Submediant', 'Leading'];
+const FUNCTION_MINOR = ['Tonic', 'Supertonic', 'Mediant', 'Subdominant', 'Dominant', 'Submediant', 'Subtonic'];
+
 interface Props {
   keyRoot: NoteName;
   keyQuality: KeyQuality;
 }
 
-/** Vertical list of diatonic chords. Drag onto the chord lane (uses HTML5 DnD with `text/chord-symbol`). */
+/** Vertical list of diatonic chords with their harmonic function. Drag onto the chord lane. */
 export function DiatonicChordPalette({ keyRoot, keyQuality }: Props) {
   const mode: KeyMode = keyQuality === 'Major' ? 'major' : 'minor';
   const chords = useMemo(() => getDiatonicChords(keyRoot, mode), [keyRoot, mode]);
+  const functionLabels = keyQuality === 'Major' ? FUNCTION_MAJOR : FUNCTION_MINOR;
   const [openMenu, setOpenMenu] = useState<number | null>(null);
 
   return (
@@ -42,7 +48,7 @@ export function DiatonicChordPalette({ keyRoot, keyQuality }: Props) {
                   e.dataTransfer.effectAllowed = 'copy';
                 }}
                 onDoubleClick={() => setOpenMenu(openMenu === i ? null : i)}
-                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs font-mono cursor-grab active:cursor-grabbing transition-all hover:brightness-110 select-none"
+                className="w-full grid grid-cols-[2rem_1fr_auto] items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs font-mono cursor-grab active:cursor-grabbing transition-all hover:brightness-110 select-none"
                 style={{
                   background: `hsl(${color})`,
                   color: 'white',
@@ -50,8 +56,9 @@ export function DiatonicChordPalette({ keyRoot, keyQuality }: Props) {
                   border: 'none',
                 }}
               >
-                <span className="font-bold w-8 opacity-80">{c.roman}</span>
+                <span className="font-bold opacity-90">{c.roman}</span>
                 <span className="font-bold">{c.symbol}</span>
+                <span className="text-[9px] uppercase tracking-wider opacity-90">{functionLabels[i]}</span>
               </button>
               {openMenu === i && (
                 <div className="absolute left-full top-0 ml-2 z-40 bg-popover border border-border rounded-lg shadow-lg p-2 min-w-[140px]">
