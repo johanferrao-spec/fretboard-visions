@@ -674,22 +674,38 @@ export function TabEditor({
           </defs>
         </svg>
 
-        {/* Bar numbers row — bar numbers anchored at the EXACT same x as the bar gridlines below. */}
-        <div className="relative" style={{ height: BAR_ROW_H, borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
-          <div className="absolute left-0 top-0 h-full z-10" style={{ width: LABEL_W, background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
-          <div className="absolute inset-0" style={{ left: LABEL_W }}>
-            {barMarkers.map(({ x, barNumber }) => (
-              <div key={`bar-${barNumber}`}
-                className="absolute top-0 bottom-0 flex items-center text-[10px] font-mono font-bold pointer-events-none"
-                style={{
-                  left: x,
-                  paddingLeft: 3,
-                  color: 'rgb(0,0,0)',
-                }}
-              >{barNumber}</div>
-            ))}
+        {/* Bar numbers row — clickable to set the cursor. Hidden when parent renders a shared bar row. */}
+        {!hideBarRow && (
+          <div
+            className="relative cursor-pointer"
+            style={{ height: BAR_ROW_H, borderBottom: '1px solid rgba(0,0,0,0.15)' }}
+            onMouseDown={(e) => {
+              // Click anywhere on the bar row → snap cursor to that grid position.
+              if ((e.target as HTMLElement).closest('[data-cursor-handle]')) return;
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              const x = e.clientX - rect.left - LABEL_W;
+              if (x < 0) return;
+              const cell = x / CELL_W;
+              setCursorGrid(snapGrid(startGrid + cell));
+              e.stopPropagation();
+            }}
+            title="Click to move the insertion cursor"
+          >
+            <div className="absolute left-0 top-0 h-full z-10 pointer-events-none" style={{ width: LABEL_W, background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
+            <div className="absolute inset-0" style={{ left: LABEL_W }}>
+              {barMarkers.map(({ x, barNumber }) => (
+                <div key={`bar-${barNumber}`}
+                  className="absolute top-0 bottom-0 flex items-center text-[10px] font-mono font-bold pointer-events-none"
+                  style={{
+                    left: x,
+                    paddingLeft: 3,
+                    color: 'rgb(0,0,0)',
+                  }}
+                >{barNumber}</div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* String rows */}
         <div className="relative">
