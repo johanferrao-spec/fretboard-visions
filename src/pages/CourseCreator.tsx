@@ -153,7 +153,8 @@ export default function CourseCreator() {
   useEffect(() => {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
-      if (selectedIdsRef.current.length === 1) {
+      if (selectedIdsRef.current.length >= 1) {
+        // Move the (first) selected note to picked string/fret
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
         return;
       }
@@ -174,6 +175,21 @@ export default function CourseCreator() {
     return () => { fb.setArpAddMode(false); fb.setArpAddClickHandler(null); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When tab notes are selected, mirror them on the interactive fretboard so user can see the picked frets.
+  // When NO selection, show staged notes instead.
+  const fretboardReference = useMemo(() => {
+    if (selectedIds.length > 0) {
+      return phrase.notes
+        .filter(n => selectedIds.includes(n.id))
+        .map(n => ({ stringIndex: n.stringIndex, fret: n.fret }));
+    }
+    return stagedNotes;
+  }, [selectedIds, phrase.notes, stagedNotes]);
+
+  useEffect(() => {
+    fb.setArpAddReferenceNotes(fretboardReference);
+  }, [fretboardReference]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearStaged = () => { setStagedNotes([]); fb.setArpAddReferenceNotes([]); };
 
