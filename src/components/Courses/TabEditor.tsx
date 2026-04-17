@@ -804,10 +804,55 @@ export function TabEditor({
           />
         )}
 
-        {/* Playhead */}
+        {/* Playhead (live during playback) */}
         {playheadGrid != null && playheadGrid >= startGrid && playheadGrid < startGrid + totalCells && (
           <div className="absolute top-0 bottom-0 w-0.5 bg-primary z-30 pointer-events-none transition-[left] duration-150"
-            style={{ left: 24 + (playheadGrid - startGrid) * CELL_W, boxShadow: '0 0 8px hsl(var(--primary))' }} />
+            style={{ left: LABEL_W + (playheadGrid - startGrid) * CELL_W, boxShadow: '0 0 8px hsl(var(--primary))' }} />
+        )}
+
+        {/* Insertion cursor (draggable when stopped) — orange triangle + dotted line */}
+        {(playheadGrid == null) && cursorGrid >= startGrid && cursorGrid <= startGrid + totalCells && (
+          <>
+            <div
+              className="absolute z-40 cursor-ew-resize"
+              style={{
+                left: LABEL_W + (cursorGrid - startGrid) * CELL_W - 6,
+                top: 0,
+                width: 12,
+                height: BAR_ROW_H,
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const rect = gridRef.current?.getBoundingClientRect();
+                if (!rect) return;
+                const onMove = (mv: MouseEvent) => {
+                  const x = mv.clientX - rect.left - LABEL_W;
+                  const cell = Math.max(0, x / CELL_W);
+                  setCursorGrid(snapGrid(startGrid + cell));
+                };
+                const onUp = () => {
+                  window.removeEventListener('mousemove', onMove);
+                  window.removeEventListener('mouseup', onUp);
+                };
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+              }}
+              title="Drag to move insertion cursor"
+            >
+              <svg viewBox="0 0 12 18" width="12" height={BAR_ROW_H}>
+                <polygon points="6,18 0,4 12,4" fill="hsl(28, 90%, 55%)" stroke="rgb(0,0,0)" strokeWidth="0.5" />
+              </svg>
+            </div>
+            <div className="absolute top-0 bottom-0 pointer-events-none z-30"
+              style={{
+                left: LABEL_W + (cursorGrid - startGrid) * CELL_W,
+                width: 1,
+                background: 'hsl(28, 90%, 55%)',
+                opacity: 0.7,
+                borderLeft: '1px dashed hsl(28, 90%, 55%)',
+              }} />
+          </>
         )}
       </div>
       </div>
