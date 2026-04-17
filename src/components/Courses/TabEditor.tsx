@@ -757,6 +757,13 @@ export function TabEditor({
           </div>
         )}
 
+        {/* Embedded global tracks (chord/key/tempo) — sit between bar row and string rows */}
+        {tracksSlot && (
+          <div className="relative" style={{ borderBottom: '2px solid rgba(0,0,0,0.4)' }}>
+            {tracksSlot}
+          </div>
+        )}
+
         {/* String rows */}
         <div className="relative">
           {[5, 4, 3, 2, 1, 0].map((stringIndex) => (
