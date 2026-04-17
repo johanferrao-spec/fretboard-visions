@@ -388,6 +388,7 @@ export function GlobalTracksEditor({
 interface LaneProps {
   label: string;
   totalCells: number;
+  cellW: number;
   isBarLine: (cellIdx: number) => boolean;
   onCellClick?: (cellIdx: number) => void;
   onCellDoubleClick?: (cellIdx: number) => void;
@@ -396,7 +397,7 @@ interface LaneProps {
   children: React.ReactNode;
 }
 
-function Lane({ label, totalCells, isBarLine, onCellClick, onCellDoubleClick, onCellDrop, allowDrop, children }: LaneProps) {
+function Lane({ label, totalCells, cellW, isBarLine, onCellClick, onCellDoubleClick, onCellDrop, allowDrop, children }: LaneProps) {
   return (
     <div className="relative border-b border-border" style={{ height: ROW_H }}>
       <div className="absolute left-0 top-0 h-full flex items-center justify-center text-[9px] font-mono uppercase tracking-wider bg-muted/30 border-r border-border z-10 text-muted-foreground"
@@ -411,7 +412,7 @@ function Lane({ label, totalCells, isBarLine, onCellClick, onCellDoubleClick, on
             onDrop={allowDrop ? (e) => onCellDrop?.(cellIdx, e) : undefined}
             className="hover:bg-primary/5 cursor-pointer"
             style={{
-              width: CELL_W, height: ROW_H,
+              width: cellW, height: ROW_H,
               borderRight: isBarLine(cellIdx + 1) ? '2px solid hsl(var(--foreground) / 0.5)' : '1px solid hsl(var(--border) / 0.3)',
             }}
           />
