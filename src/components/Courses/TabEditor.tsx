@@ -503,9 +503,30 @@ export function TabEditor({
             <Music className="size-3" /> Rests
           </button>
         </div>
-        <span className="text-[10px] font-mono text-muted-foreground">
-          Default duration: {lastDuration === 1 ? '1/16' : lastDuration === 2 ? '1/8' : lastDuration === 4 ? '1/4' : lastDuration === 8 ? '1/2' : `${lastDuration}/16`}
-        </span>
+        <div className="flex items-center gap-3 relative">
+          <span className="text-[10px] font-mono text-muted-foreground">Default duration:</span>
+          <button
+            onClick={() => setSubOpen(o => !o)}
+            className="inline-flex items-center gap-1 bg-secondary text-secondary-foreground rounded px-2 py-1 text-[10px] font-mono uppercase tracking-wider hover:bg-secondary/80"
+          >
+            {subdivision} <ChevronDown className="size-3" />
+          </button>
+          {subOpen && (
+            <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-md shadow-lg min-w-[10rem] py-1">
+              {(Object.keys(SUBDIVISION_LABEL) as Subdivision[]).map(s => (
+                <button
+                  key={s}
+                  onClick={() => { setSubdivision(s); setSubOpen(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-accent ${s === subdivision ? 'bg-accent text-accent-foreground' : 'text-popover-foreground'}`}
+                >
+                  <span className="font-bold mr-2">{s}</span>
+                  <span className="text-muted-foreground">{SUBDIVISION_LABEL[s]}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
       <div className="overflow-x-auto">
       <div ref={gridRef} className="relative" style={gridStyle} onMouseDown={startMarquee}>
