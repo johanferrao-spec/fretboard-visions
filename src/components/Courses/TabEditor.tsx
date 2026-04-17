@@ -354,26 +354,47 @@ export function TabEditor({
 
   // ===== Bar number markers (drawn at the SAME x as bar gridlines for perfect alignment) =====
   const barMarkers = useMemo(() => {
-    const out: Array<{ cellOffset: number; barNumber: number }> = [];
-    for (let cell = 0; cell < totalCells; cell++) {
+    const out: Array<{ x: number; barNumber: number }> = [];
+    for (let cell = 0; cell <= totalCells; cell++) {
       const abs = startGrid + cell;
       if (abs % gridPerBar === 0) {
-        out.push({ cellOffset: cell, barNumber: Math.floor(abs / gridPerBar) + 1 });
+        out.push({ x: cell * CELL_W, barNumber: Math.floor(abs / gridPerBar) + 1 });
       }
     }
     return out;
   }, [startGrid, totalCells, gridPerBar]);
 
-  /** Vertical lines (bar + beat) drawn as absolute overlays so positions are exact. */
+  /**
+   * Vertical lines (bar + beat + subdivision) drawn as absolute overlays so positions are exact.
+   * In '16th' mode we also draw subdivision lines according to the current subdivision.
+   * Subdivision step can be fractional (triplets), so we generate from absolute time, not cells.
+   */
   const verticalLines = useMemo(() => {
-    const lines: Array<{ x: number; kind: 'bar' | 'beat' }> = [];
+    const lines: Array<{ x: number; kind: 'bar' | 'beat' | 'sub' }> = [];
+    const step = SUBDIVISION_STEP[subdivision];
+    // First, draw bar + beat lines (always integer cells)
     for (let cell = 0; cell <= totalCells; cell++) {
       const abs = startGrid + cell;
       if (abs % gridPerBar === 0) lines.push({ x: cell * CELL_W, kind: 'bar' });
       else if (abs % GRID_PER_BEAT === 0) lines.push({ x: cell * CELL_W, kind: 'beat' });
     }
+    // Then subdivision lines (skip if they coincide with bar/beat). Only in 16th-grid mode.
+    if (gridMode === '16th') {
+      const startAbs = startGrid;
+      const endAbs = startGrid + totalCells;
+      // Snap start to nearest subdivision tick at or after startAbs
+      const firstTick = Math.ceil(startAbs / step) * step;
+      for (let t = firstTick; t < endAbs + 0.0001; t += step) {
+        const cellPos = t - startAbs;
+        // Skip if this coincides with an integer cell that's already a bar/beat
+        const onBar = Math.abs((startAbs + cellPos) % gridPerBar) < 0.0001;
+        const onBeat = Math.abs((startAbs + cellPos) % GRID_PER_BEAT) < 0.0001;
+        if (onBar || onBeat) continue;
+        lines.push({ x: cellPos * CELL_W, kind: 'sub' });
+      }
+    }
     return lines;
-  }, [totalCells, startGrid, gridPerBar]);
+  }, [totalCells, startGrid, gridPerBar, gridMode, subdivision]);
 
   // ===== Tab-style technique notation rendering (slurs, slides, bends, etc.) =====
   /** Find the next note on the same string after a given note. */
