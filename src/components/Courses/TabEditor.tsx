@@ -217,7 +217,8 @@ export function TabEditor({
   const noteTextColor = 'rgb(20, 20, 20)';
 
   return (
-    <div ref={containerRef} className="border border-border rounded-lg overflow-x-auto bg-white text-black">
+    <div ref={containerRef} className="border border-border rounded-lg bg-white text-black">
+      <div className="overflow-x-auto">
       <div className="relative" style={gridStyle}>
         {[5, 4, 3, 2, 1, 0].map((stringIndex) => (
           <div key={stringIndex} className="relative" style={{ height: ROW_H }}>
