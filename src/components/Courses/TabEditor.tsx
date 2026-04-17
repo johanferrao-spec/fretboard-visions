@@ -235,6 +235,58 @@ export function TabEditor({
       });
   }, [visibleNotes]);
 
+  /**
+   * Compute "rest spans" — gaps in the rhythm row where no note is sounding.
+   * Walks the visible window beat-by-subdivision and emits a rest span for each
+   * contiguous empty stretch. Each span is then split into musical rest values
+   * (whole, half, quarter, eighth, sixteenth) with proper glyphs.
+   */
+  const REST_GLYPHS: Array<{ grid: number; glyph: string }> = [
+    { grid: GRID_PER_BEAT * 4, glyph: '𝄻' }, // whole rest (4 beats)
+    { grid: GRID_PER_BEAT * 2, glyph: '𝄼' }, // half rest
+    { grid: GRID_PER_BEAT,     glyph: '𝄽' }, // quarter rest
+    { grid: GRID_PER_BEAT / 2, glyph: '𝄾' }, // eighth rest
+    { grid: GRID_PER_BEAT / 4, glyph: '𝄿' }, // sixteenth rest
+  ];
+  const restGlyphs = useMemo(() => {
+    if (gridMode !== 'rests') return [] as Array<{ x: number; glyph: string; w: number }>;
+    // Build a sorted list of "occupied" intervals (across ALL strings).
+    const intervals = phrase.notes
+      .map(n => [n.beatIndex, n.beatIndex + n.durationGrid] as [number, number])
+      .sort((a, b) => a[0] - b[0]);
+    // Merge overlapping intervals.
+    const merged: Array<[number, number]> = [];
+    for (const [s, e] of intervals) {
+      if (merged.length === 0 || s > merged[merged.length - 1][1]) merged.push([s, e]);
+      else merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], e);
+    }
+    // Walk the visible window, finding gaps between merged intervals.
+    const out: Array<{ x: number; glyph: string; w: number }> = [];
+    let cursor = startGrid;
+    const end = startGrid + totalCells;
+    const emitRests = (from: number, to: number) => {
+      let pos = from;
+      while (pos < to - 0.001) {
+        const remaining = to - pos;
+        // Pick the largest rest value that fits AND aligns to the beat grid where possible.
+        const chosen = REST_GLYPHS.find(r => r.grid <= remaining + 0.001) ?? REST_GLYPHS[REST_GLYPHS.length - 1];
+        const w = chosen.grid * CELL_W;
+        out.push({ x: (pos - startGrid) * CELL_W + w / 2 - 6, glyph: chosen.glyph, w });
+        pos += chosen.grid;
+      }
+    };
+    for (const [s, e] of merged) {
+      if (e <= startGrid) continue;
+      if (s >= end) break;
+      const gapStart = Math.max(cursor, startGrid);
+      const gapEnd = Math.min(s, end);
+      if (gapEnd > gapStart) emitRests(gapStart, gapEnd);
+      cursor = Math.max(cursor, e);
+    }
+    if (cursor < end) emitRests(Math.max(cursor, startGrid), end);
+    return out;
+  }, [gridMode, phrase.notes, startGrid, totalCells]);
+
   // (Default duration is now driven by the lifted `subdivision` prop. Selecting a single
   // note no longer mutates the default — the subdivision dropdown is the source of truth.)
 
@@ -510,16 +562,16 @@ export function TabEditor({
             className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
               gridMode === '16th' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}
-            title="Show 16th-note subdivision grid"
+            title="Show subdivision grid lines"
           >
-            <Grid3x3 className="size-3" /> 16ths
+            <Grid3x3 className="size-3" /> Grid
           </button>
           <button
             onClick={() => setGridMode('rests')}
             className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
               gridMode === 'rests' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}
-            title="Hide grid; show rests in gaps"
+            title="Hide grid; show rest symbols in gaps"
           >
             <Music className="size-3" /> Rests
           </button>
@@ -693,33 +745,7 @@ export function TabEditor({
             })}
           </div>
 
-          {/* Rest glyphs in 'rests' mode — show ♪ rest icons in empty beat cells per string */}
-          {gridMode === 'rests' && (
-            <div className="absolute inset-0 pointer-events-none" style={{ left: LABEL_W }}>
-              {[5, 4, 3, 2, 1, 0].map((stringIndex, visIdx) => {
-                const rests: React.ReactNode[] = [];
-                for (let beat = 0; beat < totalCells; beat += GRID_PER_BEAT) {
-                  const absBeat = startGrid + beat;
-                  const covered = phrase.notes.some(n =>
-                    n.stringIndex === stringIndex &&
-                    n.beatIndex <= absBeat &&
-                    n.beatIndex + n.durationGrid > absBeat
-                  );
-                  if (covered) continue;
-                  rests.push(
-                    <div key={`rest-${stringIndex}-${beat}`}
-                      className="absolute text-muted-foreground/40 text-[10px] font-mono"
-                      style={{
-                        left: beat * CELL_W + CELL_W / 2 - 4,
-                        top: visIdx * ROW_H + ROW_H / 2 - 6,
-                      }}
-                    >𝄽</div>
-                  );
-                }
-                return <div key={stringIndex}>{rests}</div>;
-              })}
-            </div>
-          )}
+          {/* Rest glyphs in 'rests' mode are rendered in the duration-bar row below — not per string. */}
 
           {/* Technique overlay (slurs, slides, bends, etc.) */}
           <svg className="absolute inset-0 pointer-events-none" style={{ left: 0, width: '100%', height: 6 * ROW_H }}>
@@ -788,6 +814,22 @@ export function TabEditor({
                 </div>
               );
             })}
+            {/* Rest glyphs (only in 'rests' mode) — sit in the gaps between duration bars. */}
+            {restGlyphs.map((r, i) => (
+              <div
+                key={`rest-${i}`}
+                className="absolute pointer-events-none select-none flex items-center justify-center text-black"
+                style={{
+                  left: r.x,
+                  top: 0,
+                  height: ROW_H,
+                  width: 12,
+                  fontSize: 22,
+                  lineHeight: `${ROW_H}px`,
+                  fontFamily: '"Bravura", "Noto Music", serif',
+                }}
+              >{r.glyph}</div>
+            ))}
           </div>
         </div>
 

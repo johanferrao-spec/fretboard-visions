@@ -166,7 +166,16 @@ export default function CourseCreator() {
     insertNoteAtCursor(stagedNote.stringIndex, stagedNote.fret);
   };
 
-  // Track ⌘/Ctrl for delete-mode UI + Space=play/stop + Enter=insert staged note
+  // Always-fresh staged-note commit (avoids stale closures in the global keydown listener).
+  const commitStagedRef = useRef(commitStaged);
+  commitStagedRef.current = commitStaged;
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+  const onPlayRef = useRef<(() => void) | null>(null);
+  // onPlayRef.current is wired below, after onPlay is declared.
+
+  // Track ⌘/Ctrl for delete-mode UI + Space=play/stop + Enter=insert staged note.
+  // Bind ONCE; use refs so the latest staged note / play state is always read.
   useEffect(() => {
     const onKD = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey) setDeleteMode(true);
@@ -174,12 +183,12 @@ export default function CourseCreator() {
       const inField = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
       if (e.code === 'Space' && !inField) {
         e.preventDefault();
-        if (isPlaying) { player.stop(); setIsPlaying(false); setPlayheadGrid(0); }
-        else { onPlay(); }
+        if (isPlayingRef.current) { player.stop(); setIsPlaying(false); setPlayheadGrid(0); }
+        else { onPlayRef.current?.(); }
       }
-      if (e.key === 'Enter' && !inField && stagedNote) {
+      if (e.key === 'Enter' && !inField && stagedNoteRef.current) {
         e.preventDefault();
-        commitStaged();
+        commitStagedRef.current();
       }
     };
     const onKU = (e: KeyboardEvent) => { if (!e.metaKey && !e.ctrlKey) setDeleteMode(false); };
@@ -189,7 +198,7 @@ export default function CourseCreator() {
     window.addEventListener('blur', onBlur);
     return () => { window.removeEventListener('keydown', onKD); window.removeEventListener('keyup', onKU); window.removeEventListener('blur', onBlur); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, phrase.notes, phrase.lengthGrid, tempo, stagedNote]);
+  }, []);
 
   // When a tab note is selected, sync cursor to the end of that note (so the next insert
   // continues from there). Subdivision/duration are NOT changed by selection — the
@@ -261,6 +270,7 @@ export default function CourseCreator() {
       () => { setIsPlaying(false); setPlayheadGrid(0); },
     );
   };
+  onPlayRef.current = onPlay;
   const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); };
 
   const totalBars = Math.max(VISIBLE_BARS, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
