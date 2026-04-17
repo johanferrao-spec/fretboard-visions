@@ -54,9 +54,8 @@ export default function CourseCreator() {
   const [stagedNotes, setStagedNotes] = useState<{ stringIndex: number; fret: number }[]>([]);
 
   // Bar window: viewport over the timeline. Indexed in MUSICAL bars (bar 1 = the first "real" bar).
-  // We allow windowStartBar to be negative so the user can edit anacrusis bars (bar 0, bar -1, …).
-  // Default: start one bar BEFORE bar 1 so end of bar 0 is visible just before bar 1.
-  const [windowStartBar, setWindowStartBar] = useState(-ANACRUSIS_BARS);
+  // Default: start AT bar 1 (windowStartBar = 0). User can scroll back ONE bar (-1) to view anacrusis.
+  const [windowStartBar, setWindowStartBar] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadGrid, setPlayheadGrid] = useState(0);
 
