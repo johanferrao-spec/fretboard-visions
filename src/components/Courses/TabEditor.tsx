@@ -214,24 +214,25 @@ export function TabEditor({
   }), [phrase.notes, startGrid, totalCells]);
 
   /**
-   * Group notes for the duration bar row. CRITICAL: at any given beat instant
-   * only ONE bar may be visible. So we cluster overlapping notes (across all
-   * strings) into a single group spanning the union of their durations.
+   * Group notes for the duration bar row.
+   * Chord = notes that share the EXACT same start beat. Notes that merely overlap
+   * (e.g. an 1/8 followed by a 1/16 on a different string) must NOT be merged into
+   * a chord — instead the earlier note will be trimmed by the insertion logic.
    */
   const beatGroups = useMemo(() => {
-    const sorted = [...visibleNotes].sort((a, b) => a.beatIndex - b.beatIndex);
-    const clusters: { start: number; end: number; notes: CourseNote[] }[] = [];
-    for (const n of sorted) {
-      const nEnd = n.beatIndex + n.durationGrid;
-      const last = clusters[clusters.length - 1];
-      if (last && n.beatIndex < last.end) {
-        last.notes.push(n);
-        last.end = Math.max(last.end, nEnd);
-      } else {
-        clusters.push({ start: n.beatIndex, end: nEnd, notes: [n] });
-      }
+    const groups = new Map<number, CourseNote[]>();
+    for (const n of visibleNotes) {
+      const key = Math.round(n.beatIndex * 1000) / 1000; // float-safe key
+      const arr = groups.get(key) ?? [];
+      arr.push(n);
+      groups.set(key, arr);
     }
-    return clusters.map(c => [c.start, c.notes, c.end - c.start] as [number, CourseNote[], number]);
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([start, notes]) => {
+        const dur = Math.max(...notes.map(n => n.durationGrid));
+        return [start, notes, dur] as [number, CourseNote[], number];
+      });
   }, [visibleNotes]);
 
   // (Default duration is now driven by the lifted `subdivision` prop. Selecting a single
