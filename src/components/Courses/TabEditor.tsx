@@ -755,7 +755,7 @@ export function TabEditor({
           </div>
 
           {/* Note markers (fret numbers) — absolute over string rows */}
-          <div className="absolute inset-0 pointer-events-none" style={{ left: 24 }}>
+          <div className="absolute inset-0 pointer-events-none" style={{ left: LABEL_W }}>
             {visibleNotes.map(n => {
               const localCell = n.beatIndex - startGrid;
               const tech = n.technique;
