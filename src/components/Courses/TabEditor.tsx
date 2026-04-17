@@ -693,33 +693,7 @@ export function TabEditor({
             })}
           </div>
 
-          {/* Rest glyphs in 'rests' mode — show ♪ rest icons in empty beat cells per string */}
-          {gridMode === 'rests' && (
-            <div className="absolute inset-0 pointer-events-none" style={{ left: LABEL_W }}>
-              {[5, 4, 3, 2, 1, 0].map((stringIndex, visIdx) => {
-                const rests: React.ReactNode[] = [];
-                for (let beat = 0; beat < totalCells; beat += GRID_PER_BEAT) {
-                  const absBeat = startGrid + beat;
-                  const covered = phrase.notes.some(n =>
-                    n.stringIndex === stringIndex &&
-                    n.beatIndex <= absBeat &&
-                    n.beatIndex + n.durationGrid > absBeat
-                  );
-                  if (covered) continue;
-                  rests.push(
-                    <div key={`rest-${stringIndex}-${beat}`}
-                      className="absolute text-muted-foreground/40 text-[10px] font-mono"
-                      style={{
-                        left: beat * CELL_W + CELL_W / 2 - 4,
-                        top: visIdx * ROW_H + ROW_H / 2 - 6,
-                      }}
-                    >𝄽</div>
-                  );
-                }
-                return <div key={stringIndex}>{rests}</div>;
-              })}
-            </div>
-          )}
+          {/* Rest glyphs in 'rests' mode are rendered in the duration-bar row below — not per string. */}
 
           {/* Technique overlay (slurs, slides, bends, etc.) */}
           <svg className="absolute inset-0 pointer-events-none" style={{ left: 0, width: '100%', height: 6 * ROW_H }}>
