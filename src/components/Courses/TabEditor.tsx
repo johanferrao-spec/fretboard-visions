@@ -91,6 +91,14 @@ export function TabEditor({
 
   const addNoteAt = (stringIndex: number, cellInWindow: number) => {
     const beatIndex = startGrid + cellInWindow;
+    // Block: do not allow another note at the exact same beatIndex on any string
+    // (no two notes can be played at the same instant on the same string slot).
+    const collision = phrase.notes.find(n => n.stringIndex === stringIndex && n.beatIndex === beatIndex);
+    if (collision) {
+      setSelectedIds([collision.id]);
+      setEditingFret({ id: collision.id, value: String(collision.fret) });
+      return;
+    }
     const id = `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const note: CourseNote = { id, stringIndex, fret: 0, beatIndex, durationGrid: DEFAULT_DUR };
     const trimmed = trimOverlaps(phrase.notes, stringIndex, beatIndex, DEFAULT_DUR);
@@ -289,18 +297,17 @@ export function TabEditor({
     <div ref={containerRef} className="border border-border rounded-lg bg-white text-black">
       <div className="overflow-x-auto">
       <div ref={gridRef} className="relative" style={gridStyle} onMouseDown={startMarquee}>
-        {/* Bar numbers row */}
+        {/* Bar numbers row — aligned exactly with bar gridlines below */}
         <div className="relative" style={{ height: BAR_ROW_H, borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
           <div className="absolute left-0 top-0 h-full w-6 z-10" style={{ background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
           <div className="absolute inset-0 left-6">
             {barMarkers.map(({ cellOffset, barNumber }) => (
               <div key={cellOffset}
-                className="absolute top-0 bottom-0 flex items-center px-1 text-[10px] font-mono font-bold pointer-events-none"
+                className="absolute top-0 bottom-0 flex items-center text-[10px] font-mono font-bold pointer-events-none"
                 style={{
                   left: cellOffset * CELL_W,
-                  color: barNumber === 1 ? 'rgb(0,0,0)' : 'rgba(0,0,0,0.55)',
-                  borderLeft: '2px solid rgba(0,0,0,0.4)',
-                  paddingLeft: 4,
+                  paddingLeft: 3,
+                  color: 'rgb(0,0,0)',
                 }}
               >{barNumber}</div>
             ))}
@@ -319,8 +326,8 @@ export function TabEditor({
               {Array.from({ length: totalCells }).map((_, cellIdx) => (
                 <button
                   key={cellIdx}
-                  onClick={(e) => { if (deleteMode) return; addNoteAt(stringIndex, cellIdx); }}
-                  className="transition-colors hover:bg-primary/10"
+                  onDoubleClick={(e) => { e.stopPropagation(); if (deleteMode) return; addNoteAt(stringIndex, cellIdx); }}
+                  className="transition-colors hover:bg-primary/5"
                   style={{
                     width: CELL_W,
                     height: ROW_H,
@@ -338,6 +345,12 @@ export function TabEditor({
               const localCell = n.beatIndex - startGrid;
               const tech = n.technique;
               const isSel = selectedIds.includes(n.id);
+              // Width: tight to the text (fret digits + optional technique). Min ~16px, max = CELL_W.
+              const fretText = String(n.fret);
+              const noteW = Math.min(CELL_W, Math.max(16, fretText.length * 8 + 8 + (tech ? 8 : 0)));
+              // Center the marker inside its 16th-note cell.
+              const cellLeft = 24 + localCell * CELL_W;
+              const left = cellLeft + (CELL_W - noteW) / 2;
               return (
                 <div
                   key={n.id}
@@ -350,17 +363,19 @@ export function TabEditor({
                   }}
                   onDoubleClick={(e) => { e.stopPropagation(); setEditingFret({ id: n.id, value: String(n.fret) }); }}
                   className={`absolute z-20 text-xs font-mono cursor-pointer flex items-center justify-center gap-0.5 ${
-                    isSel ? 'ring-2 ring-primary rounded bg-primary/20' : 'rounded hover:bg-primary/10'
+                    isSel ? 'ring-2 ring-primary rounded bg-white' : 'rounded'
                   } ${deleteMode ? 'ring-2 ring-destructive cursor-not-allowed' : ''}`}
                   style={{
-                    left: 24 + localCell * CELL_W,
+                    left,
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    width: CELL_W,
-                    height: ROW_H - 4,
-                    lineHeight: `${ROW_H - 4}px`,
+                    width: noteW,
+                    height: ROW_H - 6,
+                    lineHeight: `${ROW_H - 6}px`,
                     color: noteTextColor,
-                    background: isSel ? undefined : 'white',
+                    background: isSel ? 'white' : 'white',
+                    paddingLeft: 2,
+                    paddingRight: 2,
                   }}
                 >
                   {editingFret?.id === n.id ? (

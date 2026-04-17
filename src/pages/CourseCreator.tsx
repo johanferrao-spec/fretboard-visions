@@ -135,16 +135,26 @@ export default function CourseCreator() {
     }
   };
 
-  // Track ⌘/Ctrl for delete-mode UI
+  // Track ⌘/Ctrl for delete-mode UI + Space shortcut for play/stop
   useEffect(() => {
-    const onKD = (e: KeyboardEvent) => { if (e.metaKey || e.ctrlKey) setDeleteMode(true); };
+    const onKD = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) setDeleteMode(true);
+      if (e.code === 'Space') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+        e.preventDefault();
+        if (isPlaying) { player.stop(); setIsPlaying(false); setPlayheadGrid(0); }
+        else { onPlay(); }
+      }
+    };
     const onKU = (e: KeyboardEvent) => { if (!e.metaKey && !e.ctrlKey) setDeleteMode(false); };
     const onBlur = () => setDeleteMode(false);
     window.addEventListener('keydown', onKD);
     window.addEventListener('keyup', onKU);
     window.addEventListener('blur', onBlur);
     return () => { window.removeEventListener('keydown', onKD); window.removeEventListener('keyup', onKU); window.removeEventListener('blur', onBlur); };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, phrase.notes, phrase.lengthGrid, tempo]);
 
   // Wire up fretboard clicks. If exactly one tab note is selected → set its fret/string.
   // Otherwise → stage the click as part of a chord/note to insert.
@@ -301,7 +311,7 @@ export default function CourseCreator() {
           {/* Interactive fretboard (input + visualizer) */}
           <section className="border border-border rounded-2xl bg-card p-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Interactive fretboard — click frets to stage a chord/note</p>
+              <div /> {/* hint removed per request */}
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={clearStaged} disabled={stagedNotes.length === 0}>Clear</Button>
                 <Button size="sm" onClick={onInsert} disabled={stagedNotes.length === 0}>
@@ -325,7 +335,7 @@ export default function CourseCreator() {
               primaryColor={fb.primaryColor}
               activeChord={null}
               orientation={fb.orientation}
-              showFretBox={fb.showFretBox}
+              showFretBox={false}
               fretBoxStart={fb.fretBoxStart}
               fretBoxSize={fb.fretBoxSize}
               setFretBoxStart={fb.setFretBoxStart}
@@ -335,7 +345,7 @@ export default function CourseCreator() {
               setFretBoxStringStart={fb.setFretBoxStringStart}
               setFretBoxStringSize={fb.setFretBoxStringSize}
               noteMarkerSize={fb.noteMarkerSize}
-              degreeColors={fb.degreeColors}
+              degreeColors={false}
               setDegreeColors={fb.setDegreeColors}
               disabledDegrees={fb.disabledDegrees}
               toggleDegree={fb.toggleDegree}
