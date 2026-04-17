@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import type { CoursePhrase, CourseNote, NoteKind, Technique } from '@/lib/courseTypes';
+import type { CoursePhrase, CourseNote, NoteKind, Technique, ChordTrackEntry } from '@/lib/courseTypes';
 import { GRID_PER_BEAT, NOTE_KIND_COLOR } from '@/lib/courseTypes';
-import { NOTE_NAMES, SCALE_FORMULAS } from '@/lib/music';
+import { NOTE_NAMES, SCALE_FORMULAS, SCALE_DEGREE_COLORS } from '@/lib/music';
 import { KEY_QUALITY_SCALE, type KeyQuality } from '@/lib/courseTypes';
 import type { NoteName } from '@/lib/music';
-import { Trash2, Grid3x3, Music, ChevronDown } from 'lucide-react';
+import { Trash2, Grid3x3, Music, ChevronDown, Palette } from 'lucide-react';
 
 /** Subdivision options. Step = grid units between consecutive snap points. */
 export type Subdivision = '1/4' | '1/6' | '1/8' | '1/12' | '1/16' | '1/24';
