@@ -232,8 +232,32 @@ export function GlobalTracksEditor({
   return (
     <div className="border border-border rounded-lg bg-card overflow-x-auto relative">
       <div className="relative" style={{ width: totalCells * CELL_W + LANE_LABEL_W, minWidth: '100%' }}>
+        {/* ============ Top bar-marker row — clickable to set the cursor ============ */}
+        <div
+          className="relative cursor-pointer"
+          style={{ height: BAR_ROW_H, borderBottom: '1px solid hsl(var(--border))' }}
+          onMouseDown={(e) => {
+            if (!setCursorGrid) return;
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const x = e.clientX - rect.left - LANE_LABEL_W;
+            if (x < 0) return;
+            setCursorGrid(Math.round(startGrid + x / CELL_W));
+          }}
+          title="Click to move the insertion cursor"
+        >
+          <div className="absolute left-0 top-0 h-full bg-muted/30 border-r border-border z-10 pointer-events-none" style={{ width: LANE_LABEL_W }} />
+          <div className="absolute inset-0" style={{ left: LANE_LABEL_W }}>
+            {barMarkers.map(({ x, barNumber }) => (
+              <div key={`bar-${barNumber}`}
+                className="absolute top-0 bottom-0 flex items-center text-[10px] font-mono font-bold pointer-events-none text-foreground"
+                style={{ left: x, paddingLeft: 3 }}
+              >{barNumber}</div>
+            ))}
+          </div>
+        </div>
+
         {/* ============ Chord lane ============ */}
-        <Lane label="Chords" totalCells={totalCells} isBarLine={isBarLine}
+        <Lane label="Chords" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
           onCellDoubleClick={startTypeChord}
           onCellDrop={handleChordDrop} allowDrop>
           {visChords.map(c => {
