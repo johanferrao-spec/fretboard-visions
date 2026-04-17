@@ -357,6 +357,7 @@ export function TabEditor({
             style={{ left: 24 + (playheadGrid - startGrid) * CELL_W, boxShadow: '0 0 8px hsl(var(--primary))' }} />
         )}
       </div>
+      </div>
 
       {selectedIds.length > 0 && (
         <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/10">
