@@ -288,11 +288,10 @@ export function TabEditor({
       setPhrase({ ...phrase, notes: next });
     };
     const onUp = () => {
-      window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
-      // Update remembered duration
-      const sel = phrase.notes.find(n => ids.includes(n.id));
-      if (sel) setLastDuration(sel.durationGrid);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
     };
+
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   };
