@@ -215,6 +215,7 @@ export default function ChordReference({
   chordOctaveShift, setChordOctaveShift,
   setArpAddReferenceNotes,
 }: ChordReferenceProps) {
+  const navigate = useNavigate();
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
   const [voicingTab, setVoicingTab] = useState<VoicingTab>('full');
