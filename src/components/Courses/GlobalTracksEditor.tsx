@@ -35,15 +35,28 @@ const BAR_ROW_H = 18;
 export function GlobalTracksEditor({
   chordTrack, setChordTrack, keyTrack, setKeyTrack, tempoTrack, setTempoTrack,
   startGrid, visibleGrids, beatsPerBar, isOwner, defaultKeyRoot, defaultKeyQuality, defaultTempo, pendingKey,
-  deleteMode, playheadGrid,
+  deleteMode, playheadGrid, cellW, cursorGrid, setCursorGrid,
 }: Props) {
   const [editingChordId, setEditingChordId] = useState<string | null>(null);
   const [chordInput, setChordInput] = useState('');
   const [editingTempoId, setEditingTempoId] = useState<string | null>(null);
   const [splitMode, setSplitMode] = useState(false);
+  const CELL_W = cellW;
 
   const totalCells = visibleGrids;
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
+
+  /** Bar markers — same calc as TabEditor for column alignment. */
+  const barMarkers = useMemo(() => {
+    const out: Array<{ x: number; barNumber: number }> = [];
+    for (let cell = 0; cell <= totalCells; cell++) {
+      const abs = startGrid + cell;
+      if (abs % gridPerBar === 0) {
+        out.push({ x: cell * CELL_W, barNumber: Math.floor(abs / gridPerBar) + 1 });
+      }
+    }
+    return out;
+  }, [startGrid, totalCells, gridPerBar, CELL_W]);
 
   const keyAt = (gridIdx: number): { root: NoteName; quality: KeyQuality } => {
     const sorted = [...keyTrack].filter(k => k.beatIndex <= gridIdx).sort((a, b) => b.beatIndex - a.beatIndex);
