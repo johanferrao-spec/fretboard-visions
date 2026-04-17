@@ -212,14 +212,98 @@ export function TabEditor({
     window.addEventListener('mouseup', onUp);
   };
 
-  // White-tab styling: classic black-on-white tablature look
-  const stringLineColor = 'rgba(0, 0, 0, 0.55)';
-  const noteTextColor = 'rgb(20, 20, 20)';
+  // ===== Marquee box selection =====
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const startMarquee = (e: React.MouseEvent) => {
+    if (deleteMode) return;
+    // Only start marquee on background (not on a note/cell button)
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-note]') || target.closest('[data-duration-bar]')) return;
+    const rect = gridRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setMarquee({ x0: x, y0: y, x1: x, y1: y });
+
+    const onMove = (mv: MouseEvent) => {
+      const r = gridRef.current?.getBoundingClientRect();
+      if (!r) return;
+      setMarquee(m => m ? { ...m, x1: mv.clientX - r.left, y1: mv.clientY - r.top } : null);
+    };
+    const onUp = (mv: MouseEvent) => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      const r = gridRef.current?.getBoundingClientRect();
+      if (!r) { setMarquee(null); return; }
+      const x1 = mv.clientX - r.left, y1 = mv.clientY - r.top;
+      const minX = Math.min(x, x1), maxX = Math.max(x, x1);
+      const minY = Math.min(y, y1), maxY = Math.max(y, y1);
+      // Only treat as marquee if dragged at least a few px
+      if (Math.abs(x1 - x) < 4 && Math.abs(y1 - y) < 4) {
+        setSelectedIds([]);
+        setMarquee(null);
+        return;
+      }
+      // String rows are at top: BAR_ROW_H + (5 - stringIndex) * ROW_H ... + ROW_H
+      const hits: string[] = [];
+      for (const n of visibleNotes) {
+        const localCell = n.beatIndex - startGrid;
+        const noteX = 24 + localCell * CELL_W;
+        const noteW = Math.max(CELL_W, n.durationGrid * CELL_W);
+        // Visible string rows are stacked top-to-bottom in order [5,4,3,2,1,0]
+        const visibleRowIdx = [5, 4, 3, 2, 1, 0].indexOf(n.stringIndex);
+        const noteY = BAR_ROW_H + visibleRowIdx * ROW_H;
+        const noteY2 = noteY + ROW_H;
+        if (noteX + noteW < minX || noteX > maxX) continue;
+        if (noteY2 < minY || noteY > maxY) continue;
+        hits.push(n.id);
+      }
+      setSelectedIds(hits);
+      setMarquee(null);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  const BAR_ROW_H = 18;
+
+  // Build bar number markers within window
+  const barMarkers = useMemo(() => {
+    const out: Array<{ cellOffset: number; barNumber: number }> = [];
+    for (let cell = 0; cell < totalCells; cell++) {
+      const abs = startGrid + cell;
+      if (abs % gridPerBar === 0) {
+        // Musical bar number: bar 1 starts at absolute grid 0
+        out.push({ cellOffset: cell, barNumber: Math.floor(abs / gridPerBar) + 1 });
+      }
+    }
+    return out;
+  }, [startGrid, totalCells, gridPerBar]);
 
   return (
     <div ref={containerRef} className="border border-border rounded-lg bg-white text-black">
       <div className="overflow-x-auto">
-      <div className="relative" style={gridStyle}>
+      <div ref={gridRef} className="relative" style={gridStyle} onMouseDown={startMarquee}>
+        {/* Bar numbers row */}
+        <div className="relative" style={{ height: BAR_ROW_H, borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
+          <div className="absolute left-0 top-0 h-full w-6 z-10" style={{ background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
+          <div className="absolute inset-0 left-6">
+            {barMarkers.map(({ cellOffset, barNumber }) => (
+              <div key={cellOffset}
+                className="absolute top-0 bottom-0 flex items-center px-1 text-[10px] font-mono font-bold pointer-events-none"
+                style={{
+                  left: cellOffset * CELL_W,
+                  color: barNumber === 1 ? 'rgb(0,0,0)' : 'rgba(0,0,0,0.55)',
+                  borderLeft: '2px solid rgba(0,0,0,0.4)',
+                  paddingLeft: 4,
+                }}
+              >{barNumber}</div>
+            ))}
+          </div>
+        </div>
+
         {[5, 4, 3, 2, 1, 0].map((stringIndex) => (
           <div key={stringIndex} className="relative" style={{ height: ROW_H }}>
             <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[10px] font-mono z-10"
@@ -232,6 +316,7 @@ export function TabEditor({
               {Array.from({ length: totalCells }).map((_, cellIdx) => (
                 <button
                   key={cellIdx}
+                  onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => { if (deleteMode) return; addNoteAt(stringIndex, cellIdx); }}
                   className="transition-colors hover:bg-primary/10"
                   style={{
@@ -254,23 +339,26 @@ export function TabEditor({
               return (
                 <div
                   key={n.id}
+                  data-note
+                  onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (deleteMode) { deleteNotes([n.id]); return; }
                     toggleSelect(n.id, e.shiftKey || e.metaKey || e.ctrlKey);
                   }}
                   onDoubleClick={(e) => { e.stopPropagation(); setEditingFret({ id: n.id, value: String(n.fret) }); }}
-                  className={`absolute z-20 text-xs font-mono rounded px-1 cursor-pointer flex items-center gap-0.5 ${
-                    isSel ? 'ring-2 ring-primary bg-primary/20' : 'bg-white hover:bg-primary/10'
+                  className={`absolute z-20 text-xs font-mono cursor-pointer flex items-center justify-center gap-0.5 ${
+                    isSel ? 'ring-2 ring-primary rounded bg-primary/20' : 'rounded hover:bg-primary/10'
                   } ${deleteMode ? 'ring-2 ring-destructive cursor-not-allowed' : ''}`}
                   style={{
-                    left: 24 + localCell * CELL_W + 2,
+                    left: 24 + localCell * CELL_W,
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    height: ROW_H - 6,
-                    lineHeight: `${ROW_H - 6}px`,
-                    minWidth: 18,
+                    width: CELL_W,
+                    height: ROW_H - 4,
+                    lineHeight: `${ROW_H - 4}px`,
                     color: noteTextColor,
+                    background: isSel ? undefined : 'white',
                   }}
                 >
                   {editingFret?.id === n.id ? (
@@ -286,11 +374,11 @@ export function TabEditor({
                         if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
                         if (e.key === 'Escape') setEditingFret(null);
                       }}
-                      className="w-10 bg-transparent outline-none text-black"
+                      className="w-full bg-transparent outline-none text-black text-center"
                     />
                   ) : (
                     <>
-                      <span>{n.fret}</span>
+                      <span className="text-center">{n.fret}</span>
                       {tech && <span className="text-[9px] text-primary font-bold">{TECHNIQUE_SYMBOL[tech]}</span>}
                     </>
                   )}
@@ -325,6 +413,7 @@ export function TabEditor({
               return (
                 <div
                   key={beatIdx}
+                  data-duration-bar
                   className={`absolute top-1 rounded-sm flex items-center justify-center text-[10px] font-mono text-white font-bold select-none overflow-hidden ${
                     groupSelected ? 'ring-2 ring-primary' : ''
                   } ${deleteMode ? 'cursor-not-allowed ring-2 ring-destructive' : 'cursor-move'}`}
@@ -334,7 +423,7 @@ export function TabEditor({
                     height: ROW_H,
                     backgroundColor: NOTE_KIND_COLOR[kind],
                   }}
-                  onMouseDown={(e) => dragGroup(notes, 'move', e)}
+                  onMouseDown={(e) => { e.stopPropagation(); dragGroup(notes, 'move', e); }}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (deleteMode) { deleteNotes(notes.map(n => n.id)); return; }
@@ -342,14 +431,27 @@ export function TabEditor({
                   }}
                   title={label}
                 >
-                  <div onMouseDown={(e) => dragGroup(notes, 'resize-l', e)} className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-white/30" />
+                  <div onMouseDown={(e) => { e.stopPropagation(); dragGroup(notes, 'resize-l', e); }} className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-white/30" />
                   {label}
-                  <div onMouseDown={(e) => dragGroup(notes, 'resize-r', e)} className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-white/30" />
+                  <div onMouseDown={(e) => { e.stopPropagation(); dragGroup(notes, 'resize-r', e); }} className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-white/30" />
                 </div>
               );
             })}
           </div>
         </div>
+
+        {/* Marquee selection rectangle */}
+        {marquee && (
+          <div
+            className="absolute pointer-events-none border-2 border-primary bg-primary/10 z-40"
+            style={{
+              left: Math.min(marquee.x0, marquee.x1),
+              top: Math.min(marquee.y0, marquee.y1),
+              width: Math.abs(marquee.x1 - marquee.x0),
+              height: Math.abs(marquee.y1 - marquee.y0),
+            }}
+          />
+        )}
 
         {/* Playhead */}
         {playheadGrid != null && playheadGrid >= startGrid && playheadGrid < startGrid + totalCells && (
