@@ -234,13 +234,8 @@ export function TabEditor({
     return clusters.map(c => [c.start, c.notes, c.end - c.start] as [number, CourseNote[], number]);
   }, [visibleNotes]);
 
-  /** Track last duration whenever a single note is selected. */
-  useEffect(() => {
-    if (selectedIds.length === 1) {
-      const n = phrase.notes.find(x => x.id === selectedIds[0]);
-      if (n) setLastDuration(n.durationGrid);
-    }
-  }, [selectedIds, phrase.notes]);
+  // (Default duration is now driven by the lifted `subdivision` prop. Selecting a single
+  // note no longer mutates the default — the subdivision dropdown is the source of truth.)
 
   const gridStyle: React.CSSProperties = { width: totalCells * CELL_W, minWidth: '100%' };
 
