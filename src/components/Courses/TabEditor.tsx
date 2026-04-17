@@ -312,6 +312,34 @@ export function TabEditor({
     return NOTE_NAMES[(pc + 12) % 12];
   };
 
+  /** Major-scale interval table for measuring degree from a chord root. */
+  const MAJ_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
+  /** Find the chord (from chordTrack) that's sounding at a given grid position. */
+  const chordAtBeat = (g: number): ChordTrackEntry | null => {
+    for (const c of chordTrack) {
+      if (g >= c.beatIndex && g < c.beatIndex + c.durationGrid) return c;
+    }
+    return null;
+  };
+  /** Compute the scale-degree colour (HSL string) for a note relative to the chord at its beat. */
+  const noteDegreeColour = (n: CourseNote): string | null => {
+    const chord = chordAtBeat(n.beatIndex);
+    let rootPc: number;
+    if (chord) {
+      rootPc = NOTE_NAMES.indexOf(chord.root);
+    } else {
+      // Fallback: use the lesson's key root.
+      rootPc = NOTE_NAMES.indexOf(keyRoot);
+    }
+    if (rootPc < 0) return null;
+    const notePc = ((tuning[n.stringIndex] ?? 0) + n.fret) % 12;
+    const interval = ((notePc - rootPc) % 12 + 12) % 12;
+    const degIdx = MAJ_INTERVALS.indexOf(interval);
+    if (degIdx >= 0) return SCALE_DEGREE_COLORS[degIdx];
+    // Chromatic note → muted grey
+    return '0, 0%, 50%';
+  };
+
   const toggleSelect = (id: string, multi: boolean) => {
     if (multi) {
       setSelectedIds(selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id]);
