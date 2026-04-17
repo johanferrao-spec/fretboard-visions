@@ -54,9 +54,8 @@ export default function CourseCreator() {
   const [stagedNotes, setStagedNotes] = useState<{ stringIndex: number; fret: number }[]>([]);
 
   // Bar window: viewport over the timeline. Indexed in MUSICAL bars (bar 1 = the first "real" bar).
-  // We allow windowStartBar to be negative so the user can edit anacrusis bars (bar 0, bar -1, …).
-  // Default: start one bar BEFORE bar 1 so end of bar 0 is visible just before bar 1.
-  const [windowStartBar, setWindowStartBar] = useState(-ANACRUSIS_BARS);
+  // Default: start AT bar 1 (windowStartBar = 0). User can scroll back ONE bar (-1) to view anacrusis.
+  const [windowStartBar, setWindowStartBar] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadGrid, setPlayheadGrid] = useState(0);
 
@@ -155,6 +154,7 @@ export default function CourseCreator() {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
       if (selectedIdsRef.current.length === 1) {
+        // Move the selected note to picked string/fret
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
         return;
       }
@@ -176,6 +176,21 @@ export default function CourseCreator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // When tab notes are selected, mirror them on the interactive fretboard so user can see the picked frets.
+  // When NO selection, show staged notes instead.
+  const fretboardReference = useMemo(() => {
+    if (selectedIds.length > 0) {
+      return phrase.notes
+        .filter(n => selectedIds.includes(n.id))
+        .map(n => ({ stringIndex: n.stringIndex, fret: n.fret }));
+    }
+    return stagedNotes;
+  }, [selectedIds, phrase.notes, stagedNotes]);
+
+  useEffect(() => {
+    fb.setArpAddReferenceNotes(fretboardReference);
+  }, [fretboardReference]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const clearStaged = () => { setStagedNotes([]); fb.setArpAddReferenceNotes([]); };
 
   const onPlay = async () => {
@@ -192,7 +207,7 @@ export default function CourseCreator() {
   const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); };
 
   const totalBars = Math.max(VISIBLE_BARS, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
-  const minWindow = -ANACRUSIS_BARS;
+  const minWindow = -ANACRUSIS_BARS; // -1 → user can scroll back exactly one bar
   const maxWindow = totalBars - VISIBLE_BARS;
   const goPrevBar = () => setWindowStartBar(b => Math.max(minWindow, b - 1));
   const goNextBar = () => setWindowStartBar(b => Math.min(maxWindow, b + 1));
@@ -337,7 +352,7 @@ export default function CourseCreator() {
               ghostNoteOpacity={fb.ghostNoteOpacity}
               arpPathVisible={false}
               arpAddMode={true}
-              arpAddReferenceNotes={stagedNotes}
+              arpAddReferenceNotes={fretboardReference}
               onArpAddClick={(si, fret) => fb.arpAddClickHandler?.(si, fret)}
             />
           </section>

@@ -42,14 +42,15 @@ export function DiatonicChordPalette({ keyRoot, keyQuality }: Props) {
                   e.dataTransfer.effectAllowed = 'copy';
                 }}
                 onDoubleClick={() => setOpenMenu(openMenu === i ? null : i)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded border text-left text-xs font-mono cursor-grab active:cursor-grabbing transition-all hover:brightness-125"
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs font-mono cursor-grab active:cursor-grabbing transition-all hover:brightness-110 select-none"
                 style={{
-                  background: `hsl(${color} / 0.18)`,
-                  borderColor: `hsl(${color} / 0.5)`,
-                  color: `hsl(${color})`,
+                  background: `hsl(${color})`,
+                  color: 'white',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+                  border: 'none',
                 }}
               >
-                <span className="font-bold w-8 text-foreground/70">{c.roman}</span>
+                <span className="font-bold w-8 opacity-80">{c.roman}</span>
                 <span className="font-bold">{c.symbol}</span>
               </button>
               {openMenu === i && (
