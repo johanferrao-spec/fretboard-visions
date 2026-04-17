@@ -429,7 +429,7 @@ export function TabEditor({
       const hits: string[] = [];
       for (const n of visibleNotes) {
         const localCell = n.beatIndex - startGrid;
-        const noteX = 24 + localCell * CELL_W;
+        const noteX = LABEL_W + localCell * CELL_W;
         const noteW = Math.max(CELL_W, n.durationGrid * CELL_W);
         const visibleRowIdx = [5, 4, 3, 2, 1, 0].indexOf(n.stringIndex);
         const noteY = BAR_ROW_H + visibleRowIdx * ROW_H;
@@ -510,10 +510,10 @@ export function TabEditor({
     visibleNotes.forEach(n => {
       if (!n.technique) return;
       const t = n.technique;
-      const xStart = 24 + (n.beatIndex - startGrid) * CELL_W + CELL_W / 2;
+      const xStart = LABEL_W + (n.beatIndex - startGrid) * CELL_W + CELL_W / 2;
       const y = stringRowY(n.stringIndex);
       const next = nextOnString(n);
-      const xEnd = next ? 24 + (next.beatIndex - startGrid) * CELL_W + CELL_W / 2 : xStart + CELL_W;
+      const xEnd = next ? LABEL_W + (next.beatIndex - startGrid) * CELL_W + CELL_W / 2 : xStart + CELL_W;
 
       if (t === 'hammer' || t === 'pull') {
         // Slur: arc above the two fret numbers, with 'h' or 'p' label
@@ -567,7 +567,7 @@ export function TabEditor({
         );
       } else if (t === 'palm-mute') {
         // P.M. with dashed line over the duration
-        const x2 = 24 + (n.beatIndex + n.durationGrid - startGrid) * CELL_W;
+        const x2 = LABEL_W + (n.beatIndex + n.durationGrid - startGrid) * CELL_W;
         elems.push(
           <g key={`tech-${n.id}`}>
             <text x={xStart - 4} y={y - 12} fontSize={8} fontFamily="monospace" fill="rgb(20,20,20)">P.M.</text>
