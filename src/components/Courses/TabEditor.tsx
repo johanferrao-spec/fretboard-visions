@@ -661,56 +661,6 @@ export function TabEditor({
 
       </div>
       <div className="overflow-x-auto" onWheel={onWheelZoom}>
-
-    <div ref={containerRef} className="border border-border rounded-lg bg-white text-black">
-      {/* Toolbar above tab: grid mode toggle */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-muted/20 border-b border-border">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setGridMode('16th')}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
-              gridMode === '16th' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-            }`}
-            title="Show subdivision grid lines"
-          >
-            <Grid3x3 className="size-3" /> Grid
-          </button>
-          <button
-            onClick={() => setGridMode('rests')}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
-              gridMode === 'rests' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-            }`}
-            title="Hide grid; show rest symbols in gaps"
-          >
-            <Music className="size-3" /> Rests
-          </button>
-        </div>
-        <div className="flex items-center gap-3 relative">
-          <span className="text-[10px] font-mono text-muted-foreground">Default duration:</span>
-          <button
-            onClick={() => setSubOpen(o => !o)}
-            className="inline-flex items-center gap-1 bg-secondary text-secondary-foreground rounded px-2 py-1 text-[10px] font-mono uppercase tracking-wider hover:bg-secondary/80"
-          >
-            {subdivision} <ChevronDown className="size-3" />
-          </button>
-          {subOpen && (
-            <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-md shadow-lg min-w-[10rem] py-1">
-              {(Object.keys(SUBDIVISION_LABEL) as Subdivision[]).map(s => (
-                <button
-                  key={s}
-                  onClick={() => { setSubdivision(s); setSubOpen(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-accent ${s === subdivision ? 'bg-accent text-accent-foreground' : 'text-popover-foreground'}`}
-                >
-                  <span className="font-bold mr-2">{s}</span>
-                  <span className="text-muted-foreground">{SUBDIVISION_LABEL[s]}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-      </div>
-      <div className="overflow-x-auto">
       <div ref={gridRef} className="relative" style={gridStyle} onMouseDown={startMarquee}>
         {/* SVG defs for arrows */}
         <svg width="0" height="0" style={{ position: 'absolute' }}>
