@@ -13,13 +13,10 @@ export default function Courses() {
   const { courses, loading, deleteCourse, createCourse } = useCourses();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setAuthChecked(true);
-      if (!data.session) nav('/auth');
-    });
-    // start hidden, slide in next frame
+    // Auth disabled for now — preview without sign-in.
+    setAuthChecked(true);
     requestAnimationFrame(() => requestAnimationFrame(() => setAnimateIn(true)));
-  }, [nav]);
+  }, []);
 
   const onLogout = async () => { await supabase.auth.signOut(); nav('/'); };
 
