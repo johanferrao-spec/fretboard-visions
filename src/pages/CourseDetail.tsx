@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useCourses, useCourseTabs } from '@/hooks/useCourses';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Plus, Trash2, Pencil, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CourseRow } from '@/lib/courseTypes';
+import { getCourse } from '@/lib/courseStorage';
 
 export default function CourseDetail() {
   const { courseId } = useParams<{ courseId: string }>();
@@ -16,7 +16,7 @@ export default function CourseDetail() {
   const [course, setCourse] = useState<CourseRow | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
-  const { updateCourse, session } = useCourses();
+  const { updateCourse } = useCourses();
   const { tabs, loading, createTab, deleteTab } = useCourseTabs(courseId);
 
   useEffect(() => {
@@ -27,17 +27,16 @@ export default function CourseDetail() {
 
   useEffect(() => {
     if (!courseId) return;
-    supabase.from('courses').select('*').eq('id', courseId).single().then(({ data }) => {
-      if (data) {
-        setCourse(data as unknown as CourseRow);
-        setTitleDraft((data as unknown as CourseRow).title);
-      }
-    });
+    const data = getCourse(courseId);
+    if (data) {
+      setCourse(data as CourseRow);
+      setTitleDraft(data.title);
+    }
   }, [courseId]);
 
   const goBack = () => { setAnimateIn(false); setTimeout(() => nav('/courses'), 300); };
 
-  const isOwner = !!(course && session && course.user_id === session.user.id);
+  const isOwner = true;
 
   const onAddTab = async () => {
     if (!course) return;
