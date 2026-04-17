@@ -1,32 +1,44 @@
 ---
 name: Courses Mode
-description: Educator-built interactive guitar lessons with mic listening, fretboard chase, and shared Cloud library
+description: Educator-built guitar lessons; courses contain many tabs/lessons with full Fretboard reuse, bar-window editor, global tracks, and shared Cloud library
 type: feature
 ---
 # Courses Mode
 
-Top-level tab right of Tab Visualiser. Clicking it navigates to `/courses` (a separate page that slides in from the right with a 300ms ease-out translate-x animation, covering the entire screen). Back arrow on the top-left reverses the animation.
+Top-level "🎓 Courses" tab opens a full-screen module that slides in from the right (300ms ease-out). Back arrow reverses the animation.
 
-## Pages
-- `/auth` — sign-in / sign-up (email + password, Google OAuth via `lovable.auth.signInWithOAuth`). Auto-confirm email is ON. HIBP password check ON.
-- `/courses` — library grid of saved courses + plus icon (top right) → Creator. Empty state shown when no courses.
-- `/courses/new` — Creator: title, key root, key quality (Major/Minor), time signature, tempo, then the **TabEditor** component (6-string × 16th-note grid). Click any cell to add a note; double-click to edit fret. Right edge of duration bar is draggable to resize.
-- `/courses/:id` — Player: shows ONLY the next expected note(s) on a compact fretboard with glowing pulse. Listens via mic (autocorrelation pitch detection, `usePitchDetector`) and advances on match. Chords advance when ≥2 expected pitch classes are detected via FFT peaks.
+## Data model
+- `courses` — collection metadata: title, description, default key/tempo/time-sig.
+- `course_tabs` — many lessons per course: title, position, key, time_sig, tempo, `phrase` (notes), `chord_track`, `key_track`, `tempo_track` (Logic-style global lanes).
+- RLS: anyone signed in reads any course/tab; only owners can write.
 
-## Data
-- Tables: `profiles` (display_name, avatar_url), `user_roles` (admin/user), `courses` (title, key_root, key_quality, time_signature, tempo, phrase jsonb).
-- RLS: anyone signed in can read all courses (shared library); only owners can edit/delete.
-- Auto-trigger creates profile + default `user` role on signup.
+## Routes
+- `/courses` — library (course cards, plus button creates course)
+- `/courses/:courseId` — lesson list inside a course
+- `/courses/:courseId/lessons/:tabId/edit` — Creator (lesson editor)
+- `/courses/:courseId/lessons/:tabId` — Player (mic-listening fretboard chase)
 
-## Duration bar colors
-- Green = diatonic note in selected key
-- Blue = chord (≥2 notes at same beatIndex)
-- Orange = non-diatonic note
-- Defined in `NOTE_KIND_COLOR` (`src/lib/courseTypes.ts`)
+## Creator
+- Full **identical Fretboard** (reused from main page) on top, used both for visualization AND note input via Fretboard's `arpAddMode` mechanism (multi-select frets across strings = chord).
+- **Insert** button below fretboard commits staged frets to the next available beat slot on the tab timeline.
+- **Bar window**: 4 bars visible (1 before + 2 main + 1 after for anacrusis); cycle arrows jump ±1 bar. Cells outside the main 2-bar region are tinted.
+- **Global tracks** above tab: chords, key changes, tempo changes — click empty cell to add, click entry to edit/delete.
+- **Scale selector**: same UX as main page ControlPanel but single-scale (no dual). `CourseScaleSelector` component.
+- **Playback**: `useCourseGuitarPlayer` (Tone.js PolySynth) plays `phrase.notes` at current tempo; playhead drawn on `TabEditor`.
+
+## Player
+- Uses the real `<Fretboard />` (not bespoke) with `tabVisNotes` showing only current target + upcoming preview.
+- `usePitchDetector` autocorrelation for single notes (±25¢) and FFT for ≥2 chord-tone match.
 
 ## Key files
-- `src/lib/courseTypes.ts` — types, `GRID_PER_BEAT = 4`, color constants
-- `src/hooks/useCourses.ts` — CRUD against Cloud
-- `src/hooks/usePitchDetector.ts` — autocorrelation (audio.js style) + FFT chord-tone detection
-- `src/components/Courses/TabEditor.tsx` — 6-string grid + duration bars
-- `src/pages/Auth.tsx`, `Courses.tsx`, `CourseCreator.tsx`, `CoursePlayer.tsx`
+- `src/lib/courseTypes.ts`
+- `src/hooks/useCourses.ts` — `useCourses` (collections) + `useCourseTabs` (lessons)
+- `src/hooks/useCourseGuitarPlayer.ts` — Tone.js tab playback
+- `src/hooks/usePitchDetector.ts`
+- `src/components/Courses/TabEditor.tsx` — bar-window aware, playhead support
+- `src/components/Courses/GlobalTracksEditor.tsx` — chord/key/tempo lanes
+- `src/components/Courses/CourseScaleSelector.tsx` — single-scale selector
+- `src/pages/Courses.tsx`, `CourseDetail.tsx`, `CourseCreator.tsx`, `CoursePlayer.tsx`, `Auth.tsx`
+
+## Slide-in animation
+All Courses pages mount with `translateX(100%)` then animate to `0` after a double `requestAnimationFrame`, so the slide-in mirrors the slide-out direction.
