@@ -164,14 +164,25 @@ export function TabEditor({
     return end > startGrid && n.beatIndex < startGrid + totalCells;
   }), [phrase.notes, startGrid, totalCells]);
 
+  /**
+   * Group notes for the duration bar row. CRITICAL: at any given beat instant
+   * only ONE bar may be visible. So we cluster overlapping notes (across all
+   * strings) into a single group spanning the union of their durations.
+   */
   const beatGroups = useMemo(() => {
-    const map = new Map<number, CourseNote[]>();
-    visibleNotes.forEach(n => {
-      const arr = map.get(n.beatIndex) ?? [];
-      arr.push(n);
-      map.set(n.beatIndex, arr);
-    });
-    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
+    const sorted = [...visibleNotes].sort((a, b) => a.beatIndex - b.beatIndex);
+    const clusters: { start: number; end: number; notes: CourseNote[] }[] = [];
+    for (const n of sorted) {
+      const nEnd = n.beatIndex + n.durationGrid;
+      const last = clusters[clusters.length - 1];
+      if (last && n.beatIndex < last.end) {
+        last.notes.push(n);
+        last.end = Math.max(last.end, nEnd);
+      } else {
+        clusters.push({ start: n.beatIndex, end: nEnd, notes: [n] });
+      }
+    }
+    return clusters.map(c => [c.start, c.notes, c.end - c.start] as [number, CourseNote[], number]);
   }, [visibleNotes]);
 
   /** Track last duration whenever a single note is selected. */
@@ -647,8 +658,8 @@ export function TabEditor({
           <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[9px] font-mono z-10"
             style={{ color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>♪</div>
           <div className="absolute inset-0 left-6">
-            {beatGroups.map(([beatIdx, notes]) => {
-              const dur = Math.max(...notes.map(n => n.durationGrid));
+            {beatGroups.map(([beatIdx, notes, clusterDur]) => {
+              const dur = clusterDur;
               const kind: NoteKind = notes.length > 1
                 ? 'chord'
                 : (() => { const n = notes[0]; const pc = ((tuning[n.stringIndex] ?? 0) + n.fret) % 12; return diatonicPC.has(pc) ? 'diatonic' : 'non-diatonic'; })();

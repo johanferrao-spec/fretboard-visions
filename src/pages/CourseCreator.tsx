@@ -50,8 +50,12 @@ export default function CourseCreator() {
   const [deleteMode, setDeleteMode] = useState(false);
   const [pickedFretboardNote, setPickedFretboardNote] = useState<{ stringIndex: number; fret: number; nonce: number } | null>(null);
 
-  // Staged input notes (from interactive fretboard)
-  const [stagedNotes, setStagedNotes] = useState<{ stringIndex: number; fret: number }[]>([]);
+  // Staged input note from interactive fretboard (preview before commit via Enter)
+  const [stagedNote, setStagedNote] = useState<{ stringIndex: number; fret: number } | null>(null);
+  /** Last duration used for new note inserts (defaults to 1/8 = 2 grid units). */
+  const lastDurationRef = useRef<number>(GRID_PER_BEAT / 2);
+  /** Cursor: where the next inserted note will go. Advances after each insert. */
+  const cursorRef = useRef<number>(0);
 
   // Bar window: viewport over the timeline. Indexed in MUSICAL bars (bar 1 = the first "real" bar).
   // Default: start AT bar 1 (windowStartBar = 0). User can scroll back ONE bar (-1) to view anacrusis.
@@ -112,39 +116,49 @@ export default function CourseCreator() {
     else toast.success('Saved');
   };
 
-  // Insert staged notes into next available slot
-  const onInsert = () => {
-    if (stagedNotes.length === 0) { toast.info('Click frets on the fretboard first'); return; }
-    const nextSlot = phrase.notes.length === 0
-      ? 0
-      : Math.max(...phrase.notes.map(n => n.beatIndex + n.durationGrid));
-    const newNotes: CourseNote[] = stagedNotes.map(s => ({
-      id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${s.stringIndex}`,
-      stringIndex: s.stringIndex,
-      fret: s.fret,
-      beatIndex: nextSlot,
-      durationGrid: GRID_PER_BEAT,
-    }));
-    const newLen = Math.max(phrase.lengthGrid, nextSlot + GRID_PER_BEAT * 2);
-    setPhrase({ notes: [...phrase.notes, ...newNotes], lengthGrid: newLen });
-    setStagedNotes([]);
+  /** Insert one note at the current cursor with last-used duration; advance cursor. */
+  const insertNoteAtCursor = (stringIndex: number, fret: number) => {
+    const dur = lastDurationRef.current;
+    const beatIndex = cursorRef.current;
+    // Block: no two notes may share the same string at the same beat instant
+    const collision = phrase.notes.find(n => n.stringIndex === stringIndex && n.beatIndex === beatIndex);
+    if (collision) {
+      toast.info('A note already exists on that string at this position');
+      return;
+    }
+    const id = `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${stringIndex}`;
+    const note: CourseNote = { id, stringIndex, fret, beatIndex, durationGrid: dur };
+    const newLen = Math.max(phrase.lengthGrid, beatIndex + dur * 2);
+    setPhrase({ notes: [...phrase.notes, note], lengthGrid: newLen });
+    cursorRef.current = beatIndex + dur;
+    setStagedNote(null);
     fb.setArpAddReferenceNotes([]);
-    const newBarIdx = Math.floor(nextSlot / gridPerBar);
+    const newBarIdx = Math.floor(cursorRef.current / gridPerBar);
     if (newBarIdx >= windowStartBar + VISIBLE_BARS - 1) {
       setWindowStartBar(Math.max(-ANACRUSIS_BARS, newBarIdx - 1));
     }
   };
 
-  // Track ⌘/Ctrl for delete-mode UI + Space shortcut for play/stop
+  /** Commit current staged fretboard pick (Enter key). */
+  const commitStaged = () => {
+    if (!stagedNote) { toast.info('Pick a fret on the fretboard first'); return; }
+    insertNoteAtCursor(stagedNote.stringIndex, stagedNote.fret);
+  };
+
+  // Track ⌘/Ctrl for delete-mode UI + Space=play/stop + Enter=insert staged note
   useEffect(() => {
     const onKD = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey) setDeleteMode(true);
-      if (e.code === 'Space') {
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      const inField = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
+      if (e.code === 'Space' && !inField) {
         e.preventDefault();
         if (isPlaying) { player.stop(); setIsPlaying(false); setPlayheadGrid(0); }
         else { onPlay(); }
+      }
+      if (e.key === 'Enter' && !inField && stagedNote) {
+        e.preventDefault();
+        commitStaged();
       }
     };
     const onKU = (e: KeyboardEvent) => { if (!e.metaKey && !e.ctrlKey) setDeleteMode(false); };
@@ -154,12 +168,32 @@ export default function CourseCreator() {
     window.addEventListener('blur', onBlur);
     return () => { window.removeEventListener('keydown', onKD); window.removeEventListener('keyup', onKU); window.removeEventListener('blur', onBlur); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, phrase.notes, phrase.lengthGrid, tempo]);
+  }, [isPlaying, phrase.notes, phrase.lengthGrid, tempo, stagedNote]);
 
-  // Wire up fretboard clicks. If exactly one tab note is selected → set its fret/string.
-  // Otherwise → stage the click as part of a chord/note to insert.
+  // When a tab note is selected, sync cursor + lastDuration to that note's end
+  useEffect(() => {
+    if (selectedIds.length === 1) {
+      const n = phrase.notes.find(x => x.id === selectedIds[0]);
+      if (n) {
+        cursorRef.current = n.beatIndex + n.durationGrid;
+        lastDurationRef.current = n.durationGrid;
+      }
+    } else if (selectedIds.length === 0 && phrase.notes.length > 0) {
+      // Cursor stays at the end of the last note
+      const end = Math.max(...phrase.notes.map(n => n.beatIndex + n.durationGrid));
+      cursorRef.current = end;
+    }
+  }, [selectedIds, phrase.notes]);
+
+  // Wire up fretboard clicks.
+  // - If exactly one tab note is selected → update that note's string/fret (move).
+  // - Otherwise → STAGE the click as a preview; user presses Enter to commit,
+  //   OR clicking another fret immediately commits the previous staged note
+  //   then stages the new one (rapid sequential input).
   const selectedIdsRef = useRef<string[]>([]);
   selectedIdsRef.current = selectedIds;
+  const stagedNoteRef = useRef<{ stringIndex: number; fret: number } | null>(null);
+  stagedNoteRef.current = stagedNote;
   useEffect(() => {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
@@ -168,40 +202,39 @@ export default function CourseCreator() {
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
         return;
       }
-      setStagedNotes(prev => {
-        const existing = prev.find(p => p.stringIndex === si);
-        let next: { stringIndex: number; fret: number }[];
-        if (existing && existing.fret === fret) {
-          next = prev.filter(p => p.stringIndex !== si);
-        } else if (existing) {
-          next = prev.map(p => p.stringIndex === si ? { stringIndex: si, fret } : p);
-        } else {
-          next = [...prev, { stringIndex: si, fret }];
-        }
-        fb.setArpAddReferenceNotes(next);
-        return next;
-      });
+      // Rapid sequential input: if a note is already staged, commit it first then stage the new pick.
+      if (stagedNoteRef.current) {
+        const prev = stagedNoteRef.current;
+        // Commit previous, then stage new (advance cursor inside insertNoteAtCursor).
+        insertNoteAtCursor(prev.stringIndex, prev.fret);
+        // After commit, cursor has advanced. Stage the new pick.
+        setStagedNote({ stringIndex: si, fret });
+        fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
+        return;
+      }
+      // First click: just stage. Press Enter or click another fret to commit.
+      setStagedNote({ stringIndex: si, fret });
+      fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
     });
     return () => { fb.setArpAddMode(false); fb.setArpAddClickHandler(null); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When tab notes are selected, mirror them on the interactive fretboard so user can see the picked frets.
-  // When NO selection, show staged notes instead.
+  // When tab notes are selected, mirror them on the fretboard. Otherwise show staged note.
   const fretboardReference = useMemo(() => {
     if (selectedIds.length > 0) {
       return phrase.notes
         .filter(n => selectedIds.includes(n.id))
         .map(n => ({ stringIndex: n.stringIndex, fret: n.fret }));
     }
-    return stagedNotes;
-  }, [selectedIds, phrase.notes, stagedNotes]);
+    return stagedNote ? [stagedNote] : [];
+  }, [selectedIds, phrase.notes, stagedNote]);
 
   useEffect(() => {
     fb.setArpAddReferenceNotes(fretboardReference);
   }, [fretboardReference]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const clearStaged = () => { setStagedNotes([]); fb.setArpAddReferenceNotes([]); };
+  const clearStaged = () => { setStagedNote(null); fb.setArpAddReferenceNotes([]); };
 
   const onPlay = async () => {
     if (phrase.notes.length === 0) { toast.info('No notes to play'); return; }
@@ -311,11 +344,17 @@ export default function CourseCreator() {
           {/* Interactive fretboard (input + visualizer) */}
           <section className="border border-border rounded-2xl bg-card p-4">
             <div className="flex items-center justify-between mb-2">
-              <div /> {/* hint removed per request */}
+              <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                {selectedIds.length === 1
+                  ? 'Click a fret to move the selected note'
+                  : stagedNote
+                    ? `Staged: string ${stagedNote.stringIndex + 1}, fret ${stagedNote.fret} — press Enter or click another fret to insert`
+                    : 'Click a fret to stage; Enter inserts at cursor'}
+              </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={clearStaged} disabled={stagedNotes.length === 0}>Clear</Button>
-                <Button size="sm" onClick={onInsert} disabled={stagedNotes.length === 0}>
-                  <Plus className="size-4 mr-1" /> Insert ({stagedNotes.length})
+                <Button size="sm" variant="outline" onClick={clearStaged} disabled={!stagedNote}>Clear</Button>
+                <Button size="sm" onClick={commitStaged} disabled={!stagedNote}>
+                  <Plus className="size-4 mr-1" /> Insert
                 </Button>
               </div>
             </div>
