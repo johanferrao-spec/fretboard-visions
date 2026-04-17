@@ -732,19 +732,18 @@ export function TabEditor({
           onDoubleClick={(e) => {
             if (deleteMode) return;
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            const x = e.clientX - rect.left - 24;
+            const x = e.clientX - rect.left - LABEL_W;
             if (x < 0) return;
             const cellIdx = Math.floor(x / CELL_W);
-            // Default to highest string (high e = stringIndex 5) if no selection context
             const targetString = selectedIds.length === 1
               ? (phrase.notes.find(n => n.id === selectedIds[0])?.stringIndex ?? 5)
               : 5;
             addNoteAt(targetString, cellIdx);
           }}
         >
-          <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[9px] font-mono z-10"
-            style={{ color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>♪</div>
-          <div className="absolute inset-0 left-6">
+          <div className="absolute left-0 top-0 h-full flex items-center justify-center text-[9px] font-mono z-10"
+            style={{ width: LABEL_W, color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>♪</div>
+          <div className="absolute inset-0" style={{ left: LABEL_W }}>
             {beatGroups.map(([beatIdx, notes, clusterDur]) => {
               const dur = clusterDur;
               const kind: NoteKind = notes.length > 1
