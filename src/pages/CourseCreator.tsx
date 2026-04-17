@@ -171,8 +171,8 @@ export default function CourseCreator() {
   commitStagedRef.current = commitStaged;
   const isPlayingRef = useRef(isPlaying);
   isPlayingRef.current = isPlaying;
-  const onPlayRef = useRef(onPlay);
-  // onPlay is defined later — assigned via effect below.
+  const onPlayRef = useRef<(() => void) | null>(null);
+  // onPlayRef.current is wired below, after onPlay is declared.
 
   // Track ⌘/Ctrl for delete-mode UI + Space=play/stop + Enter=insert staged note.
   // Bind ONCE; use refs so the latest staged note / play state is always read.
