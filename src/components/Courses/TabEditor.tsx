@@ -934,6 +934,7 @@ export function TabEditor({
         {(playheadGrid == null) && cursorGrid >= startGrid && cursorGrid <= startGrid + totalCells && (
           <>
             <div
+              data-cursor-handle
               className="absolute z-40 cursor-ew-resize"
               style={{
                 left: LABEL_W + (cursorGrid - startGrid) * CELL_W - 6,
