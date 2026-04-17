@@ -277,7 +277,7 @@ export default function CourseCreator() {
           <TechniqueToolbar
             selectedTechnique={currentTechnique}
             onApply={applyTechnique}
-            hasSelection={!!selectedNote}
+            hasSelection={!!firstSelected}
           />
         </aside>
 
@@ -367,7 +367,10 @@ export default function CourseCreator() {
             isOwner
             defaultKeyRoot={keyRoot}
             defaultKeyQuality={keyQuality}
+            defaultTempo={tempo}
             pendingKey={{ root: keyRoot, quality: keyQuality }}
+            deleteMode={deleteMode}
+            playheadGrid={isPlaying ? playheadGrid : null}
           />
 
           {/* Tab editor with bar window */}
@@ -378,11 +381,13 @@ export default function CourseCreator() {
             keyRoot={keyRoot}
             keyQuality={keyQuality}
             beatsPerBar={beatsPerBar}
-            selectedId={selectedId}
-            setSelectedId={setSelectedId}
+            selectedIds={selectedIds}
+            setSelectedIds={setSelectedIds}
             startGrid={windowStartBar * gridPerBar}
             visibleGrids={VISIBLE_BARS * gridPerBar}
             playheadGrid={isPlaying ? playheadGrid : null}
+            pickedFretboardNote={pickedFretboardNote}
+            deleteMode={deleteMode}
           />
 
           {/* Legend */}
