@@ -352,7 +352,7 @@ export default function CourseCreator() {
               ghostNoteOpacity={fb.ghostNoteOpacity}
               arpPathVisible={false}
               arpAddMode={true}
-              arpAddReferenceNotes={stagedNotes}
+              arpAddReferenceNotes={fretboardReference}
               onArpAddClick={(si, fret) => fb.arpAddClickHandler?.(si, fret)}
             />
           </section>
