@@ -467,6 +467,10 @@ export default function CourseCreator() {
             playheadGrid={isPlaying ? playheadGrid : null}
             pickedFretboardNote={pickedFretboardNote}
             deleteMode={deleteMode}
+            cursorGrid={cursorGrid}
+            setCursorGrid={setCursorGrid}
+            subdivision={subdivision}
+            setSubdivision={setSubdivision}
           />
 
           {/* Legend */}
