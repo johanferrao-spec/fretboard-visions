@@ -46,7 +46,9 @@ export default function CourseCreator() {
   const [chordTrack, setChordTrack] = useState<ChordTrackEntry[]>([]);
   const [keyTrack, setKeyTrack] = useState<KeyChangeEntry[]>([]);
   const [tempoTrack, setTempoTrack] = useState<TempoChangeEntry[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [pickedFretboardNote, setPickedFretboardNote] = useState<{ stringIndex: number; fret: number; nonce: number } | null>(null);
 
   // Staged input notes (from interactive fretboard)
   const [stagedNotes, setStagedNotes] = useState<{ stringIndex: number; fret: number }[]>([]);
@@ -134,10 +136,28 @@ export default function CourseCreator() {
     }
   };
 
-  // Wire up staged-note clicks via Fretboard's arp-add mechanism
+  // Track ⌘/Ctrl for delete-mode UI
+  useEffect(() => {
+    const onKD = (e: KeyboardEvent) => { if (e.metaKey || e.ctrlKey) setDeleteMode(true); };
+    const onKU = (e: KeyboardEvent) => { if (!e.metaKey && !e.ctrlKey) setDeleteMode(false); };
+    const onBlur = () => setDeleteMode(false);
+    window.addEventListener('keydown', onKD);
+    window.addEventListener('keyup', onKU);
+    window.addEventListener('blur', onBlur);
+    return () => { window.removeEventListener('keydown', onKD); window.removeEventListener('keyup', onKU); window.removeEventListener('blur', onBlur); };
+  }, []);
+
+  // Wire up fretboard clicks. If exactly one tab note is selected → set its fret/string.
+  // Otherwise → stage the click as part of a chord/note to insert.
+  const selectedIdsRef = useRef<string[]>([]);
+  selectedIdsRef.current = selectedIds;
   useEffect(() => {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
+      if (selectedIdsRef.current.length === 1) {
+        setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
+        return;
+      }
       setStagedNotes(prev => {
         const existing = prev.find(p => p.stringIndex === si);
         let next: { stringIndex: number; fret: number }[];
@@ -171,14 +191,12 @@ export default function CourseCreator() {
   };
   const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); };
 
-  // Bar window navigation. Allow window to extend back to -ANACRUSIS_BARS.
   const totalBars = Math.max(VISIBLE_BARS, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
   const minWindow = -ANACRUSIS_BARS;
   const maxWindow = totalBars - VISIBLE_BARS;
   const goPrevBar = () => setWindowStartBar(b => Math.max(minWindow, b - 1));
   const goNextBar = () => setWindowStartBar(b => Math.min(maxWindow, b + 1));
 
-  // Auto-grow length when needed for editing the upcoming bar
   useEffect(() => {
     const needed = (windowStartBar + VISIBLE_BARS) * gridPerBar;
     if (phrase.lengthGrid < needed) {
@@ -186,18 +204,17 @@ export default function CourseCreator() {
     }
   }, [windowStartBar, gridPerBar, phrase.lengthGrid]);
 
-  // Apply technique to currently selected note
   const applyTechnique = (t: Technique | 'none') => {
-    if (!selectedId) return;
+    if (selectedIds.length === 0) return;
     setPhrase({
       ...phrase,
       notes: phrase.notes.map(n =>
-        n.id === selectedId ? { ...n, technique: t === 'none' ? undefined : t } : n,
+        selectedIds.includes(n.id) ? { ...n, technique: t === 'none' ? undefined : t } : n,
       ),
     });
   };
-  const selectedNote = phrase.notes.find(n => n.id === selectedId);
-  const currentTechnique: Technique | 'none' = selectedNote?.technique ?? 'none';
+  const firstSelected = selectedIds[0] ? phrase.notes.find(n => n.id === selectedIds[0]) : null;
+  const currentTechnique: Technique | 'none' = firstSelected?.technique ?? 'none';
 
   if (!authChecked || loading) return <div className="fixed inset-0 z-50 bg-background flex items-center justify-center text-muted-foreground">Loading…</div>;
   if (!tab) return <div className="fixed inset-0 z-50 bg-background flex items-center justify-center text-muted-foreground">Lesson not found</div>;
@@ -260,7 +277,7 @@ export default function CourseCreator() {
           <TechniqueToolbar
             selectedTechnique={currentTechnique}
             onApply={applyTechnique}
-            hasSelection={!!selectedNote}
+            hasSelection={!!firstSelected}
           />
         </aside>
 
@@ -350,7 +367,10 @@ export default function CourseCreator() {
             isOwner
             defaultKeyRoot={keyRoot}
             defaultKeyQuality={keyQuality}
+            defaultTempo={tempo}
             pendingKey={{ root: keyRoot, quality: keyQuality }}
+            deleteMode={deleteMode}
+            playheadGrid={isPlaying ? playheadGrid : null}
           />
 
           {/* Tab editor with bar window */}
@@ -361,11 +381,13 @@ export default function CourseCreator() {
             keyRoot={keyRoot}
             keyQuality={keyQuality}
             beatsPerBar={beatsPerBar}
-            selectedId={selectedId}
-            setSelectedId={setSelectedId}
+            selectedIds={selectedIds}
+            setSelectedIds={setSelectedIds}
             startGrid={windowStartBar * gridPerBar}
             visibleGrids={VISIBLE_BARS * gridPerBar}
             playheadGrid={isPlaying ? playheadGrid : null}
+            pickedFretboardNote={pickedFretboardNote}
+            deleteMode={deleteMode}
           />
 
           {/* Legend */}
