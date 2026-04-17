@@ -63,6 +63,8 @@ interface FretboardProps {
   suppressScaleNotes?: boolean;
   tabVisNotes?: { current: Array<{string: number; fret: number}>; upcoming: Array<Array<{string: number; fret: number}>> } | null;
   chordOctaveShift?: number;
+  /** When true, hides the top toolbar row (degree key, Degrees Active, Position focus). */
+  hideToolbar?: boolean;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -105,6 +107,7 @@ export default function Fretboard({
   suppressScaleNotes = false,
   tabVisNotes,
   chordOctaveShift = 0,
+  hideToolbar = false,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -915,6 +918,7 @@ export default function Fretboard({
         style={isVertical ? { transform: 'rotate(90deg)', width: '80vh', maxWidth: 900 } : {}}
       >
         {/* Degree color key + toggles + position box toggle */}
+        {!hideToolbar && (
         <div className={`flex items-center gap-1 mb-2 flex-wrap ${isVertical ? '-rotate-90' : ''}`}>
           <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Key:</span>
           {DEGREE_LEGEND.map(d => {
@@ -926,7 +930,6 @@ export default function Fretboard({
                 key={d.label}
                 onClick={() => {
                   if (isHidden) {
-                    // Click on hidden (X) degree to restore it
                     setHiddenDegrees(prev => { const next = new Set(prev); next.delete(posKey); return next; });
                   } else {
                     toggleDegree(posKey);
@@ -935,7 +938,6 @@ export default function Fretboard({
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   if (!isHidden) {
-                    // Double-click to completely hide this degree
                     setHiddenDegrees(prev => { const next = new Set(prev); next.add(posKey); return next; });
                   }
                 }}
@@ -989,6 +991,7 @@ export default function Fretboard({
             Position focus: {showFretBox ? 'on' : 'off'}
           </button>
         </div>
+        )}
 
         {/* Fret numbers */}
         <div className="flex items-center mb-1">
