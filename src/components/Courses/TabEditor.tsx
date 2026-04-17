@@ -244,9 +244,8 @@ export function TabEditor({
       const x1 = mv.clientX - r.left, y1 = mv.clientY - r.top;
       const minX = Math.min(x, x1), maxX = Math.max(x, x1);
       const minY = Math.min(y, y1), maxY = Math.max(y, y1);
-      // Only treat as marquee if dragged at least a few px
-      if (Math.abs(x1 - x) < 4 && Math.abs(y1 - y) < 4) {
-        setSelectedIds([]);
+      // Only treat as marquee if dragged at least a few px — otherwise let click handlers do their thing
+      if (Math.abs(x1 - x) < 5 && Math.abs(y1 - y) < 5) {
         setMarquee(null);
         return;
       }
