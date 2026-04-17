@@ -4,7 +4,26 @@ import { GRID_PER_BEAT, NOTE_KIND_COLOR } from '@/lib/courseTypes';
 import { NOTE_NAMES, SCALE_FORMULAS } from '@/lib/music';
 import { KEY_QUALITY_SCALE, type KeyQuality } from '@/lib/courseTypes';
 import type { NoteName } from '@/lib/music';
-import { Trash2, Grid3x3, Music } from 'lucide-react';
+import { Trash2, Grid3x3, Music, ChevronDown } from 'lucide-react';
+
+/** Subdivision options. Step = grid units between consecutive snap points. */
+export type Subdivision = '1/4' | '1/6' | '1/8' | '1/12' | '1/16' | '1/24';
+const SUBDIVISION_STEP: Record<Subdivision, number> = {
+  '1/4': GRID_PER_BEAT,           // 4
+  '1/6': GRID_PER_BEAT * 2 / 3,   // 8/3 ≈ 2.667 (triplet half-beat)
+  '1/8': GRID_PER_BEAT / 2,       // 2
+  '1/12': GRID_PER_BEAT / 3,      // 4/3 ≈ 1.333 (eighth-note triplet)
+  '1/16': 1,                       // 1
+  '1/24': GRID_PER_BEAT / 6,      // 2/3 ≈ 0.667 (sixteenth triplet)
+};
+const SUBDIVISION_LABEL: Record<Subdivision, string> = {
+  '1/4': 'Quarter',
+  '1/6': 'Quarter triplet',
+  '1/8': 'Eighth',
+  '1/12': 'Eighth triplet',
+  '1/16': 'Sixteenth',
+  '1/24': 'Sixteenth triplet',
+};
 
 interface Props {
   phrase: CoursePhrase;
@@ -20,27 +39,35 @@ interface Props {
   playheadGrid?: number | null;
   pickedFretboardNote?: { stringIndex: number; fret: number; nonce: number } | null;
   deleteMode: boolean;
+  /** Draggable playhead position in grid units (parent-controlled). */
+  cursorGrid: number;
+  setCursorGrid: (g: number) => void;
+  /** Currently selected subdivision (lifted to parent for shared default duration). */
+  subdivision: Subdivision;
+  setSubdivision: (s: Subdivision) => void;
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
 const CELL_W = 28;
 const ROW_H = 26;
 const BAR_ROW_H = 18;
-/** Default duration = 1/8 note = 2 grid units (since GRID_PER_BEAT=4 → 1/16=1, 1/8=2, 1/4=4). */
-const DEFAULT_DUR = GRID_PER_BEAT / 2;
+const LABEL_W = 24; // left gutter (string labels / bar number gutter)
 
 export function TabEditor({
   phrase, setPhrase, tuning, keyRoot, keyQuality, beatsPerBar,
   selectedIds, setSelectedIds, startGrid = 0, visibleGrids, playheadGrid,
-  pickedFretboardNote, deleteMode,
+  pickedFretboardNote, deleteMode, cursorGrid, setCursorGrid,
+  subdivision, setSubdivision,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingFret, setEditingFret] = useState<{ id: string; value: string } | null>(null);
   const lastPickRef = useRef<number>(0);
-  /** Remember the most recently used note duration so subsequent inserts inherit it. */
-  const [lastDuration, setLastDuration] = useState<number>(DEFAULT_DUR);
-  /** Display mode: '16th' = full subdivision grid; 'rests' = only beat lines, with rest glyphs in gaps. */
+  /** Grid display mode: '16th' = subdivision lines per current subdivision; 'rests' = no subdivisions. */
   const [gridMode, setGridMode] = useState<'16th' | 'rests'>('16th');
+  const [subOpen, setSubOpen] = useState(false);
+
+  /** The default duration of a new note equals the current subdivision length. */
+  const defaultDur = SUBDIVISION_STEP[subdivision];
 
   const diatonicPC = useMemo(() => {
     const formula = SCALE_FORMULAS[KEY_QUALITY_SCALE[keyQuality]] ?? [];
@@ -55,7 +82,12 @@ export function TabEditor({
     setPhrase({ ...phrase, notes: phrase.notes.map(n => n.id === id ? { ...n, ...patch } : n) });
   };
 
-  /** Trim/delete duration bars on this string that overlap [start, start+dur). */
+  /**
+   * Trim notes that overlap [start, start+dur).
+   * If `crossString` is true, trims notes on ANY string that start AFTER `start` but before `start+dur`,
+   * shortening the new note (returned) to end exactly at the next note's start.
+   * Always trims same-string overlaps as before.
+   */
   const trimOverlaps = (notes: CourseNote[], stringIndex: number, start: number, dur: number, ignoreId?: string): CourseNote[] => {
     const end = start + dur;
     const out: CourseNote[] = [];
@@ -82,27 +114,44 @@ export function TabEditor({
     return out;
   };
 
-  /** Snap an absolute grid index to the active grid (16th = 1, rests = beat). */
+  /**
+   * Trim any earlier note (any string) whose duration crosses into `start`,
+   * shortening it to end exactly at `start`. Used to prevent visual chord bars
+   * when consecutive notes are entered close together on different strings.
+   */
+  const shortenPreviousAtStart = (notes: CourseNote[], start: number, ignoreId?: string): CourseNote[] => {
+    return notes.map(n => {
+      if (n.id === ignoreId) return n;
+      const nEnd = n.beatIndex + n.durationGrid;
+      if (n.beatIndex < start && nEnd > start) {
+        return { ...n, durationGrid: start - n.beatIndex };
+      }
+      return n;
+    });
+  };
+
+  /** Snap an absolute grid index to the active subdivision. */
   const snapGrid = (g: number) => {
-    if (gridMode === 'rests') return Math.round(g / GRID_PER_BEAT) * GRID_PER_BEAT;
-    return Math.round(g);
+    const step = SUBDIVISION_STEP[subdivision];
+    return Math.round(g / step) * step;
   };
 
   const addNoteAt = (stringIndex: number, cellInWindow: number) => {
     const beatIndex = snapGrid(startGrid + cellInWindow);
     // Block: no two notes may share the same string at the same beat instant
-    const collision = phrase.notes.find(n => n.stringIndex === stringIndex && n.beatIndex === beatIndex);
+    const collision = phrase.notes.find(n => n.stringIndex === stringIndex && Math.abs(n.beatIndex - beatIndex) < 0.001);
     if (collision) {
       setSelectedIds([collision.id]);
       setEditingFret({ id: collision.id, value: String(collision.fret) });
       return;
     }
     const id = `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const dur = lastDuration;
+    const dur = defaultDur;
     const note: CourseNote = { id, stringIndex, fret: 0, beatIndex, durationGrid: dur };
-    const trimmed = trimOverlaps(phrase.notes, stringIndex, beatIndex, dur);
+    let next = trimOverlaps(phrase.notes, stringIndex, beatIndex, dur);
+    next = shortenPreviousAtStart(next, beatIndex);
     const newLen = Math.max(phrase.lengthGrid, beatIndex + dur * 2);
-    setPhrase({ notes: [...trimmed, note], lengthGrid: newLen });
+    setPhrase({ notes: [...next, note], lengthGrid: newLen });
     setSelectedIds([id]);
     setEditingFret({ id, value: '0' });
   };
