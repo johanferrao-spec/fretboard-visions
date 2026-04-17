@@ -270,6 +270,7 @@ export default function CourseCreator() {
       () => { setIsPlaying(false); setPlayheadGrid(0); },
     );
   };
+  onPlayRef.current = onPlay;
   const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); };
 
   const totalBars = Math.max(VISIBLE_BARS, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
