@@ -164,14 +164,25 @@ export function TabEditor({
     return end > startGrid && n.beatIndex < startGrid + totalCells;
   }), [phrase.notes, startGrid, totalCells]);
 
+  /**
+   * Group notes for the duration bar row. CRITICAL: at any given beat instant
+   * only ONE bar may be visible. So we cluster overlapping notes (across all
+   * strings) into a single group spanning the union of their durations.
+   */
   const beatGroups = useMemo(() => {
-    const map = new Map<number, CourseNote[]>();
-    visibleNotes.forEach(n => {
-      const arr = map.get(n.beatIndex) ?? [];
-      arr.push(n);
-      map.set(n.beatIndex, arr);
-    });
-    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
+    const sorted = [...visibleNotes].sort((a, b) => a.beatIndex - b.beatIndex);
+    const clusters: { start: number; end: number; notes: CourseNote[] }[] = [];
+    for (const n of sorted) {
+      const nEnd = n.beatIndex + n.durationGrid;
+      const last = clusters[clusters.length - 1];
+      if (last && n.beatIndex < last.end) {
+        last.notes.push(n);
+        last.end = Math.max(last.end, nEnd);
+      } else {
+        clusters.push({ start: n.beatIndex, end: nEnd, notes: [n] });
+      }
+    }
+    return clusters.map(c => [c.start, c.notes, c.end - c.start] as [number, CourseNote[], number]);
   }, [visibleNotes]);
 
   /** Track last duration whenever a single note is selected. */
