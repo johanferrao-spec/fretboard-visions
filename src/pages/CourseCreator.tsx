@@ -364,6 +364,7 @@ export default function CourseCreator() {
               arpAddMode={true}
               arpAddReferenceNotes={fretboardReference}
               onArpAddClick={(si, fret) => fb.arpAddClickHandler?.(si, fret)}
+              hideToolbar={true}
             />
           </section>
 
