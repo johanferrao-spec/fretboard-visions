@@ -814,6 +814,22 @@ export function TabEditor({
                 </div>
               );
             })}
+            {/* Rest glyphs (only in 'rests' mode) — sit in the gaps between duration bars. */}
+            {restGlyphs.map((r, i) => (
+              <div
+                key={`rest-${i}`}
+                className="absolute pointer-events-none select-none flex items-center justify-center text-black"
+                style={{
+                  left: r.x,
+                  top: 0,
+                  height: ROW_H,
+                  width: 12,
+                  fontSize: 22,
+                  lineHeight: `${ROW_H}px`,
+                  fontFamily: '"Bravura", "Noto Music", serif',
+                }}
+              >{r.glyph}</div>
+            ))}
           </div>
         </div>
 
