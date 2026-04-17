@@ -2,12 +2,16 @@ import type { NoteName } from './music';
 
 export type NoteKind = 'diatonic' | 'chord' | 'non-diatonic';
 
+export type Technique = 'hammer' | 'pull' | 'slide-up' | 'slide-down' | 'bend' | 'release' | 'vibrato' | 'palm-mute' | 'tap' | 'harmonic';
+
 export interface CourseNote {
   id: string;
   stringIndex: number; // 0 = low E, 5 = high e
   fret: number;
   beatIndex: number;
   durationGrid: number;
+  /** Technique applied AT this note (e.g. starts a hammer-on into the next note). */
+  technique?: Technique;
 }
 
 export interface CoursePhrase {

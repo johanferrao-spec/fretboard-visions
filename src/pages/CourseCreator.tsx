@@ -4,7 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCourseTabs } from '@/hooks/useCourses';
 import { useFretboard } from '@/hooks/useFretboard';
 import Fretboard from '@/components/Fretboard';
-import { CourseScaleSelector } from '@/components/Courses/CourseScaleSelector';
+import { CompactScaleSelector } from '@/components/Courses/CompactScaleSelector';
+import { DiatonicChordPalette } from '@/components/Courses/DiatonicChordPalette';
+import { TechniqueToolbar } from '@/components/Courses/TechniqueToolbar';
 import { TabEditor } from '@/components/Courses/TabEditor';
 import { GlobalTracksEditor } from '@/components/Courses/GlobalTracksEditor';
 import { Button } from '@/components/ui/button';
@@ -13,11 +15,14 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCourseGuitarPlayer } from '@/hooks/useCourseGuitarPlayer';
-import type { CoursePhrase, CourseTabRow, KeyQuality, ChordTrackEntry, KeyChangeEntry, TempoChangeEntry, CourseNote } from '@/lib/courseTypes';
+import type { CoursePhrase, CourseTabRow, KeyQuality, ChordTrackEntry, KeyChangeEntry, TempoChangeEntry, CourseNote, Technique } from '@/lib/courseTypes';
 import { GRID_PER_BEAT, KEY_QUALITY_SCALE } from '@/lib/courseTypes';
 import { STANDARD_TUNING, type NoteName } from '@/lib/music';
 
 const TIME_SIGS = ['4/4', '3/4', '6/8', '2/4'];
+/** Show one bar of anacrusis before bar 1, plus 3 bars after = 4 bars visible. */
+const VISIBLE_BARS = 4;
+const ANACRUSIS_BARS = 1;
 
 export default function CourseCreator() {
   const { courseId, tabId } = useParams<{ courseId: string; tabId: string }>();
@@ -46,14 +51,15 @@ export default function CourseCreator() {
   // Staged input notes (from interactive fretboard)
   const [stagedNotes, setStagedNotes] = useState<{ stringIndex: number; fret: number }[]>([]);
 
-  // Bar window: viewport over the timeline. Show 4 bars (1 before + 2 main + 1 after).
-  const [windowStartBar, setWindowStartBar] = useState(0);
+  // Bar window: viewport over the timeline. Indexed in MUSICAL bars (bar 1 = the first "real" bar).
+  // We allow windowStartBar to be negative so the user can edit anacrusis bars (bar 0, bar -1, …).
+  // Default: start one bar BEFORE bar 1 so end of bar 0 is visible just before bar 1.
+  const [windowStartBar, setWindowStartBar] = useState(-ANACRUSIS_BARS);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadGrid, setPlayheadGrid] = useState(0);
 
   const beatsPerBar = useMemo(() => parseInt(timeSig.split('/')[0], 10) || 4, [timeSig]);
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
-  const VISIBLE_BARS = 4;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -108,7 +114,6 @@ export default function CourseCreator() {
   // Insert staged notes into next available slot
   const onInsert = () => {
     if (stagedNotes.length === 0) { toast.info('Click frets on the fretboard first'); return; }
-    // next available slot = max beatIndex+duration of existing notes (or 0)
     const nextSlot = phrase.notes.length === 0
       ? 0
       : Math.max(...phrase.notes.map(n => n.beatIndex + n.durationGrid));
@@ -123,10 +128,9 @@ export default function CourseCreator() {
     setPhrase({ notes: [...phrase.notes, ...newNotes], lengthGrid: newLen });
     setStagedNotes([]);
     fb.setArpAddReferenceNotes([]);
-    // auto-advance bar window if past end
     const newBarIdx = Math.floor(nextSlot / gridPerBar);
     if (newBarIdx >= windowStartBar + VISIBLE_BARS - 1) {
-      setWindowStartBar(Math.max(0, newBarIdx - 1));
+      setWindowStartBar(Math.max(-ANACRUSIS_BARS, newBarIdx - 1));
     }
   };
 
@@ -135,7 +139,6 @@ export default function CourseCreator() {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
       setStagedNotes(prev => {
-        // toggle: remove if exact match, else add (one note per string max)
         const existing = prev.find(p => p.stringIndex === si);
         let next: { stringIndex: number; fret: number }[];
         if (existing && existing.fret === fret) {
@@ -168,10 +171,12 @@ export default function CourseCreator() {
   };
   const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); };
 
-  // Bar window navigation
+  // Bar window navigation. Allow window to extend back to -ANACRUSIS_BARS.
   const totalBars = Math.max(VISIBLE_BARS, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
-  const goPrevBar = () => setWindowStartBar(b => Math.max(0, b - 1));
-  const goNextBar = () => setWindowStartBar(b => Math.min(totalBars - VISIBLE_BARS, b + 1));
+  const minWindow = -ANACRUSIS_BARS;
+  const maxWindow = totalBars - VISIBLE_BARS;
+  const goPrevBar = () => setWindowStartBar(b => Math.max(minWindow, b - 1));
+  const goNextBar = () => setWindowStartBar(b => Math.min(maxWindow, b + 1));
 
   // Auto-grow length when needed for editing the upcoming bar
   useEffect(() => {
@@ -180,6 +185,19 @@ export default function CourseCreator() {
       setPhrase(p => ({ ...p, lengthGrid: needed }));
     }
   }, [windowStartBar, gridPerBar, phrase.lengthGrid]);
+
+  // Apply technique to currently selected note
+  const applyTechnique = (t: Technique | 'none') => {
+    if (!selectedId) return;
+    setPhrase({
+      ...phrase,
+      notes: phrase.notes.map(n =>
+        n.id === selectedId ? { ...n, technique: t === 'none' ? undefined : t } : n,
+      ),
+    });
+  };
+  const selectedNote = phrase.notes.find(n => n.id === selectedId);
+  const currentTechnique: Technique | 'none' = selectedNote?.technique ?? 'none';
 
   if (!authChecked || loading) return <div className="fixed inset-0 z-50 bg-background flex items-center justify-center text-muted-foreground">Loading…</div>;
   if (!tab) return <div className="fixed inset-0 z-50 bg-background flex items-center justify-center text-muted-foreground">Lesson not found</div>;
@@ -205,13 +223,14 @@ export default function CourseCreator() {
       </header>
 
       <div className="flex flex-col lg:flex-row gap-4 p-4">
-        {/* Left: scale selector + meta */}
-        <aside className="lg:w-64 shrink-0 space-y-3">
+        {/* Left column: meta + scale + diatonic chords + techniques */}
+        <aside className="lg:w-72 shrink-0 space-y-4">
           <div>
-            <Label>Lesson title</Label>
-            <Input value={title} onChange={e => setTitle(e.target.value)} />
+            <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Lesson title</Label>
+            <Input value={title} onChange={e => setTitle(e.target.value)} className="mt-1" />
           </div>
-          <CourseScaleSelector
+
+          <CompactScaleSelector
             root={keyRoot} setRoot={setKeyRoot}
             scale={KEY_QUALITY_SCALE[keyQuality]}
             setScale={(s) => {
@@ -220,17 +239,29 @@ export default function CourseCreator() {
             }}
             setKeyQuality={setKeyQuality}
           />
-          <div>
-            <Label>Time signature</Label>
-            <select value={timeSig} onChange={e => setTimeSig(e.target.value)}
-              className="bg-background border border-border rounded px-2 py-2 text-sm w-full">
-              {TIME_SIGS.map(t => <option key={t}>{t}</option>)}
-            </select>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Time sig</Label>
+              <select value={timeSig} onChange={e => setTimeSig(e.target.value)}
+                className="bg-background border border-border rounded px-2 py-1.5 text-sm w-full mt-1">
+                {TIME_SIGS.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Tempo</Label>
+              <Input type="number" min={40} max={240} value={tempo}
+                onChange={e => setTempo(parseInt(e.target.value, 10) || 100)} className="mt-1" />
+            </div>
           </div>
-          <div>
-            <Label>Tempo (bpm)</Label>
-            <Input type="number" min={40} max={240} value={tempo} onChange={e => setTempo(parseInt(e.target.value, 10) || 100)} />
-          </div>
+
+          <DiatonicChordPalette keyRoot={keyRoot} keyQuality={keyQuality} />
+
+          <TechniqueToolbar
+            selectedTechnique={currentTechnique}
+            onApply={applyTechnique}
+            hasSelection={!!selectedNote}
+          />
         </aside>
 
         {/* Right: fretboard + global tracks + tab editor */}
@@ -296,13 +327,14 @@ export default function CourseCreator() {
 
           {/* Bar window controls */}
           <div className="flex items-center justify-between gap-2">
-            <Button size="lg" variant="outline" onClick={goPrevBar} disabled={windowStartBar === 0} className="rounded-full size-12 p-0">
+            <Button size="lg" variant="outline" onClick={goPrevBar} disabled={windowStartBar <= minWindow} className="rounded-full size-12 p-0">
               <ChevronLeft className="size-6" />
             </Button>
             <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
               Bars {windowStartBar + 1} – {windowStartBar + VISIBLE_BARS} of {totalBars}
+              {windowStartBar < 0 && <span className="ml-2 text-primary">(anacrusis visible)</span>}
             </p>
-            <Button size="lg" variant="outline" onClick={goNextBar} disabled={windowStartBar + VISIBLE_BARS >= totalBars} className="rounded-full size-12 p-0">
+            <Button size="lg" variant="outline" onClick={goNextBar} disabled={windowStartBar >= maxWindow} className="rounded-full size-12 p-0">
               <ChevronRight className="size-6" />
             </Button>
           </div>
@@ -316,6 +348,9 @@ export default function CourseCreator() {
             visibleGrids={VISIBLE_BARS * gridPerBar}
             beatsPerBar={beatsPerBar}
             isOwner
+            defaultKeyRoot={keyRoot}
+            defaultKeyQuality={keyQuality}
+            pendingKey={{ root: keyRoot, quality: keyQuality }}
           />
 
           {/* Tab editor with bar window */}

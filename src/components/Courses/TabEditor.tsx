@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import type { CoursePhrase, CourseNote, NoteKind } from '@/lib/courseTypes';
+import type { CoursePhrase, CourseNote, NoteKind, Technique } from '@/lib/courseTypes';
 import { GRID_PER_BEAT, NOTE_KIND_COLOR } from '@/lib/courseTypes';
 import { NOTE_NAMES, SCALE_FORMULAS } from '@/lib/music';
 import { KEY_QUALITY_SCALE, type KeyQuality } from '@/lib/courseTypes';
@@ -15,16 +15,28 @@ interface Props {
   beatsPerBar: number;
   selectedId: string | null;
   setSelectedId: (id: string | null) => void;
-  /** Bar-window viewport: which grid the visible window starts at, and how many grid cells are visible. */
+  /** Window start in absolute grid units (CAN be negative for anacrusis). */
   startGrid?: number;
   visibleGrids?: number;
-  /** Optional playhead position in grid units; null means hide. */
+  /** Optional playhead position in absolute grid units; null means hide. */
   playheadGrid?: number | null;
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
 const CELL_W = 28;
-const ROW_H = 22;
+const ROW_H = 24;
+const TECHNIQUE_SYMBOL: Record<Technique, string> = {
+  hammer: 'h',
+  pull: 'p',
+  'slide-up': '/',
+  'slide-down': '\\',
+  bend: 'b',
+  release: 'r',
+  vibrato: '~',
+  'palm-mute': 'PM',
+  tap: 't',
+  harmonic: '◆',
+};
 
 export function TabEditor({
   phrase, setPhrase, tuning, keyRoot, keyQuality, beatsPerBar,
@@ -39,7 +51,6 @@ export function TabEditor({
     return new Set(formula.map(i => (rootIdx + i) % 12));
   }, [keyRoot, keyQuality]);
 
-  // Window length: prefer explicit visibleGrids; otherwise full phrase
   const totalCells = visibleGrids ?? phrase.lengthGrid;
 
   const addNoteAt = (stringIndex: number, cellInWindow: number) => {
@@ -60,7 +71,6 @@ export function TabEditor({
     if (selectedId === id) setSelectedId(null);
   };
 
-  // Notes visible in window
   const visibleNotes = useMemo(() => phrase.notes.filter(n => {
     const end = n.beatIndex + n.durationGrid;
     return end > startGrid && n.beatIndex < startGrid + totalCells;
@@ -77,61 +87,82 @@ export function TabEditor({
   }, [visibleNotes]);
 
   const gridStyle: React.CSSProperties = { width: totalCells * CELL_W, minWidth: '100%' };
+  const gridPerBar = beatsPerBar * GRID_PER_BEAT;
 
   const isBarLine = (cellIdx: number) => {
     const absoluteIdx = startGrid + cellIdx;
-    return absoluteIdx > 0 && absoluteIdx % (beatsPerBar * GRID_PER_BEAT) === 0;
+    return absoluteIdx % gridPerBar === 0;
   };
   const isBeatLine = (cellIdx: number) => {
     const absoluteIdx = startGrid + cellIdx;
-    return absoluteIdx > 0 && absoluteIdx % GRID_PER_BEAT === 0;
+    return absoluteIdx % GRID_PER_BEAT === 0;
   };
 
-  // Determine if a given cell is in the "main" 2-bar editable region (centered in 4-bar window)
-  const isMainRegion = (cellIdx: number) => {
-    if (!visibleGrids) return true;
-    const oneBarsCells = beatsPerBar * GRID_PER_BEAT;
-    return cellIdx >= oneBarsCells && cellIdx < oneBarsCells * 3;
+  // Cells before bar 1 (i.e., absolute grid < 0) are "anacrusis" - subtle tint
+  const isAnacrusis = (cellIdx: number) => (startGrid + cellIdx) < 0;
+
+  const noteName = (n: CourseNote): string => {
+    const pc = ((tuning[n.stringIndex] ?? 0) + n.fret) % 12;
+    return NOTE_NAMES[(pc + 12) % 12];
   };
 
   return (
     <div ref={containerRef} className="border border-border rounded-lg bg-card overflow-x-auto">
       <div className="relative" style={gridStyle}>
-        {/* String rows (high e top → low E bottom) */}
+        {/* String rows. Strings drawn through the centre of each row to look like a real tab. */}
         {[5, 4, 3, 2, 1, 0].map((stringIndex) => (
-          <div key={stringIndex} className="relative border-b border-border last:border-b-0" style={{ height: ROW_H }}>
+          <div key={stringIndex} className="relative" style={{ height: ROW_H }}>
+            {/* String label gutter */}
             <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[10px] font-mono text-muted-foreground bg-muted/30 border-r border-border z-10">
               {STRING_LABELS[stringIndex]}
             </div>
+            {/* The string line — drawn through the vertical centre of the row */}
+            <div
+              className="absolute left-6 right-0 pointer-events-none"
+              style={{
+                top: '50%',
+                height: 1,
+                background: 'hsl(var(--muted-foreground) / 0.55)',
+                transform: 'translateY(-0.5px)',
+              }}
+            />
+            {/* Click cells (for adding notes), with bar/beat divider lines */}
             <div className="absolute inset-0 left-6 flex">
               {Array.from({ length: totalCells }).map((_, cellIdx) => (
                 <button
                   key={cellIdx}
                   onClick={() => addNoteAt(stringIndex, cellIdx)}
-                  className={`border-r border-border/40 transition-colors ${
-                    isMainRegion(cellIdx) ? 'hover:bg-primary/10 bg-transparent' : 'hover:bg-primary/5 bg-muted/10'
+                  className={`transition-colors hover:bg-primary/10 ${
+                    isAnacrusis(cellIdx) ? 'bg-muted/30' : 'bg-transparent'
                   }`}
                   style={{
                     width: CELL_W,
                     height: ROW_H,
-                    borderRightWidth: isBarLine(cellIdx + 1) ? 2 : 1,
-                    borderRightColor: isBarLine(cellIdx + 1) ? 'hsl(var(--foreground))' : isBeatLine(cellIdx + 1) ? 'hsl(var(--muted-foreground) / 0.4)' : undefined,
+                    borderRight: isBarLine(cellIdx + 1)
+                      ? '2px solid hsl(var(--foreground) / 0.7)'
+                      : isBeatLine(cellIdx + 1)
+                        ? '1px solid hsl(var(--muted-foreground) / 0.35)'
+                        : '1px solid hsl(var(--border) / 0.35)',
                   }}
                 />
               ))}
             </div>
+            {/* Notes (fret numbers sit on top of the string line) */}
             {visibleNotes.filter(n => n.stringIndex === stringIndex).map(n => {
               const localCell = n.beatIndex - startGrid;
+              const tech = n.technique;
               return (
                 <div
                   key={n.id}
                   onClick={(e) => { e.stopPropagation(); setSelectedId(n.id); }}
                   onDoubleClick={(e) => { e.stopPropagation(); setEditingFret({ id: n.id, value: String(n.fret) }); }}
-                  className={`absolute top-0.5 z-20 text-xs font-mono rounded px-1 cursor-pointer ${selectedId === n.id ? 'ring-2 ring-primary bg-primary/20 text-foreground' : 'bg-background/90 text-foreground hover:bg-primary/10'}`}
+                  className={`absolute z-20 text-xs font-mono rounded px-1 cursor-pointer flex items-center gap-0.5 ${selectedId === n.id ? 'ring-2 ring-primary bg-primary/20 text-foreground' : 'bg-background text-foreground hover:bg-primary/10'}`}
                   style={{
                     left: 24 + localCell * CELL_W + 2,
-                    height: ROW_H - 4,
-                    lineHeight: `${ROW_H - 4}px`,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    height: ROW_H - 6,
+                    lineHeight: `${ROW_H - 6}px`,
                     minWidth: 18,
                   }}
                 >
@@ -147,16 +178,21 @@ export function TabEditor({
                       onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingFret(null); }}
                       className="w-10 bg-transparent outline-none"
                     />
-                  ) : n.fret}
+                  ) : (
+                    <>
+                      <span>{n.fret}</span>
+                      {tech && <span className="text-[9px] text-primary font-bold">{TECHNIQUE_SYMBOL[tech]}</span>}
+                    </>
+                  )}
                 </div>
               );
             })}
           </div>
         ))}
 
-        {/* Duration bars row */}
+        {/* Duration bars row — labelled with NOTE NAMES instead of grid count */}
         <div className="relative border-t-2 border-border bg-muted/20" style={{ height: ROW_H + 6 }}>
-          <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[9px] font-mono text-muted-foreground bg-muted/30 border-r border-border z-10">⏱</div>
+          <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[9px] font-mono text-muted-foreground bg-muted/30 border-r border-border z-10">♪</div>
           <div className="absolute inset-0 left-6">
             {beatGroups.map(([beatIdx, notes]) => {
               const dur = Math.max(...notes.map(n => n.durationGrid));
@@ -165,15 +201,27 @@ export function TabEditor({
                 : (() => { const n = notes[0]; const pc = ((tuning[n.stringIndex] ?? 0) + n.fret) % 12; return diatonicPC.has(pc) ? 'diatonic' : 'non-diatonic'; })();
               const groupSelected = notes.some(n => n.id === selectedId);
               const localBeat = beatIdx - startGrid;
+              // Build label: for a chord, list note names (deduped); otherwise the single note name.
+              const label = (() => {
+                if (notes.length === 1) return noteName(notes[0]);
+                const seen = new Set<string>();
+                const names: string[] = [];
+                for (const n of notes) {
+                  const nm = noteName(n);
+                  if (!seen.has(nm)) { seen.add(nm); names.push(nm); }
+                }
+                return names.join('-');
+              })();
               return (
                 <div
                   key={beatIdx}
-                  className={`absolute top-1 rounded-sm flex items-center justify-end pr-1 text-[9px] font-mono text-white/90 cursor-ew-resize ${groupSelected ? 'ring-2 ring-primary' : ''}`}
+                  className={`absolute top-1 rounded-sm flex items-center justify-center text-[10px] font-mono text-white font-bold cursor-ew-resize ${groupSelected ? 'ring-2 ring-primary' : ''}`}
                   style={{
                     left: localBeat * CELL_W + 1,
                     width: dur * CELL_W - 2,
                     height: ROW_H,
                     backgroundColor: NOTE_KIND_COLOR[kind],
+                    overflow: 'hidden',
                   }}
                   onMouseDown={(e) => {
                     const startX = e.clientX;
@@ -188,7 +236,8 @@ export function TabEditor({
                     window.addEventListener('mouseup', onUp);
                   }}
                   onClick={(e) => { e.stopPropagation(); setSelectedId(notes[0].id); }}
-                >{dur}</div>
+                  title={label}
+                >{label}</div>
               );
             })}
           </div>
@@ -203,7 +252,7 @@ export function TabEditor({
 
       {selectedId && (
         <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/10">
-          <span className="text-xs font-mono text-muted-foreground">Selected: {selectedId}</span>
+          <span className="text-xs font-mono text-muted-foreground">Selected note</span>
           <button onClick={() => deleteNote(selectedId)} className="inline-flex items-center gap-1 text-xs text-destructive hover:underline">
             <Trash2 className="size-3" /> Delete
           </button>
