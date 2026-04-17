@@ -212,6 +212,10 @@ export function TabEditor({
     window.addEventListener('mouseup', onUp);
   };
 
+  // White-tab styling: classic black-on-white tablature look
+  const stringLineColor = 'rgba(0, 0, 0, 0.55)';
+  const noteTextColor = 'rgb(20, 20, 20)';
+
   // ===== Marquee box selection =====
   const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
