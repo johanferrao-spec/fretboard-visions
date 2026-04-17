@@ -207,7 +207,7 @@ export default function CourseCreator() {
   const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); };
 
   const totalBars = Math.max(VISIBLE_BARS, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
-  const minWindow = -ANACRUSIS_BARS;
+  const minWindow = -ANACRUSIS_BARS; // -1 → user can scroll back exactly one bar
   const maxWindow = totalBars - VISIBLE_BARS;
   const goPrevBar = () => setWindowStartBar(b => Math.max(minWindow, b - 1));
   const goNextBar = () => setWindowStartBar(b => Math.min(maxWindow, b + 1));
