@@ -4,7 +4,7 @@ import { GRID_PER_BEAT, NOTE_KIND_COLOR } from '@/lib/courseTypes';
 import { NOTE_NAMES, SCALE_FORMULAS } from '@/lib/music';
 import { KEY_QUALITY_SCALE, type KeyQuality } from '@/lib/courseTypes';
 import type { NoteName } from '@/lib/music';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Grid3x3, Music } from 'lucide-react';
 
 interface Props {
   phrase: CoursePhrase;
@@ -18,22 +18,16 @@ interface Props {
   startGrid?: number;
   visibleGrids?: number;
   playheadGrid?: number | null;
-  /** When user clicks a fret on the interactive fretboard while a note is selected, parent passes (stringIndex, fret). */
   pickedFretboardNote?: { stringIndex: number; fret: number; nonce: number } | null;
-  /** ⌘ held → click to delete. */
   deleteMode: boolean;
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
 const CELL_W = 28;
 const ROW_H = 26;
+const BAR_ROW_H = 18;
 /** Default duration = 1/8 note = 2 grid units (since GRID_PER_BEAT=4 → 1/16=1, 1/8=2, 1/4=4). */
 const DEFAULT_DUR = GRID_PER_BEAT / 2;
-
-const TECHNIQUE_SYMBOL: Record<Technique, string> = {
-  hammer: 'h', pull: 'p', 'slide-up': '/', 'slide-down': '\\',
-  bend: 'b', release: 'r', vibrato: '~', 'palm-mute': 'PM', tap: 't', harmonic: '◆',
-};
 
 export function TabEditor({
   phrase, setPhrase, tuning, keyRoot, keyQuality, beatsPerBar,
@@ -43,6 +37,10 @@ export function TabEditor({
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingFret, setEditingFret] = useState<{ id: string; value: string } | null>(null);
   const lastPickRef = useRef<number>(0);
+  /** Remember the most recently used note duration so subsequent inserts inherit it. */
+  const [lastDuration, setLastDuration] = useState<number>(DEFAULT_DUR);
+  /** Display mode: '16th' = full subdivision grid; 'rests' = only beat lines, with rest glyphs in gaps. */
+  const [gridMode, setGridMode] = useState<'16th' | 'rests'>('16th');
 
   const diatonicPC = useMemo(() => {
     const formula = SCALE_FORMULAS[KEY_QUALITY_SCALE[keyQuality]] ?? [];
@@ -64,21 +62,16 @@ export function TabEditor({
     for (const n of notes) {
       if (n.id === ignoreId || n.stringIndex !== stringIndex) { out.push(n); continue; }
       const nEnd = n.beatIndex + n.durationGrid;
-      // No overlap
       if (nEnd <= start || n.beatIndex >= end) { out.push(n); continue; }
-      // Fully inside → drop
       if (n.beatIndex >= start && nEnd <= end) continue;
-      // Overlaps from the left → trim its tail
       if (n.beatIndex < start && nEnd > start && nEnd <= end) {
         out.push({ ...n, durationGrid: start - n.beatIndex });
         continue;
       }
-      // Overlaps from the right → push start to end
       if (n.beatIndex >= start && n.beatIndex < end && nEnd > end) {
         out.push({ ...n, beatIndex: end, durationGrid: nEnd - end });
         continue;
       }
-      // Spans across (existing wider than new) → split into two
       if (n.beatIndex < start && nEnd > end) {
         out.push({ ...n, durationGrid: start - n.beatIndex });
         out.push({ ...n, id: `${n.id}-r`, beatIndex: end, durationGrid: nEnd - end });
@@ -89,10 +82,15 @@ export function TabEditor({
     return out;
   };
 
+  /** Snap an absolute grid index to the active grid (16th = 1, rests = beat). */
+  const snapGrid = (g: number) => {
+    if (gridMode === 'rests') return Math.round(g / GRID_PER_BEAT) * GRID_PER_BEAT;
+    return Math.round(g);
+  };
+
   const addNoteAt = (stringIndex: number, cellInWindow: number) => {
-    const beatIndex = startGrid + cellInWindow;
-    // Block: do not allow another note at the exact same beatIndex on any string
-    // (no two notes can be played at the same instant on the same string slot).
+    const beatIndex = snapGrid(startGrid + cellInWindow);
+    // Block: no two notes may share the same string at the same beat instant
     const collision = phrase.notes.find(n => n.stringIndex === stringIndex && n.beatIndex === beatIndex);
     if (collision) {
       setSelectedIds([collision.id]);
@@ -100,9 +98,10 @@ export function TabEditor({
       return;
     }
     const id = `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const note: CourseNote = { id, stringIndex, fret: 0, beatIndex, durationGrid: DEFAULT_DUR };
-    const trimmed = trimOverlaps(phrase.notes, stringIndex, beatIndex, DEFAULT_DUR);
-    const newLen = Math.max(phrase.lengthGrid, beatIndex + DEFAULT_DUR * 2);
+    const dur = lastDuration;
+    const note: CourseNote = { id, stringIndex, fret: 0, beatIndex, durationGrid: dur };
+    const trimmed = trimOverlaps(phrase.notes, stringIndex, beatIndex, dur);
+    const newLen = Math.max(phrase.lengthGrid, beatIndex + dur * 2);
     setPhrase({ notes: [...trimmed, note], lengthGrid: newLen });
     setSelectedIds([id]);
     setEditingFret({ id, value: '0' });
@@ -118,16 +117,32 @@ export function TabEditor({
     if (!pickedFretboardNote) return;
     if (pickedFretboardNote.nonce === lastPickRef.current) return;
     lastPickRef.current = pickedFretboardNote.nonce;
+    if (editingFret) {
+      setEditingFret({ id: editingFret.id, value: String(pickedFretboardNote.fret) });
+      // Also move the note's string if different
+      const n = phrase.notes.find(x => x.id === editingFret.id);
+      if (n && n.stringIndex !== pickedFretboardNote.stringIndex) {
+        const trimmed = trimOverlaps(
+          phrase.notes.filter(x => x.id !== editingFret.id),
+          pickedFretboardNote.stringIndex, n.beatIndex, n.durationGrid,
+        );
+        setPhrase({ ...phrase, notes: [...trimmed, { ...n, stringIndex: pickedFretboardNote.stringIndex, fret: pickedFretboardNote.fret }] });
+      } else if (n) {
+        updateNote(editingFret.id, { fret: pickedFretboardNote.fret });
+      }
+      return;
+    }
     if (selectedIds.length !== 1) return;
     const id = selectedIds[0];
     const n = phrase.notes.find(x => x.id === id);
     if (!n) return;
     const newString = pickedFretboardNote.stringIndex;
     const newFret = pickedFretboardNote.fret;
-    // Move the note to the picked string/fret (trim overlaps on the new string)
+    // Block move if a different note already occupies that exact slot
+    const conflict = phrase.notes.find(x => x.id !== id && x.stringIndex === newString && x.beatIndex === n.beatIndex);
+    if (conflict) return;
     const trimmed = trimOverlaps(phrase.notes.filter(x => x.id !== id), newString, n.beatIndex, n.durationGrid);
-    const updated = { ...n, stringIndex: newString, fret: newFret };
-    setPhrase({ ...phrase, notes: [...trimmed, updated] });
+    setPhrase({ ...phrase, notes: [...trimmed, { ...n, stringIndex: newString, fret: newFret }] });
   }, [pickedFretboardNote]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard delete + escape
@@ -159,10 +174,16 @@ export function TabEditor({
     return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
   }, [visibleNotes]);
 
+  /** Track last duration whenever a single note is selected. */
+  useEffect(() => {
+    if (selectedIds.length === 1) {
+      const n = phrase.notes.find(x => x.id === selectedIds[0]);
+      if (n) setLastDuration(n.durationGrid);
+    }
+  }, [selectedIds, phrase.notes]);
+
   const gridStyle: React.CSSProperties = { width: totalCells * CELL_W, minWidth: '100%' };
 
-  const isBarLine = (cellIdx: number) => (startGrid + cellIdx) % gridPerBar === 0;
-  const isBeatLine = (cellIdx: number) => (startGrid + cellIdx) % GRID_PER_BEAT === 0;
   const isAnacrusis = (cellIdx: number) => (startGrid + cellIdx) < 0;
 
   const noteName = (n: CourseNote): string => {
@@ -198,29 +219,29 @@ export function TabEditor({
         const nd = startDur - deltaCells;
         if (nd >= 1) { newBeat = nb; newDur = nd; }
       }
-      // Apply with overlap-trim per string
       let next = phrase.notes;
-      // Pull out the moved notes
       const moved = ids.map(id => {
         const orig = phrase.notes.find(x => x.id === id);
         if (!orig) return null;
         return { ...orig, beatIndex: newBeat, durationGrid: newDur };
       }).filter(Boolean) as CourseNote[];
-      // Remove originals
       next = next.filter(n => !ids.includes(n.id));
-      // Trim overlaps on each affected string
       for (const m of moved) {
         next = trimOverlaps(next, m.stringIndex, m.beatIndex, m.durationGrid, m.id);
       }
       next = [...next, ...moved];
       setPhrase({ ...phrase, notes: next });
     };
-    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
+      // Update remembered duration
+      const sel = phrase.notes.find(n => ids.includes(n.id));
+      if (sel) setLastDuration(sel.durationGrid);
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   };
 
-  // White-tab styling: classic black-on-white tablature look
   const stringLineColor = 'rgba(0, 0, 0, 0.55)';
   const noteTextColor = 'rgb(20, 20, 20)';
 
@@ -230,7 +251,6 @@ export function TabEditor({
 
   const startMarquee = (e: React.MouseEvent) => {
     if (deleteMode) return;
-    // Only start marquee on background (not on a note/cell button)
     const target = e.target as HTMLElement;
     if (target.closest('[data-note]') || target.closest('[data-duration-bar]')) return;
     const rect = gridRef.current?.getBoundingClientRect();
@@ -252,18 +272,17 @@ export function TabEditor({
       const x1 = mv.clientX - r.left, y1 = mv.clientY - r.top;
       const minX = Math.min(x, x1), maxX = Math.max(x, x1);
       const minY = Math.min(y, y1), maxY = Math.max(y, y1);
-      // Only treat as marquee if dragged at least a few px — otherwise let click handlers do their thing
+      // Pure click (no drag) → deselect
       if (Math.abs(x1 - x) < 5 && Math.abs(y1 - y) < 5) {
+        setSelectedIds([]);
         setMarquee(null);
         return;
       }
-      // String rows are at top: BAR_ROW_H + (5 - stringIndex) * ROW_H ... + ROW_H
       const hits: string[] = [];
       for (const n of visibleNotes) {
         const localCell = n.beatIndex - startGrid;
         const noteX = 24 + localCell * CELL_W;
         const noteW = Math.max(CELL_W, n.durationGrid * CELL_W);
-        // Visible string rows are stacked top-to-bottom in order [5,4,3,2,1,0]
         const visibleRowIdx = [5, 4, 3, 2, 1, 0].indexOf(n.stringIndex);
         const noteY = BAR_ROW_H + visibleRowIdx * ROW_H;
         const noteY2 = noteY + ROW_H;
@@ -278,35 +297,184 @@ export function TabEditor({
     window.addEventListener('mouseup', onUp);
   };
 
-  const BAR_ROW_H = 18;
-
-  // Build bar number markers within window
+  // ===== Bar number markers (drawn at the SAME x as bar gridlines for perfect alignment) =====
   const barMarkers = useMemo(() => {
     const out: Array<{ cellOffset: number; barNumber: number }> = [];
     for (let cell = 0; cell < totalCells; cell++) {
       const abs = startGrid + cell;
       if (abs % gridPerBar === 0) {
-        // Musical bar number: bar 1 starts at absolute grid 0
         out.push({ cellOffset: cell, barNumber: Math.floor(abs / gridPerBar) + 1 });
       }
     }
     return out;
   }, [startGrid, totalCells, gridPerBar]);
 
+  /** Vertical lines (bar + beat) drawn as absolute overlays so positions are exact. */
+  const verticalLines = useMemo(() => {
+    const lines: Array<{ x: number; kind: 'bar' | 'beat' }> = [];
+    for (let cell = 0; cell <= totalCells; cell++) {
+      const abs = startGrid + cell;
+      if (abs % gridPerBar === 0) lines.push({ x: cell * CELL_W, kind: 'bar' });
+      else if (abs % GRID_PER_BEAT === 0) lines.push({ x: cell * CELL_W, kind: 'beat' });
+    }
+    return lines;
+  }, [totalCells, startGrid, gridPerBar]);
+
+  // ===== Tab-style technique notation rendering (slurs, slides, bends, etc.) =====
+  /** Find the next note on the same string after a given note. */
+  const nextOnString = (n: CourseNote): CourseNote | null => {
+    const cands = phrase.notes
+      .filter(x => x.stringIndex === n.stringIndex && x.beatIndex > n.beatIndex)
+      .sort((a, b) => a.beatIndex - b.beatIndex);
+    return cands[0] ?? null;
+  };
+
+  /** Tab-row Y for a given stringIndex (relative to the grid container). */
+  const stringRowY = (stringIndex: number) => {
+    const visibleRowIdx = [5, 4, 3, 2, 1, 0].indexOf(stringIndex);
+    return BAR_ROW_H + visibleRowIdx * ROW_H + ROW_H / 2;
+  };
+
+  /** SVG layer for technique notation (slurs for h/p, slide lines, bend arrows, vibrato squiggles). */
+  const techOverlay = useMemo(() => {
+    const elems: React.ReactNode[] = [];
+    visibleNotes.forEach(n => {
+      if (!n.technique) return;
+      const t = n.technique;
+      const xStart = 24 + (n.beatIndex - startGrid) * CELL_W + CELL_W / 2;
+      const y = stringRowY(n.stringIndex);
+      const next = nextOnString(n);
+      const xEnd = next ? 24 + (next.beatIndex - startGrid) * CELL_W + CELL_W / 2 : xStart + CELL_W;
+
+      if (t === 'hammer' || t === 'pull') {
+        // Slur: arc above the two fret numbers, with 'h' or 'p' label
+        const cx = (xStart + xEnd) / 2;
+        const cy = y - 14;
+        elems.push(
+          <g key={`tech-${n.id}`}>
+            <path d={`M ${xStart} ${y - 10} Q ${cx} ${cy - 4} ${xEnd} ${y - 10}`}
+              fill="none" stroke="rgb(20,20,20)" strokeWidth={1.2} />
+            <text x={cx} y={cy - 6} fontSize={9} fontFamily="monospace" textAnchor="middle" fill="rgb(20,20,20)">
+              {t === 'hammer' ? 'H' : 'P'}
+            </text>
+          </g>
+        );
+      } else if (t === 'slide-up' || t === 'slide-down') {
+        // Diagonal line between fret numbers; / for up, \ for down
+        const dy = t === 'slide-up' ? -3 : 3;
+        elems.push(
+          <line key={`tech-${n.id}`}
+            x1={xStart + 6} y1={y + dy} x2={xEnd - 6} y2={y - dy}
+            stroke="rgb(20,20,20)" strokeWidth={1.4} />
+        );
+      } else if (t === 'bend' || t === 'release') {
+        // Upward arrow with "1/2" or full bend label; "release" mirrors arrow downward
+        const up = t === 'bend';
+        const top = y - 16;
+        elems.push(
+          <g key={`tech-${n.id}`}>
+            <path d={up
+              ? `M ${xStart} ${y - 8} Q ${xStart + 8} ${top} ${xStart + 16} ${top + 2}`
+              : `M ${xStart + 16} ${top + 2} Q ${xStart + 8} ${top} ${xStart} ${y - 8}`}
+              fill="none" stroke="rgb(20,20,20)" strokeWidth={1.2}
+              markerEnd={up ? 'url(#arrowUp)' : 'url(#arrowDown)'} />
+            <text x={xStart + 18} y={top + 4} fontSize={8} fontFamily="monospace" fill="rgb(20,20,20)">
+              {up ? 'full' : 'rel'}
+            </text>
+          </g>
+        );
+      } else if (t === 'vibrato') {
+        // Squiggle line above the note
+        const len = 18;
+        const path: string[] = [`M ${xStart} ${y - 12}`];
+        for (let i = 0; i < 4; i++) {
+          const x0 = xStart + (i / 4) * len;
+          const x1 = xStart + ((i + 0.5) / 4) * len;
+          const x2 = xStart + ((i + 1) / 4) * len;
+          path.push(`Q ${x1} ${y - 16} ${x2} ${y - 12}`);
+        }
+        elems.push(
+          <path key={`tech-${n.id}`} d={path.join(' ')} fill="none" stroke="rgb(20,20,20)" strokeWidth={1} />
+        );
+      } else if (t === 'palm-mute') {
+        // P.M. with dashed line over the duration
+        const x2 = 24 + (n.beatIndex + n.durationGrid - startGrid) * CELL_W;
+        elems.push(
+          <g key={`tech-${n.id}`}>
+            <text x={xStart - 4} y={y - 12} fontSize={8} fontFamily="monospace" fill="rgb(20,20,20)">P.M.</text>
+            <line x1={xStart + 16} y1={y - 14} x2={x2} y2={y - 14}
+              stroke="rgb(20,20,20)" strokeWidth={1} strokeDasharray="3 2" />
+          </g>
+        );
+      } else if (t === 'tap') {
+        elems.push(
+          <text key={`tech-${n.id}`} x={xStart} y={y - 12} fontSize={9} fontFamily="monospace" fontWeight="bold"
+            textAnchor="middle" fill="rgb(20,20,20)">T</text>
+        );
+      } else if (t === 'harmonic') {
+        // Diamond around fret number — render a small diamond above
+        elems.push(
+          <g key={`tech-${n.id}`}>
+            <polygon points={`${xStart - 5},${y - 12} ${xStart},${y - 17} ${xStart + 5},${y - 12} ${xStart},${y - 7}`}
+              fill="none" stroke="rgb(20,20,20)" strokeWidth={1} />
+          </g>
+        );
+      }
+    });
+    return elems;
+  }, [visibleNotes, phrase.notes, startGrid]);
+
   return (
     <div ref={containerRef} className="border border-border rounded-lg bg-white text-black">
+      {/* Toolbar above tab: grid mode toggle */}
+      <div className="flex items-center justify-between px-3 py-1.5 bg-muted/20 border-b border-border">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setGridMode('16th')}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+              gridMode === '16th' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            }`}
+            title="Show 16th-note subdivision grid"
+          >
+            <Grid3x3 className="size-3" /> 16ths
+          </button>
+          <button
+            onClick={() => setGridMode('rests')}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+              gridMode === 'rests' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            }`}
+            title="Hide grid; show rests in gaps"
+          >
+            <Music className="size-3" /> Rests
+          </button>
+        </div>
+        <span className="text-[10px] font-mono text-muted-foreground">
+          Default duration: {lastDuration === 1 ? '1/16' : lastDuration === 2 ? '1/8' : lastDuration === 4 ? '1/4' : lastDuration === 8 ? '1/2' : `${lastDuration}/16`}
+        </span>
+      </div>
       <div className="overflow-x-auto">
       <div ref={gridRef} className="relative" style={gridStyle} onMouseDown={startMarquee}>
-        {/* Bar numbers row — aligned exactly with bar gridlines below */}
+        {/* SVG defs for arrows */}
+        <svg width="0" height="0" style={{ position: 'absolute' }}>
+          <defs>
+            <marker id="arrowUp" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 z" fill="rgb(20,20,20)" />
+            </marker>
+            <marker id="arrowDown" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 z" fill="rgb(20,20,20)" />
+            </marker>
+          </defs>
+        </svg>
+
+        {/* Bar numbers row */}
         <div className="relative" style={{ height: BAR_ROW_H, borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
           <div className="absolute left-0 top-0 h-full w-6 z-10" style={{ background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
-          <div className="absolute inset-0 left-6">
+          <div className="absolute inset-0" style={{ left: 24 }}>
             {barMarkers.map(({ cellOffset, barNumber }) => (
               <div key={cellOffset}
                 className="absolute top-0 bottom-0 flex items-center text-[10px] font-mono font-bold pointer-events-none"
                 style={{
-                  left: cellOffset * CELL_W,
-                  paddingLeft: 3,
+                  left: cellOffset * CELL_W + 3,
                   color: 'rgb(0,0,0)',
                 }}
               >{barNumber}</div>
@@ -314,43 +482,64 @@ export function TabEditor({
           </div>
         </div>
 
-        {[5, 4, 3, 2, 1, 0].map((stringIndex) => (
-          <div key={stringIndex} className="relative" style={{ height: ROW_H }}>
-            <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[10px] font-mono z-10"
-              style={{ color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>
-              {STRING_LABELS[stringIndex]}
+        {/* String rows */}
+        <div className="relative">
+          {[5, 4, 3, 2, 1, 0].map((stringIndex) => (
+            <div key={stringIndex} className="relative" style={{ height: ROW_H }}>
+              <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[10px] font-mono z-10"
+                style={{ color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>
+                {STRING_LABELS[stringIndex]}
+              </div>
+              <div className="absolute left-6 right-0 pointer-events-none"
+                style={{ top: '50%', height: 1, background: stringLineColor, transform: 'translateY(-0.5px)' }} />
+              <div className="absolute inset-0 left-6 flex">
+                {Array.from({ length: totalCells }).map((_, cellIdx) => (
+                  <button
+                    key={cellIdx}
+                    onDoubleClick={(e) => { e.stopPropagation(); if (deleteMode) return; addNoteAt(stringIndex, cellIdx); }}
+                    className="transition-colors hover:bg-primary/5"
+                    style={{
+                      width: CELL_W,
+                      height: ROW_H,
+                      background: isAnacrusis(cellIdx) ? 'rgba(0,0,0,0.04)' : 'transparent',
+                      // Subdivision lines only in 16ths mode (very subtle)
+                      borderRight: gridMode === '16th'
+                        ? '1px solid rgba(0,0,0,0.05)'
+                        : 'none',
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="absolute left-6 right-0 pointer-events-none"
-              style={{ top: '50%', height: 1, background: stringLineColor, transform: 'translateY(-0.5px)' }} />
-            <div className="absolute inset-0 left-6 flex">
-              {Array.from({ length: totalCells }).map((_, cellIdx) => (
-                <button
-                  key={cellIdx}
-                  onDoubleClick={(e) => { e.stopPropagation(); if (deleteMode) return; addNoteAt(stringIndex, cellIdx); }}
-                  className="transition-colors hover:bg-primary/5"
-                  style={{
-                    width: CELL_W,
-                    height: ROW_H,
-                    background: isAnacrusis(cellIdx) ? 'rgba(0,0,0,0.04)' : 'transparent',
-                    borderRight: isBarLine(cellIdx + 1)
-                      ? '2px solid rgba(0,0,0,0.7)'
-                      : isBeatLine(cellIdx + 1)
-                        ? '1px solid rgba(0,0,0,0.25)'
-                        : '1px solid rgba(0,0,0,0.07)',
-                  }}
-                />
-              ))}
-            </div>
-            {visibleNotes.filter(n => n.stringIndex === stringIndex).map(n => {
+          ))}
+
+          {/* Vertical bar/beat lines drawn as overlay (perfectly aligned with bar numbers above) */}
+          <div className="absolute inset-0 pointer-events-none" style={{ left: 24 }}>
+            {verticalLines.map((l, i) => (
+              <div key={i}
+                className="absolute top-0 bottom-0"
+                style={{
+                  left: l.x,
+                  width: l.kind === 'bar' ? 2 : 1,
+                  marginLeft: l.kind === 'bar' ? -1 : 0,
+                  background: l.kind === 'bar' ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.18)',
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Note markers (fret numbers) — absolute over string rows */}
+          <div className="absolute inset-0 pointer-events-none" style={{ left: 24 }}>
+            {visibleNotes.map(n => {
               const localCell = n.beatIndex - startGrid;
               const tech = n.technique;
               const isSel = selectedIds.includes(n.id);
-              // Width: tight to the text (fret digits + optional technique). Min ~16px, max = CELL_W.
               const fretText = String(n.fret);
-              const noteW = Math.min(CELL_W, Math.max(16, fretText.length * 8 + 8 + (tech ? 8 : 0)));
-              // Center the marker inside its 16th-note cell.
-              const cellLeft = 24 + localCell * CELL_W;
+              const noteW = Math.min(CELL_W, Math.max(16, fretText.length * 8 + 8));
+              const cellLeft = localCell * CELL_W;
               const left = cellLeft + (CELL_W - noteW) / 2;
+              const visibleRowIdx = [5, 4, 3, 2, 1, 0].indexOf(n.stringIndex);
+              const top = visibleRowIdx * ROW_H + ROW_H / 2;
               return (
                 <div
                   key={n.id}
@@ -362,18 +551,18 @@ export function TabEditor({
                     toggleSelect(n.id, e.shiftKey || e.metaKey || e.ctrlKey);
                   }}
                   onDoubleClick={(e) => { e.stopPropagation(); setEditingFret({ id: n.id, value: String(n.fret) }); }}
-                  className={`absolute z-20 text-xs font-mono cursor-pointer flex items-center justify-center gap-0.5 ${
-                    isSel ? 'ring-2 ring-primary rounded bg-white' : 'rounded'
+                  className={`absolute pointer-events-auto z-20 text-xs font-mono cursor-pointer flex items-center justify-center rounded ${
+                    isSel ? 'ring-2 ring-primary' : ''
                   } ${deleteMode ? 'ring-2 ring-destructive cursor-not-allowed' : ''}`}
                   style={{
                     left,
-                    top: '50%',
+                    top,
                     transform: 'translateY(-50%)',
                     width: noteW,
-                    height: ROW_H - 6,
-                    lineHeight: `${ROW_H - 6}px`,
+                    height: ROW_H - 8,
+                    lineHeight: `${ROW_H - 8}px`,
                     color: noteTextColor,
-                    background: isSel ? 'white' : 'white',
+                    background: 'white',
                     paddingLeft: 2,
                     paddingRight: 2,
                   }}
@@ -388,25 +577,73 @@ export function TabEditor({
                         setEditingFret(null);
                       }}
                       onKeyDown={e => {
-                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                        if (e.key === 'Enter') {
+                          const v = parseInt(editingFret.value, 10);
+                          if (!isNaN(v) && v >= 0 && v <= 24) updateNote(n.id, { fret: v });
+                          setEditingFret(null);
+                        }
                         if (e.key === 'Escape') setEditingFret(null);
                       }}
                       className="w-full bg-transparent outline-none text-black text-center"
                     />
                   ) : (
-                    <>
-                      <span className="text-center">{n.fret}</span>
-                      {tech && <span className="text-[9px] text-primary font-bold">{TECHNIQUE_SYMBOL[tech]}</span>}
-                    </>
+                    <span className="text-center">{n.fret}</span>
                   )}
                 </div>
               );
             })}
           </div>
-        ))}
 
-        {/* Duration bars row — note-name labels, drag-resize, drag-move */}
-        <div className="relative bg-muted/10" style={{ height: ROW_H + 8, borderTop: '2px solid rgba(0,0,0,0.4)' }}>
+          {/* Rest glyphs in 'rests' mode — show ♪ rest icons in empty beat cells per string */}
+          {gridMode === 'rests' && (
+            <div className="absolute inset-0 pointer-events-none" style={{ left: 24 }}>
+              {[5, 4, 3, 2, 1, 0].map((stringIndex, visIdx) => {
+                const rests: React.ReactNode[] = [];
+                for (let beat = 0; beat < totalCells; beat += GRID_PER_BEAT) {
+                  const absBeat = startGrid + beat;
+                  // is there a note covering this beat on this string?
+                  const covered = phrase.notes.some(n =>
+                    n.stringIndex === stringIndex &&
+                    n.beatIndex <= absBeat &&
+                    n.beatIndex + n.durationGrid > absBeat
+                  );
+                  if (covered) continue;
+                  rests.push(
+                    <div key={`rest-${stringIndex}-${beat}`}
+                      className="absolute text-muted-foreground/40 text-[10px] font-mono"
+                      style={{
+                        left: beat * CELL_W + CELL_W / 2 - 4,
+                        top: visIdx * ROW_H + ROW_H / 2 - 6,
+                      }}
+                    >𝄽</div>
+                  );
+                }
+                return <div key={stringIndex}>{rests}</div>;
+              })}
+            </div>
+          )}
+
+          {/* Technique overlay (slurs, slides, bends, etc.) */}
+          <svg className="absolute inset-0 pointer-events-none" style={{ left: 0, width: '100%', height: 6 * ROW_H }}>
+            {techOverlay}
+          </svg>
+        </div>
+
+        {/* Duration bars row — note-name labels, drag-resize, drag-move; double-click adds new */}
+        <div className="relative bg-muted/10" style={{ height: ROW_H + 8, borderTop: '2px solid rgba(0,0,0,0.4)' }}
+          onDoubleClick={(e) => {
+            if (deleteMode) return;
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const x = e.clientX - rect.left - 24;
+            if (x < 0) return;
+            const cellIdx = Math.floor(x / CELL_W);
+            // Default to highest string (high e = stringIndex 5) if no selection context
+            const targetString = selectedIds.length === 1
+              ? (phrase.notes.find(n => n.id === selectedIds[0])?.stringIndex ?? 5)
+              : 5;
+            addNoteAt(targetString, cellIdx);
+          }}
+        >
           <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[9px] font-mono z-10"
             style={{ color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>♪</div>
           <div className="absolute inset-0 left-6">
