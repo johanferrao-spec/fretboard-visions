@@ -383,10 +383,20 @@ export function GlobalTracksEditor({
           })}
         </Lane>
 
-        {/* Playhead spanning all 3 lanes */}
+        {/* Playhead spanning all lanes */}
         {playheadGrid != null && playheadGrid >= startGrid && playheadGrid < startGrid + totalCells && (
           <div className="absolute top-0 bottom-0 w-0.5 bg-primary z-30 pointer-events-none transition-[left] duration-150"
             style={{ left: LANE_LABEL_W + (playheadGrid - startGrid) * CELL_W, boxShadow: '0 0 8px hsl(var(--primary))' }} />
+        )}
+
+        {/* Insertion-cursor dotted line — mirrors TabEditor cursor */}
+        {playheadGrid == null && cursorGrid != null && cursorGrid >= startGrid && cursorGrid <= startGrid + totalCells && (
+          <div className="absolute top-0 bottom-0 pointer-events-none z-30"
+            style={{
+              left: LANE_LABEL_W + (cursorGrid - startGrid) * CELL_W,
+              width: 1,
+              borderLeft: '1px dashed hsl(28, 90%, 55%)',
+            }} />
         )}
       </div>
 
