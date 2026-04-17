@@ -67,6 +67,8 @@ export default function CourseCreator() {
   const [subdivision, setSubdivision] = useState<Subdivision>('1/8');
   /** Insertion cursor (state, not ref) — also acts as the draggable playhead when stopped. */
   const [cursorGrid, setCursorGrid] = useState<number>(0);
+  /** Tab cell width — shared between TabEditor and GlobalTracksEditor for column alignment. */
+  const [cellW, setCellW] = useState<number>(28);
 
   // Bar window: viewport over the timeline. Indexed in MUSICAL bars (bar 1 = the first "real" bar).
   // Default: start AT bar 1 (windowStartBar = 0). User can scroll back ONE bar (-1) to view anacrusis.
@@ -460,6 +462,9 @@ export default function CourseCreator() {
             pendingKey={{ root: keyRoot, quality: keyQuality }}
             deleteMode={deleteMode}
             playheadGrid={isPlaying ? playheadGrid : null}
+            cellW={cellW}
+            cursorGrid={cursorGrid}
+            setCursorGrid={setCursorGrid}
           />
 
           {/* Tab editor with bar window */}
@@ -481,6 +486,10 @@ export default function CourseCreator() {
             setCursorGrid={setCursorGrid}
             subdivision={subdivision}
             setSubdivision={setSubdivision}
+            cellW={cellW}
+            setCellW={setCellW}
+            chordTrack={chordTrack}
+            hideBarRow
           />
 
           {/* Legend */}
