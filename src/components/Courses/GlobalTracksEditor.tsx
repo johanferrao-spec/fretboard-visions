@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
-import { type NoteName, getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS } from '@/lib/music';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { type NoteName, getChordDegree, SCALE_DEGREE_COLORS } from '@/lib/music';
 import { GRID_PER_BEAT, type ChordTrackEntry, type KeyChangeEntry, type TempoChangeEntry, type KeyQuality } from '@/lib/courseTypes';
-import { Trash2, Scissors } from 'lucide-react';
+import { Scissors } from 'lucide-react';
 import { parseChordSymbol, chordToShortLabel } from '@/lib/chordParser';
 
 interface Props {
@@ -12,11 +12,14 @@ interface Props {
   visibleGrids: number;
   beatsPerBar: number;
   isOwner: boolean;
-  /** Course-level key (used as the implicit first key marker on the lane). */
   defaultKeyRoot: NoteName;
   defaultKeyQuality: KeyQuality;
-  /** When the user uses the "split bar" tool, parent supplies the currently selected key from the left scale selector. */
+  defaultTempo: number;
   pendingKey: { root: NoteName; quality: KeyQuality };
+  /** Cmd/Meta is being held → cells flash a deletion affordance. */
+  deleteMode: boolean;
+  /** Optional playhead in absolute grid units. */
+  playheadGrid?: number | null;
 }
 
 const CELL_W = 28;
@@ -25,7 +28,8 @@ const LANE_LABEL_W = 64;
 
 export function GlobalTracksEditor({
   chordTrack, setChordTrack, keyTrack, setKeyTrack, tempoTrack, setTempoTrack,
-  startGrid, visibleGrids, beatsPerBar, isOwner, defaultKeyRoot, defaultKeyQuality, pendingKey,
+  startGrid, visibleGrids, beatsPerBar, isOwner, defaultKeyRoot, defaultKeyQuality, defaultTempo, pendingKey,
+  deleteMode, playheadGrid,
 }: Props) {
   const [editingChordId, setEditingChordId] = useState<string | null>(null);
   const [chordInput, setChordInput] = useState('');
@@ -35,29 +39,25 @@ export function GlobalTracksEditor({
   const totalCells = visibleGrids;
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
 
-  const inWindow = <T extends { beatIndex: number }>(arr: T[]) =>
-    arr.filter(e => e.beatIndex >= startGrid && e.beatIndex < startGrid + totalCells);
-
-  // Determine the "active key" at any given grid index (latest keyTrack entry ≤ idx, or default).
   const keyAt = (gridIdx: number): { root: NoteName; quality: KeyQuality } => {
     const sorted = [...keyTrack].filter(k => k.beatIndex <= gridIdx).sort((a, b) => b.beatIndex - a.beatIndex);
     if (sorted[0]) return { root: sorted[0].root, quality: sorted[0].quality };
     return { root: defaultKeyRoot, quality: defaultKeyQuality };
   };
+  const tempoAt = (gridIdx: number): number => {
+    const sorted = [...tempoTrack].filter(t => t.beatIndex <= gridIdx).sort((a, b) => b.beatIndex - a.beatIndex);
+    return sorted[0]?.bpm ?? defaultTempo;
+  };
 
-  // Chord color from active key
   const chordColor = (c: ChordTrackEntry) => {
     const k = keyAt(c.beatIndex);
     const mode = k.quality === 'Major' ? 'major' : 'minor';
     const deg = getChordDegree(k.root, c.root, c.quality, mode);
     if (deg >= 0) return SCALE_DEGREE_COLORS[deg];
-    return '28, 90%, 55%'; // non-diatonic = orange
+    return '28, 90%, 55%';
   };
 
-  const isBarLine = (cellIdx: number) => {
-    const absolute = startGrid + cellIdx;
-    return absolute % gridPerBar === 0;
-  };
+  const isBarLine = (cellIdx: number) => (startGrid + cellIdx) % gridPerBar === 0;
 
   // ============ Chord lane interactions ============
   const handleChordDrop = (cellIdx: number, e: React.DragEvent) => {
@@ -74,7 +74,7 @@ export function GlobalTracksEditor({
 
   const startTypeChord = (cellIdx: number) => {
     if (!isOwner) return;
-    const beatIndex = startGrid + Math.floor(cellIdx / GRID_PER_BEAT) * GRID_PER_BEAT;
+    const beatIndex = startGrid + Math.floor(cellIdx / gridPerBar) * gridPerBar;
     const id = `c-${Date.now()}`;
     setChordTrack([...chordTrack, { id, beatIndex, durationGrid: gridPerBar, root: 'C', quality: 'Major' }]);
     setEditingChordId(id);
@@ -90,11 +90,59 @@ export function GlobalTracksEditor({
     setChordInput('');
   };
 
+  // Generic drag/resize for chord lane (objects with beatIndex + durationGrid)
+  const dragChord = (id: string, mode: 'move' | 'resize-l' | 'resize-r', e: React.MouseEvent) => {
+    if (!isOwner) return;
+    e.stopPropagation();
+    const startX = e.clientX;
+    const c = chordTrack.find(x => x.id === id);
+    if (!c) return;
+    const startBeat = c.beatIndex;
+    const startDur = c.durationGrid;
+    const onMove = (mv: MouseEvent) => {
+      const deltaCells = Math.round((mv.clientX - startX) / CELL_W);
+      let next = { beatIndex: startBeat, durationGrid: startDur };
+      if (mode === 'move') next.beatIndex = startBeat + deltaCells;
+      if (mode === 'resize-r') next.durationGrid = Math.max(1, startDur + deltaCells);
+      if (mode === 'resize-l') {
+        const newBeat = startBeat + deltaCells;
+        const newDur = startDur - deltaCells;
+        if (newDur >= 1) { next.beatIndex = newBeat; next.durationGrid = newDur; }
+      }
+      setChordTrack(chordTrack.map(x => x.id === id ? { ...x, ...next } : x));
+    };
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  // Drag a key/tempo marker (single point, no width)
+  const dragMarker = (id: string, kind: 'key' | 'tempo', e: React.MouseEvent) => {
+    if (!isOwner) return;
+    e.stopPropagation();
+    const startX = e.clientX;
+    const arr = kind === 'key' ? keyTrack : tempoTrack;
+    const m = arr.find(x => x.id === id);
+    if (!m) return;
+    const startBeat = m.beatIndex;
+    const onMove = (mv: MouseEvent) => {
+      const deltaCells = Math.round((mv.clientX - startX) / CELL_W);
+      const newBeat = startBeat + deltaCells;
+      if (kind === 'key') {
+        setKeyTrack(keyTrack.map(x => x.id === id ? { ...x, beatIndex: newBeat } : x));
+      } else {
+        setTempoTrack(tempoTrack.map(x => x.id === id ? { ...x, beatIndex: newBeat } : x));
+      }
+    };
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
   // ============ Key lane: split-bar tool ============
   const handleKeyLaneClick = (cellIdx: number) => {
     if (!isOwner || !splitMode) return;
     const beatIndex = startGrid + Math.floor(cellIdx / gridPerBar) * gridPerBar;
-    // Don't duplicate a marker at the same position
     if (keyTrack.some(k => k.beatIndex === beatIndex)) return;
     setKeyTrack([...keyTrack, { id: `k-${Date.now()}`, beatIndex, root: pendingKey.root, quality: pendingKey.quality }]);
     setSplitMode(false);
@@ -103,48 +151,90 @@ export function GlobalTracksEditor({
   const handleTempoCellClick = (cellIdx: number) => {
     if (!isOwner) return;
     const beatIndex = startGrid + Math.floor(cellIdx / gridPerBar) * gridPerBar;
+    if (tempoTrack.some(t => t.beatIndex === beatIndex)) return;
     const id = `t-${Date.now()}`;
-    setTempoTrack([...tempoTrack, { id, beatIndex, bpm: 100 }]);
+    setTempoTrack([...tempoTrack, { id, beatIndex, bpm: defaultTempo }]);
     setEditingTempoId(id);
   };
 
-  const visChords = useMemo(() => inWindow(chordTrack), [chordTrack, startGrid, totalCells]);
-  const visTempos = useMemo(() => inWindow(tempoTrack), [tempoTrack, startGrid, totalCells]);
+  // Visible chords in window
+  const visChords = useMemo(
+    () => chordTrack.filter(c => c.beatIndex + c.durationGrid > startGrid && c.beatIndex < startGrid + totalCells),
+    [chordTrack, startGrid, totalCells],
+  );
 
-  // For the key lane: render the IMPLICIT key (from default) at the start, then any markers in window.
-  const visKeyMarkers = useMemo(() => {
-    const markers: { id: string; beatIndex: number; root: NoteName; quality: KeyQuality }[] = [];
-    // implicit start-of-window marker = active key at startGrid
-    const startKey = keyAt(startGrid);
-    markers.push({ id: '__implicit', beatIndex: startGrid, root: startKey.root, quality: startKey.quality });
-    inWindow(keyTrack).forEach(k => markers.push(k));
-    return markers;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Build "infinite" key segments — each key entry extends to the next entry (or end of window)
+  const keySegments = useMemo(() => {
+    // Sort all key markers + implicit at -Infinity (i.e. defaults)
+    const all = [
+      { id: '__implicit', beatIndex: -Infinity, root: defaultKeyRoot, quality: defaultKeyQuality },
+      ...keyTrack,
+    ].sort((a, b) => a.beatIndex - b.beatIndex);
+    const segs: Array<{ id: string; from: number; to: number; root: NoteName; quality: KeyQuality; isImplicit: boolean }> = [];
+    for (let i = 0; i < all.length; i++) {
+      const cur = all[i];
+      const next = all[i + 1];
+      const from = cur.beatIndex === -Infinity ? startGrid : cur.beatIndex;
+      const to = next ? next.beatIndex : startGrid + totalCells;
+      // only push if visible
+      if (to > startGrid && from < startGrid + totalCells) {
+        segs.push({
+          id: cur.id, from, to,
+          root: cur.root, quality: cur.quality,
+          isImplicit: cur.id === '__implicit' || cur.beatIndex < startGrid && i === 0,
+        });
+      }
+    }
+    return segs;
   }, [keyTrack, startGrid, totalCells, defaultKeyRoot, defaultKeyQuality]);
 
+  const tempoSegments = useMemo(() => {
+    const all = [
+      { id: '__implicit', beatIndex: -Infinity, bpm: defaultTempo },
+      ...tempoTrack,
+    ].sort((a, b) => a.beatIndex - b.beatIndex);
+    const segs: Array<{ id: string; from: number; to: number; bpm: number; isImplicit: boolean }> = [];
+    for (let i = 0; i < all.length; i++) {
+      const cur = all[i];
+      const next = all[i + 1];
+      const from = cur.beatIndex === -Infinity ? startGrid : cur.beatIndex;
+      const to = next ? next.beatIndex : startGrid + totalCells;
+      if (to > startGrid && from < startGrid + totalCells) {
+        segs.push({ id: cur.id, from, to, bpm: cur.bpm, isImplicit: cur.id === '__implicit' });
+      }
+    }
+    return segs;
+  }, [tempoTrack, startGrid, totalCells, defaultTempo]);
+
+  const tryDeleteChord = (id: string) => deleteMode && setChordTrack(chordTrack.filter(x => x.id !== id));
+  const tryDeleteKey = (id: string) => deleteMode && id !== '__implicit' && setKeyTrack(keyTrack.filter(x => x.id !== id));
+  const tryDeleteTempo = (id: string) => deleteMode && id !== '__implicit' && setTempoTrack(tempoTrack.filter(x => x.id !== id));
+
   return (
-    <div className="border border-border rounded-lg bg-card overflow-x-auto">
+    <div className="border border-border rounded-lg bg-card overflow-x-auto relative">
       <div className="relative" style={{ width: totalCells * CELL_W + LANE_LABEL_W, minWidth: '100%' }}>
         {/* ============ Chord lane ============ */}
-        <Lane label="Chords" color="hsl(210, 80%, 55%)" totalCells={totalCells} isBarLine={isBarLine}
+        <Lane label="Chords" totalCells={totalCells} isBarLine={isBarLine}
           onCellDoubleClick={startTypeChord}
-          onCellDrop={handleChordDrop}
-          allowDrop>
+          onCellDrop={handleChordDrop} allowDrop>
           {visChords.map(c => {
             const local = c.beatIndex - startGrid;
             const color = chordColor(c);
             const editing = editingChordId === c.id;
             return (
               <div key={c.id}
-                className="absolute top-1 rounded-md text-[11px] font-mono z-20 flex items-center px-1.5 gap-1 group"
+                onClick={(e) => { e.stopPropagation(); tryDeleteChord(c.id); }}
+                onMouseDown={(e) => !deleteMode && !editing && dragChord(c.id, 'move', e)}
+                className={`absolute top-0.5 bottom-0.5 rounded-md text-[11px] font-mono z-20 flex items-center px-2 select-none overflow-hidden ${deleteMode ? 'cursor-not-allowed ring-2 ring-destructive' : 'cursor-move'}`}
                 style={{
                   left: LANE_LABEL_W + local * CELL_W,
                   width: c.durationGrid * CELL_W - 2,
-                  height: ROW_H - 4,
-                  background: `hsl(${color} / 0.30)`,
-                  border: `1px solid hsl(${color} / 0.7)`,
-                  color: `hsl(${color})`,
+                  background: `hsl(${color})`,
+                  color: 'white',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                 }}>
+                {/* left resize */}
+                <div onMouseDown={(e) => dragChord(c.id, 'resize-l', e)} className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-white/30" />
                 {editing && isOwner ? (
                   <input
                     autoFocus
@@ -156,93 +246,109 @@ export function GlobalTracksEditor({
                       if (e.key === 'Escape') { setEditingChordId(null); setChordInput(''); }
                     }}
                     onBlur={() => commitChordType(c.id)}
+                    onClick={e => e.stopPropagation()}
+                    onMouseDown={e => e.stopPropagation()}
                     className="bg-background/80 text-foreground text-[11px] rounded px-1 outline-none flex-1 min-w-0"
                   />
                 ) : (
                   <button
-                    onDoubleClick={() => {
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
                       setEditingChordId(c.id);
                       setChordInput(chordToShortLabel(c.root, c.quality));
                     }}
-                    className="flex-1 text-left font-bold truncate"
-                    title="Double-click to type new chord"
+                    className="flex-1 text-left font-bold truncate px-1"
+                    title="Double-click to rename — drag edges to resize — drag body to move"
                   >{chordToShortLabel(c.root, c.quality)}</button>
                 )}
-                <button
-                  onClick={() => setChordTrack(chordTrack.filter(x => x.id !== c.id))}
-                  className="opacity-0 group-hover:opacity-100 text-destructive transition-opacity"
-                  title="Delete chord"
-                ><Trash2 className="size-3" /></button>
+                {/* right resize */}
+                <div onMouseDown={(e) => dragChord(c.id, 'resize-r', e)} className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-white/30" />
               </div>
             );
           })}
         </Lane>
 
-        {/* ============ Key lane ============ */}
-        <Lane label="Key" color="hsl(280, 70%, 60%)" totalCells={totalCells} isBarLine={isBarLine}
+        {/* ============ Key lane (infinite segments) ============ */}
+        <Lane label="Key" totalCells={totalCells} isBarLine={isBarLine}
           onCellClick={handleKeyLaneClick}>
-          {visKeyMarkers.map(k => {
-            const local = Math.max(0, k.beatIndex - startGrid);
-            const isImplicit = k.id === '__implicit';
+          {keySegments.map(seg => {
+            const localFrom = Math.max(0, seg.from - startGrid);
+            const localTo = Math.min(totalCells, seg.to - startGrid);
+            const width = (localTo - localFrom) * CELL_W - 2;
             return (
-              <div key={k.id} className="absolute top-1 rounded text-[10px] font-mono z-20 flex items-center px-2 gap-1 group"
+              <div key={seg.id}
+                onClick={(e) => { e.stopPropagation(); tryDeleteKey(seg.id); }}
+                onMouseDown={(e) => !deleteMode && !seg.isImplicit && dragMarker(seg.id, 'key', e)}
+                className={`absolute top-0.5 bottom-0.5 rounded text-[10px] font-mono z-20 flex items-center px-2 gap-1 select-none overflow-hidden ${
+                  deleteMode && !seg.isImplicit ? 'cursor-not-allowed ring-2 ring-destructive' : seg.isImplicit ? '' : 'cursor-move'
+                }`}
                 style={{
-                  left: LANE_LABEL_W + local * CELL_W,
-                  height: ROW_H - 4,
-                  background: 'hsl(280, 70%, 60%, 0.25)',
-                  border: `1px ${isImplicit ? 'dashed' : 'solid'} hsl(280, 70%, 60%, 0.7)`,
-                  color: 'hsl(280, 70%, 80%)',
-                }}>
-                <span className="font-bold">🎼 {k.root} {k.quality}</span>
-                {!isImplicit && isOwner && (
-                  <button onClick={() => setKeyTrack(keyTrack.filter(x => x.id !== k.id))}
-                    className="opacity-0 group-hover:opacity-100 text-destructive">
-                    <Trash2 className="size-3" />
-                  </button>
-                )}
+                  left: LANE_LABEL_W + localFrom * CELL_W,
+                  width,
+                  background: 'hsl(280, 70%, 55%)',
+                  color: 'white',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                  opacity: seg.isImplicit ? 0.7 : 1,
+                }}
+                title={seg.isImplicit ? 'Default key (set in scale selector)' : 'Drag to move • cmd-click to delete'}>
+                <span className="font-bold whitespace-nowrap">🎼 {seg.root} {seg.quality}</span>
               </div>
             );
           })}
         </Lane>
 
-        {/* ============ Tempo lane ============ */}
-        <Lane label="Tempo" color="hsl(40, 80%, 55%)" totalCells={totalCells} isBarLine={isBarLine}
+        {/* ============ Tempo lane (infinite segments) ============ */}
+        <Lane label="Tempo" totalCells={totalCells} isBarLine={isBarLine}
           onCellClick={handleTempoCellClick}>
-          {visTempos.map(t => {
-            const local = t.beatIndex - startGrid;
-            const editing = editingTempoId === t.id;
+          {tempoSegments.map(seg => {
+            const localFrom = Math.max(0, seg.from - startGrid);
+            const localTo = Math.min(totalCells, seg.to - startGrid);
+            const width = (localTo - localFrom) * CELL_W - 2;
+            const editing = editingTempoId === seg.id;
             return (
-              <div key={t.id} className="absolute top-1 rounded text-[10px] font-mono z-20 flex items-center px-2 gap-1 group"
+              <div key={seg.id}
+                onClick={(e) => { e.stopPropagation(); tryDeleteTempo(seg.id); }}
+                onMouseDown={(e) => !deleteMode && !seg.isImplicit && !editing && dragMarker(seg.id, 'tempo', e)}
+                className={`absolute top-0.5 bottom-0.5 rounded text-[10px] font-mono z-20 flex items-center px-2 gap-1 select-none overflow-hidden ${
+                  deleteMode && !seg.isImplicit ? 'cursor-not-allowed ring-2 ring-destructive' : seg.isImplicit ? '' : 'cursor-move'
+                }`}
                 style={{
-                  left: LANE_LABEL_W + local * CELL_W,
-                  height: ROW_H - 4,
-                  background: 'hsl(40, 80%, 55%, 0.25)',
-                  border: '1px solid hsl(40, 80%, 55%, 0.7)',
-                  color: 'hsl(40, 80%, 80%)',
+                  left: LANE_LABEL_W + localFrom * CELL_W,
+                  width,
+                  background: 'hsl(40, 80%, 50%)',
+                  color: 'white',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                  opacity: seg.isImplicit ? 0.7 : 1,
                 }}>
                 {editing && isOwner ? (
-                  <input type="number" autoFocus min={40} max={240} value={t.bpm}
-                    onChange={e => setTempoTrack(tempoTrack.map(x => x.id === t.id ? { ...x, bpm: parseInt(e.target.value, 10) || 100 } : x))}
+                  <input type="number" autoFocus min={40} max={240} value={seg.bpm}
+                    onChange={e => setTempoTrack(tempoTrack.map(x => x.id === seg.id ? { ...x, bpm: parseInt(e.target.value, 10) || 100 } : x))}
                     onBlur={() => setEditingTempoId(null)}
                     onKeyDown={e => { if (e.key === 'Enter') setEditingTempoId(null); }}
+                    onClick={e => e.stopPropagation()}
+                    onMouseDown={e => e.stopPropagation()}
                     className="bg-background/80 text-foreground text-[10px] rounded w-12 px-1 outline-none" />
                 ) : (
-                  <button onDoubleClick={() => setEditingTempoId(t.id)} className="font-bold">♩= {t.bpm}</button>
-                )}
-                {isOwner && (
-                  <button onClick={() => setTempoTrack(tempoTrack.filter(x => x.id !== t.id))}
-                    className="opacity-0 group-hover:opacity-100 text-destructive">
-                    <Trash2 className="size-3" />
-                  </button>
+                  <button
+                    onDoubleClick={(e) => { e.stopPropagation(); if (!seg.isImplicit) setEditingTempoId(seg.id); }}
+                    className="font-bold whitespace-nowrap"
+                    title={seg.isImplicit ? 'Default tempo' : 'Double-click to edit'}
+                  >♩= {seg.bpm}</button>
                 )}
               </div>
             );
           })}
         </Lane>
+
+        {/* Playhead spanning all 3 lanes */}
+        {playheadGrid != null && playheadGrid >= startGrid && playheadGrid < startGrid + totalCells && (
+          <div className="absolute top-0 bottom-0 w-0.5 bg-primary z-30 pointer-events-none transition-[left] duration-150"
+            style={{ left: LANE_LABEL_W + (playheadGrid - startGrid) * CELL_W, boxShadow: '0 0 8px hsl(var(--primary))' }} />
+        )}
       </div>
 
       {isOwner && (
-        <div className="flex items-center gap-3 px-3 py-2 border-t border-border bg-muted/10 text-[10px] font-mono text-muted-foreground">
+        <div className="flex items-center gap-3 px-3 py-2 border-t border-border bg-muted/10 text-[10px] font-mono text-muted-foreground flex-wrap">
           <button
             onClick={() => setSplitMode(s => !s)}
             className={`inline-flex items-center gap-1 px-2 py-1 rounded border transition-colors ${
@@ -253,7 +359,7 @@ export function GlobalTracksEditor({
             <Scissors className="size-3" />
             Split bar → new key ({pendingKey.root} {pendingKey.quality})
           </button>
-          <span>Drag chords from the palette • Double-click empty chord cell to type • Double-click tempo cell to edit</span>
+          <span>Drag chords from palette • Double-click empty chord cell to type • Drag edges to resize • Hold ⌘ and click to delete</span>
         </div>
       )}
     </div>
@@ -262,7 +368,6 @@ export function GlobalTracksEditor({
 
 interface LaneProps {
   label: string;
-  color: string;
   totalCells: number;
   isBarLine: (cellIdx: number) => boolean;
   onCellClick?: (cellIdx: number) => void;
@@ -272,11 +377,11 @@ interface LaneProps {
   children: React.ReactNode;
 }
 
-function Lane({ label, color, totalCells, isBarLine, onCellClick, onCellDoubleClick, onCellDrop, allowDrop, children }: LaneProps) {
+function Lane({ label, totalCells, isBarLine, onCellClick, onCellDoubleClick, onCellDrop, allowDrop, children }: LaneProps) {
   return (
     <div className="relative border-b border-border" style={{ height: ROW_H }}>
-      <div className="absolute left-0 top-0 h-full flex items-center justify-center text-[9px] font-mono uppercase tracking-wider bg-muted/30 border-r border-border z-10"
-        style={{ width: LANE_LABEL_W, color }}>{label}</div>
+      <div className="absolute left-0 top-0 h-full flex items-center justify-center text-[9px] font-mono uppercase tracking-wider bg-muted/30 border-r border-border z-10 text-muted-foreground"
+        style={{ width: LANE_LABEL_W }}>{label}</div>
       <div className="absolute inset-0 flex" style={{ left: LANE_LABEL_W }}>
         {Array.from({ length: totalCells }).map((_, cellIdx) => (
           <div
