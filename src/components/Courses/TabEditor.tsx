@@ -658,8 +658,8 @@ export function TabEditor({
           <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[9px] font-mono z-10"
             style={{ color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>♪</div>
           <div className="absolute inset-0 left-6">
-            {beatGroups.map(([beatIdx, notes]) => {
-              const dur = Math.max(...notes.map(n => n.durationGrid));
+            {beatGroups.map(([beatIdx, notes, clusterDur]) => {
+              const dur = clusterDur;
               const kind: NoteKind = notes.length > 1
                 ? 'chord'
                 : (() => { const n = notes[0]; const pc = ((tuning[n.stringIndex] ?? 0) + n.fret) % 12; return diatonicPC.has(pc) ? 'diatonic' : 'non-diatonic'; })();
