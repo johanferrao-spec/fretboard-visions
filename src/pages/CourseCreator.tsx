@@ -135,16 +135,26 @@ export default function CourseCreator() {
     }
   };
 
-  // Track ⌘/Ctrl for delete-mode UI
+  // Track ⌘/Ctrl for delete-mode UI + Space shortcut for play/stop
   useEffect(() => {
-    const onKD = (e: KeyboardEvent) => { if (e.metaKey || e.ctrlKey) setDeleteMode(true); };
+    const onKD = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) setDeleteMode(true);
+      if (e.code === 'Space') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+        e.preventDefault();
+        if (isPlaying) { player.stop(); setIsPlaying(false); setPlayheadGrid(0); }
+        else { onPlay(); }
+      }
+    };
     const onKU = (e: KeyboardEvent) => { if (!e.metaKey && !e.ctrlKey) setDeleteMode(false); };
     const onBlur = () => setDeleteMode(false);
     window.addEventListener('keydown', onKD);
     window.addEventListener('keyup', onKU);
     window.addEventListener('blur', onBlur);
     return () => { window.removeEventListener('keydown', onKD); window.removeEventListener('keyup', onKU); window.removeEventListener('blur', onBlur); };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, phrase.notes, phrase.lengthGrid, tempo]);
 
   // Wire up fretboard clicks. If exactly one tab note is selected → set its fret/string.
   // Otherwise → stage the click as part of a chord/note to insert.
