@@ -437,21 +437,21 @@ export function TabEditor({
   const verticalLines = useMemo(() => {
     const lines: Array<{ x: number; kind: 'bar' | 'beat' | 'sub' }> = [];
     const step = SUBDIVISION_STEP[subdivision];
-    // First, draw bar + beat lines (always integer cells)
+    // Bar lines are ALWAYS drawn (orientation anchor). Beat + sub lines only in '16th' mode.
     for (let cell = 0; cell <= totalCells; cell++) {
       const abs = startGrid + cell;
-      if (abs % gridPerBar === 0) lines.push({ x: cell * CELL_W, kind: 'bar' });
-      else if (abs % GRID_PER_BEAT === 0) lines.push({ x: cell * CELL_W, kind: 'beat' });
+      if (abs % gridPerBar === 0) {
+        lines.push({ x: cell * CELL_W, kind: 'bar' });
+      } else if (gridMode === '16th' && abs % GRID_PER_BEAT === 0) {
+        lines.push({ x: cell * CELL_W, kind: 'beat' });
+      }
     }
-    // Then subdivision lines (skip if they coincide with bar/beat). Only in 16th-grid mode.
     if (gridMode === '16th') {
       const startAbs = startGrid;
       const endAbs = startGrid + totalCells;
-      // Snap start to nearest subdivision tick at or after startAbs
       const firstTick = Math.ceil(startAbs / step) * step;
       for (let t = firstTick; t < endAbs + 0.0001; t += step) {
         const cellPos = t - startAbs;
-        // Skip if this coincides with an integer cell that's already a bar/beat
         const onBar = Math.abs((startAbs + cellPos) % gridPerBar) < 0.0001;
         const onBeat = Math.abs((startAbs + cellPos) % GRID_PER_BEAT) < 0.0001;
         if (onBar || onBeat) continue;
@@ -459,7 +459,7 @@ export function TabEditor({
       }
     }
     return lines;
-  }, [totalCells, startGrid, gridPerBar, gridMode, subdivision]);
+  }, [totalCells, startGrid, gridPerBar, gridMode, subdivision, CELL_W]);
 
   // ===== Tab-style technique notation rendering (slurs, slides, bends, etc.) =====
   /** Find the next note on the same string after a given note. */
