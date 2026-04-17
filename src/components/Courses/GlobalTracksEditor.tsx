@@ -20,11 +20,17 @@ interface Props {
   deleteMode: boolean;
   /** Optional playhead in absolute grid units. */
   playheadGrid?: number | null;
+  /** Cell width — kept in sync with TabEditor for column alignment. */
+  cellW: number;
+  /** Optional draggable insertion cursor in absolute grid units. */
+  cursorGrid?: number;
+  setCursorGrid?: (g: number) => void;
 }
 
-const CELL_W = 28;
 const ROW_H = 28;
+/** Shared gutter width with TabEditor for perfect column alignment. */
 const LANE_LABEL_W = 64;
+const BAR_ROW_H = 18;
 
 export function GlobalTracksEditor({
   chordTrack, setChordTrack, keyTrack, setKeyTrack, tempoTrack, setTempoTrack,
