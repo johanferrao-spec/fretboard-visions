@@ -67,12 +67,10 @@ export default function CourseCreator() {
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setAuthChecked(true);
-      if (!data.session) nav('/auth');
-    });
+    // Auth disabled for now — preview without sign-in.
+    setAuthChecked(true);
     requestAnimationFrame(() => requestAnimationFrame(() => setAnimateIn(true)));
-  }, [nav]);
+  }, []);
 
   useEffect(() => {
     if (!tabId) return;
