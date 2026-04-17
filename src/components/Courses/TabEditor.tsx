@@ -5,6 +5,7 @@ import { NOTE_NAMES, SCALE_FORMULAS, SCALE_DEGREE_COLORS } from '@/lib/music';
 import { KEY_QUALITY_SCALE, type KeyQuality } from '@/lib/courseTypes';
 import type { NoteName } from '@/lib/music';
 import { Trash2, Grid3x3, Music, ChevronDown, Palette } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 /** Subdivision options. Step = grid units between consecutive snap points. */
 export type Subdivision = '1/4' | '1/6' | '1/8' | '1/12' | '1/16' | '1/24';
@@ -52,6 +53,15 @@ interface Props {
   chordTrack: ChordTrackEntry[];
   /** Hide the local bar-marker row (when parent renders a shared one above). */
   hideBarRow?: boolean;
+  /** Optional global tracks (chord/key/tempo) rendered inside the editor below the bar row. */
+  tracksSlot?: React.ReactNode;
+  /** Visibility toggles for chord / key / tempo lanes (controlled by parent). */
+  showChordTrack?: boolean;
+  setShowChordTrack?: (v: boolean) => void;
+  showKeyTrack?: boolean;
+  setShowKeyTrack?: (v: boolean) => void;
+  showTempoTrack?: boolean;
+  setShowTempoTrack?: (v: boolean) => void;
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
@@ -68,6 +78,8 @@ export function TabEditor({
   selectedIds, setSelectedIds, startGrid = 0, visibleGrids, playheadGrid,
   pickedFretboardNote, deleteMode, cursorGrid, setCursorGrid,
   subdivision, setSubdivision, cellW, setCellW, chordTrack, hideBarRow,
+  tracksSlot, showChordTrack = true, setShowChordTrack,
+  showKeyTrack = true, setShowKeyTrack, showTempoTrack = true, setShowTempoTrack,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingFret, setEditingFret] = useState<{ id: string; value: string } | null>(null);
