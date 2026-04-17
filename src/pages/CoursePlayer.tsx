@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Mic, MicOff, RotateCcw } from 'lucide-react';
 import { usePitchDetector } from '@/hooks/usePitchDetector';
@@ -9,6 +8,7 @@ import Fretboard from '@/components/Fretboard';
 import type { CourseTabRow } from '@/lib/courseTypes';
 import { KEY_QUALITY_SCALE } from '@/lib/courseTypes';
 import { STANDARD_TUNING } from '@/lib/music';
+import { getTab } from '@/lib/courseStorage';
 
 export default function CoursePlayer() {
   const { courseId, tabId } = useParams<{ courseId: string; tabId: string }>();
@@ -29,11 +29,10 @@ export default function CoursePlayer() {
 
   useEffect(() => {
     if (!tabId) return;
-    supabase.from('course_tabs').select('*').eq('id', tabId).single().then(({ data, error }) => {
-      if (error || !data) { setLoading(false); return; }
-      setTab(data as unknown as CourseTabRow);
-      setLoading(false);
-    });
+    const data = getTab(tabId);
+    if (!data) { setLoading(false); return; }
+    setTab(data as CourseTabRow);
+    setLoading(false);
   }, [tabId]);
 
   // Sync fretboard scale with lesson key

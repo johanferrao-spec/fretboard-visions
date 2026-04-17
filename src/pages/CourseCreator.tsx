@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useCourseTabs } from '@/hooks/useCourses';
 import { useFretboard } from '@/hooks/useFretboard';
 import Fretboard from '@/components/Fretboard';
@@ -19,6 +18,7 @@ import type { CoursePhrase, CourseTabRow, KeyQuality, ChordTrackEntry, KeyChange
 import { GRID_PER_BEAT, KEY_QUALITY_SCALE } from '@/lib/courseTypes';
 import { STANDARD_TUNING, type NoteName } from '@/lib/music';
 import type { Subdivision } from '@/components/Courses/TabEditor';
+import { getTab } from '@/lib/courseStorage';
 
 /** Subdivision → grid units. Triplets produce non-integer steps (LCM is fractional). */
 const SUB_STEP: Record<Subdivision, number> = {
@@ -87,21 +87,19 @@ export default function CourseCreator() {
 
   useEffect(() => {
     if (!tabId) return;
-    supabase.from('course_tabs').select('*').eq('id', tabId).single().then(({ data, error }) => {
-      if (error || !data) { setLoading(false); return; }
-      const t = data as unknown as CourseTabRow;
-      setTab(t);
-      setTitle(t.title);
-      setKeyRoot(t.key_root);
-      setKeyQuality(t.key_quality);
-      setTimeSig(t.time_signature);
-      setTempo(t.tempo);
-      setPhrase(t.phrase ?? { notes: [], lengthGrid: GRID_PER_BEAT * 4 * 4 });
-      setChordTrack(Array.isArray(t.chord_track) ? t.chord_track : []);
-      setKeyTrack(Array.isArray(t.key_track) ? t.key_track : []);
-      setTempoTrack(Array.isArray(t.tempo_track) ? t.tempo_track : []);
-      setLoading(false);
-    });
+    const t = getTab(tabId);
+    if (!t) { setLoading(false); return; }
+    setTab(t);
+    setTitle(t.title);
+    setKeyRoot(t.key_root);
+    setKeyQuality(t.key_quality);
+    setTimeSig(t.time_signature);
+    setTempo(t.tempo);
+    setPhrase(t.phrase ?? { notes: [], lengthGrid: GRID_PER_BEAT * 4 * 4 });
+    setChordTrack(Array.isArray(t.chord_track) ? t.chord_track : []);
+    setKeyTrack(Array.isArray(t.key_track) ? t.key_track : []);
+    setTempoTrack(Array.isArray(t.tempo_track) ? t.tempo_track : []);
+    setLoading(false);
   }, [tabId]);
 
   // Sync fretboard primary scale with key

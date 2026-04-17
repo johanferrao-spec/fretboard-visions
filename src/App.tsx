@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import AuthPage from "./pages/Auth.tsx";
 import Courses from "./pages/Courses.tsx";
 import CourseDetail from "./pages/CourseDetail.tsx";
 import CourseCreator from "./pages/CourseCreator.tsx";
@@ -21,7 +20,6 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<AuthPage />} />
           <Route path="/courses" element={<Courses />} />
           <Route path="/courses/:courseId" element={<CourseDetail />} />
           <Route path="/courses/:courseId/lessons/:tabId/edit" element={<CourseCreator />} />

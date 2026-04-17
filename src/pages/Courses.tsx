@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useCourses } from '@/hooks/useCourses';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, LogOut, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Courses() {
@@ -17,8 +16,6 @@ export default function Courses() {
     setAuthChecked(true);
     requestAnimationFrame(() => requestAnimationFrame(() => setAnimateIn(true)));
   }, []);
-
-  const onLogout = async () => { await supabase.auth.signOut(); nav('/'); };
 
   const goBack = () => {
     setAnimateIn(false);
@@ -53,7 +50,6 @@ export default function Courses() {
         </button>
         <h1 className="text-xl font-semibold">Courses</h1>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onLogout}><LogOut className="size-4 mr-1" /> Sign out</Button>
           <Button size="sm" onClick={onNewCourse}><Plus className="size-4 mr-1" /> New course</Button>
         </div>
       </header>
