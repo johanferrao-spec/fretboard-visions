@@ -787,8 +787,11 @@ export function TabEditor({
                     width: noteW,
                     height: ROW_H - 8,
                     lineHeight: `${ROW_H - 8}px`,
-                    color: noteTextColor,
-                    background: 'white',
+                    color: degreeColours ? 'white' : noteTextColor,
+                    background: degreeColours
+                      ? `hsl(${noteDegreeColour(n) ?? '0, 0%, 50%'})`
+                      : 'white',
+                    textShadow: degreeColours ? '0 1px 1px rgba(0,0,0,0.4)' : undefined,
                     paddingLeft: 2,
                     paddingRight: 2,
                   }}
