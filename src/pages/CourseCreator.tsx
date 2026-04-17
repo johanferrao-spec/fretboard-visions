@@ -301,7 +301,7 @@ export default function CourseCreator() {
           {/* Interactive fretboard (input + visualizer) */}
           <section className="border border-border rounded-2xl bg-card p-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Interactive fretboard — click frets to stage a chord/note</p>
+              <div /> {/* hint removed per request */}
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={clearStaged} disabled={stagedNotes.length === 0}>Clear</Button>
                 <Button size="sm" onClick={onInsert} disabled={stagedNotes.length === 0}>
@@ -325,7 +325,7 @@ export default function CourseCreator() {
               primaryColor={fb.primaryColor}
               activeChord={null}
               orientation={fb.orientation}
-              showFretBox={fb.showFretBox}
+              showFretBox={false}
               fretBoxStart={fb.fretBoxStart}
               fretBoxSize={fb.fretBoxSize}
               setFretBoxStart={fb.setFretBoxStart}
@@ -335,7 +335,7 @@ export default function CourseCreator() {
               setFretBoxStringStart={fb.setFretBoxStringStart}
               setFretBoxStringSize={fb.setFretBoxStringSize}
               noteMarkerSize={fb.noteMarkerSize}
-              degreeColors={fb.degreeColors}
+              degreeColors={false}
               setDegreeColors={fb.setDegreeColors}
               disabledDegrees={fb.disabledDegrees}
               toggleDegree={fb.toggleDegree}
