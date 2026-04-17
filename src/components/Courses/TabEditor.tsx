@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import type { CoursePhrase, CourseNote, NoteKind, Technique } from '@/lib/courseTypes';
+import type { CoursePhrase, CourseNote, NoteKind, Technique, ChordTrackEntry } from '@/lib/courseTypes';
 import { GRID_PER_BEAT, NOTE_KIND_COLOR } from '@/lib/courseTypes';
-import { NOTE_NAMES, SCALE_FORMULAS } from '@/lib/music';
+import { NOTE_NAMES, SCALE_FORMULAS, SCALE_DEGREE_COLORS } from '@/lib/music';
 import { KEY_QUALITY_SCALE, type KeyQuality } from '@/lib/courseTypes';
 import type { NoteName } from '@/lib/music';
-import { Trash2, Grid3x3, Music, ChevronDown } from 'lucide-react';
+import { Trash2, Grid3x3, Music, ChevronDown, Palette } from 'lucide-react';
 
 /** Subdivision options. Step = grid units between consecutive snap points. */
 export type Subdivision = '1/4' | '1/6' | '1/8' | '1/12' | '1/16' | '1/24';
@@ -45,19 +45,29 @@ interface Props {
   /** Currently selected subdivision (lifted to parent for shared default duration). */
   subdivision: Subdivision;
   setSubdivision: (s: Subdivision) => void;
+  /** Cell width in px (controlled by parent so global tracks can match). */
+  cellW: number;
+  setCellW: (w: number) => void;
+  /** Chord lane entries — used for degree-colour mode. */
+  chordTrack: ChordTrackEntry[];
+  /** Hide the local bar-marker row (when parent renders a shared one above). */
+  hideBarRow?: boolean;
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
-const CELL_W = 28;
 const ROW_H = 26;
 const BAR_ROW_H = 18;
-const LABEL_W = 24; // left gutter (string labels / bar number gutter)
+/** Shared gutter width across TabEditor + GlobalTracksEditor so columns align. */
+export const TAB_LABEL_W = 64;
+export const MIN_CELL_W = 14;
+export const MAX_CELL_W = 56;
+const LABEL_W = TAB_LABEL_W;
 
 export function TabEditor({
   phrase, setPhrase, tuning, keyRoot, keyQuality, beatsPerBar,
   selectedIds, setSelectedIds, startGrid = 0, visibleGrids, playheadGrid,
   pickedFretboardNote, deleteMode, cursorGrid, setCursorGrid,
-  subdivision, setSubdivision,
+  subdivision, setSubdivision, cellW, setCellW, chordTrack, hideBarRow,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingFret, setEditingFret] = useState<{ id: string; value: string } | null>(null);
@@ -65,6 +75,9 @@ export function TabEditor({
   /** Grid display mode: '16th' = subdivision lines per current subdivision; 'rests' = no subdivisions. */
   const [gridMode, setGridMode] = useState<'16th' | 'rests'>('16th');
   const [subOpen, setSubOpen] = useState(false);
+  /** Degree-colour mode: tints fret-number cells by their scale degree relative to the chord at that beat. */
+  const [degreeColours, setDegreeColours] = useState(false);
+  const CELL_W = cellW;
 
   /** The default duration of a new note equals the current subdivision length. */
   const defaultDur = SUBDIVISION_STEP[subdivision];
@@ -299,6 +312,34 @@ export function TabEditor({
     return NOTE_NAMES[(pc + 12) % 12];
   };
 
+  /** Major-scale interval table for measuring degree from a chord root. */
+  const MAJ_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
+  /** Find the chord (from chordTrack) that's sounding at a given grid position. */
+  const chordAtBeat = (g: number): ChordTrackEntry | null => {
+    for (const c of chordTrack) {
+      if (g >= c.beatIndex && g < c.beatIndex + c.durationGrid) return c;
+    }
+    return null;
+  };
+  /** Compute the scale-degree colour (HSL string) for a note relative to the chord at its beat. */
+  const noteDegreeColour = (n: CourseNote): string | null => {
+    const chord = chordAtBeat(n.beatIndex);
+    let rootPc: number;
+    if (chord) {
+      rootPc = NOTE_NAMES.indexOf(chord.root);
+    } else {
+      // Fallback: use the lesson's key root.
+      rootPc = NOTE_NAMES.indexOf(keyRoot);
+    }
+    if (rootPc < 0) return null;
+    const notePc = ((tuning[n.stringIndex] ?? 0) + n.fret) % 12;
+    const interval = ((notePc - rootPc) % 12 + 12) % 12;
+    const degIdx = MAJ_INTERVALS.indexOf(interval);
+    if (degIdx >= 0) return SCALE_DEGREE_COLORS[degIdx];
+    // Chromatic note → muted grey
+    return '0, 0%, 50%';
+  };
+
   const toggleSelect = (id: string, multi: boolean) => {
     if (multi) {
       setSelectedIds(selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id]);
@@ -424,21 +465,21 @@ export function TabEditor({
   const verticalLines = useMemo(() => {
     const lines: Array<{ x: number; kind: 'bar' | 'beat' | 'sub' }> = [];
     const step = SUBDIVISION_STEP[subdivision];
-    // First, draw bar + beat lines (always integer cells)
+    // Bar lines are ALWAYS drawn (orientation anchor). Beat + sub lines only in '16th' mode.
     for (let cell = 0; cell <= totalCells; cell++) {
       const abs = startGrid + cell;
-      if (abs % gridPerBar === 0) lines.push({ x: cell * CELL_W, kind: 'bar' });
-      else if (abs % GRID_PER_BEAT === 0) lines.push({ x: cell * CELL_W, kind: 'beat' });
+      if (abs % gridPerBar === 0) {
+        lines.push({ x: cell * CELL_W, kind: 'bar' });
+      } else if (gridMode === '16th' && abs % GRID_PER_BEAT === 0) {
+        lines.push({ x: cell * CELL_W, kind: 'beat' });
+      }
     }
-    // Then subdivision lines (skip if they coincide with bar/beat). Only in 16th-grid mode.
     if (gridMode === '16th') {
       const startAbs = startGrid;
       const endAbs = startGrid + totalCells;
-      // Snap start to nearest subdivision tick at or after startAbs
       const firstTick = Math.ceil(startAbs / step) * step;
       for (let t = firstTick; t < endAbs + 0.0001; t += step) {
         const cellPos = t - startAbs;
-        // Skip if this coincides with an integer cell that's already a bar/beat
         const onBar = Math.abs((startAbs + cellPos) % gridPerBar) < 0.0001;
         const onBeat = Math.abs((startAbs + cellPos) % GRID_PER_BEAT) < 0.0001;
         if (onBar || onBeat) continue;
@@ -446,7 +487,7 @@ export function TabEditor({
       }
     }
     return lines;
-  }, [totalCells, startGrid, gridPerBar, gridMode, subdivision]);
+  }, [totalCells, startGrid, gridPerBar, gridMode, subdivision, CELL_W]);
 
   // ===== Tab-style technique notation rendering (slurs, slides, bends, etc.) =====
   /** Find the next note on the same string after a given note. */
@@ -552,9 +593,18 @@ export function TabEditor({
     return elems;
   }, [visibleNotes, phrase.notes, startGrid]);
 
+  // ===== Trackpad / Ctrl+wheel zoom on the tab grid =====
+  const onWheelZoom = (e: React.WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const delta = -e.deltaY * 0.05;
+    const next = Math.max(MIN_CELL_W, Math.min(MAX_CELL_W, cellW + delta));
+    setCellW(next);
+  };
+
   return (
     <div ref={containerRef} className="border border-border rounded-lg bg-white text-black">
-      {/* Toolbar above tab: grid mode toggle */}
+      {/* Toolbar above tab: grid mode + degree-colour toggle + subdivision */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-muted/20 border-b border-border">
         <div className="flex items-center gap-1">
           <button
@@ -571,13 +621,22 @@ export function TabEditor({
             className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
               gridMode === 'rests' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}
-            title="Hide grid; show rest symbols in gaps"
+            title="Hide all subdivisions; show rest symbols"
           >
             <Music className="size-3" /> Rests
           </button>
+          <button
+            onClick={() => setDegreeColours(d => !d)}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+              degreeColours ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            }`}
+            title="Colour fret cells by their scale degree relative to the chord at that beat"
+          >
+            <Palette className="size-3" /> Degree colours
+          </button>
         </div>
         <div className="flex items-center gap-3 relative">
-          <span className="text-[10px] font-mono text-muted-foreground">Default duration:</span>
+          <span className="text-[10px] font-mono text-muted-foreground">Default duration · ⌘/Ctrl+scroll = zoom</span>
           <button
             onClick={() => setSubOpen(o => !o)}
             className="inline-flex items-center gap-1 bg-secondary text-secondary-foreground rounded px-2 py-1 text-[10px] font-mono uppercase tracking-wider hover:bg-secondary/80"
@@ -601,7 +660,7 @@ export function TabEditor({
         </div>
 
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" onWheel={onWheelZoom}>
       <div ref={gridRef} className="relative" style={gridStyle} onMouseDown={startMarquee}>
         {/* SVG defs for arrows */}
         <svg width="0" height="0" style={{ position: 'absolute' }}>
@@ -615,22 +674,38 @@ export function TabEditor({
           </defs>
         </svg>
 
-        {/* Bar numbers row — bar numbers anchored at the EXACT same x as the bar gridlines below. */}
-        <div className="relative" style={{ height: BAR_ROW_H, borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
-          <div className="absolute left-0 top-0 h-full z-10" style={{ width: LABEL_W, background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
-          <div className="absolute inset-0" style={{ left: LABEL_W }}>
-            {barMarkers.map(({ x, barNumber }) => (
-              <div key={`bar-${barNumber}`}
-                className="absolute top-0 bottom-0 flex items-center text-[10px] font-mono font-bold pointer-events-none"
-                style={{
-                  left: x,
-                  paddingLeft: 3,
-                  color: 'rgb(0,0,0)',
-                }}
-              >{barNumber}</div>
-            ))}
+        {/* Bar numbers row — clickable to set the cursor. Hidden when parent renders a shared bar row. */}
+        {!hideBarRow && (
+          <div
+            className="relative cursor-pointer"
+            style={{ height: BAR_ROW_H, borderBottom: '1px solid rgba(0,0,0,0.15)' }}
+            onMouseDown={(e) => {
+              // Click anywhere on the bar row → snap cursor to that grid position.
+              if ((e.target as HTMLElement).closest('[data-cursor-handle]')) return;
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              const x = e.clientX - rect.left - LABEL_W;
+              if (x < 0) return;
+              const cell = x / CELL_W;
+              setCursorGrid(snapGrid(startGrid + cell));
+              e.stopPropagation();
+            }}
+            title="Click to move the insertion cursor"
+          >
+            <div className="absolute left-0 top-0 h-full z-10 pointer-events-none" style={{ width: LABEL_W, background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
+            <div className="absolute inset-0" style={{ left: LABEL_W }}>
+              {barMarkers.map(({ x, barNumber }) => (
+                <div key={`bar-${barNumber}`}
+                  className="absolute top-0 bottom-0 flex items-center text-[10px] font-mono font-bold pointer-events-none"
+                  style={{
+                    left: x,
+                    paddingLeft: 3,
+                    color: 'rgb(0,0,0)',
+                  }}
+                >{barNumber}</div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* String rows */}
         <div className="relative">
@@ -712,8 +787,11 @@ export function TabEditor({
                     width: noteW,
                     height: ROW_H - 8,
                     lineHeight: `${ROW_H - 8}px`,
-                    color: noteTextColor,
-                    background: 'white',
+                    color: degreeColours ? 'white' : noteTextColor,
+                    background: degreeColours
+                      ? `hsl(${noteDegreeColour(n) ?? '0, 0%, 50%'})`
+                      : 'white',
+                    textShadow: degreeColours ? '0 1px 1px rgba(0,0,0,0.4)' : undefined,
                     paddingLeft: 2,
                     paddingRight: 2,
                   }}
@@ -856,6 +934,7 @@ export function TabEditor({
         {(playheadGrid == null) && cursorGrid >= startGrid && cursorGrid <= startGrid + totalCells && (
           <>
             <div
+              data-cursor-handle
               className="absolute z-40 cursor-ew-resize"
               style={{
                 left: LABEL_W + (cursorGrid - startGrid) * CELL_W - 6,

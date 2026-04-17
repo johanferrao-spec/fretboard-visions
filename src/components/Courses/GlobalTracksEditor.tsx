@@ -20,24 +20,43 @@ interface Props {
   deleteMode: boolean;
   /** Optional playhead in absolute grid units. */
   playheadGrid?: number | null;
+  /** Cell width — kept in sync with TabEditor for column alignment. */
+  cellW: number;
+  /** Optional draggable insertion cursor in absolute grid units. */
+  cursorGrid?: number;
+  setCursorGrid?: (g: number) => void;
 }
 
-const CELL_W = 28;
 const ROW_H = 28;
+/** Shared gutter width with TabEditor for perfect column alignment. */
 const LANE_LABEL_W = 64;
+const BAR_ROW_H = 18;
 
 export function GlobalTracksEditor({
   chordTrack, setChordTrack, keyTrack, setKeyTrack, tempoTrack, setTempoTrack,
   startGrid, visibleGrids, beatsPerBar, isOwner, defaultKeyRoot, defaultKeyQuality, defaultTempo, pendingKey,
-  deleteMode, playheadGrid,
+  deleteMode, playheadGrid, cellW, cursorGrid, setCursorGrid,
 }: Props) {
   const [editingChordId, setEditingChordId] = useState<string | null>(null);
   const [chordInput, setChordInput] = useState('');
   const [editingTempoId, setEditingTempoId] = useState<string | null>(null);
   const [splitMode, setSplitMode] = useState(false);
+  const CELL_W = cellW;
 
   const totalCells = visibleGrids;
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
+
+  /** Bar markers — same calc as TabEditor for column alignment. */
+  const barMarkers = useMemo(() => {
+    const out: Array<{ x: number; barNumber: number }> = [];
+    for (let cell = 0; cell <= totalCells; cell++) {
+      const abs = startGrid + cell;
+      if (abs % gridPerBar === 0) {
+        out.push({ x: cell * CELL_W, barNumber: Math.floor(abs / gridPerBar) + 1 });
+      }
+    }
+    return out;
+  }, [startGrid, totalCells, gridPerBar, CELL_W]);
 
   const keyAt = (gridIdx: number): { root: NoteName; quality: KeyQuality } => {
     const sorted = [...keyTrack].filter(k => k.beatIndex <= gridIdx).sort((a, b) => b.beatIndex - a.beatIndex);
@@ -213,8 +232,32 @@ export function GlobalTracksEditor({
   return (
     <div className="border border-border rounded-lg bg-card overflow-x-auto relative">
       <div className="relative" style={{ width: totalCells * CELL_W + LANE_LABEL_W, minWidth: '100%' }}>
+        {/* ============ Top bar-marker row — clickable to set the cursor ============ */}
+        <div
+          className="relative cursor-pointer"
+          style={{ height: BAR_ROW_H, borderBottom: '1px solid hsl(var(--border))' }}
+          onMouseDown={(e) => {
+            if (!setCursorGrid) return;
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const x = e.clientX - rect.left - LANE_LABEL_W;
+            if (x < 0) return;
+            setCursorGrid(Math.round(startGrid + x / CELL_W));
+          }}
+          title="Click to move the insertion cursor"
+        >
+          <div className="absolute left-0 top-0 h-full bg-muted/30 border-r border-border z-10 pointer-events-none" style={{ width: LANE_LABEL_W }} />
+          <div className="absolute inset-0" style={{ left: LANE_LABEL_W }}>
+            {barMarkers.map(({ x, barNumber }) => (
+              <div key={`bar-${barNumber}`}
+                className="absolute top-0 bottom-0 flex items-center text-[10px] font-mono font-bold pointer-events-none text-foreground"
+                style={{ left: x, paddingLeft: 3 }}
+              >{barNumber}</div>
+            ))}
+          </div>
+        </div>
+
         {/* ============ Chord lane ============ */}
-        <Lane label="Chords" totalCells={totalCells} isBarLine={isBarLine}
+        <Lane label="Chords" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
           onCellDoubleClick={startTypeChord}
           onCellDrop={handleChordDrop} allowDrop>
           {visChords.map(c => {
@@ -269,7 +312,7 @@ export function GlobalTracksEditor({
         </Lane>
 
         {/* ============ Key lane (infinite segments) ============ */}
-        <Lane label="Key" totalCells={totalCells} isBarLine={isBarLine}
+        <Lane label="Key" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
           onCellClick={handleKeyLaneClick}>
           {keySegments.map(seg => {
             const localFrom = Math.max(0, seg.from - startGrid);
@@ -298,7 +341,7 @@ export function GlobalTracksEditor({
         </Lane>
 
         {/* ============ Tempo lane (infinite segments) ============ */}
-        <Lane label="Tempo" totalCells={totalCells} isBarLine={isBarLine}
+        <Lane label="Tempo" totalCells={totalCells} cellW={CELL_W} isBarLine={isBarLine}
           onCellClick={handleTempoCellClick}>
           {tempoSegments.map(seg => {
             const localFrom = Math.max(0, seg.from - startGrid);
@@ -340,10 +383,20 @@ export function GlobalTracksEditor({
           })}
         </Lane>
 
-        {/* Playhead spanning all 3 lanes */}
+        {/* Playhead spanning all lanes */}
         {playheadGrid != null && playheadGrid >= startGrid && playheadGrid < startGrid + totalCells && (
           <div className="absolute top-0 bottom-0 w-0.5 bg-primary z-30 pointer-events-none transition-[left] duration-150"
             style={{ left: LANE_LABEL_W + (playheadGrid - startGrid) * CELL_W, boxShadow: '0 0 8px hsl(var(--primary))' }} />
+        )}
+
+        {/* Insertion-cursor dotted line — mirrors TabEditor cursor */}
+        {playheadGrid == null && cursorGrid != null && cursorGrid >= startGrid && cursorGrid <= startGrid + totalCells && (
+          <div className="absolute top-0 bottom-0 pointer-events-none z-30"
+            style={{
+              left: LANE_LABEL_W + (cursorGrid - startGrid) * CELL_W,
+              width: 1,
+              borderLeft: '1px dashed hsl(28, 90%, 55%)',
+            }} />
         )}
       </div>
 
@@ -369,6 +422,7 @@ export function GlobalTracksEditor({
 interface LaneProps {
   label: string;
   totalCells: number;
+  cellW: number;
   isBarLine: (cellIdx: number) => boolean;
   onCellClick?: (cellIdx: number) => void;
   onCellDoubleClick?: (cellIdx: number) => void;
@@ -377,7 +431,7 @@ interface LaneProps {
   children: React.ReactNode;
 }
 
-function Lane({ label, totalCells, isBarLine, onCellClick, onCellDoubleClick, onCellDrop, allowDrop, children }: LaneProps) {
+function Lane({ label, totalCells, cellW, isBarLine, onCellClick, onCellDoubleClick, onCellDrop, allowDrop, children }: LaneProps) {
   return (
     <div className="relative border-b border-border" style={{ height: ROW_H }}>
       <div className="absolute left-0 top-0 h-full flex items-center justify-center text-[9px] font-mono uppercase tracking-wider bg-muted/30 border-r border-border z-10 text-muted-foreground"
@@ -392,7 +446,7 @@ function Lane({ label, totalCells, isBarLine, onCellClick, onCellDoubleClick, on
             onDrop={allowDrop ? (e) => onCellDrop?.(cellIdx, e) : undefined}
             className="hover:bg-primary/5 cursor-pointer"
             style={{
-              width: CELL_W, height: ROW_H,
+              width: cellW, height: ROW_H,
               borderRight: isBarLine(cellIdx + 1) ? '2px solid hsl(var(--foreground) / 0.5)' : '1px solid hsl(var(--border) / 0.3)',
             }}
           />
