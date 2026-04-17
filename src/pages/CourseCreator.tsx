@@ -18,6 +18,17 @@ import { useCourseGuitarPlayer } from '@/hooks/useCourseGuitarPlayer';
 import type { CoursePhrase, CourseTabRow, KeyQuality, ChordTrackEntry, KeyChangeEntry, TempoChangeEntry, CourseNote, Technique } from '@/lib/courseTypes';
 import { GRID_PER_BEAT, KEY_QUALITY_SCALE } from '@/lib/courseTypes';
 import { STANDARD_TUNING, type NoteName } from '@/lib/music';
+import type { Subdivision } from '@/components/Courses/TabEditor';
+
+/** Subdivision → grid units. Triplets produce non-integer steps (LCM is fractional). */
+const SUB_STEP: Record<Subdivision, number> = {
+  '1/4': GRID_PER_BEAT,
+  '1/6': GRID_PER_BEAT * 2 / 3,
+  '1/8': GRID_PER_BEAT / 2,
+  '1/12': GRID_PER_BEAT / 3,
+  '1/16': 1,
+  '1/24': GRID_PER_BEAT / 6,
+};
 
 const TIME_SIGS = ['4/4', '3/4', '6/8', '2/4'];
 /** Show one bar of anacrusis before bar 1, plus 3 bars after = 4 bars visible. */
@@ -52,10 +63,10 @@ export default function CourseCreator() {
 
   // Staged input note from interactive fretboard (preview before commit via Enter)
   const [stagedNote, setStagedNote] = useState<{ stringIndex: number; fret: number } | null>(null);
-  /** Last duration used for new note inserts (defaults to 1/8 = 2 grid units). */
-  const lastDurationRef = useRef<number>(GRID_PER_BEAT / 2);
-  /** Cursor: where the next inserted note will go. Advances after each insert. */
-  const cursorRef = useRef<number>(0);
+  /** Subdivision drives BOTH grid snapping and default new-note duration. */
+  const [subdivision, setSubdivision] = useState<Subdivision>('1/8');
+  /** Insertion cursor (state, not ref) — also acts as the draggable playhead when stopped. */
+  const [cursorGrid, setCursorGrid] = useState<number>(0);
 
   // Bar window: viewport over the timeline. Indexed in MUSICAL bars (bar 1 = the first "real" bar).
   // Default: start AT bar 1 (windowStartBar = 0). User can scroll back ONE bar (-1) to view anacrusis.
