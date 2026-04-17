@@ -563,15 +563,16 @@ export function TabEditor({
           </defs>
         </svg>
 
-        {/* Bar numbers row */}
+        {/* Bar numbers row — bar numbers anchored at the EXACT same x as the bar gridlines below. */}
         <div className="relative" style={{ height: BAR_ROW_H, borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
-          <div className="absolute left-0 top-0 h-full w-6 z-10" style={{ background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
-          <div className="absolute inset-0" style={{ left: 24 }}>
-            {barMarkers.map(({ cellOffset, barNumber }) => (
-              <div key={cellOffset}
+          <div className="absolute left-0 top-0 h-full z-10" style={{ width: LABEL_W, background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }} />
+          <div className="absolute inset-0" style={{ left: LABEL_W }}>
+            {barMarkers.map(({ x, barNumber }) => (
+              <div key={`bar-${barNumber}`}
                 className="absolute top-0 bottom-0 flex items-center text-[10px] font-mono font-bold pointer-events-none"
                 style={{
-                  left: cellOffset * CELL_W + 3,
+                  left: x,
+                  paddingLeft: 3,
                   color: 'rgb(0,0,0)',
                 }}
               >{barNumber}</div>
@@ -583,13 +584,14 @@ export function TabEditor({
         <div className="relative">
           {[5, 4, 3, 2, 1, 0].map((stringIndex) => (
             <div key={stringIndex} className="relative" style={{ height: ROW_H }}>
-              <div className="absolute left-0 top-0 h-full w-6 flex items-center justify-center text-[10px] font-mono z-10"
-                style={{ color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>
+              <div className="absolute left-0 top-0 h-full flex items-center justify-center text-[10px] font-mono z-10"
+                style={{ width: LABEL_W, color: 'rgb(80,80,80)', background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.1)' }}>
                 {STRING_LABELS[stringIndex]}
               </div>
-              <div className="absolute left-6 right-0 pointer-events-none"
-                style={{ top: '50%', height: 1, background: stringLineColor, transform: 'translateY(-0.5px)' }} />
-              <div className="absolute inset-0 left-6 flex">
+              <div className="absolute pointer-events-none"
+                style={{ left: LABEL_W, right: 0, top: '50%', height: 1, background: stringLineColor, transform: 'translateY(-0.5px)' }} />
+              {/* Hit-test cells (no per-cell border — gridlines come from the absolute overlay below) */}
+              <div className="absolute inset-0 flex" style={{ left: LABEL_W }}>
                 {Array.from({ length: totalCells }).map((_, cellIdx) => (
                   <button
                     key={cellIdx}
@@ -599,10 +601,6 @@ export function TabEditor({
                       width: CELL_W,
                       height: ROW_H,
                       background: isAnacrusis(cellIdx) ? 'rgba(0,0,0,0.04)' : 'transparent',
-                      // Subdivision lines only in 16ths mode (very subtle)
-                      borderRight: gridMode === '16th'
-                        ? '1px solid rgba(0,0,0,0.05)'
-                        : 'none',
                     }}
                   />
                 ))}
@@ -610,8 +608,8 @@ export function TabEditor({
             </div>
           ))}
 
-          {/* Vertical bar/beat lines drawn as overlay (perfectly aligned with bar numbers above) */}
-          <div className="absolute inset-0 pointer-events-none" style={{ left: 24 }}>
+          {/* Vertical bar/beat/subdivision lines — single source of truth for gridlines */}
+          <div className="absolute inset-0 pointer-events-none" style={{ left: LABEL_W }}>
             {verticalLines.map((l, i) => (
               <div key={i}
                 className="absolute top-0 bottom-0"
@@ -619,7 +617,11 @@ export function TabEditor({
                   left: l.x,
                   width: l.kind === 'bar' ? 2 : 1,
                   marginLeft: l.kind === 'bar' ? -1 : 0,
-                  background: l.kind === 'bar' ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.18)',
+                  background: l.kind === 'bar'
+                    ? 'rgba(0,0,0,0.7)'
+                    : l.kind === 'beat'
+                      ? 'rgba(0,0,0,0.22)'
+                      : 'rgba(0,0,0,0.07)',
                 }}
               />
             ))}
