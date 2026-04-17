@@ -918,6 +918,7 @@ export default function Fretboard({
         style={isVertical ? { transform: 'rotate(90deg)', width: '80vh', maxWidth: 900 } : {}}
       >
         {/* Degree color key + toggles + position box toggle */}
+        {!hideToolbar && (
         <div className={`flex items-center gap-1 mb-2 flex-wrap ${isVertical ? '-rotate-90' : ''}`}>
           <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Key:</span>
           {DEGREE_LEGEND.map(d => {
@@ -929,7 +930,6 @@ export default function Fretboard({
                 key={d.label}
                 onClick={() => {
                   if (isHidden) {
-                    // Click on hidden (X) degree to restore it
                     setHiddenDegrees(prev => { const next = new Set(prev); next.delete(posKey); return next; });
                   } else {
                     toggleDegree(posKey);
@@ -938,7 +938,6 @@ export default function Fretboard({
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   if (!isHidden) {
-                    // Double-click to completely hide this degree
                     setHiddenDegrees(prev => { const next = new Set(prev); next.add(posKey); return next; });
                   }
                 }}
@@ -992,6 +991,7 @@ export default function Fretboard({
             Position focus: {showFretBox ? 'on' : 'off'}
           </button>
         </div>
+        )}
 
         {/* Fret numbers */}
         <div className="flex items-center mb-1">
