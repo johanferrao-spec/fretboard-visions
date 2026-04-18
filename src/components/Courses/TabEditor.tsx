@@ -388,38 +388,56 @@ export function TabEditor({
     }
   };
 
-  // ===== Drag duration bars =====
+  // ===== Drag duration bars (Option/Alt held = duplicate-and-drag) =====
   const dragGroup = (notes: CourseNote[], mode: 'move' | 'resize-l' | 'resize-r', e: React.MouseEvent) => {
     e.stopPropagation();
     if (deleteMode) { deleteNotes(notes.map(n => n.id)); return; }
     const startX = e.clientX;
-    const startBeat = notes[0].beatIndex;
-    const startDur = Math.max(...notes.map(n => n.durationGrid));
-    const ids = notes.map(n => n.id);
+    // If multiple notes are selected and the user grabs one of them, drag the WHOLE selection.
+    const isMultiSelected = selectedIds.length > 1 && notes.every(n => selectedIds.includes(n.id));
+    const dragSet: CourseNote[] = isMultiSelected
+      ? phrase.notes.filter(n => selectedIds.includes(n.id))
+      : notes;
+    const startBeat = Math.min(...dragSet.map(n => n.beatIndex));
+    // Option/Alt held → duplicate the dragged set and move the COPIES.
+    const altCopy = e.altKey;
+    let workingPhrase = phrase;
+    let ids: string[];
+    if (altCopy) {
+      const copies: CourseNote[] = dragSet.map(n => ({
+        ...n,
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${n.stringIndex}`,
+      }));
+      workingPhrase = { ...phrase, notes: [...phrase.notes, ...copies] };
+      setPhrase(workingPhrase);
+      ids = copies.map(n => n.id);
+      setSelectedIds(ids);
+    } else {
+      ids = dragSet.map(n => n.id);
+    }
+    const startDur = Math.max(...dragSet.map(n => n.durationGrid));
 
     const onMove = (mv: MouseEvent) => {
       const deltaCells = Math.round((mv.clientX - startX) / CELL_W);
-      let newBeat = startBeat;
-      let newDur = startDur;
-      if (mode === 'move') newBeat = startBeat + deltaCells;
-      if (mode === 'resize-r') newDur = Math.max(1, startDur + deltaCells);
-      if (mode === 'resize-l') {
-        const nb = startBeat + deltaCells;
-        const nd = startDur - deltaCells;
-        if (nd >= 1) { newBeat = nb; newDur = nd; }
+      let next = workingPhrase.notes;
+      if (mode === 'move') {
+        next = next.map(n => ids.includes(n.id) ? { ...n, beatIndex: n.beatIndex + deltaCells } : n);
+      } else {
+        // resize-l / resize-r still acts on the first/single group
+        const newDur = mode === 'resize-r'
+          ? Math.max(1, startDur + deltaCells)
+          : Math.max(1, startDur - deltaCells);
+        const newBeat = mode === 'resize-l' ? startBeat + deltaCells : startBeat;
+        next = next.map(n => ids.includes(n.id) ? { ...n, beatIndex: newBeat, durationGrid: newDur } : n);
       }
-      let next = phrase.notes;
-      const moved = ids.map(id => {
-        const orig = phrase.notes.find(x => x.id === id);
-        if (!orig) return null;
-        return { ...orig, beatIndex: newBeat, durationGrid: newDur };
-      }).filter(Boolean) as CourseNote[];
-      next = next.filter(n => !ids.includes(n.id));
+      // Trim overlaps for moved notes
+      const movedIds = new Set(ids);
+      const moved = next.filter(n => movedIds.has(n.id));
+      let other = next.filter(n => !movedIds.has(n.id));
       for (const m of moved) {
-        next = trimOverlaps(next, m.stringIndex, m.beatIndex, m.durationGrid, m.id);
+        other = trimOverlaps(other, m.stringIndex, m.beatIndex, m.durationGrid, m.id);
       }
-      next = [...next, ...moved];
-      setPhrase({ ...phrase, notes: next });
+      setPhrase({ ...workingPhrase, notes: [...other, ...moved] });
     };
     const onUp = () => {
       window.removeEventListener('mousemove', onMove);
