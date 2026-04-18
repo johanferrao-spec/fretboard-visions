@@ -347,6 +347,12 @@ export default function CourseCreator() {
       </header>
 
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <TechniqueQuickMenu
+        open={techMenuOpen}
+        onOpenChange={setTechMenuOpen}
+        onPick={applyTechnique}
+        hasSelection={selectedIds.length > 0}
+      />
 
       <div className="flex flex-col lg:flex-row gap-4 p-4">
         {/* Left column: meta + scale + diatonic chords + techniques */}
@@ -516,6 +522,8 @@ export default function CourseCreator() {
             cellW={cellW}
             setCellW={setCellW}
             chordTrack={chordTrack}
+            activePlaybackIds={activePlaybackIds}
+            onOpenTechniqueMenu={() => setTechMenuOpen(true)}
             showChordTrack={showChordTrack} setShowChordTrack={setShowChordTrack}
             showKeyTrack={showKeyTrack} setShowKeyTrack={setShowKeyTrack}
             showTempoTrack={showTempoTrack} setShowTempoTrack={setShowTempoTrack}
