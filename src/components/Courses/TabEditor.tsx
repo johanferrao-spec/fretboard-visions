@@ -467,7 +467,7 @@ export function TabEditor({
       }
     }
     return out;
-  }, [startGrid, totalCells, gridPerBar]);
+  }, [startGrid, totalCells, gridPerBar, CELL_W]);
 
   /**
    * Vertical lines (bar + beat + subdivision) drawn as absolute overlays so positions are exact.
