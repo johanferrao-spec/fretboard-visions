@@ -306,7 +306,7 @@ export default function CourseCreator() {
   // (so a held note doesn't keep re-staging).
   useEffect(() => {
     if (!listenMode || pitch.midi == null) return;
-    if (pitch.rms < 0.02) return;
+    if (pitch.rms < 0.01) return;
     if (lastStagedMidiRef.current === pitch.midi) return;
     lastStagedMidiRef.current = pitch.midi;
     // Open-string MIDI = tuning[stringIndex] + 12 * octave. STANDARD_TUNING uses pitch
