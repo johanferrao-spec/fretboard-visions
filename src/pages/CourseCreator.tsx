@@ -558,7 +558,6 @@ export default function CourseCreator() {
                 <span className="text-xs text-destructive ml-2">{pitch.error}</span>
               )}
             </div>
-            </div>
           </section>
 
           {/* Bar window controls */}
