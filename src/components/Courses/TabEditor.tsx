@@ -909,8 +909,15 @@ export function TabEditor({
                 >
                   {editingFret?.id === n.id ? (
                     <input
-                      autoFocus type="number" value={editingFret.value} min={0} max={24}
-                      onChange={e => setEditingFret({ id: n.id, value: e.target.value })}
+                      autoFocus
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={editingFret.value}
+                      onChange={e => {
+                        const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+                        setEditingFret({ id: n.id, value: v });
+                      }}
                       onBlur={() => {
                         const v = parseInt(editingFret.value, 10);
                         if (!isNaN(v) && v >= 0 && v <= 24) updateNote(n.id, { fret: v });
@@ -924,7 +931,8 @@ export function TabEditor({
                         }
                         if (e.key === 'Escape') setEditingFret(null);
                       }}
-                      className="w-full bg-transparent outline-none text-black text-center"
+                      className="w-full bg-transparent outline-none text-black text-center font-mono text-xs p-0 border-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      style={{ minWidth: 0 }}
                     />
                   ) : (
                     <span className="text-center">{n.fret}</span>
