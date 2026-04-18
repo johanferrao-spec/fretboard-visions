@@ -4,7 +4,7 @@ import { GRID_PER_BEAT, NOTE_KIND_COLOR } from '@/lib/courseTypes';
 import { NOTE_NAMES, SCALE_FORMULAS, SCALE_DEGREE_COLORS } from '@/lib/music';
 import { KEY_QUALITY_SCALE, type KeyQuality } from '@/lib/courseTypes';
 import type { NoteName } from '@/lib/music';
-import { Trash2, Grid3x3, Music, ChevronDown, Palette } from 'lucide-react';
+import { Trash2, Grid3x3, Music, ChevronDown, Palette, Sparkles } from 'lucide-react';
 import { Eye, EyeOff } from 'lucide-react';
 
 /** Subdivision options. Step = grid units between consecutive snap points. */
@@ -62,6 +62,10 @@ interface Props {
   setShowKeyTrack?: (v: boolean) => void;
   showTempoTrack?: boolean;
   setShowTempoTrack?: (v: boolean) => void;
+  /** Open the techniques menu near the cursor (used by the "E" shortcut). */
+  onOpenTechniqueMenu?: () => void;
+  /** Currently sounding notes during playback — used to highlight active duration bars. */
+  activePlaybackIds?: string[];
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
@@ -80,6 +84,7 @@ export function TabEditor({
   subdivision, setSubdivision, cellW, setCellW, chordTrack, hideBarRow,
   tracksSlot, showChordTrack = true, setShowChordTrack,
   showKeyTrack = true, setShowKeyTrack, showTempoTrack = true, setShowTempoTrack,
+  onOpenTechniqueMenu, activePlaybackIds,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingFret, setEditingFret] = useState<{ id: string; value: string } | null>(null);
