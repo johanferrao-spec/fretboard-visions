@@ -746,8 +746,8 @@ export function TabEditor({
         </div>
 
       </div>
-      <div className="overflow-x-auto" onWheel={onWheelZoom}>
-      <div ref={gridRef} className="relative" style={gridStyle} onMouseDown={startMarquee}>
+      <div className="overflow-x-auto pb-3 [scrollbar-gutter:stable]" onWheel={onWheelZoom} style={{ scrollbarColor: 'hsl(var(--muted-foreground)) transparent' }}>
+      <div ref={gridRef} className="relative pb-2" style={gridStyle} onMouseDown={startMarquee}>
         {/* SVG defs for arrows */}
         <svg width="0" height="0" style={{ position: 'absolute' }}>
           <defs>
