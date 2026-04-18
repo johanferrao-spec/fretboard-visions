@@ -641,9 +641,9 @@ export function TabEditor({
     return elems;
   }, [visibleNotes, phrase.notes, startGrid]);
 
-  // ===== Trackpad / Ctrl+wheel zoom on the tab grid =====
+  // ===== Trackpad / Ctrl+wheel / Z+scroll zoom on the tab grid =====
   const onWheelZoom = (e: React.WheelEvent) => {
-    if (!e.ctrlKey && !e.metaKey) return;
+    if (!e.ctrlKey && !e.metaKey && !zHeldRef.current) return;
     e.preventDefault();
     const delta = -e.deltaY * 0.05;
     const next = Math.max(MIN_CELL_W, Math.min(MAX_CELL_W, cellW + delta));
