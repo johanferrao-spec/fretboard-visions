@@ -65,6 +65,8 @@ interface FretboardProps {
   chordOctaveShift?: number;
   /** When true, hides the top toolbar row (degree key, Degrees Active, Position focus). */
   hideToolbar?: boolean;
+  /** Optional tint colour (HSL string, e.g. "200, 80%, 60%") for the position-focus box. Defaults to accent. */
+  fretBoxTintHsl?: string;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -108,6 +110,7 @@ export default function Fretboard({
   tabVisNotes,
   chordOctaveShift = 0,
   hideToolbar = false,
+  fretBoxTintHsl,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
