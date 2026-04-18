@@ -600,6 +600,14 @@ export function TabEditor({
               fill="none" stroke="rgb(20,20,20)" strokeWidth={1} />
           </g>
         );
+      } else if (t === 'mute') {
+        // Big X above the note (string-mute / dead note)
+        elems.push(
+          <g key={`tech-${n.id}`}>
+            <line x1={xStart - 6} y1={y - 16} x2={xStart + 6} y2={y - 4} stroke="rgb(20,20,20)" strokeWidth={1.6} strokeLinecap="round" />
+            <line x1={xStart + 6} y1={y - 16} x2={xStart - 6} y2={y - 4} stroke="rgb(20,20,20)" strokeWidth={1.6} strokeLinecap="round" />
+          </g>
+        );
       }
     });
     return elems;
