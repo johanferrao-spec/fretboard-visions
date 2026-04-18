@@ -454,6 +454,28 @@ export default function CourseCreator() {
               onArpAddClick={(si, fret) => fb.arpAddClickHandler?.(si, fret)}
               hideToolbar={true}
             />
+            {/* Play / Stop + Metronome — sit directly under the fretboard for quick reach */}
+            <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-border">
+              {isPlaying ? (
+                <Button size="lg" variant="destructive" onClick={onStop} className="rounded-full px-6">
+                  <Square className="size-5 mr-2" /> Stop
+                </Button>
+              ) : (
+                <Button size="lg" onClick={onPlay} className="rounded-full px-6">
+                  <Play className="size-5 mr-2" /> Play
+                </Button>
+              )}
+              <Button
+                size="lg"
+                variant={metronome ? 'default' : 'outline'}
+                onClick={() => setMetronome(m => !m)}
+                className="rounded-full px-4"
+                title={metronome ? 'Metronome on — click to disable' : 'Metronome off — click to enable'}
+              >
+                {metronome ? <Bell className="size-5" /> : <BellOff className="size-5" />}
+                <span className="ml-2 text-xs uppercase font-mono tracking-wider">Click</span>
+              </Button>
+            </div>
           </section>
 
           {/* Bar window controls */}
