@@ -292,7 +292,7 @@ export default function CourseCreator() {
   useEffect(() => {
     if (listenMode) {
       fb.setShowFretBox(true);
-      pitch.start();
+      pitch.start(pitch.selectedDeviceId ?? undefined);
     } else {
       pitch.stop();
       lastStagedMidiRef.current = null;
