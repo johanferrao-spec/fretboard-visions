@@ -224,19 +224,42 @@ export function TabEditor({
     setPhrase({ ...phrase, notes: [...trimmed, { ...n, stringIndex: newString, fret: newFret }] });
   }, [pickedFretboardNote]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keyboard delete + escape
+  // Keyboard: Delete/Backspace, Escape, A/S to navigate notes, E for techniques, track Z for zoom.
+  const zHeldRef = useRef(false);
   useEffect(() => {
+    const inField = (t: EventTarget | null) => {
+      const el = t as HTMLElement | null;
+      if (!el) return false;
+      return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
+    };
     const onKey = (e: KeyboardEvent) => {
+      if (inField(e.target)) return;
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
-        if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
         e.preventDefault();
         deleteNotes(selectedIds);
+        return;
       }
-      if (e.key === 'Escape') setSelectedIds([]);
+      if (e.key === 'Escape') { setSelectedIds([]); return; }
+      if (e.key === 'z' || e.key === 'Z') { zHeldRef.current = true; return; }
+      if (e.key === 'e' || e.key === 'E') { onOpenTechniqueMenu?.(); return; }
+      if (e.key === 'a' || e.key === 'A' || e.key === 's' || e.key === 'S') {
+        const dir = (e.key === 'a' || e.key === 'A') ? -1 : 1;
+        const sorted = [...phrase.notes].sort((a, b) => a.beatIndex - b.beatIndex || a.stringIndex - b.stringIndex);
+        if (sorted.length === 0) return;
+        let idx = -1;
+        if (selectedIds.length === 1) idx = sorted.findIndex(n => n.id === selectedIds[0]);
+        const next = sorted[Math.max(0, Math.min(sorted.length - 1, idx + dir))] ?? sorted[0];
+        setSelectedIds([next.id]);
+        e.preventDefault();
+      }
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.key === 'z' || e.key === 'Z') zHeldRef.current = false;
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [selectedIds, phrase.notes]); // eslint-disable-line react-hooks/exhaustive-deps
+    window.addEventListener('keyup', onUp);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onUp); };
+  }, [selectedIds, phrase.notes, onOpenTechniqueMenu]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const visibleNotes = useMemo(() => phrase.notes.filter(n => {
     const end = n.beatIndex + n.durationGrid;
