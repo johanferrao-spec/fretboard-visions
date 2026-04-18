@@ -252,6 +252,13 @@ export function TabEditor({
         setSelectedIds([next.id]);
         e.preventDefault();
       }
+      // Left / Right arrows: nudge cursor by one subdivision step.
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const step = SUBDIVISION_STEP[subdivision];
+        const dir = e.key === 'ArrowLeft' ? -1 : 1;
+        setCursorGrid(Math.max(0, snapGrid(cursorGrid + dir * step)));
+      }
     };
     const onUp = (e: KeyboardEvent) => {
       if (e.key === 'z' || e.key === 'Z') zHeldRef.current = false;
