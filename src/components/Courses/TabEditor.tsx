@@ -871,8 +871,10 @@ export function TabEditor({
               const localCell = n.beatIndex - startGrid;
               const tech = n.technique;
               const isSel = selectedIds.includes(n.id);
+              const isEditing = editingFret?.id === n.id;
               const fretText = String(n.fret);
-              const noteW = Math.min(CELL_W, Math.max(16, fretText.length * 8 + 8));
+              const baseW = Math.min(CELL_W, Math.max(16, fretText.length * 8 + 8));
+              const noteW = isEditing ? Math.max(32, baseW) : baseW;
               const cellLeft = localCell * CELL_W;
               const left = cellLeft + (CELL_W - noteW) / 2;
               const visibleRowIdx = [5, 4, 3, 2, 1, 0].indexOf(n.stringIndex);
@@ -884,13 +886,18 @@ export function TabEditor({
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (deleteMode) { deleteNotes([n.id]); return; }
+                    if (deleteMode) {
+                      // If this note is part of a multi-selection, delete the whole selection.
+                      if (selectedIds.includes(n.id) && selectedIds.length > 1) deleteNotes(selectedIds);
+                      else deleteNotes([n.id]);
+                      return;
+                    }
                     toggleSelect(n.id, e.shiftKey || e.metaKey || e.ctrlKey);
                   }}
                   onDoubleClick={(e) => { e.stopPropagation(); setEditingFret({ id: n.id, value: String(n.fret) }); }}
                   className={`absolute pointer-events-auto z-20 text-xs font-mono cursor-pointer flex items-center justify-center rounded ${
                     isSel ? 'ring-2 ring-primary' : ''
-                  } ${deleteMode ? 'ring-2 ring-destructive cursor-not-allowed' : ''}`}
+                  } ${deleteMode ? 'ring-2 ring-destructive' : ''}`}
                   style={{
                     left,
                     top,
@@ -905,6 +912,7 @@ export function TabEditor({
                     textShadow: degreeColours ? '0 1px 1px rgba(0,0,0,0.4)' : undefined,
                     paddingLeft: 2,
                     paddingRight: 2,
+                    cursor: deleteMode ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18'/><path d='M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6'/><path d='M10 11v6'/><path d='M14 11v6'/><path d='M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2'/></svg>") 12 12, not-allowed` : 'pointer',
                   }}
                 >
                   {editingFret?.id === n.id ? (
