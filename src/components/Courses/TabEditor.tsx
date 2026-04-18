@@ -487,14 +487,20 @@ export function TabEditor({
       const hits: string[] = [];
       for (const n of visibleNotes) {
         const localCell = n.beatIndex - startGrid;
+        // Generous hit-rect: full cell width + duration bar width.
         const noteX = LABEL_W + localCell * CELL_W;
         const noteW = Math.max(CELL_W, n.durationGrid * CELL_W);
         const visibleRowIdx = [5, 4, 3, 2, 1, 0].indexOf(n.stringIndex);
         const noteY = BAR_ROW_H + visibleRowIdx * ROW_H;
         const noteY2 = noteY + ROW_H;
-        if (noteX + noteW < minX || noteX > maxX) continue;
-        if (noteY2 < minY || noteY > maxY) continue;
-        hits.push(n.id);
+        // Also include the duration-bar row at the bottom (height ROW_H + 8) so a marquee
+        // dragged across the bottom always picks up the corresponding notes.
+        const barY = BAR_ROW_H + 6 * ROW_H;
+        const barY2 = barY + ROW_H + 8;
+        const overlapsString = !(noteY2 < minY || noteY > maxY);
+        const overlapsBar = !(barY2 < minY || barY > maxY);
+        const overlapsX = !(noteX + noteW < minX || noteX > maxX);
+        if (overlapsX && (overlapsString || overlapsBar)) hits.push(n.id);
       }
       setSelectedIds(hits);
       setMarquee(null);
