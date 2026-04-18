@@ -11,8 +11,9 @@ import { GlobalTracksEditor } from '@/components/Courses/GlobalTracksEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus, Keyboard, Bell, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { ShortcutsDialog } from '@/components/Courses/ShortcutsDialog';
 import { useCourseGuitarPlayer } from '@/hooks/useCourseGuitarPlayer';
 import type { CoursePhrase, CourseTabRow, KeyQuality, ChordTrackEntry, KeyChangeEntry, TempoChangeEntry, CourseNote, Technique } from '@/lib/courseTypes';
 import { GRID_PER_BEAT, KEY_QUALITY_SCALE } from '@/lib/courseTypes';
@@ -79,6 +80,9 @@ export default function CourseCreator() {
   const [windowStartBar, setWindowStartBar] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadGrid, setPlayheadGrid] = useState(0);
+  const [activePlaybackIds, setActivePlaybackIds] = useState<string[]>([]);
+  const [metronome, setMetronome] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const beatsPerBar = useMemo(() => parseInt(timeSig.split('/')[0], 10) || 4, [timeSig]);
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
