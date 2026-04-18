@@ -11,6 +11,7 @@ const TECHNIQUES: { value: Technique; label: string; symbol: string; hint: strin
   { value: 'palm-mute', label: 'Palm mute', symbol: 'PM', hint: 'PM' },
   { value: 'tap', label: 'Tap', symbol: 't', hint: 't' },
   { value: 'harmonic', label: 'Harmonic', symbol: '◆', hint: '◆' },
+  { value: 'mute', label: 'Mute', symbol: '✕', hint: 'x' },
 ];
 
 interface Props {

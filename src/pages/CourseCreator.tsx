@@ -11,8 +11,10 @@ import { GlobalTracksEditor } from '@/components/Courses/GlobalTracksEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus, Keyboard, Bell, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { ShortcutsDialog } from '@/components/Courses/ShortcutsDialog';
+import { TechniqueQuickMenu } from '@/components/Courses/TechniqueQuickMenu';
 import { useCourseGuitarPlayer } from '@/hooks/useCourseGuitarPlayer';
 import type { CoursePhrase, CourseTabRow, KeyQuality, ChordTrackEntry, KeyChangeEntry, TempoChangeEntry, CourseNote, Technique } from '@/lib/courseTypes';
 import { GRID_PER_BEAT, KEY_QUALITY_SCALE } from '@/lib/courseTypes';
@@ -79,6 +81,10 @@ export default function CourseCreator() {
   const [windowStartBar, setWindowStartBar] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadGrid, setPlayheadGrid] = useState(0);
+  const [activePlaybackIds, setActivePlaybackIds] = useState<string[]>([]);
+  const [metronome, setMetronome] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [techMenuOpen, setTechMenuOpen] = useState(false);
 
   const beatsPerBar = useMemo(() => parseInt(timeSig.split('/')[0], 10) || 4, [timeSig]);
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
@@ -248,34 +254,49 @@ export default function CourseCreator() {
   }, []);
 
   // When tab notes are selected, mirror them on the fretboard. Otherwise show staged note.
+  // During playback, mirror the currently sounding notes (live).
   const fretboardReference = useMemo(() => {
+    if (isPlaying && activePlaybackIds.length > 0) {
+      return phrase.notes
+        .filter(n => activePlaybackIds.includes(n.id))
+        .map(n => ({ stringIndex: n.stringIndex, fret: n.fret }));
+    }
     if (selectedIds.length > 0) {
       return phrase.notes
         .filter(n => selectedIds.includes(n.id))
         .map(n => ({ stringIndex: n.stringIndex, fret: n.fret }));
     }
     return stagedNote ? [stagedNote] : [];
-  }, [selectedIds, phrase.notes, stagedNote]);
+  }, [selectedIds, phrase.notes, stagedNote, isPlaying, activePlaybackIds]);
 
   useEffect(() => {
     fb.setArpAddReferenceNotes(fretboardReference);
   }, [fretboardReference]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Selected/staged/playing notes should render at FULL opacity on the fretboard
+  // (the arp-add overlay normally uses ~0.3 opacity for "ghost" reference notes).
+  useEffect(() => {
+    fb.setArpOverlayOpacity(1);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearStaged = () => { setStagedNote(null); fb.setArpAddReferenceNotes([]); };
 
   const onPlay = async () => {
     if (phrase.notes.length === 0) { toast.info('No notes to play'); return; }
     setIsPlaying(true);
-    await player.play(
-      phrase.notes,
-      phrase.lengthGrid,
-      tempo,
-      (idx) => setPlayheadGrid(idx),
-      () => { setIsPlaying(false); setPlayheadGrid(0); },
-    );
+    await player.play({
+      notes: phrase.notes,
+      lengthGrid: phrase.lengthGrid,
+      bpm: tempo,
+      beatsPerBar,
+      metronome,
+      onBeat: (idx) => setPlayheadGrid(idx),
+      onEnd: () => { setIsPlaying(false); setPlayheadGrid(0); setActivePlaybackIds([]); },
+      onActiveNotes: (ids) => setActivePlaybackIds(ids),
+    });
   };
   onPlayRef.current = onPlay;
-  const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); };
+  const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); setActivePlaybackIds([]); };
 
   const totalBars = Math.max(VISIBLE_BARS, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
   const minWindow = -ANACRUSIS_BARS; // -1 → user can scroll back exactly one bar
@@ -311,19 +332,27 @@ export default function CourseCreator() {
       style={{ transform: animateIn ? 'translateX(0)' : 'translateX(100%)' }}
     >
       <header className="flex items-center justify-between px-6 py-3 border-b border-border sticky top-0 bg-background z-30">
-        <button onClick={goBack} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-5" /> Course
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={goBack} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-5" /> Course
+          </button>
+          <Button size="sm" variant="outline" onClick={() => setShortcutsOpen(true)} className="ml-2">
+            <Keyboard className="size-4 mr-1" /> Shortcuts
+          </Button>
+        </div>
         <h1 className="text-lg font-semibold">Lesson editor</h1>
         <div className="flex gap-2">
-          {isPlaying ? (
-            <Button size="sm" variant="destructive" onClick={onStop}><Square className="size-4 mr-1" /> Stop</Button>
-          ) : (
-            <Button size="sm" variant="outline" onClick={onPlay}><Play className="size-4 mr-1" /> Play</Button>
-          )}
           <Button size="sm" onClick={onSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
         </div>
       </header>
+
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <TechniqueQuickMenu
+        open={techMenuOpen}
+        onOpenChange={setTechMenuOpen}
+        onPick={applyTechnique}
+        hasSelection={selectedIds.length > 0}
+      />
 
       <div className="flex flex-col lg:flex-row gap-4 p-4">
         {/* Left column: meta + scale + diatonic chords + techniques */}
@@ -347,7 +376,7 @@ export default function CourseCreator() {
             <div>
               <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Time sig</Label>
               <select value={timeSig} onChange={e => setTimeSig(e.target.value)}
-                className="bg-background border border-border rounded px-2 py-1.5 text-sm w-full mt-1">
+                className="appearance-none bg-card border border-border rounded-md px-2 py-1.5 text-sm w-full mt-1 font-mono hover:bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary">
                 {TIME_SIGS.map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
@@ -433,6 +462,28 @@ export default function CourseCreator() {
               onArpAddClick={(si, fret) => fb.arpAddClickHandler?.(si, fret)}
               hideToolbar={true}
             />
+            {/* Play / Stop + Metronome — sit directly under the fretboard for quick reach */}
+            <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-border">
+              {isPlaying ? (
+                <Button size="lg" variant="destructive" onClick={onStop} className="rounded-full px-6">
+                  <Square className="size-5 mr-2" /> Stop
+                </Button>
+              ) : (
+                <Button size="lg" onClick={onPlay} className="rounded-full px-6">
+                  <Play className="size-5 mr-2" /> Play
+                </Button>
+              )}
+              <Button
+                size="lg"
+                variant={metronome ? 'default' : 'outline'}
+                onClick={() => setMetronome(m => !m)}
+                className="rounded-full px-4"
+                title={metronome ? 'Metronome on — click to disable' : 'Metronome off — click to enable'}
+              >
+                {metronome ? <Bell className="size-5" /> : <BellOff className="size-5" />}
+                <span className="ml-2 text-xs uppercase font-mono tracking-wider">Click</span>
+              </Button>
+            </div>
           </section>
 
           {/* Bar window controls */}
@@ -471,6 +522,8 @@ export default function CourseCreator() {
             cellW={cellW}
             setCellW={setCellW}
             chordTrack={chordTrack}
+            activePlaybackIds={activePlaybackIds}
+            onOpenTechniqueMenu={() => setTechMenuOpen(true)}
             showChordTrack={showChordTrack} setShowChordTrack={setShowChordTrack}
             showKeyTrack={showKeyTrack} setShowKeyTrack={setShowKeyTrack}
             showTempoTrack={showTempoTrack} setShowTempoTrack={setShowTempoTrack}

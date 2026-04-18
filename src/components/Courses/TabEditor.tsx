@@ -4,7 +4,7 @@ import { GRID_PER_BEAT, NOTE_KIND_COLOR } from '@/lib/courseTypes';
 import { NOTE_NAMES, SCALE_FORMULAS, SCALE_DEGREE_COLORS } from '@/lib/music';
 import { KEY_QUALITY_SCALE, type KeyQuality } from '@/lib/courseTypes';
 import type { NoteName } from '@/lib/music';
-import { Trash2, Grid3x3, Music, ChevronDown, Palette } from 'lucide-react';
+import { Trash2, Grid3x3, Music, ChevronDown, Palette, Sparkles } from 'lucide-react';
 import { Eye, EyeOff } from 'lucide-react';
 
 /** Subdivision options. Step = grid units between consecutive snap points. */
@@ -62,6 +62,10 @@ interface Props {
   setShowKeyTrack?: (v: boolean) => void;
   showTempoTrack?: boolean;
   setShowTempoTrack?: (v: boolean) => void;
+  /** Open the techniques menu near the cursor (used by the "E" shortcut). */
+  onOpenTechniqueMenu?: () => void;
+  /** Currently sounding notes during playback — used to highlight active duration bars. */
+  activePlaybackIds?: string[];
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
@@ -80,6 +84,7 @@ export function TabEditor({
   subdivision, setSubdivision, cellW, setCellW, chordTrack, hideBarRow,
   tracksSlot, showChordTrack = true, setShowChordTrack,
   showKeyTrack = true, setShowKeyTrack, showTempoTrack = true, setShowTempoTrack,
+  onOpenTechniqueMenu, activePlaybackIds,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingFret, setEditingFret] = useState<{ id: string; value: string } | null>(null);
@@ -219,19 +224,42 @@ export function TabEditor({
     setPhrase({ ...phrase, notes: [...trimmed, { ...n, stringIndex: newString, fret: newFret }] });
   }, [pickedFretboardNote]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keyboard delete + escape
+  // Keyboard: Delete/Backspace, Escape, A/S to navigate notes, E for techniques, track Z for zoom.
+  const zHeldRef = useRef(false);
   useEffect(() => {
+    const inField = (t: EventTarget | null) => {
+      const el = t as HTMLElement | null;
+      if (!el) return false;
+      return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
+    };
     const onKey = (e: KeyboardEvent) => {
+      if (inField(e.target)) return;
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
-        if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
         e.preventDefault();
         deleteNotes(selectedIds);
+        return;
       }
-      if (e.key === 'Escape') setSelectedIds([]);
+      if (e.key === 'Escape') { setSelectedIds([]); return; }
+      if (e.key === 'z' || e.key === 'Z') { zHeldRef.current = true; return; }
+      if (e.key === 'e' || e.key === 'E') { onOpenTechniqueMenu?.(); return; }
+      if (e.key === 'a' || e.key === 'A' || e.key === 's' || e.key === 'S') {
+        const dir = (e.key === 'a' || e.key === 'A') ? -1 : 1;
+        const sorted = [...phrase.notes].sort((a, b) => a.beatIndex - b.beatIndex || a.stringIndex - b.stringIndex);
+        if (sorted.length === 0) return;
+        let idx = -1;
+        if (selectedIds.length === 1) idx = sorted.findIndex(n => n.id === selectedIds[0]);
+        const next = sorted[Math.max(0, Math.min(sorted.length - 1, idx + dir))] ?? sorted[0];
+        setSelectedIds([next.id]);
+        e.preventDefault();
+      }
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.key === 'z' || e.key === 'Z') zHeldRef.current = false;
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [selectedIds, phrase.notes]); // eslint-disable-line react-hooks/exhaustive-deps
+    window.addEventListener('keyup', onUp);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onUp); };
+  }, [selectedIds, phrase.notes, onOpenTechniqueMenu]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const visibleNotes = useMemo(() => phrase.notes.filter(n => {
     const end = n.beatIndex + n.durationGrid;
@@ -360,38 +388,56 @@ export function TabEditor({
     }
   };
 
-  // ===== Drag duration bars =====
+  // ===== Drag duration bars (Option/Alt held = duplicate-and-drag) =====
   const dragGroup = (notes: CourseNote[], mode: 'move' | 'resize-l' | 'resize-r', e: React.MouseEvent) => {
     e.stopPropagation();
     if (deleteMode) { deleteNotes(notes.map(n => n.id)); return; }
     const startX = e.clientX;
-    const startBeat = notes[0].beatIndex;
-    const startDur = Math.max(...notes.map(n => n.durationGrid));
-    const ids = notes.map(n => n.id);
+    // If multiple notes are selected and the user grabs one of them, drag the WHOLE selection.
+    const isMultiSelected = selectedIds.length > 1 && notes.every(n => selectedIds.includes(n.id));
+    const dragSet: CourseNote[] = isMultiSelected
+      ? phrase.notes.filter(n => selectedIds.includes(n.id))
+      : notes;
+    const startBeat = Math.min(...dragSet.map(n => n.beatIndex));
+    // Option/Alt held → duplicate the dragged set and move the COPIES.
+    const altCopy = e.altKey;
+    let workingPhrase = phrase;
+    let ids: string[];
+    if (altCopy) {
+      const copies: CourseNote[] = dragSet.map(n => ({
+        ...n,
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${n.stringIndex}`,
+      }));
+      workingPhrase = { ...phrase, notes: [...phrase.notes, ...copies] };
+      setPhrase(workingPhrase);
+      ids = copies.map(n => n.id);
+      setSelectedIds(ids);
+    } else {
+      ids = dragSet.map(n => n.id);
+    }
+    const startDur = Math.max(...dragSet.map(n => n.durationGrid));
 
     const onMove = (mv: MouseEvent) => {
       const deltaCells = Math.round((mv.clientX - startX) / CELL_W);
-      let newBeat = startBeat;
-      let newDur = startDur;
-      if (mode === 'move') newBeat = startBeat + deltaCells;
-      if (mode === 'resize-r') newDur = Math.max(1, startDur + deltaCells);
-      if (mode === 'resize-l') {
-        const nb = startBeat + deltaCells;
-        const nd = startDur - deltaCells;
-        if (nd >= 1) { newBeat = nb; newDur = nd; }
+      let next = workingPhrase.notes;
+      if (mode === 'move') {
+        next = next.map(n => ids.includes(n.id) ? { ...n, beatIndex: n.beatIndex + deltaCells } : n);
+      } else {
+        // resize-l / resize-r still acts on the first/single group
+        const newDur = mode === 'resize-r'
+          ? Math.max(1, startDur + deltaCells)
+          : Math.max(1, startDur - deltaCells);
+        const newBeat = mode === 'resize-l' ? startBeat + deltaCells : startBeat;
+        next = next.map(n => ids.includes(n.id) ? { ...n, beatIndex: newBeat, durationGrid: newDur } : n);
       }
-      let next = phrase.notes;
-      const moved = ids.map(id => {
-        const orig = phrase.notes.find(x => x.id === id);
-        if (!orig) return null;
-        return { ...orig, beatIndex: newBeat, durationGrid: newDur };
-      }).filter(Boolean) as CourseNote[];
-      next = next.filter(n => !ids.includes(n.id));
+      // Trim overlaps for moved notes
+      const movedIds = new Set(ids);
+      const moved = next.filter(n => movedIds.has(n.id));
+      let other = next.filter(n => !movedIds.has(n.id));
       for (const m of moved) {
-        next = trimOverlaps(next, m.stringIndex, m.beatIndex, m.durationGrid, m.id);
+        other = trimOverlaps(other, m.stringIndex, m.beatIndex, m.durationGrid, m.id);
       }
-      next = [...next, ...moved];
-      setPhrase({ ...phrase, notes: next });
+      setPhrase({ ...workingPhrase, notes: [...other, ...moved] });
     };
     const onUp = () => {
       window.removeEventListener('mousemove', onMove);
@@ -467,7 +513,7 @@ export function TabEditor({
       }
     }
     return out;
-  }, [startGrid, totalCells, gridPerBar]);
+  }, [startGrid, totalCells, gridPerBar, CELL_W]);
 
   /**
    * Vertical lines (bar + beat + subdivision) drawn as absolute overlays so positions are exact.
@@ -600,14 +646,22 @@ export function TabEditor({
               fill="none" stroke="rgb(20,20,20)" strokeWidth={1} />
           </g>
         );
+      } else if (t === 'mute') {
+        // Big X above the note (string-mute / dead note)
+        elems.push(
+          <g key={`tech-${n.id}`}>
+            <line x1={xStart - 6} y1={y - 16} x2={xStart + 6} y2={y - 4} stroke="rgb(20,20,20)" strokeWidth={1.6} strokeLinecap="round" />
+            <line x1={xStart + 6} y1={y - 16} x2={xStart - 6} y2={y - 4} stroke="rgb(20,20,20)" strokeWidth={1.6} strokeLinecap="round" />
+          </g>
+        );
       }
     });
     return elems;
   }, [visibleNotes, phrase.notes, startGrid]);
 
-  // ===== Trackpad / Ctrl+wheel zoom on the tab grid =====
+  // ===== Trackpad / Ctrl+wheel / Z+scroll zoom on the tab grid =====
   const onWheelZoom = (e: React.WheelEvent) => {
-    if (!e.ctrlKey && !e.metaKey) return;
+    if (!e.ctrlKey && !e.metaKey && !zHeldRef.current) return;
     e.preventDefault();
     const delta = -e.deltaY * 0.05;
     const next = Math.max(MIN_CELL_W, Math.min(MAX_CELL_W, cellW + delta));
@@ -686,20 +740,20 @@ export function TabEditor({
           )}
         </div>
         <div className="flex items-center gap-3 relative">
-          <span className="text-[10px] font-mono text-muted-foreground">Default duration · ⌘/Ctrl+scroll = zoom</span>
+          <span className="text-[10px] font-mono text-muted-foreground">Default duration · ⌘/Z + scroll = zoom</span>
           <button
             onClick={() => setSubOpen(o => !o)}
-            className="inline-flex items-center gap-1 bg-secondary text-secondary-foreground rounded px-2 py-1 text-[10px] font-mono uppercase tracking-wider hover:bg-secondary/80"
+            className="inline-flex items-center gap-1 bg-secondary/70 text-secondary-foreground rounded-md px-2 py-1 text-[10px] font-mono uppercase tracking-wider hover:bg-secondary border border-border"
           >
             {subdivision} <ChevronDown className="size-3" />
           </button>
           {subOpen && (
-            <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-md shadow-lg min-w-[10rem] py-1">
+            <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-md min-w-[10rem] py-1">
               {(Object.keys(SUBDIVISION_LABEL) as Subdivision[]).map(s => (
                 <button
                   key={s}
                   onClick={() => { setSubdivision(s); setSubOpen(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-accent ${s === subdivision ? 'bg-accent text-accent-foreground' : 'text-popover-foreground'}`}
+                  className={`w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-muted/60 ${s === subdivision ? 'bg-primary/15 text-primary' : 'text-foreground'}`}
                 >
                   <span className="font-bold mr-2">{s}</span>
                   <span className="text-muted-foreground">{SUBDIVISION_LABEL[s]}</span>
@@ -710,8 +764,8 @@ export function TabEditor({
         </div>
 
       </div>
-      <div className="overflow-x-auto" onWheel={onWheelZoom}>
-      <div ref={gridRef} className="relative" style={gridStyle} onMouseDown={startMarquee}>
+      <div className="overflow-x-auto pb-3 [scrollbar-gutter:stable]" onWheel={onWheelZoom} style={{ scrollbarColor: 'hsl(var(--muted-foreground)) transparent' }}>
+      <div ref={gridRef} className="relative pb-2" style={gridStyle} onMouseDown={startMarquee}>
         {/* SVG defs for arrows */}
         <svg width="0" height="0" style={{ position: 'absolute' }}>
           <defs>
@@ -922,13 +976,14 @@ export function TabEditor({
                 }
                 return names.join('-');
               })();
+              const groupActive = activePlaybackIds && notes.some(n => activePlaybackIds.includes(n.id));
               return (
                 <div
                   key={beatIdx}
                   data-duration-bar
                   className={`absolute top-1 rounded-sm flex items-center justify-center text-[10px] font-mono text-white font-bold select-none overflow-hidden ${
                     groupSelected ? 'ring-2 ring-primary' : ''
-                  } ${deleteMode ? 'cursor-not-allowed ring-2 ring-destructive' : 'cursor-move'}`}
+                  } ${groupActive ? 'ring-2 ring-accent shadow-[0_0_12px_hsl(var(--primary))]' : ''} ${deleteMode ? 'cursor-not-allowed ring-2 ring-destructive' : 'cursor-move'}`}
                   style={{
                     left: localBeat * CELL_W + 1,
                     width: dur * CELL_W - 2,
