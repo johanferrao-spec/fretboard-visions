@@ -287,6 +287,54 @@ export default function CourseCreator() {
 
   const clearStaged = () => { setStagedNote(null); fb.setArpAddReferenceNotes([]); };
 
+  // ===== Listen mode: pitch detection → stage a note inside the position-focus box =====
+  // Toggle: turn fret box on (light blue) and start mic.
+  useEffect(() => {
+    if (listenMode) {
+      fb.setShowFretBox(true);
+      pitch.start();
+    } else {
+      pitch.stop();
+      lastStagedMidiRef.current = null;
+    }
+    return () => { if (listenMode) pitch.stop(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listenMode]);
+
+  // When pitch.midi changes (and is stable), find the (string, fret) inside the fret box
+  // that produces this MIDI value, and STAGE it. Only update when the rounded MIDI changes
+  // (so a held note doesn't keep re-staging).
+  useEffect(() => {
+    if (!listenMode || pitch.midi == null) return;
+    if (pitch.rms < 0.02) return;
+    if (lastStagedMidiRef.current === pitch.midi) return;
+    lastStagedMidiRef.current = pitch.midi;
+    // Open-string MIDI = tuning[stringIndex] + 12 * octave. STANDARD_TUNING uses pitch
+    // classes 4,9,2,7,11,4 for strings E2(40), A2(45), D3(50), G3(55), B3(59), e4(64).
+    const stringMidiBase = [40, 45, 50, 55, 59, 64];
+    const targetMidi = pitch.midi;
+    const fretBoxEnd = fb.fretBoxStart + fb.fretBoxSize - 1;
+    const candidates: { stringIndex: number; fret: number; dist: number }[] = [];
+    for (let s = 0; s < 6; s++) {
+      // Filter strings inside the vertical box (mapped to display rows).
+      // stringOrder in Fretboard is [5,4,3,2,1,0] → row 0 = high e, row 5 = low E.
+      const row = [5, 4, 3, 2, 1, 0].indexOf(s);
+      if (row < fb.fretBoxStringStart || row >= fb.fretBoxStringStart + fb.fretBoxStringSize) continue;
+      const fret = targetMidi - stringMidiBase[s];
+      if (fret < fb.fretBoxStart || fret > fretBoxEnd) continue;
+      // Prefer lowest fret (closest to box start) and lowest string distance.
+      candidates.push({ stringIndex: s, fret, dist: fret - fb.fretBoxStart });
+    }
+    if (candidates.length === 0) {
+      toast.info(`Note ${targetMidi} is outside the focus box`);
+      return;
+    }
+    candidates.sort((a, b) => a.dist - b.dist);
+    const pick = candidates[0];
+    setStagedNote({ stringIndex: pick.stringIndex, fret: pick.fret });
+    fb.setArpAddReferenceNotes([{ stringIndex: pick.stringIndex, fret: pick.fret }]);
+  }, [pitch.midi, pitch.rms, listenMode, fb.fretBoxStart, fb.fretBoxSize, fb.fretBoxStringStart, fb.fretBoxStringSize]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const onPlay = async () => {
     if (phrase.notes.length === 0) { toast.info('No notes to play'); return; }
     setIsPlaying(true);
