@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus, Keyboard, Bell, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShortcutsDialog } from '@/components/Courses/ShortcutsDialog';
+import { TechniqueQuickMenu } from '@/components/Courses/TechniqueQuickMenu';
 import { useCourseGuitarPlayer } from '@/hooks/useCourseGuitarPlayer';
 import type { CoursePhrase, CourseTabRow, KeyQuality, ChordTrackEntry, KeyChangeEntry, TempoChangeEntry, CourseNote, Technique } from '@/lib/courseTypes';
 import { GRID_PER_BEAT, KEY_QUALITY_SCALE } from '@/lib/courseTypes';
@@ -83,6 +84,7 @@ export default function CourseCreator() {
   const [activePlaybackIds, setActivePlaybackIds] = useState<string[]>([]);
   const [metronome, setMetronome] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [techMenuOpen, setTechMenuOpen] = useState(false);
 
   const beatsPerBar = useMemo(() => parseInt(timeSig.split('/')[0], 10) || 4, [timeSig]);
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
