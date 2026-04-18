@@ -9,6 +9,7 @@ interface Props {
 const SHORTCUTS: Array<{ keys: string[]; label: string; hint?: string }> = [
   { keys: ['Space'], label: 'Play / Stop' },
   { keys: ['Enter'], label: 'Insert staged note at cursor' },
+  { keys: ['←', '→'], label: 'Move cursor by one subdivision' },
   { keys: ['⌘', 'Hold'], label: 'Delete tool (click to remove)', hint: 'Ctrl on Windows' },
   { keys: ['Z', '+', 'Scroll'], label: 'Zoom the tab grid', hint: 'or ⌘ + scroll' },
   { keys: ['A'], label: 'Select previous tab note' },
