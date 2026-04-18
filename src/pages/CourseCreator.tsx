@@ -11,7 +11,7 @@ import { GlobalTracksEditor } from '@/components/Courses/GlobalTracksEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus, Keyboard, Bell, BellOff } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus, Keyboard, Bell, BellOff, Mic, MicOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShortcutsDialog } from '@/components/Courses/ShortcutsDialog';
 import { TechniqueQuickMenu } from '@/components/Courses/TechniqueQuickMenu';
@@ -21,6 +21,7 @@ import { GRID_PER_BEAT, KEY_QUALITY_SCALE } from '@/lib/courseTypes';
 import { STANDARD_TUNING, type NoteName } from '@/lib/music';
 import type { Subdivision } from '@/components/Courses/TabEditor';
 import { getTab } from '@/lib/courseStorage';
+import { usePitchDetector } from '@/hooks/usePitchDetector';
 
 /** Subdivision → grid units. Triplets produce non-integer steps (LCM is fractional). */
 const SUB_STEP: Record<Subdivision, number> = {
