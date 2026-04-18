@@ -1009,7 +1009,13 @@ export function TabEditor({
                   onMouseDown={(e) => { e.stopPropagation(); dragGroup(notes, 'move', e); }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (deleteMode) { deleteNotes(notes.map(n => n.id)); return; }
+                    if (deleteMode) {
+                      const groupIds = notes.map(n => n.id);
+                      const inSel = groupIds.some(id => selectedIds.includes(id));
+                      if (inSel && selectedIds.length > 1) deleteNotes(selectedIds);
+                      else deleteNotes(groupIds);
+                      return;
+                    }
                     setSelectedIds(notes.map(n => n.id));
                   }}
                   title={label}
