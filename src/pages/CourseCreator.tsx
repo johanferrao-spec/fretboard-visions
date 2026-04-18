@@ -330,19 +330,21 @@ export default function CourseCreator() {
       style={{ transform: animateIn ? 'translateX(0)' : 'translateX(100%)' }}
     >
       <header className="flex items-center justify-between px-6 py-3 border-b border-border sticky top-0 bg-background z-30">
-        <button onClick={goBack} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-5" /> Course
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={goBack} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-5" /> Course
+          </button>
+          <Button size="sm" variant="outline" onClick={() => setShortcutsOpen(true)} className="ml-2">
+            <Keyboard className="size-4 mr-1" /> Shortcuts
+          </Button>
+        </div>
         <h1 className="text-lg font-semibold">Lesson editor</h1>
         <div className="flex gap-2">
-          {isPlaying ? (
-            <Button size="sm" variant="destructive" onClick={onStop}><Square className="size-4 mr-1" /> Stop</Button>
-          ) : (
-            <Button size="sm" variant="outline" onClick={onPlay}><Play className="size-4 mr-1" /> Play</Button>
-          )}
           <Button size="sm" onClick={onSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
         </div>
       </header>
+
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       <div className="flex flex-col lg:flex-row gap-4 p-4">
         {/* Left column: meta + scale + diatonic chords + techniques */}
@@ -366,7 +368,7 @@ export default function CourseCreator() {
             <div>
               <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Time sig</Label>
               <select value={timeSig} onChange={e => setTimeSig(e.target.value)}
-                className="bg-background border border-border rounded px-2 py-1.5 text-sm w-full mt-1">
+                className="appearance-none bg-card border border-border rounded-md px-2 py-1.5 text-sm w-full mt-1 font-mono hover:bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary">
                 {TIME_SIGS.map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
