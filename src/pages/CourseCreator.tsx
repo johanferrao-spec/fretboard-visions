@@ -86,6 +86,11 @@ export default function CourseCreator() {
   const [metronome, setMetronome] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [techMenuOpen, setTechMenuOpen] = useState(false);
+  /** "Listen" mode: turns on the position-focus box (light-blue) + mic pitch detection.
+   * Detected pitches are mapped to a fret inside the box and STAGED for insertion. */
+  const [listenMode, setListenMode] = useState(false);
+  const pitch = usePitchDetector();
+  const lastStagedMidiRef = useRef<number | null>(null);
 
   const beatsPerBar = useMemo(() => parseInt(timeSig.split('/')[0], 10) || 4, [timeSig]);
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
