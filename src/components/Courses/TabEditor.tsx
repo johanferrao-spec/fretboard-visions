@@ -771,7 +771,19 @@ export function TabEditor({
 
       </div>
       <div className="overflow-x-auto pb-3 [scrollbar-gutter:stable]" onWheel={onWheelZoom} style={{ scrollbarColor: 'hsl(var(--muted-foreground)) transparent' }}>
-      <div ref={gridRef} className="relative pb-2" style={gridStyle} onMouseDown={startMarquee}>
+      <div
+        ref={gridRef}
+        className="relative pb-2"
+        style={{
+          ...gridStyle,
+          cursor: deleteMode
+            ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18'/><path d='M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6'/><path d='M10 11v6'/><path d='M14 11v6'/><path d='M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2'/></svg>") 14 14, not-allowed`
+            : marquee
+              ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='hsl(28,90%25,55%25)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' stroke-dasharray='3 2'/><path d='M9 9l6 6'/></svg>") 12 12, crosshair`
+              : 'crosshair',
+        }}
+        onMouseDown={startMarquee}
+      >
         {/* SVG defs for arrows */}
         <svg width="0" height="0" style={{ position: 'absolute' }}>
           <defs>
