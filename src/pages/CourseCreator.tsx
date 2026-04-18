@@ -491,7 +491,8 @@ export default function CourseCreator() {
               primaryColor={fb.primaryColor}
               activeChord={null}
               orientation={fb.orientation}
-              showFretBox={false}
+              showFretBox={listenMode || fb.showFretBox}
+              fretBoxTintHsl={listenMode ? '200, 80%, 60%' : undefined}
               fretBoxStart={fb.fretBoxStart}
               fretBoxSize={fb.fretBoxSize}
               setFretBoxStart={fb.setFretBoxStart}
@@ -522,8 +523,18 @@ export default function CourseCreator() {
               onArpAddClick={(si, fret) => fb.arpAddClickHandler?.(si, fret)}
               hideToolbar={true}
             />
-            {/* Play / Stop + Metronome — sit directly under the fretboard for quick reach */}
+            {/* Listen + Play / Stop + Metronome — sit directly under the fretboard for quick reach */}
             <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-border">
+              <Button
+                size="lg"
+                variant={listenMode ? 'default' : 'outline'}
+                onClick={() => setListenMode(m => !m)}
+                className="rounded-full px-4"
+                title={listenMode ? 'Listening to mic — click to disable' : 'Listen: detect pitch and stage notes inside the focus box'}
+              >
+                {listenMode ? <Mic className="size-5" /> : <MicOff className="size-5" />}
+                <span className="ml-2 text-xs uppercase font-mono tracking-wider">Listen</span>
+              </Button>
               {isPlaying ? (
                 <Button size="lg" variant="destructive" onClick={onStop} className="rounded-full px-6">
                   <Square className="size-5 mr-2" /> Stop
@@ -543,6 +554,10 @@ export default function CourseCreator() {
                 {metronome ? <Bell className="size-5" /> : <BellOff className="size-5" />}
                 <span className="ml-2 text-xs uppercase font-mono tracking-wider">Click</span>
               </Button>
+              {listenMode && pitch.error && (
+                <span className="text-xs text-destructive ml-2">{pitch.error}</span>
+              )}
+            </div>
             </div>
           </section>
 
