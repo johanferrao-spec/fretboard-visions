@@ -113,7 +113,7 @@ export default function CoursePlayer() {
           <Button size="sm" variant="outline" onClick={restart}><RotateCcw className="size-4 mr-1" /> Restart</Button>
           {pitch.enabled
             ? <Button size="sm" variant="destructive" onClick={pitch.stop}><MicOff className="size-4 mr-1" /> Stop</Button>
-            : <Button size="sm" onClick={pitch.start}><Mic className="size-4 mr-1" /> Listen</Button>}
+            : <Button size="sm" onClick={() => pitch.start()}><Mic className="size-4 mr-1" /> Listen</Button>}
         </div>
       </header>
 
