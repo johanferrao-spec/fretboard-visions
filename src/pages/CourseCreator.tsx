@@ -252,34 +252,49 @@ export default function CourseCreator() {
   }, []);
 
   // When tab notes are selected, mirror them on the fretboard. Otherwise show staged note.
+  // During playback, mirror the currently sounding notes (live).
   const fretboardReference = useMemo(() => {
+    if (isPlaying && activePlaybackIds.length > 0) {
+      return phrase.notes
+        .filter(n => activePlaybackIds.includes(n.id))
+        .map(n => ({ stringIndex: n.stringIndex, fret: n.fret }));
+    }
     if (selectedIds.length > 0) {
       return phrase.notes
         .filter(n => selectedIds.includes(n.id))
         .map(n => ({ stringIndex: n.stringIndex, fret: n.fret }));
     }
     return stagedNote ? [stagedNote] : [];
-  }, [selectedIds, phrase.notes, stagedNote]);
+  }, [selectedIds, phrase.notes, stagedNote, isPlaying, activePlaybackIds]);
 
   useEffect(() => {
     fb.setArpAddReferenceNotes(fretboardReference);
   }, [fretboardReference]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Selected/staged/playing notes should render at FULL opacity on the fretboard
+  // (the arp-add overlay normally uses ~0.3 opacity for "ghost" reference notes).
+  useEffect(() => {
+    fb.setArpOverlayOpacity(1);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearStaged = () => { setStagedNote(null); fb.setArpAddReferenceNotes([]); };
 
   const onPlay = async () => {
     if (phrase.notes.length === 0) { toast.info('No notes to play'); return; }
     setIsPlaying(true);
-    await player.play(
-      phrase.notes,
-      phrase.lengthGrid,
-      tempo,
-      (idx) => setPlayheadGrid(idx),
-      () => { setIsPlaying(false); setPlayheadGrid(0); },
-    );
+    await player.play({
+      notes: phrase.notes,
+      lengthGrid: phrase.lengthGrid,
+      bpm: tempo,
+      beatsPerBar,
+      metronome,
+      onBeat: (idx) => setPlayheadGrid(idx),
+      onEnd: () => { setIsPlaying(false); setPlayheadGrid(0); setActivePlaybackIds([]); },
+      onActiveNotes: (ids) => setActivePlaybackIds(ids),
+    });
   };
   onPlayRef.current = onPlay;
-  const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); };
+  const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); setActivePlaybackIds([]); };
 
   const totalBars = Math.max(VISIBLE_BARS, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
   const minWindow = -ANACRUSIS_BARS; // -1 → user can scroll back exactly one bar
