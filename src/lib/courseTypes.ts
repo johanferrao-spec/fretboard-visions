@@ -2,7 +2,7 @@ import type { NoteName } from './music';
 
 export type NoteKind = 'diatonic' | 'chord' | 'non-diatonic';
 
-export type Technique = 'hammer' | 'pull' | 'slide-up' | 'slide-down' | 'bend' | 'release' | 'vibrato' | 'palm-mute' | 'tap' | 'harmonic';
+export type Technique = 'hammer' | 'pull' | 'slide-up' | 'slide-down' | 'bend' | 'release' | 'vibrato' | 'palm-mute' | 'tap' | 'harmonic' | 'mute';
 
 export interface CourseNote {
   id: string;
