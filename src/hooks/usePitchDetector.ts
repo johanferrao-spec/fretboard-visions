@@ -16,8 +16,8 @@ export interface PitchDetectorState {
 }
 
 const SAMPLE_RATE_FFT_SIZE = 2048;
-const MIN_RMS = 0.01;
-const GOOD_ENOUGH_CORRELATION = 0.9;
+const MIN_RMS = 0.005;
+const GOOD_ENOUGH_CORRELATION = 0.85;
 
 function autoCorrelate(buf: Float32Array, sampleRate: number): { freq: number; rms: number } {
   const SIZE = buf.length;
@@ -60,14 +60,39 @@ function freqToMidi(freq: number) {
   return 69 + 12 * Math.log2(freq / 440);
 }
 
+export interface AudioInputDevice { deviceId: string; label: string; }
+
 export function usePitchDetector() {
   const [state, setState] = useState<PitchDetectorState>({
     enabled: false, midi: null, cents: 0, rms: 0, activeChordTones: new Set(), error: null,
   });
+  const [devices, setDevices] = useState<AudioInputDevice[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
+
+  /** Enumerate audio input devices. Note: labels are only available after permission is granted. */
+  const refreshDevices = useCallback(async () => {
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      const inputs = all
+        .filter(d => d.kind === 'audioinput')
+        .map((d, i) => ({ deviceId: d.deviceId, label: d.label || `Microphone ${i + 1}` }));
+      setDevices(inputs);
+      if (!selectedDeviceId && inputs.length > 0) setSelectedDeviceId(inputs[0].deviceId);
+    } catch (e) {
+      // ignore
+    }
+  }, [selectedDeviceId]);
+
+  useEffect(() => {
+    refreshDevices();
+    const handler = () => refreshDevices();
+    navigator.mediaDevices?.addEventListener?.('devicechange', handler);
+    return () => navigator.mediaDevices?.removeEventListener?.('devicechange', handler);
+  }, [refreshDevices]);
 
   const stop = useCallback(() => {
     if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
@@ -77,17 +102,35 @@ export function usePitchDetector() {
     analyserRef.current = null;
     audioCtxRef.current?.close().catch(() => {});
     audioCtxRef.current = null;
-    setState(s => ({ ...s, enabled: false, midi: null, activeChordTones: new Set() }));
+    setState(s => ({ ...s, enabled: false, midi: null, rms: 0, activeChordTones: new Set() }));
   }, []);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (deviceId?: string) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      });
+      // Stop any existing stream first to avoid orphaned tracks.
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      if (audioCtxRef.current) {
+        await audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
+      const constraints: MediaStreamConstraints = {
+        audio: deviceId
+          ? { deviceId: { exact: deviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+          : { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
+      // Refresh device list now that we have permission (so labels populate).
+      refreshDevices();
       const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       audioCtxRef.current = ctx;
+      // Some browsers start the AudioContext suspended until a user gesture.
+      if (ctx.state === 'suspended') {
+        await ctx.resume().catch(() => {});
+      }
       const src = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = SAMPLE_RATE_FFT_SIZE;
@@ -97,6 +140,8 @@ export function usePitchDetector() {
       const timeBuf = new Float32Array(analyser.fftSize);
       const freqBuf = new Uint8Array(analyser.frequencyBinCount);
       const sr = ctx.sampleRate;
+
+      setState(s => ({ ...s, enabled: true, error: null }));
 
       const tick = () => {
         if (!analyserRef.current) return;
@@ -134,9 +179,17 @@ export function usePitchDetector() {
     } catch (e) {
       setState(s => ({ ...s, enabled: false, error: e instanceof Error ? e.message : 'Mic blocked' }));
     }
-  }, []);
+  }, [refreshDevices]);
+
+  /** Hot-swap input device. Restarts the stream if currently enabled. */
+  const selectDevice = useCallback(async (deviceId: string) => {
+    setSelectedDeviceId(deviceId);
+    if (state.enabled) {
+      await start(deviceId);
+    }
+  }, [state.enabled, start]);
 
   useEffect(() => () => stop(), [stop]);
 
-  return { ...state, start, stop };
+  return { ...state, start, stop, devices, selectedDeviceId, selectDevice, refreshDevices };
 }

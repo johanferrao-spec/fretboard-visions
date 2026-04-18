@@ -292,7 +292,7 @@ export default function CourseCreator() {
   useEffect(() => {
     if (listenMode) {
       fb.setShowFretBox(true);
-      pitch.start();
+      pitch.start(pitch.selectedDeviceId ?? undefined);
     } else {
       pitch.stop();
       lastStagedMidiRef.current = null;
@@ -306,7 +306,7 @@ export default function CourseCreator() {
   // (so a held note doesn't keep re-staging).
   useEffect(() => {
     if (!listenMode || pitch.midi == null) return;
-    if (pitch.rms < 0.02) return;
+    if (pitch.rms < 0.01) return;
     if (lastStagedMidiRef.current === pitch.midi) return;
     lastStagedMidiRef.current = pitch.midi;
     // Open-string MIDI = tuning[stringIndex] + 12 * octave. STANDARD_TUNING uses pitch
@@ -554,10 +554,41 @@ export default function CourseCreator() {
                 {metronome ? <Bell className="size-5" /> : <BellOff className="size-5" />}
                 <span className="ml-2 text-xs uppercase font-mono tracking-wider">Click</span>
               </Button>
-              {listenMode && pitch.error && (
-                <span className="text-xs text-destructive ml-2">{pitch.error}</span>
-              )}
             </div>
+            {/* Listen-mode controls: input device + level meter (only when active) */}
+            {listenMode && (
+              <div className="mt-3 flex items-center gap-3 px-3 py-2 rounded-md bg-muted/30 border border-border">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground shrink-0">Input</span>
+                <select
+                  value={pitch.selectedDeviceId ?? ''}
+                  onChange={e => pitch.selectDevice(e.target.value)}
+                  className="appearance-none bg-card border border-border rounded-md px-2 py-1 text-xs font-mono text-foreground hover:bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer max-w-[14rem] truncate"
+                >
+                  {pitch.devices.length === 0 && <option value="">Default</option>}
+                  {pitch.devices.map(d => (
+                    <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                  ))}
+                </select>
+                {/* Level meter — green when signal present, brighter as RMS rises */}
+                <div className="flex-1 h-2 rounded-full bg-muted/60 overflow-hidden relative">
+                  <div
+                    className="absolute left-0 top-0 bottom-0 transition-[width] duration-75"
+                    style={{
+                      width: `${Math.min(100, pitch.rms * 600)}%`,
+                      background: pitch.rms > 0.02
+                        ? 'linear-gradient(90deg, hsl(140,70%,45%), hsl(60,90%,55%), hsl(0,80%,55%))'
+                        : 'hsl(var(--muted-foreground) / 0.5)',
+                    }}
+                  />
+                </div>
+                <span className="text-[10px] font-mono text-muted-foreground tabular-nums w-16 text-right">
+                  {pitch.midi != null ? `MIDI ${pitch.midi}` : pitch.rms > 0.005 ? 'listening…' : 'silent'}
+                </span>
+                {pitch.error && (
+                  <span className="text-xs text-destructive ml-2">{pitch.error}</span>
+                )}
+              </div>
+            )}
           </section>
 
           {/* Bar window controls */}

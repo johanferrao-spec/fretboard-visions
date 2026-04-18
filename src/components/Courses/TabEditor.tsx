@@ -908,11 +908,40 @@ export function TabEditor({
                 <div
                   key={n.id}
                   data-note
-                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => {
+                    // Begin a click-vs-drag distinction. If the user moves >3px before mouseup,
+                    // start a drag-move on this note (or the whole selection if it's selected).
+                    if (deleteMode || isEditing) { e.stopPropagation(); return; }
+                    e.stopPropagation();
+                    const downX = e.clientX, downY = e.clientY;
+                    let dragging = false;
+                    const onMv = (mv: MouseEvent) => {
+                      if (!dragging && (Math.abs(mv.clientX - downX) > 3 || Math.abs(mv.clientY - downY) > 3)) {
+                        dragging = true;
+                        window.removeEventListener('mousemove', onMv);
+                        window.removeEventListener('mouseup', onUp);
+                        // Hand off to the same drag handler used by duration bars.
+                        const groupNotes = selectedIds.includes(n.id) && selectedIds.length > 1
+                          ? phrase.notes.filter(x => selectedIds.includes(x.id))
+                          : [n];
+                        // Synthesize a React.MouseEvent-like object for dragGroup.
+                        const fakeEvt = {
+                          clientX: downX, clientY: downY, altKey: mv.altKey,
+                          stopPropagation: () => {}, preventDefault: () => {},
+                        } as unknown as React.MouseEvent;
+                        dragGroup(groupNotes, 'move', fakeEvt);
+                      }
+                    };
+                    const onUp = () => {
+                      window.removeEventListener('mousemove', onMv);
+                      window.removeEventListener('mouseup', onUp);
+                    };
+                    window.addEventListener('mousemove', onMv);
+                    window.addEventListener('mouseup', onUp);
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (deleteMode) {
-                      // If this note is part of a multi-selection, delete the whole selection.
                       if (selectedIds.includes(n.id) && selectedIds.length > 1) deleteNotes(selectedIds);
                       else deleteNotes([n.id]);
                       return;
