@@ -252,6 +252,13 @@ export function TabEditor({
         setSelectedIds([next.id]);
         e.preventDefault();
       }
+      // Left / Right arrows: nudge cursor by one subdivision step.
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const step = SUBDIVISION_STEP[subdivision];
+        const dir = e.key === 'ArrowLeft' ? -1 : 1;
+        setCursorGrid(Math.max(0, snapGrid(cursorGrid + dir * step)));
+      }
     };
     const onUp = (e: KeyboardEvent) => {
       if (e.key === 'z' || e.key === 'Z') zHeldRef.current = false;
@@ -487,14 +494,20 @@ export function TabEditor({
       const hits: string[] = [];
       for (const n of visibleNotes) {
         const localCell = n.beatIndex - startGrid;
+        // Generous hit-rect: full cell width + duration bar width.
         const noteX = LABEL_W + localCell * CELL_W;
         const noteW = Math.max(CELL_W, n.durationGrid * CELL_W);
         const visibleRowIdx = [5, 4, 3, 2, 1, 0].indexOf(n.stringIndex);
         const noteY = BAR_ROW_H + visibleRowIdx * ROW_H;
         const noteY2 = noteY + ROW_H;
-        if (noteX + noteW < minX || noteX > maxX) continue;
-        if (noteY2 < minY || noteY > maxY) continue;
-        hits.push(n.id);
+        // Also include the duration-bar row at the bottom (height ROW_H + 8) so a marquee
+        // dragged across the bottom always picks up the corresponding notes.
+        const barY = BAR_ROW_H + 6 * ROW_H;
+        const barY2 = barY + ROW_H + 8;
+        const overlapsString = !(noteY2 < minY || noteY > maxY);
+        const overlapsBar = !(barY2 < minY || barY > maxY);
+        const overlapsX = !(noteX + noteW < minX || noteX > maxX);
+        if (overlapsX && (overlapsString || overlapsBar)) hits.push(n.id);
       }
       setSelectedIds(hits);
       setMarquee(null);
@@ -765,7 +778,19 @@ export function TabEditor({
 
       </div>
       <div className="overflow-x-auto pb-3 [scrollbar-gutter:stable]" onWheel={onWheelZoom} style={{ scrollbarColor: 'hsl(var(--muted-foreground)) transparent' }}>
-      <div ref={gridRef} className="relative pb-2" style={gridStyle} onMouseDown={startMarquee}>
+      <div
+        ref={gridRef}
+        className="relative pb-2"
+        style={{
+          ...gridStyle,
+          cursor: deleteMode
+            ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18'/><path d='M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6'/><path d='M10 11v6'/><path d='M14 11v6'/><path d='M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2'/></svg>") 14 14, not-allowed`
+            : marquee
+              ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='hsl(28,90%25,55%25)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' stroke-dasharray='3 2'/><path d='M9 9l6 6'/></svg>") 12 12, crosshair`
+              : 'crosshair',
+        }}
+        onMouseDown={startMarquee}
+      >
         {/* SVG defs for arrows */}
         <svg width="0" height="0" style={{ position: 'absolute' }}>
           <defs>
@@ -871,8 +896,10 @@ export function TabEditor({
               const localCell = n.beatIndex - startGrid;
               const tech = n.technique;
               const isSel = selectedIds.includes(n.id);
+              const isEditing = editingFret?.id === n.id;
               const fretText = String(n.fret);
-              const noteW = Math.min(CELL_W, Math.max(16, fretText.length * 8 + 8));
+              const baseW = Math.min(CELL_W, Math.max(16, fretText.length * 8 + 8));
+              const noteW = isEditing ? Math.max(32, baseW) : baseW;
               const cellLeft = localCell * CELL_W;
               const left = cellLeft + (CELL_W - noteW) / 2;
               const visibleRowIdx = [5, 4, 3, 2, 1, 0].indexOf(n.stringIndex);
@@ -884,13 +911,18 @@ export function TabEditor({
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (deleteMode) { deleteNotes([n.id]); return; }
+                    if (deleteMode) {
+                      // If this note is part of a multi-selection, delete the whole selection.
+                      if (selectedIds.includes(n.id) && selectedIds.length > 1) deleteNotes(selectedIds);
+                      else deleteNotes([n.id]);
+                      return;
+                    }
                     toggleSelect(n.id, e.shiftKey || e.metaKey || e.ctrlKey);
                   }}
                   onDoubleClick={(e) => { e.stopPropagation(); setEditingFret({ id: n.id, value: String(n.fret) }); }}
                   className={`absolute pointer-events-auto z-20 text-xs font-mono cursor-pointer flex items-center justify-center rounded ${
                     isSel ? 'ring-2 ring-primary' : ''
-                  } ${deleteMode ? 'ring-2 ring-destructive cursor-not-allowed' : ''}`}
+                  } ${deleteMode ? 'ring-2 ring-destructive' : ''}`}
                   style={{
                     left,
                     top,
@@ -905,12 +937,20 @@ export function TabEditor({
                     textShadow: degreeColours ? '0 1px 1px rgba(0,0,0,0.4)' : undefined,
                     paddingLeft: 2,
                     paddingRight: 2,
+                    cursor: deleteMode ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18'/><path d='M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6'/><path d='M10 11v6'/><path d='M14 11v6'/><path d='M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2'/></svg>") 12 12, not-allowed` : 'pointer',
                   }}
                 >
                   {editingFret?.id === n.id ? (
                     <input
-                      autoFocus type="number" value={editingFret.value} min={0} max={24}
-                      onChange={e => setEditingFret({ id: n.id, value: e.target.value })}
+                      autoFocus
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={editingFret.value}
+                      onChange={e => {
+                        const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+                        setEditingFret({ id: n.id, value: v });
+                      }}
                       onBlur={() => {
                         const v = parseInt(editingFret.value, 10);
                         if (!isNaN(v) && v >= 0 && v <= 24) updateNote(n.id, { fret: v });
@@ -924,7 +964,8 @@ export function TabEditor({
                         }
                         if (e.key === 'Escape') setEditingFret(null);
                       }}
-                      className="w-full bg-transparent outline-none text-black text-center"
+                      className="w-full bg-transparent outline-none text-black text-center font-mono text-xs p-0 border-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      style={{ minWidth: 0 }}
                     />
                   ) : (
                     <span className="text-center">{n.fret}</span>
@@ -993,7 +1034,13 @@ export function TabEditor({
                   onMouseDown={(e) => { e.stopPropagation(); dragGroup(notes, 'move', e); }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (deleteMode) { deleteNotes(notes.map(n => n.id)); return; }
+                    if (deleteMode) {
+                      const groupIds = notes.map(n => n.id);
+                      const inSel = groupIds.some(id => selectedIds.includes(id));
+                      if (inSel && selectedIds.length > 1) deleteNotes(selectedIds);
+                      else deleteNotes(groupIds);
+                      return;
+                    }
                     setSelectedIds(notes.map(n => n.id));
                   }}
                   title={label}

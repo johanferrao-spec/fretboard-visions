@@ -11,7 +11,7 @@ import { GlobalTracksEditor } from '@/components/Courses/GlobalTracksEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus, Keyboard, Bell, BellOff } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus, Keyboard, Bell, BellOff, Mic, MicOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShortcutsDialog } from '@/components/Courses/ShortcutsDialog';
 import { TechniqueQuickMenu } from '@/components/Courses/TechniqueQuickMenu';
@@ -21,6 +21,7 @@ import { GRID_PER_BEAT, KEY_QUALITY_SCALE } from '@/lib/courseTypes';
 import { STANDARD_TUNING, type NoteName } from '@/lib/music';
 import type { Subdivision } from '@/components/Courses/TabEditor';
 import { getTab } from '@/lib/courseStorage';
+import { usePitchDetector } from '@/hooks/usePitchDetector';
 
 /** Subdivision → grid units. Triplets produce non-integer steps (LCM is fractional). */
 const SUB_STEP: Record<Subdivision, number> = {
@@ -85,6 +86,11 @@ export default function CourseCreator() {
   const [metronome, setMetronome] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [techMenuOpen, setTechMenuOpen] = useState(false);
+  /** "Listen" mode: turns on the position-focus box (light-blue) + mic pitch detection.
+   * Detected pitches are mapped to a fret inside the box and STAGED for insertion. */
+  const [listenMode, setListenMode] = useState(false);
+  const pitch = usePitchDetector();
+  const lastStagedMidiRef = useRef<number | null>(null);
 
   const beatsPerBar = useMemo(() => parseInt(timeSig.split('/')[0], 10) || 4, [timeSig]);
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
@@ -281,6 +287,54 @@ export default function CourseCreator() {
 
   const clearStaged = () => { setStagedNote(null); fb.setArpAddReferenceNotes([]); };
 
+  // ===== Listen mode: pitch detection → stage a note inside the position-focus box =====
+  // Toggle: turn fret box on (light blue) and start mic.
+  useEffect(() => {
+    if (listenMode) {
+      fb.setShowFretBox(true);
+      pitch.start();
+    } else {
+      pitch.stop();
+      lastStagedMidiRef.current = null;
+    }
+    return () => { if (listenMode) pitch.stop(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listenMode]);
+
+  // When pitch.midi changes (and is stable), find the (string, fret) inside the fret box
+  // that produces this MIDI value, and STAGE it. Only update when the rounded MIDI changes
+  // (so a held note doesn't keep re-staging).
+  useEffect(() => {
+    if (!listenMode || pitch.midi == null) return;
+    if (pitch.rms < 0.02) return;
+    if (lastStagedMidiRef.current === pitch.midi) return;
+    lastStagedMidiRef.current = pitch.midi;
+    // Open-string MIDI = tuning[stringIndex] + 12 * octave. STANDARD_TUNING uses pitch
+    // classes 4,9,2,7,11,4 for strings E2(40), A2(45), D3(50), G3(55), B3(59), e4(64).
+    const stringMidiBase = [40, 45, 50, 55, 59, 64];
+    const targetMidi = pitch.midi;
+    const fretBoxEnd = fb.fretBoxStart + fb.fretBoxSize - 1;
+    const candidates: { stringIndex: number; fret: number; dist: number }[] = [];
+    for (let s = 0; s < 6; s++) {
+      // Filter strings inside the vertical box (mapped to display rows).
+      // stringOrder in Fretboard is [5,4,3,2,1,0] → row 0 = high e, row 5 = low E.
+      const row = [5, 4, 3, 2, 1, 0].indexOf(s);
+      if (row < fb.fretBoxStringStart || row >= fb.fretBoxStringStart + fb.fretBoxStringSize) continue;
+      const fret = targetMidi - stringMidiBase[s];
+      if (fret < fb.fretBoxStart || fret > fretBoxEnd) continue;
+      // Prefer lowest fret (closest to box start) and lowest string distance.
+      candidates.push({ stringIndex: s, fret, dist: fret - fb.fretBoxStart });
+    }
+    if (candidates.length === 0) {
+      toast.info(`Note ${targetMidi} is outside the focus box`);
+      return;
+    }
+    candidates.sort((a, b) => a.dist - b.dist);
+    const pick = candidates[0];
+    setStagedNote({ stringIndex: pick.stringIndex, fret: pick.fret });
+    fb.setArpAddReferenceNotes([{ stringIndex: pick.stringIndex, fret: pick.fret }]);
+  }, [pitch.midi, pitch.rms, listenMode, fb.fretBoxStart, fb.fretBoxSize, fb.fretBoxStringStart, fb.fretBoxStringSize]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const onPlay = async () => {
     if (phrase.notes.length === 0) { toast.info('No notes to play'); return; }
     setIsPlaying(true);
@@ -375,10 +429,16 @@ export default function CourseCreator() {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Time sig</Label>
-              <select value={timeSig} onChange={e => setTimeSig(e.target.value)}
-                className="appearance-none bg-card border border-border rounded-md px-2 py-1.5 text-sm w-full mt-1 font-mono hover:bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary">
-                {TIME_SIGS.map(t => <option key={t}>{t}</option>)}
-              </select>
+              <div className="relative mt-1">
+                <select
+                  value={timeSig}
+                  onChange={e => setTimeSig(e.target.value)}
+                  className="appearance-none w-full bg-card border border-border rounded-md pl-2 pr-7 py-1.5 text-sm font-mono text-foreground hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  {TIME_SIGS.map(t => <option key={t}>{t}</option>)}
+                </select>
+                <ChevronLeft className="size-3 absolute right-2 top-1/2 -translate-y-1/2 -rotate-90 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
             <div>
               <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Tempo</Label>
@@ -431,7 +491,8 @@ export default function CourseCreator() {
               primaryColor={fb.primaryColor}
               activeChord={null}
               orientation={fb.orientation}
-              showFretBox={false}
+              showFretBox={listenMode || fb.showFretBox}
+              fretBoxTintHsl={listenMode ? '200, 80%, 60%' : undefined}
               fretBoxStart={fb.fretBoxStart}
               fretBoxSize={fb.fretBoxSize}
               setFretBoxStart={fb.setFretBoxStart}
@@ -462,8 +523,18 @@ export default function CourseCreator() {
               onArpAddClick={(si, fret) => fb.arpAddClickHandler?.(si, fret)}
               hideToolbar={true}
             />
-            {/* Play / Stop + Metronome — sit directly under the fretboard for quick reach */}
+            {/* Listen + Play / Stop + Metronome — sit directly under the fretboard for quick reach */}
             <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-border">
+              <Button
+                size="lg"
+                variant={listenMode ? 'default' : 'outline'}
+                onClick={() => setListenMode(m => !m)}
+                className="rounded-full px-4"
+                title={listenMode ? 'Listening to mic — click to disable' : 'Listen: detect pitch and stage notes inside the focus box'}
+              >
+                {listenMode ? <Mic className="size-5" /> : <MicOff className="size-5" />}
+                <span className="ml-2 text-xs uppercase font-mono tracking-wider">Listen</span>
+              </Button>
               {isPlaying ? (
                 <Button size="lg" variant="destructive" onClick={onStop} className="rounded-full px-6">
                   <Square className="size-5 mr-2" /> Stop
@@ -483,6 +554,9 @@ export default function CourseCreator() {
                 {metronome ? <Bell className="size-5" /> : <BellOff className="size-5" />}
                 <span className="ml-2 text-xs uppercase font-mono tracking-wider">Click</span>
               </Button>
+              {listenMode && pitch.error && (
+                <span className="text-xs text-destructive ml-2">{pitch.error}</span>
+              )}
             </div>
           </section>
 
