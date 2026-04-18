@@ -958,13 +958,14 @@ export function TabEditor({
                 }
                 return names.join('-');
               })();
+              const groupActive = activePlaybackIds && notes.some(n => activePlaybackIds.includes(n.id));
               return (
                 <div
                   key={beatIdx}
                   data-duration-bar
                   className={`absolute top-1 rounded-sm flex items-center justify-center text-[10px] font-mono text-white font-bold select-none overflow-hidden ${
                     groupSelected ? 'ring-2 ring-primary' : ''
-                  } ${deleteMode ? 'cursor-not-allowed ring-2 ring-destructive' : 'cursor-move'}`}
+                  } ${groupActive ? 'ring-2 ring-accent shadow-[0_0_12px_hsl(var(--primary))]' : ''} ${deleteMode ? 'cursor-not-allowed ring-2 ring-destructive' : 'cursor-move'}`}
                   style={{
                     left: localBeat * CELL_W + 1,
                     width: dur * CELL_W - 2,
