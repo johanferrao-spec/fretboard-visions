@@ -966,7 +966,7 @@ export function TabEditor({
                     textShadow: degreeColours ? '0 1px 1px rgba(0,0,0,0.4)' : undefined,
                     paddingLeft: 2,
                     paddingRight: 2,
-                    cursor: deleteMode ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18'/><path d='M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6'/><path d='M10 11v6'/><path d='M14 11v6'/><path d='M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2'/></svg>") 12 12, not-allowed` : 'pointer',
+                    cursor: deleteMode ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23fde68a' stroke='%23b45309' stroke-width='1.4' stroke-linejoin='round'><path d='M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53l-6.36-6.36l-3.54 3.54c-.78.78-.78 2.04 0 2.82'/></svg>") 12 12, not-allowed` : 'pointer',
                   }}
                 >
                   {editingFret?.id === n.id ? (
