@@ -102,6 +102,15 @@ export function GlobalTracksEditor({
     }]);
   };
 
+  /** Drop a bass note onto an existing chord region → set its slash bass. */
+  const handleBassDropOnChord = (chordId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const bass = e.dataTransfer.getData('text/bass-note') as NoteName;
+    if (!bass) return;
+    setChordTrack(chordTrack.map(c => c.id === chordId ? { ...c, bass } : c));
+  };
+
   const startTypeChord = (cellIdx: number) => {
     if (!isOwner) return;
     const beatIndex = startGrid + Math.floor(cellIdx / gridPerBar) * gridPerBar;
