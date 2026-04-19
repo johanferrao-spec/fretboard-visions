@@ -241,17 +241,15 @@ export default function CourseCreator() {
   useEffect(() => {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
+      // If a single tab note is selected, clicking moves it (legacy behavior).
       if (selectedIdsRef.current.length === 1) {
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
         return;
       }
-      if (stagedNoteRef.current) {
-        const prev = stagedNoteRef.current;
-        insertRef.current(prev.stringIndex, prev.fret);
-        setStagedNote({ stringIndex: si, fret });
-        fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
-        return;
-      }
+      // Otherwise, ALWAYS just stage the click as a preview.
+      // The user must press Enter (or click the Insert button) to commit.
+      // Clicking a different fret while one is staged simply replaces the staged note —
+      // it does NOT auto-commit the previous one.
       setStagedNote({ stringIndex: si, fret });
       fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
     });
