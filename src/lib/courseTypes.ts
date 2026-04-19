@@ -28,6 +28,8 @@ export interface ChordTrackEntry {
   durationGrid: number;
   root: NoteName;
   quality: string;         // e.g. "Major", "Minor 7", "Dominant 7"
+  /** Optional slash-chord bass note (e.g. Am/G → bass = G). */
+  bass?: NoteName;
 }
 
 /** Key change marker — Logic-style global track. */
