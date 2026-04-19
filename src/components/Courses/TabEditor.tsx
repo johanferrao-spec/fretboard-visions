@@ -1080,20 +1080,29 @@ export function TabEditor({
                 </div>
               );
             })}
-            {/* Rest glyphs (only in 'rests' mode) — sit in the gaps between duration bars. */}
+            {/* Rest glyphs (only in 'rests' mode) — sit in the gaps between duration bars.
+                Each rest is rendered with a clear background pill so it reads as a proper musical rest
+                rather than blending into the empty grid. Standard rest glyphs:
+                  𝄻 whole · 𝄼 half · 𝄽 quarter · 𝄾 eighth · 𝄿 sixteenth */}
             {restGlyphs.map((r, i) => (
               <div
                 key={`rest-${i}`}
-                className="absolute pointer-events-none select-none flex items-center justify-center text-black"
+                className="absolute pointer-events-none select-none flex items-center justify-center"
                 style={{
-                  left: r.x,
-                  top: 0,
-                  height: ROW_H,
-                  width: 12,
-                  fontSize: 22,
+                  left: r.x - 4,
+                  top: 2,
+                  height: ROW_H + 4,
+                  width: 20,
+                  fontSize: 24,
                   lineHeight: `${ROW_H}px`,
-                  fontFamily: '"Bravura", "Noto Music", serif',
+                  fontFamily: '"Bravura", "Noto Music", "Segoe UI Symbol", serif',
+                  color: 'rgb(40,40,40)',
+                  background: 'rgba(255,255,255,0.85)',
+                  border: '1px solid rgba(0,0,0,0.15)',
+                  borderRadius: 4,
+                  fontWeight: 'bold',
                 }}
+                title="Rest"
               >{r.glyph}</div>
             ))}
           </div>
