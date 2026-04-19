@@ -120,9 +120,10 @@ function KeyRootSelector({ selectedRoot, onSelect }: { selectedRoot: NoteName; o
     return base;
   };
 
-  // E♯/B♯ and F♭/C♭ are enharmonic duplicates of natural notes — disable them.
-  const sharpDisabled = baseNote === 'E' || baseNote === 'B';
-  const flatDisabled = baseNote === 'F' || baseNote === 'C';
+  // Enharmonic duplicates: only render the valid accidental for each natural note.
+  // E,B → only ♭ (no E♯/B♯). F,C → only ♯ (no F♭/C♭). Others → both.
+  const showFlat = baseNote !== 'F' && baseNote !== 'C';
+  const showSharp = baseNote !== 'E' && baseNote !== 'B';
 
   const handleNoteClick = (n: NoteName) => {
     setBaseNote(n);
@@ -131,8 +132,8 @@ function KeyRootSelector({ selectedRoot, onSelect }: { selectedRoot: NoteName; o
   };
 
   const handleAccidental = (acc: 'sharp' | 'flat') => {
-    if (acc === 'sharp' && sharpDisabled) return;
-    if (acc === 'flat' && flatDisabled) return;
+    if (acc === 'sharp' && !showSharp) return;
+    if (acc === 'flat' && !showFlat) return;
     const newAcc = accidental === acc ? 'natural' : acc;
     setAccidental(newAcc);
     onSelect(resolveNote(baseNote, newAcc));
@@ -150,30 +151,28 @@ function KeyRootSelector({ selectedRoot, onSelect }: { selectedRoot: NoteName; o
                 isBase ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
               }`}
             >{n}</button>
-            {isBase && (
+            {isBase && (showFlat || showSharp) && (
               <div className="mt-0.5 flex gap-px">
-                <button
-                  onClick={() => handleAccidental('flat')}
-                  disabled={flatDisabled}
-                  className={`w-5 h-4 rounded-l border text-[9px] font-mono font-bold transition-colors ${
-                    flatDisabled
-                      ? 'bg-muted/20 border-border/30 text-muted-foreground/30 cursor-not-allowed'
-                      : accidental === 'flat'
+                {showFlat && (
+                  <button
+                    onClick={() => handleAccidental('flat')}
+                    className={`w-5 h-4 ${showSharp ? 'rounded-l' : 'rounded'} border text-[9px] font-mono font-bold transition-colors ${
+                      accidental === 'flat'
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
-                  }`}
-                >♭</button>
-                <button
-                  onClick={() => handleAccidental('sharp')}
-                  disabled={sharpDisabled}
-                  className={`w-5 h-4 rounded-r border border-l-0 text-[9px] font-mono font-bold transition-colors ${
-                    sharpDisabled
-                      ? 'bg-muted/20 border-border/30 text-muted-foreground/30 cursor-not-allowed'
-                      : accidental === 'sharp'
+                    }`}
+                  >♭</button>
+                )}
+                {showSharp && (
+                  <button
+                    onClick={() => handleAccidental('sharp')}
+                    className={`w-5 h-4 ${showFlat ? 'rounded-r border-l-0' : 'rounded'} border text-[9px] font-mono font-bold transition-colors ${
+                      accidental === 'sharp'
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
-                  }`}
-                >♯</button>
+                    }`}
+                  >♯</button>
+                )}
               </div>
             )}
           </div>
