@@ -241,17 +241,15 @@ export default function CourseCreator() {
   useEffect(() => {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
+      // If a single tab note is selected, clicking moves it (legacy behavior).
       if (selectedIdsRef.current.length === 1) {
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
         return;
       }
-      if (stagedNoteRef.current) {
-        const prev = stagedNoteRef.current;
-        insertRef.current(prev.stringIndex, prev.fret);
-        setStagedNote({ stringIndex: si, fret });
-        fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
-        return;
-      }
+      // Otherwise, ALWAYS just stage the click as a preview.
+      // The user must press Enter (or click the Insert button) to commit.
+      // Clicking a different fret while one is staged simply replaces the staged note —
+      // it does NOT auto-commit the previous one.
       setStagedNote({ stringIndex: si, fret });
       fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
     });
@@ -288,10 +286,11 @@ export default function CourseCreator() {
   const clearStaged = () => { setStagedNote(null); fb.setArpAddReferenceNotes([]); };
 
   // ===== Listen mode: pitch detection → stage a note inside the position-focus box =====
-  // Toggle: turn fret box on (light blue) and start mic.
+  // Toggle: turn fret box on (light blue) and start mic. We drive `fb.setShowFretBox`
+  // synchronously inside the click handler (see toggleListen below) so the box appears
+  // on the FIRST click — this useEffect only handles the mic stream lifecycle.
   useEffect(() => {
     if (listenMode) {
-      fb.setShowFretBox(true);
       pitch.start(pitch.selectedDeviceId ?? undefined);
     } else {
       pitch.stop();
@@ -300,6 +299,17 @@ export default function CourseCreator() {
     return () => { if (listenMode) pitch.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listenMode]);
+
+  /** Toggle Listen mode + fret box together so the user sees the focus box immediately. */
+  const toggleListen = () => {
+    setListenMode(m => {
+      const next = !m;
+      // Show the fret box on first click; hide it again when listen turns off
+      // (unless the user had it on for non-listen reasons — we conservatively turn it off).
+      fb.setShowFretBox(next);
+      return next;
+    });
+  };
 
   // When pitch.midi changes (and is stable), find the (string, fret) inside the fret box
   // that produces this MIDI value, and STAGE it. Only update when the rounded MIDI changes
@@ -465,14 +475,8 @@ export default function CourseCreator() {
                 {selectedIds.length === 1
                   ? 'Click a fret to move the selected note'
                   : stagedNote
-                    ? `Staged: string ${stagedNote.stringIndex + 1}, fret ${stagedNote.fret} — press Enter or click another fret to insert`
+                    ? `Staged: string ${stagedNote.stringIndex + 1}, fret ${stagedNote.fret} — press Enter or Insert to commit`
                     : 'Click a fret to stage; Enter inserts at cursor'}
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={clearStaged} disabled={!stagedNote}>Clear</Button>
-                <Button size="sm" onClick={commitStaged} disabled={!stagedNote}>
-                  <Plus className="size-4 mr-1" /> Insert
-                </Button>
               </div>
             </div>
             <Fretboard
@@ -523,12 +527,39 @@ export default function CourseCreator() {
               onArpAddClick={(si, fret) => fb.arpAddClickHandler?.(si, fret)}
               hideToolbar={true}
             />
-            {/* Listen + Play / Stop + Metronome — sit directly under the fretboard for quick reach */}
-            <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-border">
+            {/* Unified transport row: [input meter] Listen | Play | Click | Clear | Insert */}
+            <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-border flex-wrap">
+              {/* Compact input device + level meter — sits to the LEFT of Listen, only when active */}
+              {listenMode && (
+                <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/30 border border-border mr-1">
+                  <select
+                    value={pitch.selectedDeviceId ?? ''}
+                    onChange={e => pitch.selectDevice(e.target.value)}
+                    className="appearance-none bg-card border border-border rounded px-1.5 py-0.5 text-[10px] font-mono text-foreground hover:bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer max-w-[7rem] truncate"
+                    title="Select audio input"
+                  >
+                    {pitch.devices.length === 0 && <option value="">Default</option>}
+                    {pitch.devices.map(d => (
+                      <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                    ))}
+                  </select>
+                  {/* Small level meter — green→yellow→red gradient, fills with RMS */}
+                  <div className="w-16 h-1.5 rounded-full bg-muted/60 overflow-hidden relative" title={pitch.midi != null ? `MIDI ${pitch.midi}` : 'listening'}>
+                    <div
+                      className="absolute left-0 top-0 bottom-0 transition-[width] duration-75"
+                      style={{
+                        width: `${Math.min(100, pitch.rms * 600)}%`,
+                        background: 'linear-gradient(90deg, hsl(140,70%,45%) 0%, hsl(60,90%,55%) 60%, hsl(0,80%,55%) 100%)',
+                      }}
+                    />
+                  </div>
+                  {pitch.error && <span className="text-[10px] text-destructive">{pitch.error}</span>}
+                </div>
+              )}
               <Button
                 size="lg"
                 variant={listenMode ? 'default' : 'outline'}
-                onClick={() => setListenMode(m => !m)}
+                onClick={toggleListen}
                 className="rounded-full px-4"
                 title={listenMode ? 'Listening to mic — click to disable' : 'Listen: detect pitch and stage notes inside the focus box'}
               >
@@ -554,41 +585,14 @@ export default function CourseCreator() {
                 {metronome ? <Bell className="size-5" /> : <BellOff className="size-5" />}
                 <span className="ml-2 text-xs uppercase font-mono tracking-wider">Click</span>
               </Button>
+              {/* Clear / Insert moved here to free space at top of screen */}
+              <Button size="lg" variant="outline" onClick={clearStaged} disabled={!stagedNote} className="rounded-full px-4">
+                Clear
+              </Button>
+              <Button size="lg" onClick={commitStaged} disabled={!stagedNote} className="rounded-full px-4">
+                <Plus className="size-5 mr-1" /> Insert
+              </Button>
             </div>
-            {/* Listen-mode controls: input device + level meter (only when active) */}
-            {listenMode && (
-              <div className="mt-3 flex items-center gap-3 px-3 py-2 rounded-md bg-muted/30 border border-border">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground shrink-0">Input</span>
-                <select
-                  value={pitch.selectedDeviceId ?? ''}
-                  onChange={e => pitch.selectDevice(e.target.value)}
-                  className="appearance-none bg-card border border-border rounded-md px-2 py-1 text-xs font-mono text-foreground hover:bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer max-w-[14rem] truncate"
-                >
-                  {pitch.devices.length === 0 && <option value="">Default</option>}
-                  {pitch.devices.map(d => (
-                    <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
-                  ))}
-                </select>
-                {/* Level meter — green when signal present, brighter as RMS rises */}
-                <div className="flex-1 h-2 rounded-full bg-muted/60 overflow-hidden relative">
-                  <div
-                    className="absolute left-0 top-0 bottom-0 transition-[width] duration-75"
-                    style={{
-                      width: `${Math.min(100, pitch.rms * 600)}%`,
-                      background: pitch.rms > 0.02
-                        ? 'linear-gradient(90deg, hsl(140,70%,45%), hsl(60,90%,55%), hsl(0,80%,55%))'
-                        : 'hsl(var(--muted-foreground) / 0.5)',
-                    }}
-                  />
-                </div>
-                <span className="text-[10px] font-mono text-muted-foreground tabular-nums w-16 text-right">
-                  {pitch.midi != null ? `MIDI ${pitch.midi}` : pitch.rms > 0.005 ? 'listening…' : 'silent'}
-                </span>
-                {pitch.error && (
-                  <span className="text-xs text-destructive ml-2">{pitch.error}</span>
-                )}
-              </div>
-            )}
           </section>
 
           {/* Bar window controls */}
