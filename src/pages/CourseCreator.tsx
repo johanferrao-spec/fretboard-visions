@@ -34,8 +34,7 @@ const SUB_STEP: Record<Subdivision, number> = {
 };
 
 const TIME_SIGS = ['4/4', '3/4', '6/8', '2/4'];
-/** Show one bar of anacrusis before bar 1, plus 3 bars after = 4 bars visible. */
-const VISIBLE_BARS = 4;
+const BARS_OPTIONS = [2, 4, 8] as const;
 const ANACRUSIS_BARS = 1;
 
 export default function CourseCreator() {
