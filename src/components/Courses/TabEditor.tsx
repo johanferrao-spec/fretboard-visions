@@ -1096,18 +1096,15 @@ export function TabEditor({
                 key={`rest-${i}`}
                 className="absolute pointer-events-none select-none flex items-center justify-center"
                 style={{
-                  left: r.x - 4,
-                  top: 2,
-                  height: ROW_H + 4,
-                  width: 20,
-                  fontSize: 24,
-                  lineHeight: `${ROW_H}px`,
-                  fontFamily: '"Bravura", "Noto Music", "Segoe UI Symbol", serif',
-                  color: 'rgb(40,40,40)',
-                  background: 'rgba(255,255,255,0.85)',
-                  border: '1px solid rgba(0,0,0,0.15)',
-                  borderRadius: 4,
-                  fontWeight: 'bold',
+                  left: r.x,
+                  top: -2,
+                  height: ROW_H + 12,
+                  width: r.size,
+                  fontSize: r.size,
+                  lineHeight: 1,
+                  fontFamily: '"Bravura Text", "Bravura", "Noto Music", "Segoe UI Symbol", serif',
+                  color: 'rgb(20,20,20)',
+                  fontWeight: 'normal',
                 }}
                 title="Rest"
               >{r.glyph}</div>
