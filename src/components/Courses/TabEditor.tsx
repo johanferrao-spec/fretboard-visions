@@ -296,42 +296,49 @@ export function TabEditor({
   }, [visibleNotes]);
 
   /**
-   * Compute "rest spans" — gaps in the rhythm row where no note is sounding.
-   * Walks the visible window beat-by-subdivision and emits a rest span for each
-   * contiguous empty stretch. Each span is then split into musical rest values
-   * (whole, half, quarter, eighth, sixteenth) with proper glyphs.
+   * Standard musical rest values (per Claude/standard notation):
+   *   𝄻 whole · 𝄼 half · 𝄽 quarter · 𝄾 eighth · 𝄿 sixteenth
+   * Greedy largest-first BUT respects bar boundaries and metric alignment
+   * (a half-rest only on beats 1/3, a quarter on any beat, etc).
    */
-  const REST_GLYPHS: Array<{ grid: number; glyph: string }> = [
-    { grid: GRID_PER_BEAT * 4, glyph: '𝄻' }, // whole rest (4 beats)
-    { grid: GRID_PER_BEAT * 2, glyph: '𝄼' }, // half rest
-    { grid: GRID_PER_BEAT,     glyph: '𝄽' }, // quarter rest
-    { grid: GRID_PER_BEAT / 2, glyph: '𝄾' }, // eighth rest
-    { grid: GRID_PER_BEAT / 4, glyph: '𝄿' }, // sixteenth rest
+  const REST_GLYPHS: Array<{ grid: number; glyph: string; size: number }> = [
+    { grid: GRID_PER_BEAT * 4, glyph: '𝄻', size: 26 },
+    { grid: GRID_PER_BEAT * 2, glyph: '𝄼', size: 24 },
+    { grid: GRID_PER_BEAT,     glyph: '𝄽', size: 22 },
+    { grid: GRID_PER_BEAT / 2, glyph: '𝄾', size: 20 },
+    { grid: GRID_PER_BEAT / 4, glyph: '𝄿', size: 18 },
   ];
   const restGlyphs = useMemo(() => {
-    if (gridMode !== 'rests') return [] as Array<{ x: number; glyph: string; w: number }>;
-    // Build a sorted list of "occupied" intervals (across ALL strings).
+    if (gridMode !== 'rests') return [] as Array<{ x: number; glyph: string; w: number; size: number }>;
     const intervals = phrase.notes
       .map(n => [n.beatIndex, n.beatIndex + n.durationGrid] as [number, number])
       .sort((a, b) => a[0] - b[0]);
-    // Merge overlapping intervals.
     const merged: Array<[number, number]> = [];
     for (const [s, e] of intervals) {
       if (merged.length === 0 || s > merged[merged.length - 1][1]) merged.push([s, e]);
       else merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], e);
     }
-    // Walk the visible window, finding gaps between merged intervals.
-    const out: Array<{ x: number; glyph: string; w: number }> = [];
+    const out: Array<{ x: number; glyph: string; w: number; size: number }> = [];
     let cursor = startGrid;
     const end = startGrid + totalCells;
     const emitRests = (from: number, to: number) => {
       let pos = from;
       while (pos < to - 0.001) {
         const remaining = to - pos;
-        // Pick the largest rest value that fits AND aligns to the beat grid where possible.
-        const chosen = REST_GLYPHS.find(r => r.grid <= remaining + 0.001) ?? REST_GLYPHS[REST_GLYPHS.length - 1];
+        const posInBar = ((pos % gridPerBar) + gridPerBar) % gridPerBar;
+        const distToBar = gridPerBar - posInBar || gridPerBar;
+        const maxFit = Math.min(remaining, distToBar);
+        const chosen = REST_GLYPHS.find(r =>
+          r.grid <= maxFit + 0.001 &&
+          Math.abs(((pos % r.grid) + r.grid) % r.grid) < 0.001
+        ) ?? REST_GLYPHS[REST_GLYPHS.length - 1];
         const w = chosen.grid * CELL_W;
-        out.push({ x: (pos - startGrid) * CELL_W + w / 2 - 6, glyph: chosen.glyph, w });
+        out.push({
+          x: (pos - startGrid) * CELL_W + w / 2 - chosen.size / 2,
+          glyph: chosen.glyph,
+          w,
+          size: chosen.size,
+        });
         pos += chosen.grid;
       }
     };
@@ -345,7 +352,7 @@ export function TabEditor({
     }
     if (cursor < end) emitRests(Math.max(cursor, startGrid), end);
     return out;
-  }, [gridMode, phrase.notes, startGrid, totalCells]);
+  }, [gridMode, phrase.notes, startGrid, totalCells, gridPerBar, CELL_W]);
 
   // (Default duration is now driven by the lifted `subdivision` prop. Selecting a single
   // note no longer mutates the default — the subdivision dropdown is the source of truth.)
