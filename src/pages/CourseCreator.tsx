@@ -475,14 +475,8 @@ export default function CourseCreator() {
                 {selectedIds.length === 1
                   ? 'Click a fret to move the selected note'
                   : stagedNote
-                    ? `Staged: string ${stagedNote.stringIndex + 1}, fret ${stagedNote.fret} — press Enter or click another fret to insert`
+                    ? `Staged: string ${stagedNote.stringIndex + 1}, fret ${stagedNote.fret} — press Enter or Insert to commit`
                     : 'Click a fret to stage; Enter inserts at cursor'}
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={clearStaged} disabled={!stagedNote}>Clear</Button>
-                <Button size="sm" onClick={commitStaged} disabled={!stagedNote}>
-                  <Plus className="size-4 mr-1" /> Insert
-                </Button>
               </div>
             </div>
             <Fretboard
