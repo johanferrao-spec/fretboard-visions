@@ -284,10 +284,20 @@ export function GlobalTracksEditor({
             const local = c.beatIndex - startGrid;
             const color = chordColor(c);
             const editing = editingChordId === c.id;
+            const labelText = chordToShortLabel(c.root, c.quality) + (c.bass ? `/${c.bass}` : '');
             return (
               <div key={c.id}
                 onClick={(e) => { e.stopPropagation(); tryDeleteChord(c.id); }}
                 onMouseDown={(e) => !deleteMode && !editing && dragChord(c.id, 'move', e)}
+                onDragOver={(e) => {
+                  // Accept bass-note drops on the chord region (slash chord)
+                  if (e.dataTransfer.types.includes('text/bass-note')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = 'copy';
+                  }
+                }}
+                onDrop={(e) => handleBassDropOnChord(c.id, e)}
                 className={`absolute top-0.5 bottom-0.5 rounded-md text-[11px] font-mono z-20 flex items-center px-2 select-none overflow-hidden ${deleteMode ? 'cursor-not-allowed ring-2 ring-destructive' : 'cursor-move'}`}
                 style={{
                   left: LANE_LABEL_W + local * CELL_W,
@@ -318,11 +328,21 @@ export function GlobalTracksEditor({
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       setEditingChordId(c.id);
-                      setChordInput(chordToShortLabel(c.root, c.quality));
+                      setChordInput(labelText);
                     }}
                     className="flex-1 text-left font-bold truncate px-1"
-                    title="Double-click to rename — drag edges to resize — drag body to move"
-                  >{chordToShortLabel(c.root, c.quality)}</button>
+                    title="Double-click to rename — drop a bass note for slash chord — drag edges to resize"
+                  >{labelText}</button>
+                )}
+                {c.bass && !editing && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setChordTrack(chordTrack.map(x => x.id === c.id ? { ...x, bass: undefined } : x));
+                    }}
+                    className="ml-1 text-white/70 hover:text-white text-[9px] leading-none px-1 rounded"
+                    title="Remove slash bass"
+                  >×</button>
                 )}
                 {/* right resize */}
                 <div onMouseDown={(e) => dragChord(c.id, 'resize-r', e)} className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-white/30" />
