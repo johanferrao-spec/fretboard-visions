@@ -286,10 +286,11 @@ export default function CourseCreator() {
   const clearStaged = () => { setStagedNote(null); fb.setArpAddReferenceNotes([]); };
 
   // ===== Listen mode: pitch detection → stage a note inside the position-focus box =====
-  // Toggle: turn fret box on (light blue) and start mic.
+  // Toggle: turn fret box on (light blue) and start mic. We drive `fb.setShowFretBox`
+  // synchronously inside the click handler (see toggleListen below) so the box appears
+  // on the FIRST click — this useEffect only handles the mic stream lifecycle.
   useEffect(() => {
     if (listenMode) {
-      fb.setShowFretBox(true);
       pitch.start(pitch.selectedDeviceId ?? undefined);
     } else {
       pitch.stop();
@@ -298,6 +299,17 @@ export default function CourseCreator() {
     return () => { if (listenMode) pitch.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listenMode]);
+
+  /** Toggle Listen mode + fret box together so the user sees the focus box immediately. */
+  const toggleListen = () => {
+    setListenMode(m => {
+      const next = !m;
+      // Show the fret box on first click; hide it again when listen turns off
+      // (unless the user had it on for non-listen reasons — we conservatively turn it off).
+      fb.setShowFretBox(next);
+      return next;
+    });
+  };
 
   // When pitch.midi changes (and is stable), find the (string, fret) inside the fret box
   // that produces this MIDI value, and STAGE it. Only update when the rounded MIDI changes
