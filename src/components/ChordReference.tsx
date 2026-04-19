@@ -147,6 +147,8 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
   };
 
   const handleAccidental = (acc: 'sharp' | 'flat') => {
+    if (acc === 'sharp' && (baseNote === 'E' || baseNote === 'B')) return;
+    if (acc === 'flat' && (baseNote === 'F' || baseNote === 'C')) return;
     const newAcc = accidental === acc ? 'natural' : acc;
     setAccidental(newAcc);
     setSelectedRoot(resolveNote(baseNote, newAcc));
@@ -157,6 +159,8 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
       <div className="flex flex-wrap gap-0.5 items-end">
         {NATURAL_NOTES.map(n => {
           const isBase = n === baseNote;
+          const sharpDisabled = isBase && (n === 'E' || n === 'B');
+          const flatDisabled = isBase && (n === 'F' || n === 'C');
           return (
             <div key={n} className="flex flex-col items-center">
               <button
@@ -169,18 +173,24 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
                 <div className="mt-0.5 flex gap-px">
                   <button
                     onClick={() => handleAccidental('flat')}
+                    disabled={flatDisabled}
                     className={`w-5 h-4 rounded-l border text-[9px] font-mono font-bold transition-colors ${
-                      accidental === 'flat'
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
+                      flatDisabled
+                        ? 'bg-muted/20 border-border/30 text-muted-foreground/30 cursor-not-allowed'
+                        : accidental === 'flat'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
                     }`}
                   >♭</button>
                   <button
                     onClick={() => handleAccidental('sharp')}
+                    disabled={sharpDisabled}
                     className={`w-5 h-4 rounded-r border border-l-0 text-[9px] font-mono font-bold transition-colors ${
-                      accidental === 'sharp'
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
+                      sharpDisabled
+                        ? 'bg-muted/20 border-border/30 text-muted-foreground/30 cursor-not-allowed'
+                        : accidental === 'sharp'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
                     }`}
                   >♯</button>
                 </div>
