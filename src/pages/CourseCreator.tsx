@@ -287,6 +287,10 @@ export default function CourseCreator() {
   selectedIdsRef.current = selectedIds;
   const stagedNoteRef = useRef<{ stringIndex: number; fret: number } | null>(null);
   stagedNoteRef.current = stagedNote;
+  const stagedChordRef = useRef<Array<{ stringIndex: number; fret: number }>>([]);
+  stagedChordRef.current = stagedChord;
+  const chordModeRef = useRef(false);
+  chordModeRef.current = chordMode;
   // Always-fresh insert function (avoids stale closures inside the fretboard callback).
   const insertRef = useRef(insertNoteAtCursor);
   insertRef.current = insertNoteAtCursor;
@@ -298,18 +302,27 @@ export default function CourseCreator() {
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
         return;
       }
-      // Otherwise, ALWAYS just stage the click as a preview.
-      // The user must press Enter (or click the Insert button) to commit.
-      // Clicking a different fret while one is staged simply replaces the staged note —
-      // it does NOT auto-commit the previous one.
+      // Hold-C chord mode: collect picks (one per string, latest wins).
+      if (chordModeRef.current) {
+        setStagedChord(prev => {
+          const next = prev.filter(p => p.stringIndex !== si);
+          next.push({ stringIndex: si, fret });
+          fb.setArpAddReferenceNotes(next);
+          return next;
+        });
+        setStagedNote(null);
+        return;
+      }
+      // Otherwise, single-note staging.
       setStagedNote({ stringIndex: si, fret });
+      setStagedChord([]);
       fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
     });
     return () => { fb.setArpAddMode(false); fb.setArpAddClickHandler(null); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When tab notes are selected, mirror them on the fretboard. Otherwise show staged note.
+  // When tab notes are selected, mirror them on the fretboard. Otherwise show staged chord/note.
   // During playback, mirror the currently sounding notes (live).
   const fretboardReference = useMemo(() => {
     if (isPlaying && activePlaybackIds.length > 0) {
@@ -322,8 +335,9 @@ export default function CourseCreator() {
         .filter(n => selectedIds.includes(n.id))
         .map(n => ({ stringIndex: n.stringIndex, fret: n.fret }));
     }
+    if (stagedChord.length > 0) return stagedChord;
     return stagedNote ? [stagedNote] : [];
-  }, [selectedIds, phrase.notes, stagedNote, isPlaying, activePlaybackIds]);
+  }, [selectedIds, phrase.notes, stagedNote, stagedChord, isPlaying, activePlaybackIds]);
 
   useEffect(() => {
     fb.setArpAddReferenceNotes(fretboardReference);
