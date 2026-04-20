@@ -172,7 +172,7 @@ export default function CourseCreator() {
     setStagedNote(null);
     fb.setArpAddReferenceNotes([]);
     const newBarIdx = Math.floor(nextCursor / gridPerBar);
-    if (newBarIdx >= windowStartBar + VISIBLE_BARS - 1) {
+    if (newBarIdx >= windowStartBar + visibleBars - 1) {
       setWindowStartBar(Math.max(-ANACRUSIS_BARS, newBarIdx - 1));
     }
   };
@@ -363,14 +363,14 @@ export default function CourseCreator() {
   onPlayRef.current = onPlay;
   const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); setActivePlaybackIds([]); };
 
-  const totalBars = Math.max(VISIBLE_BARS, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
+  const totalBars = Math.max(visibleBars, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
   const minWindow = -ANACRUSIS_BARS; // -1 → user can scroll back exactly one bar
-  const maxWindow = totalBars - VISIBLE_BARS;
+  const maxWindow = totalBars - visibleBars;
   const goPrevBar = () => setWindowStartBar(b => Math.max(minWindow, b - 1));
   const goNextBar = () => setWindowStartBar(b => Math.min(maxWindow, b + 1));
 
   useEffect(() => {
-    const needed = (windowStartBar + VISIBLE_BARS) * gridPerBar;
+    const needed = (windowStartBar + visibleBars) * gridPerBar;
     if (phrase.lengthGrid < needed) {
       setPhrase(p => ({ ...p, lengthGrid: needed }));
     }
@@ -602,7 +602,7 @@ export default function CourseCreator() {
               <ChevronLeft className="size-6" />
             </Button>
             <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-              Bars {windowStartBar + 1} – {windowStartBar + VISIBLE_BARS} of {totalBars}
+              Bars {windowStartBar + 1} – {windowStartBar + visibleBars} of {totalBars}
               {windowStartBar < 0 && <span className="ml-2 text-primary">(anacrusis visible)</span>}
             </p>
             <Button size="lg" variant="outline" onClick={goNextBar} disabled={windowStartBar >= maxWindow} className="rounded-full size-12 p-0">
@@ -621,7 +621,7 @@ export default function CourseCreator() {
             selectedIds={selectedIds}
             setSelectedIds={setSelectedIds}
             startGrid={windowStartBar * gridPerBar}
-            visibleGrids={VISIBLE_BARS * gridPerBar}
+            visibleGrids={visibleBars * gridPerBar}
             playheadGrid={isPlaying ? playheadGrid : null}
             pickedFretboardNote={pickedFretboardNote}
             deleteMode={deleteMode}
@@ -643,7 +643,7 @@ export default function CourseCreator() {
                 keyTrack={keyTrack} setKeyTrack={setKeyTrack}
                 tempoTrack={tempoTrack} setTempoTrack={setTempoTrack}
                 startGrid={windowStartBar * gridPerBar}
-                visibleGrids={VISIBLE_BARS * gridPerBar}
+                visibleGrids={visibleBars * gridPerBar}
                 beatsPerBar={beatsPerBar}
                 isOwner
                 defaultKeyRoot={keyRoot}
