@@ -65,6 +65,9 @@ export default function CourseCreator() {
 
   // Staged input note from interactive fretboard (preview before commit via Enter)
   const [stagedNote, setStagedNote] = useState<{ stringIndex: number; fret: number } | null>(null);
+  /** Hold-C chord mode — collects multiple staged notes (one per string) for chord insert. */
+  const [chordMode, setChordMode] = useState(false);
+  const [stagedChord, setStagedChord] = useState<Array<{ stringIndex: number; fret: number }>>([]);
   /** Subdivision drives BOTH grid snapping and default new-note duration. */
   const [subdivision, setSubdivision] = useState<Subdivision>('1/8');
   /** Insertion cursor (state, not ref) — also acts as the draggable playhead when stopped. */
@@ -79,6 +82,8 @@ export default function CourseCreator() {
   // Bar window: viewport over the timeline. Indexed in MUSICAL bars (bar 1 = the first "real" bar).
   // Default: start AT bar 1 (windowStartBar = 0). User can scroll back ONE bar (-1) to view anacrusis.
   const [windowStartBar, setWindowStartBar] = useState(0);
+  /** How many bars are visible in the tab editor at once (user-selectable, next to Tempo). */
+  const [visibleBars, setVisibleBars] = useState<number>(4);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadGrid, setPlayheadGrid] = useState(0);
   const [activePlaybackIds, setActivePlaybackIds] = useState<string[]>([]);
@@ -170,13 +175,54 @@ export default function CourseCreator() {
     setStagedNote(null);
     fb.setArpAddReferenceNotes([]);
     const newBarIdx = Math.floor(nextCursor / gridPerBar);
-    if (newBarIdx >= windowStartBar + VISIBLE_BARS - 1) {
+    if (newBarIdx >= windowStartBar + visibleBars - 1) {
       setWindowStartBar(Math.max(-ANACRUSIS_BARS, newBarIdx - 1));
     }
   };
 
-  /** Commit current staged fretboard pick (Enter key). */
+  /** Insert a CHORD (multiple notes, one per string) at the cursor. Trims overlapping notes
+   * and advances the cursor by the subdivision-derived duration just like a single note. */
+  const insertChordAtCursor = (picks: Array<{ stringIndex: number; fret: number }>) => {
+    if (picks.length === 0) return;
+    const dur = SUB_STEP[subdivision];
+    const beatIndex = cursorGrid;
+    // Trim earlier notes (any string) crossing into beatIndex.
+    const trimmed = phrase.notes.map(n => {
+      const nEnd = n.beatIndex + n.durationGrid;
+      if (n.beatIndex < beatIndex && nEnd > beatIndex) {
+        return { ...n, durationGrid: beatIndex - n.beatIndex };
+      }
+      return n;
+    });
+    // De-dupe per string (keep last pick per string) and skip strings that already have a note here.
+    const perString = new Map<number, { stringIndex: number; fret: number }>();
+    picks.forEach(p => perString.set(p.stringIndex, p));
+    const newNotes: CourseNote[] = [];
+    perString.forEach(p => {
+      const collision = trimmed.find(n => n.stringIndex === p.stringIndex && Math.abs(n.beatIndex - beatIndex) < 0.001);
+      if (collision) return;
+      newNotes.push({
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${p.stringIndex}`,
+        stringIndex: p.stringIndex, fret: p.fret, beatIndex, durationGrid: dur,
+      });
+    });
+    if (newNotes.length === 0) { toast.info('All those strings already have notes here'); return; }
+    const newLen = Math.max(phrase.lengthGrid, beatIndex + dur * 2);
+    setPhrase({ notes: [...trimmed, ...newNotes], lengthGrid: newLen });
+    const nextCursor = beatIndex + dur;
+    setCursorGrid(nextCursor);
+    setStagedNote(null);
+    setStagedChord([]);
+    fb.setArpAddReferenceNotes([]);
+    const newBarIdx = Math.floor(nextCursor / gridPerBar);
+    if (newBarIdx >= windowStartBar + visibleBars - 1) {
+      setWindowStartBar(Math.max(-ANACRUSIS_BARS, newBarIdx - 1));
+    }
+  };
+
+  /** Commit current staged fretboard pick (Enter key). Commits chord if chord-mode picks exist. */
   const commitStaged = () => {
+    if (stagedChord.length > 0) { insertChordAtCursor(stagedChord); return; }
     if (!stagedNote) { toast.info('Pick a fret on the fretboard first'); return; }
     insertNoteAtCursor(stagedNote.stringIndex, stagedNote.fret);
   };
@@ -201,13 +247,20 @@ export default function CourseCreator() {
         if (isPlayingRef.current) { player.stop(); setIsPlaying(false); setPlayheadGrid(0); }
         else { onPlayRef.current?.(); }
       }
-      if (e.key === 'Enter' && !inField && stagedNoteRef.current) {
+      // Hold-C → chord mode (collect multi-string staged notes).
+      if ((e.key === 'c' || e.key === 'C') && !inField && !e.metaKey && !e.ctrlKey && !e.repeat) {
+        setChordMode(true);
+      }
+      if (e.key === 'Enter' && !inField && (stagedNoteRef.current || stagedChordRef.current.length > 0)) {
         e.preventDefault();
         commitStagedRef.current();
       }
     };
-    const onKU = (e: KeyboardEvent) => { if (!e.metaKey && !e.ctrlKey) setDeleteMode(false); };
-    const onBlur = () => setDeleteMode(false);
+    const onKU = (e: KeyboardEvent) => {
+      if (!e.metaKey && !e.ctrlKey) setDeleteMode(false);
+      if (e.key === 'c' || e.key === 'C') setChordMode(false);
+    };
+    const onBlur = () => { setDeleteMode(false); setChordMode(false); };
     window.addEventListener('keydown', onKD);
     window.addEventListener('keyup', onKU);
     window.addEventListener('blur', onBlur);
@@ -234,6 +287,10 @@ export default function CourseCreator() {
   selectedIdsRef.current = selectedIds;
   const stagedNoteRef = useRef<{ stringIndex: number; fret: number } | null>(null);
   stagedNoteRef.current = stagedNote;
+  const stagedChordRef = useRef<Array<{ stringIndex: number; fret: number }>>([]);
+  stagedChordRef.current = stagedChord;
+  const chordModeRef = useRef(false);
+  chordModeRef.current = chordMode;
   // Always-fresh insert function (avoids stale closures inside the fretboard callback).
   const insertRef = useRef(insertNoteAtCursor);
   insertRef.current = insertNoteAtCursor;
@@ -245,18 +302,27 @@ export default function CourseCreator() {
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
         return;
       }
-      // Otherwise, ALWAYS just stage the click as a preview.
-      // The user must press Enter (or click the Insert button) to commit.
-      // Clicking a different fret while one is staged simply replaces the staged note —
-      // it does NOT auto-commit the previous one.
+      // Hold-C chord mode: collect picks (one per string, latest wins).
+      if (chordModeRef.current) {
+        setStagedChord(prev => {
+          const next = prev.filter(p => p.stringIndex !== si);
+          next.push({ stringIndex: si, fret });
+          fb.setArpAddReferenceNotes(next);
+          return next;
+        });
+        setStagedNote(null);
+        return;
+      }
+      // Otherwise, single-note staging.
       setStagedNote({ stringIndex: si, fret });
+      setStagedChord([]);
       fb.setArpAddReferenceNotes([{ stringIndex: si, fret }]);
     });
     return () => { fb.setArpAddMode(false); fb.setArpAddClickHandler(null); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When tab notes are selected, mirror them on the fretboard. Otherwise show staged note.
+  // When tab notes are selected, mirror them on the fretboard. Otherwise show staged chord/note.
   // During playback, mirror the currently sounding notes (live).
   const fretboardReference = useMemo(() => {
     if (isPlaying && activePlaybackIds.length > 0) {
@@ -269,8 +335,9 @@ export default function CourseCreator() {
         .filter(n => selectedIds.includes(n.id))
         .map(n => ({ stringIndex: n.stringIndex, fret: n.fret }));
     }
+    if (stagedChord.length > 0) return stagedChord;
     return stagedNote ? [stagedNote] : [];
-  }, [selectedIds, phrase.notes, stagedNote, isPlaying, activePlaybackIds]);
+  }, [selectedIds, phrase.notes, stagedNote, stagedChord, isPlaying, activePlaybackIds]);
 
   useEffect(() => {
     fb.setArpAddReferenceNotes(fretboardReference);
@@ -282,7 +349,7 @@ export default function CourseCreator() {
     fb.setArpOverlayOpacity(1);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const clearStaged = () => { setStagedNote(null); fb.setArpAddReferenceNotes([]); };
+  const clearStaged = () => { setStagedNote(null); setStagedChord([]); fb.setArpAddReferenceNotes([]); };
 
   // ===== Listen mode: pitch detection → stage a note inside the position-focus box =====
   // Toggle: turn fret box on (light blue) and start mic. We drive `fb.setShowFretBox`
@@ -361,14 +428,14 @@ export default function CourseCreator() {
   onPlayRef.current = onPlay;
   const onStop = () => { player.stop(); setIsPlaying(false); setPlayheadGrid(0); setActivePlaybackIds([]); };
 
-  const totalBars = Math.max(VISIBLE_BARS, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
+  const totalBars = Math.max(visibleBars, Math.ceil(phrase.lengthGrid / gridPerBar) + 1);
   const minWindow = -ANACRUSIS_BARS; // -1 → user can scroll back exactly one bar
-  const maxWindow = totalBars - VISIBLE_BARS;
+  const maxWindow = totalBars - visibleBars;
   const goPrevBar = () => setWindowStartBar(b => Math.max(minWindow, b - 1));
   const goNextBar = () => setWindowStartBar(b => Math.min(maxWindow, b + 1));
 
   useEffect(() => {
-    const needed = (windowStartBar + VISIBLE_BARS) * gridPerBar;
+    const needed = (windowStartBar + visibleBars) * gridPerBar;
     if (phrase.lengthGrid < needed) {
       setPhrase(p => ({ ...p, lengthGrid: needed }));
     }
@@ -454,6 +521,18 @@ export default function CourseCreator() {
               <Input type="number" min={40} max={240} value={tempo}
                 onChange={e => setTempo(parseInt(e.target.value, 10) || 100)} className="mt-1" />
             </div>
+            <div>
+              <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Bars shown</Label>
+              <select
+                value={visibleBars}
+                onChange={e => setVisibleBars(parseInt(e.target.value, 10))}
+                className="mt-1 w-full appearance-none bg-card border border-border rounded-md px-3 py-2 text-sm font-mono text-foreground hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                {BARS_OPTIONS.map(n => (
+                  <option key={n} value={n}>{n} bars</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <DiatonicChordPalette keyRoot={keyRoot} keyQuality={keyQuality} />
@@ -469,14 +548,21 @@ export default function CourseCreator() {
         <main className="flex-1 min-w-0 space-y-4">
           {/* Interactive fretboard (input + visualizer) */}
           <section className="border border-border rounded-2xl bg-card p-4">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-2">
               <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                 {selectedIds.length === 1
                   ? 'Click a fret to move the selected note'
-                  : stagedNote
-                    ? `Staged: string ${stagedNote.stringIndex + 1}, fret ${stagedNote.fret} — press Enter or Insert to commit`
-                    : 'Click a fret to stage; Enter inserts at cursor'}
+                  : stagedChord.length > 0
+                    ? `Chord staged (${stagedChord.length} notes) — press Enter or Insert to commit`
+                    : stagedNote
+                      ? `Staged: string ${stagedNote.stringIndex + 1}, fret ${stagedNote.fret} — press Enter or Insert to commit`
+                      : 'Click a fret to stage; Enter inserts at cursor'}
               </div>
+              {chordMode && (
+                <div className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/40">
+                  Chord mode (hold C) — pick strings, then Enter
+                </div>
+              )}
             </div>
             <Fretboard
               maxFrets={fb.maxFrets}
@@ -585,10 +671,10 @@ export default function CourseCreator() {
                 <span className="ml-2 text-xs uppercase font-mono tracking-wider">Click</span>
               </Button>
               {/* Clear / Insert moved here to free space at top of screen */}
-              <Button size="lg" variant="outline" onClick={clearStaged} disabled={!stagedNote} className="rounded-full px-4">
+              <Button size="lg" variant="outline" onClick={clearStaged} disabled={!stagedNote && stagedChord.length === 0} className="rounded-full px-4">
                 Clear
               </Button>
-              <Button size="lg" onClick={commitStaged} disabled={!stagedNote} className="rounded-full px-4">
+              <Button size="lg" onClick={commitStaged} disabled={!stagedNote && stagedChord.length === 0} className="rounded-full px-4">
                 <Plus className="size-5 mr-1" /> Insert
               </Button>
             </div>
@@ -600,7 +686,7 @@ export default function CourseCreator() {
               <ChevronLeft className="size-6" />
             </Button>
             <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-              Bars {windowStartBar + 1} – {windowStartBar + VISIBLE_BARS} of {totalBars}
+              Bars {windowStartBar + 1} – {windowStartBar + visibleBars} of {totalBars}
               {windowStartBar < 0 && <span className="ml-2 text-primary">(anacrusis visible)</span>}
             </p>
             <Button size="lg" variant="outline" onClick={goNextBar} disabled={windowStartBar >= maxWindow} className="rounded-full size-12 p-0">
@@ -619,7 +705,7 @@ export default function CourseCreator() {
             selectedIds={selectedIds}
             setSelectedIds={setSelectedIds}
             startGrid={windowStartBar * gridPerBar}
-            visibleGrids={VISIBLE_BARS * gridPerBar}
+            visibleGrids={visibleBars * gridPerBar}
             playheadGrid={isPlaying ? playheadGrid : null}
             pickedFretboardNote={pickedFretboardNote}
             deleteMode={deleteMode}
@@ -641,7 +727,7 @@ export default function CourseCreator() {
                 keyTrack={keyTrack} setKeyTrack={setKeyTrack}
                 tempoTrack={tempoTrack} setTempoTrack={setTempoTrack}
                 startGrid={windowStartBar * gridPerBar}
-                visibleGrids={VISIBLE_BARS * gridPerBar}
+                visibleGrids={visibleBars * gridPerBar}
                 beatsPerBar={beatsPerBar}
                 isOwner
                 defaultKeyRoot={keyRoot}
