@@ -224,6 +224,12 @@ export default function Fretboard({
   const pColor = primaryColor || 'hsl(var(--primary))';
   const sColor = secondaryColor || 'hsl(200, 80%, 60%)';
   const fretBoxEnd = fretBoxStart + fretBoxSize - 1;
+  const fretBoxBorderColor = fretBoxTintHsl
+    ? `hsla(${fretBoxTintHsl}, 0.7)`
+    : 'hsl(var(--accent) / 0.7)';
+  const fretBoxBackgroundColor = fretBoxTintHsl
+    ? `hsla(${fretBoxTintHsl}, 0.18)`
+    : 'hsl(var(--accent) / 0.1)';
 
   // Compute which notes are valid targets for guided arpeggio
   const guidedTargets = useMemo(() => {
@@ -1050,8 +1056,8 @@ export default function Fretboard({
                 top: `${(fretBoxStringStart / 6) * 100}%`,
                 height: `${(fretBoxStringSize / 6) * 100}%`,
                 cursor: boxDragging === 'move' ? 'grabbing' : 'grab',
-                border: `2px solid hsl(${fretBoxTintHsl ?? 'var(--accent)'} / 0.7)`,
-                background: fretBoxTintHsl ? `hsl(${fretBoxTintHsl} / 0.18)` : 'hsl(var(--accent) / 0.1)',
+                border: `2px solid ${fretBoxBorderColor}`,
+                background: fretBoxBackgroundColor,
               }}
               onMouseDown={e => handleBoxMouseDown(e, 'move')}
             >
