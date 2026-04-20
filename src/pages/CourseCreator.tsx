@@ -11,7 +11,7 @@ import { GlobalTracksEditor } from '@/components/Courses/GlobalTracksEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus, Keyboard, Bell, BellOff, Mic, MicOff } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus, Keyboard, Bell, BellOff, Mic, MicOff, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShortcutsDialog } from '@/components/Courses/ShortcutsDialog';
 import { TechniqueQuickMenu } from '@/components/Courses/TechniqueQuickMenu';
