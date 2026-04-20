@@ -349,7 +349,7 @@ export default function CourseCreator() {
     fb.setArpOverlayOpacity(1);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const clearStaged = () => { setStagedNote(null); fb.setArpAddReferenceNotes([]); };
+  const clearStaged = () => { setStagedNote(null); setStagedChord([]); fb.setArpAddReferenceNotes([]); };
 
   // ===== Listen mode: pitch detection → stage a note inside the position-focus box =====
   // Toggle: turn fret box on (light blue) and start mic. We drive `fb.setShowFretBox`
