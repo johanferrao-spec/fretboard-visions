@@ -418,11 +418,7 @@ export default function Fretboard({
         return { backgroundColor: bg, opacity: 1, ring: true, ringColor: bg, greyed: false };
       }
 
-      // Lookahead notes — full opacity grey, takes priority over normal reference notes.
-      if (lookaheadSet.size > 0 && lookaheadSet.has(key)) {
-        const grey = 'hsl(0, 0%, 55%)';
-        return { backgroundColor: grey, opacity: 1, ring: true, ringColor: grey, greyed: false };
-      }
+      // (Lookahead notes are handled above, before the position-box filter.)
 
       // All chord tone reference notes at overlay opacity
       if (arpAddRefSet.size > 0 && arpAddRefSet.has(key)) {
