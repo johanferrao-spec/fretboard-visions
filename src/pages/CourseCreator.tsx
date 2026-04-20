@@ -802,6 +802,7 @@ export default function CourseCreator() {
             setCellW={setCellW}
             chordTrack={chordTrack}
             activePlaybackIds={activePlaybackIds}
+            lookaheadRange={lookahead && lookaheadData.notes.length > 0 ? { startGrid: lookaheadData.startGrid, endGrid: lookaheadData.endGrid } : null}
             onOpenTechniqueMenu={() => setTechMenuOpen(true)}
             showChordTrack={showChordTrack} setShowChordTrack={setShowChordTrack}
             showKeyTrack={showKeyTrack} setShowKeyTrack={setShowKeyTrack}
