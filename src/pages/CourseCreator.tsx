@@ -382,6 +382,31 @@ export default function CourseCreator() {
 
   const clearStaged = () => { setStagedNote(null); setStagedChord([]); fb.setArpAddReferenceNotes([]); };
 
+  // ===== Lookahead: next N notes after the cursor (or playhead during playback) =====
+  // Picks the next `lookaheadCount` distinct beat positions (chord = same beat counts as one position).
+  const lookaheadData = useMemo(() => {
+    if (!lookahead) return { notes: [] as Array<{ stringIndex: number; fret: number }>, startGrid: 0, endGrid: 0 };
+    const fromGrid = isPlaying && playheadGrid != null ? playheadGrid : cursorGrid;
+    const upcoming = phrase.notes
+      .filter(n => n.beatIndex >= fromGrid - 0.001)
+      .sort((a, b) => a.beatIndex - b.beatIndex);
+    const positions: number[] = [];
+    for (const n of upcoming) {
+      if (positions.length >= lookaheadCount) break;
+      if (positions.length === 0 || Math.abs(positions[positions.length - 1] - n.beatIndex) > 0.001) {
+        positions.push(n.beatIndex);
+      }
+    }
+    if (positions.length === 0) return { notes: [], startGrid: 0, endGrid: 0 };
+    const inWindow = upcoming.filter(n => positions.some(p => Math.abs(p - n.beatIndex) < 0.001));
+    const lastNote = inWindow.reduce((a, b) => (b.beatIndex + b.durationGrid > a.beatIndex + a.durationGrid ? b : a), inWindow[0]);
+    return {
+      notes: inWindow.map(n => ({ stringIndex: n.stringIndex, fret: n.fret })),
+      startGrid: positions[0],
+      endGrid: lastNote.beatIndex + lastNote.durationGrid,
+    };
+  }, [lookahead, lookaheadCount, phrase.notes, cursorGrid, playheadGrid, isPlaying]);
+
   // ===== Listen mode: pitch detection → stage a note inside the position-focus box =====
   // Toggle: turn fret box on (light blue) and start mic. We drive `fb.setShowFretBox`
   // synchronously inside the click handler (see toggleListen below) so the box appears
