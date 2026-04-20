@@ -65,6 +65,9 @@ export default function CourseCreator() {
 
   // Staged input note from interactive fretboard (preview before commit via Enter)
   const [stagedNote, setStagedNote] = useState<{ stringIndex: number; fret: number } | null>(null);
+  /** Hold-C chord mode — collects multiple staged notes (one per string) for chord insert. */
+  const [chordMode, setChordMode] = useState(false);
+  const [stagedChord, setStagedChord] = useState<Array<{ stringIndex: number; fret: number }>>([]);
   /** Subdivision drives BOTH grid snapping and default new-note duration. */
   const [subdivision, setSubdivision] = useState<Subdivision>('1/8');
   /** Insertion cursor (state, not ref) — also acts as the draggable playhead when stopped. */
