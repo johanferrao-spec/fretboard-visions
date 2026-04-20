@@ -668,6 +668,7 @@ export default function CourseCreator() {
               arpPathVisible={false}
               arpAddMode={true}
               arpAddReferenceNotes={fretboardReference}
+              lookaheadNotes={lookaheadData.notes}
               onArpAddClick={(si, fret) => fb.arpAddClickHandler?.(si, fret)}
               hideToolbar={true}
             />
@@ -729,6 +730,31 @@ export default function CourseCreator() {
                 {metronome ? <Bell className="size-5" /> : <BellOff className="size-5" />}
                 <span className="ml-2 text-xs uppercase font-mono tracking-wider">Click</span>
               </Button>
+              {/* Lookahead toggle + count selector */}
+              <Button
+                size="lg"
+                variant={lookahead ? 'default' : 'outline'}
+                onClick={() => setLookahead(v => !v)}
+                className="rounded-full px-4"
+                title={lookahead ? 'Lookahead on — preview upcoming notes in grey' : 'Lookahead: preview the next few notes on the fretboard'}
+              >
+                {lookahead ? <Eye className="size-5" /> : <EyeOff className="size-5" />}
+                <span className="ml-2 text-xs uppercase font-mono tracking-wider">Lookahead</span>
+              </Button>
+              <div className="relative">
+                <select
+                  value={lookaheadCount}
+                  onChange={e => setLookaheadCount(parseInt(e.target.value, 10))}
+                  disabled={!lookahead}
+                  className="appearance-none bg-card border border-border rounded-full pl-3 pr-7 py-2 text-xs font-mono uppercase tracking-wider text-foreground hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="How many upcoming notes to preview"
+                >
+                  {LOOKAHEAD_OPTIONS.map(n => (
+                    <option key={n} value={n}>{n} note{n > 1 ? 's' : ''}</option>
+                  ))}
+                </select>
+                <ChevronLeft className="size-3 absolute right-2 top-1/2 -translate-y-1/2 -rotate-90 text-muted-foreground pointer-events-none" />
+              </div>
               {/* Clear / Insert moved here to free space at top of screen */}
               <Button size="lg" variant="outline" onClick={clearStaged} disabled={!stagedNote && stagedChord.length === 0} className="rounded-full px-4">
                 Clear
