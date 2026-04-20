@@ -52,6 +52,8 @@ interface FretboardProps {
   arpPathVisible?: boolean;
   arpAddMode?: boolean;
   arpAddReferenceNotes?: { stringIndex: number; fret: number }[];
+  /** Lookahead notes — rendered at full opacity in grey (preview of upcoming notes). */
+  lookaheadNotes?: { stringIndex: number; fret: number }[];
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   onArpBarreDrag?: (fromStringIndex: number, toStringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
@@ -99,7 +101,7 @@ export default function Fretboard({
   identifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre, identifyRoot,
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
   arpOverlayOpacity = 0.3, arpPathVisible = true,
-  arpAddMode = false, arpAddReferenceNotes, onArpAddClick, onArpBarreDrag,
+  arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, onArpAddClick, onArpBarreDrag,
   scaleViewChordTones,
   inversionVoicing,
   ghostNoteOpacity = 0.75,
@@ -216,6 +218,15 @@ export default function Fretboard({
     }
     return set;
   }, [arpAddReferenceNotes]);
+
+  // Lookahead notes — rendered at full opacity in grey (preview of upcoming notes from the tab).
+  const lookaheadSet = useMemo(() => {
+    const set = new Set<string>();
+    if (lookaheadNotes) {
+      for (const n of lookaheadNotes) set.add(`${n.stringIndex}-${n.fret}`);
+    }
+    return set;
+  }, [lookaheadNotes]);
 
   // Static voicings from chord library have showPath explicitly set to false
   const isChordLibraryVoicing = arpeggioPosition?.showPath === false;
@@ -398,6 +409,12 @@ export default function Fretboard({
           if (dc) bg = dc;
         }
         return { backgroundColor: bg, opacity: 1, ring: true, ringColor: bg, greyed: false };
+      }
+
+      // Lookahead notes — full opacity grey, takes priority over normal reference notes.
+      if (lookaheadSet.size > 0 && lookaheadSet.has(key)) {
+        const grey = 'hsl(0, 0%, 55%)';
+        return { backgroundColor: grey, opacity: 1, ring: true, ringColor: grey, greyed: false };
       }
 
       // All chord tone reference notes at overlay opacity
