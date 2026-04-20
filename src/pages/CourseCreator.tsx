@@ -502,7 +502,7 @@ export default function CourseCreator() {
             setKeyQuality={setKeyQuality}
           />
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <div>
               <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Time sig</Label>
               <div className="relative mt-1">
@@ -522,16 +522,19 @@ export default function CourseCreator() {
                 onChange={e => setTempo(parseInt(e.target.value, 10) || 100)} className="mt-1" />
             </div>
             <div>
-              <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Bars shown</Label>
-              <select
-                value={visibleBars}
-                onChange={e => setVisibleBars(parseInt(e.target.value, 10))}
-                className="mt-1 w-full appearance-none bg-card border border-border rounded-md px-3 py-2 text-sm font-mono text-foreground hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-              >
-                {BARS_OPTIONS.map(n => (
-                  <option key={n} value={n}>{n} bars</option>
-                ))}
-              </select>
+              <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Bars</Label>
+              <div className="relative mt-1">
+                <select
+                  value={visibleBars}
+                  onChange={e => setVisibleBars(parseInt(e.target.value, 10))}
+                  className="appearance-none w-full bg-card border border-border rounded-md pl-2 pr-7 py-1.5 text-sm font-mono text-foreground hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  {BARS_OPTIONS.map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+                <ChevronLeft className="size-3 absolute right-2 top-1/2 -translate-y-1/2 -rotate-90 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
           </div>
 
