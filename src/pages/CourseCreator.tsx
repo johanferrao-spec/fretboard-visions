@@ -35,6 +35,7 @@ const SUB_STEP: Record<Subdivision, number> = {
 
 const TIME_SIGS = ['4/4', '3/4', '6/8', '2/4'];
 const BARS_OPTIONS = [2, 4, 8] as const;
+const LOOKAHEAD_OPTIONS = [1, 2, 3, 4, 5, 6, 7] as const;
 const ANACRUSIS_BARS = 1;
 
 export default function CourseCreator() {
