@@ -398,8 +398,15 @@ export default function Fretboard({
 
     // In arp add mode (custom voicing creation)
     if (arpAddMode && !isChordLibraryVoicing) {
-      if (isOutsidePositionBox(stringIndex, fret)) return null;
       const key = `${stringIndex}-${fret}`;
+
+      // Lookahead notes — render even when outside the position box (they preview upcoming notes).
+      if (lookaheadSet.size > 0 && lookaheadSet.has(key)) {
+        const grey = 'hsl(0, 0%, 55%)';
+        return { backgroundColor: grey, opacity: 1, ring: true, ringColor: grey, greyed: false };
+      }
+
+      if (isOutsidePositionBox(stringIndex, fret)) return null;
 
       // Notes that are part of the shape being built (Adding.../Editing...) — full opacity with glow
       if (arpeggioPosition && (arpeggioPosition.label === 'Adding...' || arpeggioPosition.label === 'Editing...') && arpPositionSet.has(key)) {
