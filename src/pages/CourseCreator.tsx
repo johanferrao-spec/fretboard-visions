@@ -548,14 +548,21 @@ export default function CourseCreator() {
         <main className="flex-1 min-w-0 space-y-4">
           {/* Interactive fretboard (input + visualizer) */}
           <section className="border border-border rounded-2xl bg-card p-4">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-2">
               <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                 {selectedIds.length === 1
                   ? 'Click a fret to move the selected note'
-                  : stagedNote
-                    ? `Staged: string ${stagedNote.stringIndex + 1}, fret ${stagedNote.fret} — press Enter or Insert to commit`
-                    : 'Click a fret to stage; Enter inserts at cursor'}
+                  : stagedChord.length > 0
+                    ? `Chord staged (${stagedChord.length} notes) — press Enter or Insert to commit`
+                    : stagedNote
+                      ? `Staged: string ${stagedNote.stringIndex + 1}, fret ${stagedNote.fret} — press Enter or Insert to commit`
+                      : 'Click a fret to stage; Enter inserts at cursor'}
               </div>
+              {chordMode && (
+                <div className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/40">
+                  Chord mode (hold C) — pick strings, then Enter
+                </div>
+              )}
             </div>
             <Fretboard
               maxFrets={fb.maxFrets}
