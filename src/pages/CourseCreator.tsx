@@ -671,10 +671,10 @@ export default function CourseCreator() {
                 <span className="ml-2 text-xs uppercase font-mono tracking-wider">Click</span>
               </Button>
               {/* Clear / Insert moved here to free space at top of screen */}
-              <Button size="lg" variant="outline" onClick={clearStaged} disabled={!stagedNote} className="rounded-full px-4">
+              <Button size="lg" variant="outline" onClick={clearStaged} disabled={!stagedNote && stagedChord.length === 0} className="rounded-full px-4">
                 Clear
               </Button>
-              <Button size="lg" onClick={commitStaged} disabled={!stagedNote} className="rounded-full px-4">
+              <Button size="lg" onClick={commitStaged} disabled={!stagedNote && stagedChord.length === 0} className="rounded-full px-4">
                 <Plus className="size-5 mr-1" /> Insert
               </Button>
             </div>
