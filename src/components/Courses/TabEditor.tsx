@@ -1127,6 +1127,27 @@ export function TabEditor({
           />
         )}
 
+        {/* Lookahead overlay — translucent orange box covering the upcoming notes' span. */}
+        {lookaheadRange && lookaheadRange.endGrid > lookaheadRange.startGrid && (() => {
+          const visStart = Math.max(lookaheadRange.startGrid, startGrid);
+          const visEnd = Math.min(lookaheadRange.endGrid, startGrid + totalCells);
+          if (visEnd <= visStart) return null;
+          return (
+            <div
+              className="absolute z-20 pointer-events-none rounded-sm"
+              style={{
+                left: LABEL_W + (visStart - startGrid) * CELL_W,
+                width: (visEnd - visStart) * CELL_W,
+                top: BAR_ROW_H,
+                bottom: 0,
+                background: 'hsla(28, 90%, 55%, 0.18)',
+                border: '1px solid hsla(28, 90%, 55%, 0.55)',
+                boxShadow: 'inset 0 0 12px hsla(28, 90%, 55%, 0.25)',
+              }}
+            />
+          );
+        })()}
+
         {/* Playhead (live during playback) */}
         {playheadGrid != null && playheadGrid >= startGrid && playheadGrid < startGrid + totalCells && (
           <div className="absolute top-0 bottom-0 w-0.5 bg-primary z-30 pointer-events-none transition-[left] duration-150"
