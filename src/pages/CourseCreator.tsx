@@ -247,13 +247,20 @@ export default function CourseCreator() {
         if (isPlayingRef.current) { player.stop(); setIsPlaying(false); setPlayheadGrid(0); }
         else { onPlayRef.current?.(); }
       }
-      if (e.key === 'Enter' && !inField && stagedNoteRef.current) {
+      // Hold-C → chord mode (collect multi-string staged notes).
+      if ((e.key === 'c' || e.key === 'C') && !inField && !e.metaKey && !e.ctrlKey && !e.repeat) {
+        setChordMode(true);
+      }
+      if (e.key === 'Enter' && !inField && (stagedNoteRef.current || stagedChordRef.current.length > 0)) {
         e.preventDefault();
         commitStagedRef.current();
       }
     };
-    const onKU = (e: KeyboardEvent) => { if (!e.metaKey && !e.ctrlKey) setDeleteMode(false); };
-    const onBlur = () => setDeleteMode(false);
+    const onKU = (e: KeyboardEvent) => {
+      if (!e.metaKey && !e.ctrlKey) setDeleteMode(false);
+      if (e.key === 'c' || e.key === 'C') setChordMode(false);
+    };
+    const onBlur = () => { setDeleteMode(false); setChordMode(false); };
     window.addEventListener('keydown', onKD);
     window.addEventListener('keyup', onKU);
     window.addEventListener('blur', onBlur);
