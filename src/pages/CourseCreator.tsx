@@ -180,8 +180,49 @@ export default function CourseCreator() {
     }
   };
 
-  /** Commit current staged fretboard pick (Enter key). */
+  /** Insert a CHORD (multiple notes, one per string) at the cursor. Trims overlapping notes
+   * and advances the cursor by the subdivision-derived duration just like a single note. */
+  const insertChordAtCursor = (picks: Array<{ stringIndex: number; fret: number }>) => {
+    if (picks.length === 0) return;
+    const dur = SUB_STEP[subdivision];
+    const beatIndex = cursorGrid;
+    // Trim earlier notes (any string) crossing into beatIndex.
+    const trimmed = phrase.notes.map(n => {
+      const nEnd = n.beatIndex + n.durationGrid;
+      if (n.beatIndex < beatIndex && nEnd > beatIndex) {
+        return { ...n, durationGrid: beatIndex - n.beatIndex };
+      }
+      return n;
+    });
+    // De-dupe per string (keep last pick per string) and skip strings that already have a note here.
+    const perString = new Map<number, { stringIndex: number; fret: number }>();
+    picks.forEach(p => perString.set(p.stringIndex, p));
+    const newNotes: CourseNote[] = [];
+    perString.forEach(p => {
+      const collision = trimmed.find(n => n.stringIndex === p.stringIndex && Math.abs(n.beatIndex - beatIndex) < 0.001);
+      if (collision) return;
+      newNotes.push({
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${p.stringIndex}`,
+        stringIndex: p.stringIndex, fret: p.fret, beatIndex, durationGrid: dur,
+      });
+    });
+    if (newNotes.length === 0) { toast.info('All those strings already have notes here'); return; }
+    const newLen = Math.max(phrase.lengthGrid, beatIndex + dur * 2);
+    setPhrase({ notes: [...trimmed, ...newNotes], lengthGrid: newLen });
+    const nextCursor = beatIndex + dur;
+    setCursorGrid(nextCursor);
+    setStagedNote(null);
+    setStagedChord([]);
+    fb.setArpAddReferenceNotes([]);
+    const newBarIdx = Math.floor(nextCursor / gridPerBar);
+    if (newBarIdx >= windowStartBar + visibleBars - 1) {
+      setWindowStartBar(Math.max(-ANACRUSIS_BARS, newBarIdx - 1));
+    }
+  };
+
+  /** Commit current staged fretboard pick (Enter key). Commits chord if chord-mode picks exist. */
   const commitStaged = () => {
+    if (stagedChord.length > 0) { insertChordAtCursor(stagedChord); return; }
     if (!stagedNote) { toast.info('Pick a fret on the fretboard first'); return; }
     insertNoteAtCursor(stagedNote.stringIndex, stagedNote.fret);
   };
