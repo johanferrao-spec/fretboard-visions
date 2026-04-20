@@ -11,7 +11,7 @@ import { GlobalTracksEditor } from '@/components/Courses/GlobalTracksEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus, Keyboard, Bell, BellOff, Mic, MicOff } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Play, Square, Plus, Keyboard, Bell, BellOff, Mic, MicOff, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShortcutsDialog } from '@/components/Courses/ShortcutsDialog';
 import { TechniqueQuickMenu } from '@/components/Courses/TechniqueQuickMenu';
@@ -35,6 +35,7 @@ const SUB_STEP: Record<Subdivision, number> = {
 
 const TIME_SIGS = ['4/4', '3/4', '6/8', '2/4'];
 const BARS_OPTIONS = [2, 4, 8] as const;
+const LOOKAHEAD_OPTIONS = [1, 2, 3, 4, 5, 6, 7] as const;
 const ANACRUSIS_BARS = 1;
 
 export default function CourseCreator() {
@@ -95,6 +96,9 @@ export default function CourseCreator() {
   const [listenMode, setListenMode] = useState(false);
   const pitch = usePitchDetector();
   const lastStagedMidiRef = useRef<number | null>(null);
+  /** Lookahead: when active, show the next N notes from the tab (grey, full opacity). */
+  const [lookahead, setLookahead] = useState(false);
+  const [lookaheadCount, setLookaheadCount] = useState<number>(3);
 
   const beatsPerBar = useMemo(() => parseInt(timeSig.split('/')[0], 10) || 4, [timeSig]);
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
@@ -294,9 +298,36 @@ export default function CourseCreator() {
   // Always-fresh insert function (avoids stale closures inside the fretboard callback).
   const insertRef = useRef(insertNoteAtCursor);
   insertRef.current = insertNoteAtCursor;
+  // Refs so the once-bound fretboard click handler always sees the latest delete-mode flag and phrase.
+  const deleteModeRef = useRef(deleteMode);
+  deleteModeRef.current = deleteMode;
+  const phraseRef = useRef(phrase);
+  phraseRef.current = phrase;
+  const windowStartBarRef = useRef(windowStartBar);
+  windowStartBarRef.current = windowStartBar;
+  const visibleBarsRef = useRef(visibleBars);
+  visibleBarsRef.current = visibleBars;
+  const gridPerBarRef = useRef(gridPerBar);
+  gridPerBarRef.current = gridPerBar;
   useEffect(() => {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
+      // Delete mode: clicking a marker on the fretboard removes the matching tab note(s)
+      // within the currently visible bar window. Multiple matches (e.g. same note in
+      // two bars) → only delete the one nearest to the cursor.
+      if (deleteModeRef.current) {
+        const start = windowStartBarRef.current * gridPerBarRef.current;
+        const end = start + visibleBarsRef.current * gridPerBarRef.current;
+        const matches = phraseRef.current.notes.filter(n =>
+          n.stringIndex === si && n.fret === fret && n.beatIndex >= start && n.beatIndex < end);
+        if (matches.length === 0) { toast.info('No matching note in view'); return; }
+        // Pick the match closest to cursor.
+        const target = matches.reduce((best, n) =>
+          Math.abs(n.beatIndex - cursorGrid) < Math.abs(best.beatIndex - cursorGrid) ? n : best);
+        setPhrase({ ...phraseRef.current, notes: phraseRef.current.notes.filter(n => n.id !== target.id) });
+        toast.success('Note deleted');
+        return;
+      }
       // If a single tab note is selected, clicking moves it (legacy behavior).
       if (selectedIdsRef.current.length === 1) {
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
@@ -350,6 +381,31 @@ export default function CourseCreator() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearStaged = () => { setStagedNote(null); setStagedChord([]); fb.setArpAddReferenceNotes([]); };
+
+  // ===== Lookahead: next N notes after the cursor (or playhead during playback) =====
+  // Picks the next `lookaheadCount` distinct beat positions (chord = same beat counts as one position).
+  const lookaheadData = useMemo(() => {
+    if (!lookahead) return { notes: [] as Array<{ stringIndex: number; fret: number }>, startGrid: 0, endGrid: 0 };
+    const fromGrid = isPlaying && playheadGrid != null ? playheadGrid : cursorGrid;
+    const upcoming = phrase.notes
+      .filter(n => n.beatIndex >= fromGrid - 0.001)
+      .sort((a, b) => a.beatIndex - b.beatIndex);
+    const positions: number[] = [];
+    for (const n of upcoming) {
+      if (positions.length >= lookaheadCount) break;
+      if (positions.length === 0 || Math.abs(positions[positions.length - 1] - n.beatIndex) > 0.001) {
+        positions.push(n.beatIndex);
+      }
+    }
+    if (positions.length === 0) return { notes: [], startGrid: 0, endGrid: 0 };
+    const inWindow = upcoming.filter(n => positions.some(p => Math.abs(p - n.beatIndex) < 0.001));
+    const lastNote = inWindow.reduce((a, b) => (b.beatIndex + b.durationGrid > a.beatIndex + a.durationGrid ? b : a), inWindow[0]);
+    return {
+      notes: inWindow.map(n => ({ stringIndex: n.stringIndex, fret: n.fret })),
+      startGrid: positions[0],
+      endGrid: lastNote.beatIndex + lastNote.durationGrid,
+    };
+  }, [lookahead, lookaheadCount, phrase.notes, cursorGrid, playheadGrid, isPlaying]);
 
   // ===== Listen mode: pitch detection → stage a note inside the position-focus box =====
   // Toggle: turn fret box on (light blue) and start mic. We drive `fb.setShowFretBox`
@@ -502,7 +558,7 @@ export default function CourseCreator() {
             setKeyQuality={setKeyQuality}
           />
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <div>
               <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Time sig</Label>
               <div className="relative mt-1">
@@ -522,16 +578,19 @@ export default function CourseCreator() {
                 onChange={e => setTempo(parseInt(e.target.value, 10) || 100)} className="mt-1" />
             </div>
             <div>
-              <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Bars shown</Label>
-              <select
-                value={visibleBars}
-                onChange={e => setVisibleBars(parseInt(e.target.value, 10))}
-                className="mt-1 w-full appearance-none bg-card border border-border rounded-md px-3 py-2 text-sm font-mono text-foreground hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-              >
-                {BARS_OPTIONS.map(n => (
-                  <option key={n} value={n}>{n} bars</option>
-                ))}
-              </select>
+              <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Bars</Label>
+              <div className="relative mt-1">
+                <select
+                  value={visibleBars}
+                  onChange={e => setVisibleBars(parseInt(e.target.value, 10))}
+                  className="appearance-none w-full bg-card border border-border rounded-md pl-2 pr-7 py-1.5 text-sm font-mono text-foreground hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  {BARS_OPTIONS.map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+                <ChevronLeft className="size-3 absolute right-2 top-1/2 -translate-y-1/2 -rotate-90 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
           </div>
 
@@ -609,6 +668,7 @@ export default function CourseCreator() {
               arpPathVisible={false}
               arpAddMode={true}
               arpAddReferenceNotes={fretboardReference}
+              lookaheadNotes={lookaheadData.notes}
               onArpAddClick={(si, fret) => fb.arpAddClickHandler?.(si, fret)}
               hideToolbar={true}
             />
@@ -670,6 +730,31 @@ export default function CourseCreator() {
                 {metronome ? <Bell className="size-5" /> : <BellOff className="size-5" />}
                 <span className="ml-2 text-xs uppercase font-mono tracking-wider">Click</span>
               </Button>
+              {/* Lookahead toggle + count selector */}
+              <Button
+                size="lg"
+                variant={lookahead ? 'default' : 'outline'}
+                onClick={() => setLookahead(v => !v)}
+                className="rounded-full px-4"
+                title={lookahead ? 'Lookahead on — preview upcoming notes in grey' : 'Lookahead: preview the next few notes on the fretboard'}
+              >
+                {lookahead ? <Eye className="size-5" /> : <EyeOff className="size-5" />}
+                <span className="ml-2 text-xs uppercase font-mono tracking-wider">Lookahead</span>
+              </Button>
+              <div className="relative">
+                <select
+                  value={lookaheadCount}
+                  onChange={e => setLookaheadCount(parseInt(e.target.value, 10))}
+                  disabled={!lookahead}
+                  className="appearance-none bg-card border border-border rounded-full pl-3 pr-7 py-2 text-xs font-mono uppercase tracking-wider text-foreground hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="How many upcoming notes to preview"
+                >
+                  {LOOKAHEAD_OPTIONS.map(n => (
+                    <option key={n} value={n}>{n} note{n > 1 ? 's' : ''}</option>
+                  ))}
+                </select>
+                <ChevronLeft className="size-3 absolute right-2 top-1/2 -translate-y-1/2 -rotate-90 text-muted-foreground pointer-events-none" />
+              </div>
               {/* Clear / Insert moved here to free space at top of screen */}
               <Button size="lg" variant="outline" onClick={clearStaged} disabled={!stagedNote && stagedChord.length === 0} className="rounded-full px-4">
                 Clear
@@ -717,6 +802,7 @@ export default function CourseCreator() {
             setCellW={setCellW}
             chordTrack={chordTrack}
             activePlaybackIds={activePlaybackIds}
+            lookaheadRange={lookahead && lookaheadData.notes.length > 0 ? { startGrid: lookaheadData.startGrid, endGrid: lookaheadData.endGrid } : null}
             onOpenTechniqueMenu={() => setTechMenuOpen(true)}
             showChordTrack={showChordTrack} setShowChordTrack={setShowChordTrack}
             showKeyTrack={showKeyTrack} setShowKeyTrack={setShowKeyTrack}

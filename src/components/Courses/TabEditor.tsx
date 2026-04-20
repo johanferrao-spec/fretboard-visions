@@ -66,6 +66,8 @@ interface Props {
   onOpenTechniqueMenu?: () => void;
   /** Currently sounding notes during playback — used to highlight active duration bars. */
   activePlaybackIds?: string[];
+  /** Optional translucent orange overlay showing the lookahead range (in grid units). */
+  lookaheadRange?: { startGrid: number; endGrid: number } | null;
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
@@ -84,7 +86,7 @@ export function TabEditor({
   subdivision, setSubdivision, cellW, setCellW, chordTrack, hideBarRow,
   tracksSlot, showChordTrack = true, setShowChordTrack,
   showKeyTrack = true, setShowKeyTrack, showTempoTrack = true, setShowTempoTrack,
-  onOpenTechniqueMenu, activePlaybackIds,
+  onOpenTechniqueMenu, activePlaybackIds, lookaheadRange,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingFret, setEditingFret] = useState<{ id: string; value: string } | null>(null);
@@ -1124,6 +1126,27 @@ export function TabEditor({
             }}
           />
         )}
+
+        {/* Lookahead overlay — translucent orange box covering the upcoming notes' span. */}
+        {lookaheadRange && lookaheadRange.endGrid > lookaheadRange.startGrid && (() => {
+          const visStart = Math.max(lookaheadRange.startGrid, startGrid);
+          const visEnd = Math.min(lookaheadRange.endGrid, startGrid + totalCells);
+          if (visEnd <= visStart) return null;
+          return (
+            <div
+              className="absolute z-20 pointer-events-none rounded-sm"
+              style={{
+                left: LABEL_W + (visStart - startGrid) * CELL_W,
+                width: (visEnd - visStart) * CELL_W,
+                top: BAR_ROW_H,
+                bottom: 0,
+                background: 'hsla(28, 90%, 55%, 0.18)',
+                border: '1px solid hsla(28, 90%, 55%, 0.55)',
+                boxShadow: 'inset 0 0 12px hsla(28, 90%, 55%, 0.25)',
+              }}
+            />
+          );
+        })()}
 
         {/* Playhead (live during playback) */}
         {playheadGrid != null && playheadGrid >= startGrid && playheadGrid < startGrid + totalCells && (
