@@ -79,6 +79,8 @@ export default function CourseCreator() {
   // Bar window: viewport over the timeline. Indexed in MUSICAL bars (bar 1 = the first "real" bar).
   // Default: start AT bar 1 (windowStartBar = 0). User can scroll back ONE bar (-1) to view anacrusis.
   const [windowStartBar, setWindowStartBar] = useState(0);
+  /** How many bars are visible in the tab editor at once (user-selectable, next to Tempo). */
+  const [visibleBars, setVisibleBars] = useState<number>(4);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadGrid, setPlayheadGrid] = useState(0);
   const [activePlaybackIds, setActivePlaybackIds] = useState<string[]>([]);
