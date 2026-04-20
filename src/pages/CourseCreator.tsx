@@ -298,9 +298,36 @@ export default function CourseCreator() {
   // Always-fresh insert function (avoids stale closures inside the fretboard callback).
   const insertRef = useRef(insertNoteAtCursor);
   insertRef.current = insertNoteAtCursor;
+  // Refs so the once-bound fretboard click handler always sees the latest delete-mode flag and phrase.
+  const deleteModeRef = useRef(deleteMode);
+  deleteModeRef.current = deleteMode;
+  const phraseRef = useRef(phrase);
+  phraseRef.current = phrase;
+  const windowStartBarRef = useRef(windowStartBar);
+  windowStartBarRef.current = windowStartBar;
+  const visibleBarsRef = useRef(visibleBars);
+  visibleBarsRef.current = visibleBars;
+  const gridPerBarRef = useRef(gridPerBar);
+  gridPerBarRef.current = gridPerBar;
   useEffect(() => {
     fb.setArpAddMode(true);
     fb.setArpAddClickHandler(() => (si: number, fret: number) => {
+      // Delete mode: clicking a marker on the fretboard removes the matching tab note(s)
+      // within the currently visible bar window. Multiple matches (e.g. same note in
+      // two bars) → only delete the one nearest to the cursor.
+      if (deleteModeRef.current) {
+        const start = windowStartBarRef.current * gridPerBarRef.current;
+        const end = start + visibleBarsRef.current * gridPerBarRef.current;
+        const matches = phraseRef.current.notes.filter(n =>
+          n.stringIndex === si && n.fret === fret && n.beatIndex >= start && n.beatIndex < end);
+        if (matches.length === 0) { toast.info('No matching note in view'); return; }
+        // Pick the match closest to cursor.
+        const target = matches.reduce((best, n) =>
+          Math.abs(n.beatIndex - cursorGrid) < Math.abs(best.beatIndex - cursorGrid) ? n : best);
+        setPhrase({ ...phraseRef.current, notes: phraseRef.current.notes.filter(n => n.id !== target.id) });
+        toast.success('Note deleted');
+        return;
+      }
       // If a single tab note is selected, clicking moves it (legacy behavior).
       if (selectedIdsRef.current.length === 1) {
         setPickedFretboardNote({ stringIndex: si, fret, nonce: Date.now() });
