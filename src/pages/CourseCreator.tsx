@@ -96,6 +96,9 @@ export default function CourseCreator() {
   const [listenMode, setListenMode] = useState(false);
   const pitch = usePitchDetector();
   const lastStagedMidiRef = useRef<number | null>(null);
+  /** Lookahead: when active, show the next N notes from the tab (grey, full opacity). */
+  const [lookahead, setLookahead] = useState(false);
+  const [lookaheadCount, setLookaheadCount] = useState<number>(3);
 
   const beatsPerBar = useMemo(() => parseInt(timeSig.split('/')[0], 10) || 4, [timeSig]);
   const gridPerBar = beatsPerBar * GRID_PER_BEAT;
