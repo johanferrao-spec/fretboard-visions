@@ -66,6 +66,8 @@ interface Props {
   onOpenTechniqueMenu?: () => void;
   /** Currently sounding notes during playback — used to highlight active duration bars. */
   activePlaybackIds?: string[];
+  /** Optional translucent orange overlay showing the lookahead range (in grid units). */
+  lookaheadRange?: { startGrid: number; endGrid: number } | null;
 }
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
@@ -84,7 +86,7 @@ export function TabEditor({
   subdivision, setSubdivision, cellW, setCellW, chordTrack, hideBarRow,
   tracksSlot, showChordTrack = true, setShowChordTrack,
   showKeyTrack = true, setShowKeyTrack, showTempoTrack = true, setShowTempoTrack,
-  onOpenTechniqueMenu, activePlaybackIds,
+  onOpenTechniqueMenu, activePlaybackIds, lookaheadRange,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingFret, setEditingFret] = useState<{ id: string; value: string } | null>(null);
