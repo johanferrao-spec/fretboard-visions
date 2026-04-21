@@ -96,6 +96,15 @@ const Index = () => {
     return new Set(formula.map(i => (rootIdx + (i % 12)) % 12));
   }, [scaleViewDegreeFilter, fb.primaryScale.root, fb.primaryScale.scale]);
 
+  // 3-Notes-Per-String overlay: compute pattern for the selected mode/degree
+  const threeNpsData = useMemo(() => {
+    if (!threeNpsMode || activeTab !== 'scaleview' || scaleViewDegreeFilter === null) return null;
+    const formula = SCALE_FORMULAS[fb.primaryScale.scale];
+    if (!formula || formula.length < 7) return null;
+    const notes = generateThreeNpsPattern(fb.primaryScale.root, formula, scaleViewDegreeFilter, fb.tuning);
+    return { notes, color: SCALE_DEGREE_COLORS[scaleViewDegreeFilter] };
+  }, [threeNpsMode, activeTab, scaleViewDegreeFilter, fb.primaryScale.root, fb.primaryScale.scale, fb.tuning]);
+
   const handleApplyChord = (chord: ChordSelection) => {
     fb.setActiveChord(chord);
   };
@@ -342,7 +351,9 @@ const Index = () => {
                  chordAddHasNotes={chordAddHasNotes}
                suppressScaleNotes={activeTab === 'chords'}
                  tabVisNotes={activeTab === 'tabvis' ? (tabVisNotes || { current: [], upcoming: [] }) : null}
-                 chordOctaveShift={chordOctaveShift}
+                  chordOctaveShift={chordOctaveShift}
+                  threeNpsNotes={threeNpsData?.notes}
+                  threeNpsColor={threeNpsData?.color}
             />
           </div>
 
