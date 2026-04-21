@@ -54,6 +54,10 @@ interface FretboardProps {
   arpAddReferenceNotes?: { stringIndex: number; fret: number }[];
   /** Lookahead notes — rendered at full opacity in grey (preview of upcoming notes). */
   lookaheadNotes?: { stringIndex: number; fret: number }[];
+  /** 3-notes-per-string overlay — colored markers shown at full opacity for the active mode. */
+  threeNpsNotes?: { stringIndex: number; fret: number }[];
+  /** HSL color (e.g. "120, 70%, 45%") used for 3-NPS markers. */
+  threeNpsColor?: string;
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   onArpBarreDrag?: (fromStringIndex: number, toStringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
@@ -101,7 +105,7 @@ export default function Fretboard({
   identifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre, identifyRoot,
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
   arpOverlayOpacity = 0.3, arpPathVisible = true,
-  arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, onArpAddClick, onArpBarreDrag,
+  arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, threeNpsNotes, threeNpsColor, onArpAddClick, onArpBarreDrag,
   scaleViewChordTones,
   inversionVoicing,
   ghostNoteOpacity = 0.75,
@@ -227,6 +231,15 @@ export default function Fretboard({
     }
     return set;
   }, [lookaheadNotes]);
+
+  // 3-notes-per-string overlay set — colored markers for the active mode.
+  const threeNpsSet = useMemo(() => {
+    const set = new Set<string>();
+    if (threeNpsNotes) {
+      for (const n of threeNpsNotes) set.add(`${n.stringIndex}-${n.fret}`);
+    }
+    return set;
+  }, [threeNpsNotes]);
 
   // Static voicings from chord library have showPath explicitly set to false
   const isChordLibraryVoicing = arpeggioPosition?.showPath === false;
@@ -381,6 +394,16 @@ export default function Fretboard({
   }, [identifyBarre, identifyFrets, setIdentifyBarre]);
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
+    // 3-notes-per-string overlay — highest priority. Hides everything else for clarity.
+    if (threeNpsSet.size > 0) {
+      const key = `${stringIndex}-${fret}`;
+      if (threeNpsSet.has(key)) {
+        const color = threeNpsColor ? `hsl(${threeNpsColor})` : 'hsl(var(--primary))';
+        return { backgroundColor: color, opacity: 1, ring: true, ringColor: color, greyed: false };
+      }
+      return null;
+    }
+
     // Tab visualiser mode: only show tab notes
     if (tabVisNotes) {
       if (isOutsidePositionBox(stringIndex, fret)) return null;

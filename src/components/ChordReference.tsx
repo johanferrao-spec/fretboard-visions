@@ -11,7 +11,7 @@ import {
   analyzeProgression, identifyArpeggioFromNotes,
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
   getDiatonicChords, generate7thInversions, generateDrop3Inversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
-  STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS,
+  STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS, MAJOR_MODE_NAMES, MINOR_MODE_NAMES,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
   type ArpeggioPosition, type StringGroup, type InversionVoicing,
 } from '@/lib/music';
@@ -74,6 +74,8 @@ interface ChordReferenceProps {
   setGhostNoteOpacity: (v: number) => void;
   dropMode: 'drop2' | 'drop3' | null;
   setDropMode: (m: 'drop2' | 'drop3' | null) => void;
+  threeNpsMode: boolean;
+  setThreeNpsMode: (v: boolean) => void;
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
   onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
@@ -216,6 +218,7 @@ export default function ChordReference({
   onSetInversionVoicing,
   ghostNoteOpacity, setGhostNoteOpacity,
   dropMode, setDropMode,
+  threeNpsMode, setThreeNpsMode,
   onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
   tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
@@ -336,7 +339,7 @@ export default function ChordReference({
     }
     if (tab === 'scaleview') {
       setActiveChord(null);
-      setDegreeColors(true);
+      setDegreeColors(false);
     }
     if (tab === 'chords') {
       setActiveChord(null);
@@ -412,6 +415,8 @@ export default function ChordReference({
           onSetInversionVoicing={onSetInversionVoicing}
           dropMode={dropMode}
           setDropMode={setDropMode}
+          threeNpsMode={threeNpsMode}
+          setThreeNpsMode={setThreeNpsMode}
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
@@ -616,6 +621,7 @@ function ScaleViewPanel({
   tuning, onSetArpeggioPosition, degreeColors,
   onSetInversionVoicing,
   dropMode, setDropMode,
+  threeNpsMode, setThreeNpsMode,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
@@ -628,6 +634,8 @@ function ScaleViewPanel({
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
   dropMode: 'drop2' | 'drop3' | null;
   setDropMode: (m: 'drop2' | 'drop3' | null) => void;
+  threeNpsMode: boolean;
+  setThreeNpsMode: (v: boolean) => void;
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
@@ -651,6 +659,13 @@ function ScaleViewPanel({
     const suffix = get7thChordSymbol(chord.type, i + 1, keyMode);
     return { ...chord, label7: `${chord.root}${suffix}`, chordType7 };
   }), [diatonicChords]);
+
+  // Mode names per scale degree (rotation of the parent scale)
+  const modeNames = useMemo(() => {
+    // Use minor mode-rotation if the parent scale is minor/aeolian
+    if (keyMode === 'minor' || keyMode === 'aeolian') return MINOR_MODE_NAMES;
+    return MAJOR_MODE_NAMES;
+  }, [keyMode]);
 
   // Generate inversions when in drop mode with a string group and degree selected
   const inversions = useMemo(() => {
@@ -701,11 +716,12 @@ function ScaleViewPanel({
 
   return (
     <div className="space-y-2">
-      {/* Degree buttons - BIG and colourful */}
+      {/* Degree buttons - BIG and colourful. In 3-NPS mode they show mode names. */}
       <div className="grid grid-cols-7 gap-1">
         {diatonicLabels.map((chord, i) => {
           const isActive = degreeFilter === i;
           const color = SCALE_DEGREE_COLORS[i];
+          const modeName = modeNames[i] ?? '';
           return (
             <button
               key={i}
@@ -720,21 +736,28 @@ function ScaleViewPanel({
               }}
             >
               <span className="text-[14px] font-black">{chord.roman}</span>
-              <span className="text-[9px] font-mono opacity-80">{chord.label7}</span>
+              <span className="text-[9px] font-mono opacity-80 truncate w-full text-center">
+                {threeNpsMode ? modeName : chord.label7}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {/* Drop 2 / Drop 3 — vertical buttons with content to the right */}
+      {/* Drop 2 / Drop 3 / 3-NPS — bigger vertical buttons with content to the right */}
       <div className="flex gap-2">
-        {/* Left column: Drop buttons stacked vertically */}
-        <div className="flex flex-col gap-1 shrink-0" style={{ width: 80 }}>
+        {/* Left column: mode buttons stacked vertically */}
+        <div className="flex flex-col gap-1.5 shrink-0" style={{ width: 110 }}>
           {(['drop2', 'drop3'] as const).map(dm => (
             <button
               key={dm}
-              onClick={() => { setDropMode(dropMode === dm ? null : dm); setInversionStringGroup(null); onSetInversionVoicing?.(null); }}
-              className="py-3 rounded-xl text-sm font-mono font-black uppercase tracking-wider transition-all border-2"
+              onClick={() => {
+                setDropMode(dropMode === dm ? null : dm);
+                setInversionStringGroup(null);
+                onSetInversionVoicing?.(null);
+                if (threeNpsMode) setThreeNpsMode(false);
+              }}
+              className="py-5 rounded-xl text-base font-mono font-black uppercase tracking-wider transition-all border-2"
               style={{
                 backgroundColor: dropMode === dm ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
                 borderColor: dropMode === dm ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)',
@@ -743,6 +766,26 @@ function ScaleViewPanel({
               }}
             >{dm === 'drop2' ? 'Drop 2' : 'Drop 3'}</button>
           ))}
+          <button
+            onClick={() => {
+              const next = !threeNpsMode;
+              setThreeNpsMode(next);
+              if (next) {
+                // Switching INTO 3-NPS turns off drop modes & inversion display
+                setDropMode(null);
+                setInversionStringGroup(null);
+                onSetInversionVoicing?.(null);
+              }
+            }}
+            className="py-3 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight"
+            style={{
+              backgroundColor: threeNpsMode ? 'hsl(var(--accent))' : 'hsl(var(--accent) / 0.12)',
+              borderColor: threeNpsMode ? 'hsl(var(--accent))' : 'hsl(var(--accent) / 0.4)',
+              color: threeNpsMode ? 'hsl(var(--accent-foreground))' : 'hsl(var(--accent))',
+              boxShadow: threeNpsMode ? '0 0 12px hsl(var(--accent) / 0.4)' : 'none',
+            }}
+            title="Show 3-notes-per-string mode patterns. Click a degree above to display its mode."
+          >3 Notes<br/>Per String</button>
         </div>
 
         {/* Right: drop mode content panel */}
@@ -881,9 +924,17 @@ function ScaleViewPanel({
             )}
           </div>
         )}
+
+        {threeNpsMode && !dropMode && (
+          <div className="flex-1 rounded-xl p-3 border-2 self-stretch flex items-center" style={{ borderColor: 'hsl(var(--accent) / 0.4)', backgroundColor: 'hsl(var(--accent) / 0.08)' }}>
+            <div className="text-[11px] font-mono text-muted-foreground leading-relaxed">
+              <span className="text-accent font-bold">3-Notes-Per-String mode active.</span> Click a degree above to highlight its full mode pattern on the fretboard. Each degree shows its parent rotation (I → Ionian, ii → Dorian, etc.) coloured to match.
+            </div>
+          </div>
+        )}
       </div>
 
-      {!dropMode && degreeFilter === null && (
+      {!dropMode && !threeNpsMode && degreeFilter === null && (
         <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree to highlight its chord tones on the fretboard</div>
       )}
     </div>
