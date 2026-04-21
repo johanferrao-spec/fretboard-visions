@@ -232,6 +232,15 @@ export default function Fretboard({
     return set;
   }, [lookaheadNotes]);
 
+  // 3-notes-per-string overlay set — colored markers for the active mode.
+  const threeNpsSet = useMemo(() => {
+    const set = new Set<string>();
+    if (threeNpsNotes) {
+      for (const n of threeNpsNotes) set.add(`${n.stringIndex}-${n.fret}`);
+    }
+    return set;
+  }, [threeNpsNotes]);
+
   // Static voicings from chord library have showPath explicitly set to false
   const isChordLibraryVoicing = arpeggioPosition?.showPath === false;
   const shouldShowGuidedPaths = !arpAddMode && !isChordLibraryVoicing;
@@ -385,6 +394,16 @@ export default function Fretboard({
   }, [identifyBarre, identifyFrets, setIdentifyBarre]);
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
+    // 3-notes-per-string overlay — highest priority. Hides everything else for clarity.
+    if (threeNpsSet.size > 0) {
+      const key = `${stringIndex}-${fret}`;
+      if (threeNpsSet.has(key)) {
+        const color = threeNpsColor ? `hsl(${threeNpsColor})` : 'hsl(var(--primary))';
+        return { backgroundColor: color, opacity: 1, ring: true, ringColor: color, greyed: false };
+      }
+      return null;
+    }
+
     // Tab visualiser mode: only show tab notes
     if (tabVisNotes) {
       if (isOutsidePositionBox(stringIndex, fret)) return null;
