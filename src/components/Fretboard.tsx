@@ -54,6 +54,10 @@ interface FretboardProps {
   arpAddReferenceNotes?: { stringIndex: number; fret: number }[];
   /** Lookahead notes — rendered at full opacity in grey (preview of upcoming notes). */
   lookaheadNotes?: { stringIndex: number; fret: number }[];
+  /** 3-notes-per-string overlay — colored markers shown at full opacity for the active mode. */
+  threeNpsNotes?: { stringIndex: number; fret: number }[];
+  /** HSL color (e.g. "120, 70%, 45%") used for 3-NPS markers. */
+  threeNpsColor?: string;
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   onArpBarreDrag?: (fromStringIndex: number, toStringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
@@ -101,7 +105,7 @@ export default function Fretboard({
   identifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre, identifyRoot,
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
   arpOverlayOpacity = 0.3, arpPathVisible = true,
-  arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, onArpAddClick, onArpBarreDrag,
+  arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, threeNpsNotes, threeNpsColor, onArpAddClick, onArpBarreDrag,
   scaleViewChordTones,
   inversionVoicing,
   ghostNoteOpacity = 0.75,

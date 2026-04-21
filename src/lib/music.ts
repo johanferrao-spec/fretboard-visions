@@ -2779,6 +2779,109 @@ export const STRING_GROUP_CONFIG: Record<StringGroup, { label: string; strings: 
   lower: { label: 'E String Root', strings: [0, 1, 2, 3], disabled: [4, 5] },
 };
 
+/** Drop-3 has the bass note + 3 close-position upper voices, with one string skipped in the middle.
+ *  Lower (E-root): plays 0,2,3,4 (E,D,G,B) — mutes 1 (A) and 5 (high-e).
+ *  Mid   (A-root): plays 1,3,4,5 (A,G,B,e) — mutes 0 (low-E) and 2 (D). */
+export const DROP3_STRING_GROUP_CONFIG: Record<'lower' | 'mid', { strings: number[]; disabled: number[] }> = {
+  lower: { strings: [0, 2, 3, 4], disabled: [1, 5] },
+  mid:   { strings: [1, 3, 4, 5], disabled: [0, 2] },
+};
+
+// ============================================================
+// 3-NOTES-PER-STRING MODE PATTERNS
+// ============================================================
+
+/** Mode names for each scale degree (0-indexed). The ith entry is the mode whose root is the ith scale degree. */
+export const MAJOR_MODE_NAMES: string[] = ['Ionian', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Aeolian', 'Locrian'];
+export const MINOR_MODE_NAMES: string[] = ['Aeolian', 'Locrian', 'Ionian', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian'];
+
+/** Generate a 3-notes-per-string pattern for a given mode (rotation of the parent scale).
+ *  @param parentRoot The parent scale's root note (e.g. 'G' for G major).
+ *  @param parentScaleSemitones The parent scale's interval set (e.g. major = [0,2,4,5,7,9,11]).
+ *  @param degreeIndex Which scale degree starts the mode (0..6 → I..vii).
+ *  @param tuning The fretboard tuning (semitone offsets per string, low-to-high).
+ *  Returns an array of {stringIndex, fret} markers covering one position of the 3-NPS pattern.
+ */
+export function generateThreeNpsPattern(
+  parentRoot: NoteName,
+  parentScaleSemitones: number[],
+  degreeIndex: number,
+  tuning: number[] = STANDARD_TUNING,
+): { stringIndex: number; fret: number }[] {
+  if (parentScaleSemitones.length < 7) return []; // 3-NPS only meaningful for 7-note scales
+  const parentIdx = NOTE_NAMES.indexOf(parentRoot);
+  if (parentIdx < 0) return [];
+
+  // Build a sorted list of all scale-tone pitch classes
+  const scalePitchClasses = parentScaleSemitones.map(i => (parentIdx + i) % 12);
+  const isScaleTone = (pc: number) => scalePitchClasses.includes(pc);
+
+  // The mode's root pitch class
+  const modeRootPc = (parentIdx + parentScaleSemitones[degreeIndex]) % 12;
+
+  // Find the lowest fret on string 0 (low-E) where the mode root sits in fret range 1..14
+  const lowEOpenPc = tuning[0] % 12;
+  let startFret = -1;
+  for (let f = 1; f <= 14; f++) {
+    if ((lowEOpenPc + f) % 12 === modeRootPc) { startFret = f; break; }
+  }
+  if (startFret < 0) return [];
+
+  const result: { stringIndex: number; fret: number }[] = [];
+  let currentFret = startFret;
+
+  for (let s = 0; s < 6; s++) {
+    const openPc = tuning[s] % 12;
+    // For string 0: start at startFret. For higher strings: find the first scale tone at or near currentFret-1
+    // (3-NPS shifts left ~5 frets between strings, but the second/third notes set the next string's start)
+    if (s === 0) {
+      // place 3 ascending scale tones starting at startFret
+      let f = startFret;
+      let placed = 0;
+      while (placed < 3 && f <= 24) {
+        if (isScaleTone((openPc + f) % 12)) {
+          result.push({ stringIndex: s, fret: f });
+          placed++;
+          f++;
+        } else {
+          f++;
+        }
+      }
+      currentFret = f - 1; // last fret used on this string
+    } else {
+      // The next string's first note is the next scale tone *above* the last note from previous string.
+      // In 3-NPS shapes, this generally lands on the same row position but a few frets lower.
+      // Find the lowest fret on this string whose pitch is the next scale tone above the previous string's last note.
+      const prevString = result[result.length - 1];
+      const prevPitch = tuning[prevString.stringIndex] + prevString.fret;
+      let placed = 0;
+      let f = Math.max(0, prevString.fret - 6);
+      // First note: the next scale tone whose absolute pitch is > prevPitch
+      while (f <= 24 && placed < 3) {
+        const absPitch = tuning[s] + f;
+        if (isScaleTone(absPitch % 12) && absPitch > prevPitch) {
+          result.push({ stringIndex: s, fret: f });
+          placed++;
+          f++;
+          break;
+        }
+        f++;
+      }
+      // Next two notes ascending on this string
+      while (f <= 24 && placed < 3) {
+        if (isScaleTone((tuning[s] + f) % 12)) {
+          result.push({ stringIndex: s, fret: f });
+          placed++;
+          f++;
+        } else {
+          f++;
+        }
+      }
+    }
+  }
+  return result;
+}
+
 export function scaleToKeyMode(scaleName: string): KeyMode {
   const map: Record<string, KeyMode> = {
     'Major (Ionian)': 'major',
