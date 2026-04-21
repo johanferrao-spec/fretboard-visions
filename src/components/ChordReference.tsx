@@ -74,6 +74,8 @@ interface ChordReferenceProps {
   setGhostNoteOpacity: (v: number) => void;
   dropMode: 'drop2' | 'drop3' | null;
   setDropMode: (m: 'drop2' | 'drop3' | null) => void;
+  threeNpsMode: boolean;
+  setThreeNpsMode: (v: boolean) => void;
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
   onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
@@ -216,6 +218,7 @@ export default function ChordReference({
   onSetInversionVoicing,
   ghostNoteOpacity, setGhostNoteOpacity,
   dropMode, setDropMode,
+  threeNpsMode, setThreeNpsMode,
   onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
   tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
@@ -412,6 +415,8 @@ export default function ChordReference({
           onSetInversionVoicing={onSetInversionVoicing}
           dropMode={dropMode}
           setDropMode={setDropMode}
+          threeNpsMode={threeNpsMode}
+          setThreeNpsMode={setThreeNpsMode}
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
