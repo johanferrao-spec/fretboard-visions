@@ -11,7 +11,7 @@ import SongTimeline from '@/components/SongTimeline';
 import BackingTrackView from '@/components/BackingTrack/BackingTrackView';
 import type { NoteName } from '@/lib/music';
 import type { TabNote, TabData } from '@/components/TabVisualiser';
-import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_DEGREE_COLORS, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
+import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
@@ -33,18 +33,23 @@ const Index = () => {
   const [dropMode, setDropMode] = useState<'drop2' | 'drop3' | null>(null);
   const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower' | null>(null);
   const [activeInversionVoicing, setActiveInversionVoicing] = useState<InversionVoicing | null>(null);
+  const [threeNpsMode, setThreeNpsMode] = useState(false);
   const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
   const arpBarreDragRef = useRef<((fromSi: number, toSi: number, fret: number) => void) | null>(null);
   const [chordAddRoot, setChordAddRoot] = useState<NoteName | null>(null);
   const [chordAddHasNotes, setChordAddHasNotes] = useState(false);
   const [chordOctaveShift, setChordOctaveShift] = useState(0);
 
-  // Auto-disable strings based on inversion string group when in inversion mode
+  // Auto-disable strings based on inversion string group when in inversion mode.
+  // Drop 3 uses a separate config (skips one inner string), so we pick the right one per drop mode.
   const prevDisabledRef = useRef<Set<number> | null>(null);
   const inversionActive = activeTab === 'scaleview' && (dropMode === 'drop2' || dropMode === 'drop3') && inversionStringGroup !== null && scaleViewDegreeFilter !== null;
   useEffect(() => {
     if (inversionActive) {
-      const config = STRING_GROUP_CONFIG[inversionStringGroup];
+      const isDrop3 = dropMode === 'drop3' && (inversionStringGroup === 'lower' || inversionStringGroup === 'mid');
+      const config = isDrop3
+        ? DROP3_STRING_GROUP_CONFIG[inversionStringGroup as 'lower' | 'mid']
+        : STRING_GROUP_CONFIG[inversionStringGroup!];
       if (!prevDisabledRef.current) {
         prevDisabledRef.current = new Set(fb.disabledStrings);
       }
@@ -63,7 +68,7 @@ const Index = () => {
       prevDisabledRef.current = null;
       setActiveInversionVoicing(null);
     }
-  }, [inversionActive, inversionStringGroup]);
+  }, [inversionActive, inversionStringGroup, dropMode]);
 
   // Sync timeline key with primary scale
   useEffect(() => {
