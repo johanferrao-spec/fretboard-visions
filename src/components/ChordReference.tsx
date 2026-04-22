@@ -422,6 +422,10 @@ export default function ChordReference({
           setDropMode={setDropMode}
           threeNpsMode={threeNpsMode}
           setThreeNpsMode={setThreeNpsMode}
+          voiceLeadingMode={voiceLeadingMode}
+          setVoiceLeadingMode={setVoiceLeadingMode}
+          voiceLeadingMelody={voiceLeadingMelody}
+          setVoiceLeadingMelody={setVoiceLeadingMelody}
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
