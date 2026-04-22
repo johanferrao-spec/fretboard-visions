@@ -991,6 +991,75 @@ function ScaleViewPanel({
             </div>
           </div>
         )}
+
+        {voiceLeadingMode && !dropMode && !threeNpsMode && (
+          <div className="flex-1 rounded-xl p-3 border-2 self-stretch min-w-0" style={{ borderColor: 'hsl(280 80% 60% / 0.4)', backgroundColor: 'hsl(280 80% 60% / 0.08)' }}>
+            {degreeFilter === null ? (
+              <div className="text-[11px] font-mono text-muted-foreground leading-relaxed">
+                <span className="font-bold" style={{ color: 'hsl(280 80% 70%)' }}>Voice Leading mode.</span> Pick a degree above and click any note on the fretboard to use it as your melody (top voice). Jazz comping voicings will appear here.
+              </div>
+            ) : !voiceLeadingMelody ? (
+              <div className="text-[11px] font-mono text-muted-foreground leading-relaxed">
+                <span className="font-bold" style={{ color: 'hsl(280 80% 70%)' }}>Click a note on the fretboard</span> to set the melody (top voice) for {diatonicLabels[degreeFilter].label7}.
+              </div>
+            ) : voiceLeadingVoicings.length === 0 ? (
+              <div className="text-[11px] font-mono text-muted-foreground italic">
+                No voicings: melody note isn't a chord tone of {diatonicLabels[degreeFilter].label7}. Pick another note.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[10px] font-mono">
+                    <span className="font-bold" style={{ color: `hsl(${activeColor})` }}>{diatonicLabels[degreeFilter].label7}</span>
+                    <span className="text-muted-foreground"> · melody {NOTE_NAMES[(STANDARD_TUNING[voiceLeadingMelody.stringIndex] + voiceLeadingMelody.fret + 4) % 12]}{/* this label is approximate; the active voicing card below shows the precise top note */}</span>
+                  </div>
+                  <div className="flex gap-1 items-center">
+                    <button
+                      onClick={() => setCurrentVlIdx((i) => Math.max(0, i - 1))}
+                      disabled={currentVlIdx === 0}
+                      className="w-7 h-7 rounded bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 text-base font-bold"
+                    >‹</button>
+                    <span className="text-[10px] font-mono text-muted-foreground tabular-nums w-12 text-center">{currentVlIdx + 1}/{voiceLeadingVoicings.length}</span>
+                    <button
+                      onClick={() => setCurrentVlIdx((i) => Math.min(voiceLeadingVoicings.length - 1, i + 1))}
+                      disabled={currentVlIdx >= voiceLeadingVoicings.length - 1}
+                      className="w-7 h-7 rounded bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 text-base font-bold"
+                    >›</button>
+                    <button
+                      onClick={() => setVoiceLeadingMelody(null)}
+                      className="ml-1 px-2 h-7 rounded bg-secondary text-secondary-foreground hover:bg-muted text-[10px] font-mono"
+                      title="Clear melody note"
+                    >clear</button>
+                  </div>
+                </div>
+                <div className="flex gap-1 overflow-x-auto pb-1">
+                  {voiceLeadingVoicings.map((v, idx) => {
+                    const isActive = currentVlIdx === idx;
+                    const both = v.hasThird && v.hasSeventh;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentVlIdx(idx)}
+                        className="shrink-0 rounded-lg px-2 py-1.5 text-[9px] font-mono text-left border-2 transition-all"
+                        style={{
+                          minWidth: 78,
+                          backgroundColor: isActive ? `hsla(${activeColor}, 0.2)` : 'hsl(var(--secondary) / 0.5)',
+                          borderColor: isActive ? `hsl(${activeColor})` : 'hsl(var(--border))',
+                          color: isActive ? `hsl(${activeColor})` : undefined,
+                        }}
+                        title={`${v.slashName} · ${v.degreeOrder} · span ${v.span}`}
+                      >
+                        <div className="font-bold truncate">{v.slashName}</div>
+                        <div className="opacity-70 truncate">{v.degreeOrder}</div>
+                        <div className="text-[8px] opacity-60">{both ? '3+7 ✓' : (v.hasThird ? '3 only' : '7 only')} · sp{v.span}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {!dropMode && !threeNpsMode && degreeFilter === null && (
