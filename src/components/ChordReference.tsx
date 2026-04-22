@@ -810,10 +810,10 @@ function ScaleViewPanel({
               const next = !threeNpsMode;
               setThreeNpsMode(next);
               if (next) {
-                // Switching INTO 3-NPS turns off drop modes & inversion display
                 setDropMode(null);
                 setInversionStringGroup(null);
                 onSetInversionVoicing?.(null);
+                setVoiceLeadingMode(false);
               }
             }}
             className="py-3 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight"
@@ -825,6 +825,26 @@ function ScaleViewPanel({
             }}
             title="Show 3-notes-per-string mode patterns. Click a degree above to display its mode."
           >3 Notes<br/>Per String</button>
+          <button
+            onClick={() => {
+              const next = !voiceLeadingMode;
+              setVoiceLeadingMode(next);
+              if (next) {
+                setDropMode(null);
+                setInversionStringGroup(null);
+                setThreeNpsMode(false);
+                onSetInversionVoicing?.(null);
+              }
+            }}
+            className="py-3 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight"
+            style={{
+              backgroundColor: voiceLeadingMode ? 'hsl(280 80% 60%)' : 'hsl(280 80% 60% / 0.12)',
+              borderColor: voiceLeadingMode ? 'hsl(280 80% 60%)' : 'hsl(280 80% 60% / 0.4)',
+              color: voiceLeadingMode ? 'white' : 'hsl(280 80% 70%)',
+              boxShadow: voiceLeadingMode ? '0 0 12px hsl(280 80% 60% / 0.5)' : 'none',
+            }}
+            title="Voice leading: pick a melody note on the fretboard + a degree to see jazz comping voicings"
+          >Voice<br/>Leading</button>
         </div>
 
         {/* Right: drop mode content panel */}
