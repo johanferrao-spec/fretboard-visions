@@ -223,6 +223,7 @@ export default function ChordReference({
   ghostNoteOpacity, setGhostNoteOpacity,
   dropMode, setDropMode,
   threeNpsMode, setThreeNpsMode,
+  voiceLeadingMode, setVoiceLeadingMode, voiceLeadingMelody, setVoiceLeadingMelody,
   onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
   tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
