@@ -34,6 +34,8 @@ const Index = () => {
   const [inversionStringGroup, setInversionStringGroup] = useState<'upper' | 'mid' | 'lower' | null>(null);
   const [activeInversionVoicing, setActiveInversionVoicing] = useState<InversionVoicing | null>(null);
   const [threeNpsMode, setThreeNpsMode] = useState(false);
+  const [voiceLeadingMode, setVoiceLeadingMode] = useState(false);
+  const [voiceLeadingMelody, setVoiceLeadingMelody] = useState<{ stringIndex: number; fret: number } | null>(null);
   const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
   const arpBarreDragRef = useRef<((fromSi: number, toSi: number, fret: number) => void) | null>(null);
   const [chordAddRoot, setChordAddRoot] = useState<NoteName | null>(null);
