@@ -3534,7 +3534,7 @@ export function generateVoiceLeadingVoicings(
         const opts: { fret: number; pitch: number; interval: number }[] = [];
         for (let f = 0; f <= 18; f++) {
           if (f !== 0 && (f < fretWindowLow - 1 || f > fretWindowHigh)) continue;
-          const pitch = tuning[si] + f;
+          const pitch = openAbs[si] + f;
           if (pitch >= melodyPitch) continue;
           const pc = pitch % 12;
           if (!chordPcs.has(pc)) continue;
