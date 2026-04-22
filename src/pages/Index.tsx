@@ -425,6 +425,13 @@ const Index = () => {
                  setDropMode={setDropMode}
                  threeNpsMode={threeNpsMode}
                  setThreeNpsMode={setThreeNpsMode}
+                 voiceLeadingMode={voiceLeadingMode}
+                 setVoiceLeadingMode={(v) => {
+                   setVoiceLeadingMode(v);
+                   if (!v) setVoiceLeadingMelody(null);
+                 }}
+                 voiceLeadingMelody={voiceLeadingMelody}
+                 setVoiceLeadingMelody={setVoiceLeadingMelody}
                 onApplyBeginnerPreset={(preset) => {
                   if (preset === null) {
                     // Deselect: turn off focus box
