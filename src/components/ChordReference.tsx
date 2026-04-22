@@ -698,6 +698,23 @@ function ScaleViewPanel({
     return [];
   }, [dropMode, inversionStringGroup, degreeFilter, diatonicLabels, tuning]);
 
+  // Voice-leading voicings: derived from selected degree + clicked melody note
+  const voiceLeadingVoicings: VoiceLeadingVoicing[] = useMemo(() => {
+    if (!voiceLeadingMode || degreeFilter === null || !voiceLeadingMelody) return [];
+    const chord = diatonicLabels[degreeFilter];
+    if (!chord) return [];
+    return generateVoiceLeadingVoicings(
+      chord.root as NoteName,
+      chord.chordType7,
+      voiceLeadingMelody.stringIndex,
+      voiceLeadingMelody.fret,
+      tuning,
+    );
+  }, [voiceLeadingMode, degreeFilter, voiceLeadingMelody, diatonicLabels, tuning]);
+
+  const [currentVlIdx, setCurrentVlIdx] = useState(0);
+  useEffect(() => { setCurrentVlIdx(0); }, [voiceLeadingVoicings]);
+
   useEffect(() => {
     setCurrentInvIdx(0);
   }, [inversions]);
@@ -707,6 +724,11 @@ function ScaleViewPanel({
 
   // Apply octave shift to inversion voicing
   useEffect(() => {
+    if (voiceLeadingMode && voiceLeadingVoicings.length > 0) {
+      const idx = Math.min(currentVlIdx, voiceLeadingVoicings.length - 1);
+      onSetInversionVoicing?.(voiceLeadingVoicings[idx]);
+      return;
+    }
     if (dropMode && inversionStringGroup !== null && inversions.length > 0) {
       const idx = Math.min(currentInvIdx, inversions.length - 1);
       const baseInv = inversions[idx];
@@ -723,7 +745,7 @@ function ScaleViewPanel({
     } else {
       onSetInversionVoicing?.(null);
     }
-  }, [dropMode, inversionStringGroup, inversions, currentInvIdx, onSetInversionVoicing, octaveShift]);
+  }, [dropMode, inversionStringGroup, inversions, currentInvIdx, onSetInversionVoicing, octaveShift, voiceLeadingMode, voiceLeadingVoicings, currentVlIdx]);
 
   useEffect(() => {
     setOctaveShift(0);
