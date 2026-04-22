@@ -343,7 +343,14 @@ const Index = () => {
               arpPathVisible={fb.arpPathVisible}
               arpAddMode={fb.arpAddMode}
               arpAddReferenceNotes={fb.arpAddReferenceNotes}
-              onArpAddClick={(si, fret) => arpAddClickRef.current?.(si, fret)}
+              onArpAddClick={(si, fret) => {
+                if (voiceLeadingMode && activeTab === 'scaleview') {
+                  setVoiceLeadingMelody({ stringIndex: si, fret });
+                } else {
+                  arpAddClickRef.current?.(si, fret);
+                }
+              }}
+              arpAddMode={fb.arpAddMode || (voiceLeadingMode && activeTab === 'scaleview')}
               onArpBarreDrag={(fromSi, toSi, fret) => arpBarreDragRef.current?.(fromSi, toSi, fret)}
                inversionVoicing={activeInversionVoicing}
                scaleViewChordTones={scaleViewChordTones}
