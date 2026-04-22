@@ -2812,36 +2812,37 @@ export function generateThreeNpsPattern(
   const parentIdx = NOTE_NAMES.indexOf(parentRoot);
   if (parentIdx < 0) return [];
 
-  // Build the mode's scale starting from the chosen degree.
-  // We need an ordered list of scale pitch classes starting from the mode root,
-  // so that "the next scale note above X" is always well-defined.
   const numStrings = tuning.length;
   if (numStrings < 1) return [];
 
-  // Mode root pitch class = parentRoot + parentScale[degreeIndex] semitones.
+  // The tuning array stores pitch CLASSES (0-11), not absolute pitches. To compare
+  // pitches across strings we build an ascending absolute pitch for each open string,
+  // anchoring the lowest string at MIDI E2 (40) and ensuring each subsequent string
+  // is the smallest positive semitone delta above its predecessor.
+  const openAbs: number[] = new Array(numStrings);
+  openAbs[0] = 40 + ((tuning[0] - 4 + 12) % 12); // anchor: standard low-E pc=4 → 40
+  for (let s = 1; s < numStrings; s++) {
+    const prev = openAbs[s - 1];
+    const targetPc = ((tuning[s] % 12) + 12) % 12;
+    let candidate = prev + 1;
+    while (candidate % 12 !== targetPc) candidate++;
+    openAbs[s] = candidate;
+  }
+
   const modeRootPc = (parentIdx + parentScaleSemitones[degreeIndex]) % 12;
-
-  // Build absolute MIDI pitches of every scale tone across the playable range,
-  // ascending from the mode root on the low string upward, so we can step through
-  // them sequentially regardless of string.
-  // We use a generous span (5 octaves) starting from the lowest open string.
-  const lowestOpenPitch = tuning[0]; // semitone offset of low string (relative to some reference)
   const scalePcs = parentScaleSemitones.map(i => (parentIdx + i) % 12);
-  const isScaleTone = (pc: number) => scalePcs.includes(pc);
+  const isScaleTone = (pc: number) => scalePcs.includes(((pc % 12) + 12) % 12);
 
-  // Find the absolute pitch of the mode root on the low (string 0) string
-  // at the lowest fret in range 0..14.
-  const lowOpenPc = tuning[0] % 12;
+  // Find the lowest fret on string 0 where the mode root sits (fret 0..14)
   let startFret = -1;
   for (let f = 0; f <= 14; f++) {
-    if ((lowOpenPc + f) % 12 === modeRootPc) { startFret = f; break; }
+    if ((openAbs[0] + f) % 12 === modeRootPc) { startFret = f; break; }
   }
   if (startFret < 0) return [];
 
-  // Build the *ordered ascending pitch sequence* of all scale tones from the start pitch upward.
-  // We need 3 notes per string × numStrings notes.
+  // Build ascending sequence of scale-tone absolute pitches starting at startPitch.
   const totalNotes = 3 * numStrings;
-  const startPitch = tuning[0] + startFret; // absolute pitch on string 0
+  const startPitch = openAbs[0] + startFret;
   const sequence: number[] = [];
   let p = startPitch;
   while (sequence.length < totalNotes && p <= startPitch + 60) {
@@ -2850,19 +2851,14 @@ export function generateThreeNpsPattern(
   }
   if (sequence.length < totalNotes) return [];
 
-  // Now lay out the sequence: notes 0,1,2 → string 0; 3,4,5 → string 1; ... ; up to numStrings.
-  // For each note we find the fret on its assigned string that produces the required absolute pitch.
+  // Lay out: notes 0,1,2 → string 0; 3,4,5 → string 1; etc.
   const result: { stringIndex: number; fret: number }[] = [];
   for (let i = 0; i < totalNotes; i++) {
     const s = Math.floor(i / 3);
     if (s >= numStrings) break;
     const targetPitch = sequence[i];
-    const fret = targetPitch - tuning[s];
-    if (fret < 0 || fret > 24) {
-      // If the assigned string can't physically reach the pitch, abort cleanly —
-      // typically only happens with unusual tunings.
-      return result;
-    }
+    const fret = targetPitch - openAbs[s];
+    if (fret < 0 || fret > 24) return result; // unreachable on assigned string
     result.push({ stringIndex: s, fret });
   }
   return result;
