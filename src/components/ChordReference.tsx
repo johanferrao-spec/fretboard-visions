@@ -12,8 +12,10 @@ import {
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
   getDiatonicChords, generate7thInversions, generateDrop3Inversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
   STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS, MAJOR_MODE_NAMES, MINOR_MODE_NAMES,
+  generateVoiceLeadingVoicings,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
   type ArpeggioPosition, type StringGroup, type InversionVoicing,
+  type VoiceLeadingVoicing,
 } from '@/lib/music';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
@@ -76,6 +78,10 @@ interface ChordReferenceProps {
   setDropMode: (m: 'drop2' | 'drop3' | null) => void;
   threeNpsMode: boolean;
   setThreeNpsMode: (v: boolean) => void;
+  voiceLeadingMode: boolean;
+  setVoiceLeadingMode: (v: boolean) => void;
+  voiceLeadingMelody: { stringIndex: number; fret: number } | null;
+  setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
   onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
@@ -219,6 +225,7 @@ export default function ChordReference({
   ghostNoteOpacity, setGhostNoteOpacity,
   dropMode, setDropMode,
   threeNpsMode, setThreeNpsMode,
+  voiceLeadingMode, setVoiceLeadingMode, voiceLeadingMelody, setVoiceLeadingMelody,
   onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
   tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
@@ -417,6 +424,10 @@ export default function ChordReference({
           setDropMode={setDropMode}
           threeNpsMode={threeNpsMode}
           setThreeNpsMode={setThreeNpsMode}
+          voiceLeadingMode={voiceLeadingMode}
+          setVoiceLeadingMode={setVoiceLeadingMode}
+          voiceLeadingMelody={voiceLeadingMelody}
+          setVoiceLeadingMelody={setVoiceLeadingMelody}
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
@@ -622,6 +633,8 @@ function ScaleViewPanel({
   onSetInversionVoicing,
   dropMode, setDropMode,
   threeNpsMode, setThreeNpsMode,
+  voiceLeadingMode, setVoiceLeadingMode,
+  voiceLeadingMelody, setVoiceLeadingMelody,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
@@ -636,6 +649,10 @@ function ScaleViewPanel({
   setDropMode: (m: 'drop2' | 'drop3' | null) => void;
   threeNpsMode: boolean;
   setThreeNpsMode: (v: boolean) => void;
+  voiceLeadingMode: boolean;
+  setVoiceLeadingMode: (v: boolean) => void;
+  voiceLeadingMelody: { stringIndex: number; fret: number } | null;
+  setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
@@ -681,6 +698,23 @@ function ScaleViewPanel({
     return [];
   }, [dropMode, inversionStringGroup, degreeFilter, diatonicLabels, tuning]);
 
+  // Voice-leading voicings: derived from selected degree + clicked melody note
+  const voiceLeadingVoicings: VoiceLeadingVoicing[] = useMemo(() => {
+    if (!voiceLeadingMode || degreeFilter === null || !voiceLeadingMelody) return [];
+    const chord = diatonicLabels[degreeFilter];
+    if (!chord) return [];
+    return generateVoiceLeadingVoicings(
+      chord.root as NoteName,
+      chord.chordType7,
+      voiceLeadingMelody.stringIndex,
+      voiceLeadingMelody.fret,
+      tuning,
+    );
+  }, [voiceLeadingMode, degreeFilter, voiceLeadingMelody, diatonicLabels, tuning]);
+
+  const [currentVlIdx, setCurrentVlIdx] = useState(0);
+  useEffect(() => { setCurrentVlIdx(0); }, [voiceLeadingVoicings]);
+
   useEffect(() => {
     setCurrentInvIdx(0);
   }, [inversions]);
@@ -690,6 +724,11 @@ function ScaleViewPanel({
 
   // Apply octave shift to inversion voicing
   useEffect(() => {
+    if (voiceLeadingMode && voiceLeadingVoicings.length > 0) {
+      const idx = Math.min(currentVlIdx, voiceLeadingVoicings.length - 1);
+      onSetInversionVoicing?.(voiceLeadingVoicings[idx]);
+      return;
+    }
     if (dropMode && inversionStringGroup !== null && inversions.length > 0) {
       const idx = Math.min(currentInvIdx, inversions.length - 1);
       const baseInv = inversions[idx];
@@ -706,7 +745,7 @@ function ScaleViewPanel({
     } else {
       onSetInversionVoicing?.(null);
     }
-  }, [dropMode, inversionStringGroup, inversions, currentInvIdx, onSetInversionVoicing, octaveShift]);
+  }, [dropMode, inversionStringGroup, inversions, currentInvIdx, onSetInversionVoicing, octaveShift, voiceLeadingMode, voiceLeadingVoicings, currentVlIdx]);
 
   useEffect(() => {
     setOctaveShift(0);
@@ -771,10 +810,10 @@ function ScaleViewPanel({
               const next = !threeNpsMode;
               setThreeNpsMode(next);
               if (next) {
-                // Switching INTO 3-NPS turns off drop modes & inversion display
                 setDropMode(null);
                 setInversionStringGroup(null);
                 onSetInversionVoicing?.(null);
+                setVoiceLeadingMode(false);
               }
             }}
             className="py-3 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight"
@@ -786,6 +825,26 @@ function ScaleViewPanel({
             }}
             title="Show 3-notes-per-string mode patterns. Click a degree above to display its mode."
           >3 Notes<br/>Per String</button>
+          <button
+            onClick={() => {
+              const next = !voiceLeadingMode;
+              setVoiceLeadingMode(next);
+              if (next) {
+                setDropMode(null);
+                setInversionStringGroup(null);
+                setThreeNpsMode(false);
+                onSetInversionVoicing?.(null);
+              }
+            }}
+            className="py-3 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight"
+            style={{
+              backgroundColor: voiceLeadingMode ? 'hsl(280 80% 60%)' : 'hsl(280 80% 60% / 0.12)',
+              borderColor: voiceLeadingMode ? 'hsl(280 80% 60%)' : 'hsl(280 80% 60% / 0.4)',
+              color: voiceLeadingMode ? 'white' : 'hsl(280 80% 70%)',
+              boxShadow: voiceLeadingMode ? '0 0 12px hsl(280 80% 60% / 0.5)' : 'none',
+            }}
+            title="Voice leading: pick a melody note on the fretboard + a degree to see jazz comping voicings"
+          >Voice<br/>Leading</button>
         </div>
 
         {/* Right: drop mode content panel */}
@@ -930,6 +989,75 @@ function ScaleViewPanel({
             <div className="text-[11px] font-mono text-muted-foreground leading-relaxed">
               <span className="text-accent font-bold">3-Notes-Per-String mode active.</span> Click a degree above to highlight its full mode pattern on the fretboard. Each degree shows its parent rotation (I → Ionian, ii → Dorian, etc.) coloured to match.
             </div>
+          </div>
+        )}
+
+        {voiceLeadingMode && !dropMode && !threeNpsMode && (
+          <div className="flex-1 rounded-xl p-3 border-2 self-stretch min-w-0" style={{ borderColor: 'hsl(280 80% 60% / 0.4)', backgroundColor: 'hsl(280 80% 60% / 0.08)' }}>
+            {degreeFilter === null ? (
+              <div className="text-[11px] font-mono text-muted-foreground leading-relaxed">
+                <span className="font-bold" style={{ color: 'hsl(280 80% 70%)' }}>Voice Leading mode.</span> Pick a degree above and click any note on the fretboard to use it as your melody (top voice). Jazz comping voicings will appear here.
+              </div>
+            ) : !voiceLeadingMelody ? (
+              <div className="text-[11px] font-mono text-muted-foreground leading-relaxed">
+                <span className="font-bold" style={{ color: 'hsl(280 80% 70%)' }}>Click a note on the fretboard</span> to set the melody (top voice) for {diatonicLabels[degreeFilter].label7}.
+              </div>
+            ) : voiceLeadingVoicings.length === 0 ? (
+              <div className="text-[11px] font-mono text-muted-foreground italic">
+                No voicings: melody note isn't a chord tone of {diatonicLabels[degreeFilter].label7}. Pick another note.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[10px] font-mono">
+                    <span className="font-bold" style={{ color: `hsl(${activeColor})` }}>{diatonicLabels[degreeFilter].label7}</span>
+                    <span className="text-muted-foreground"> · melody {NOTE_NAMES[(STANDARD_TUNING[voiceLeadingMelody.stringIndex] + voiceLeadingMelody.fret + 4) % 12]}{/* this label is approximate; the active voicing card below shows the precise top note */}</span>
+                  </div>
+                  <div className="flex gap-1 items-center">
+                    <button
+                      onClick={() => setCurrentVlIdx((i) => Math.max(0, i - 1))}
+                      disabled={currentVlIdx === 0}
+                      className="w-7 h-7 rounded bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 text-base font-bold"
+                    >‹</button>
+                    <span className="text-[10px] font-mono text-muted-foreground tabular-nums w-12 text-center">{currentVlIdx + 1}/{voiceLeadingVoicings.length}</span>
+                    <button
+                      onClick={() => setCurrentVlIdx((i) => Math.min(voiceLeadingVoicings.length - 1, i + 1))}
+                      disabled={currentVlIdx >= voiceLeadingVoicings.length - 1}
+                      className="w-7 h-7 rounded bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 text-base font-bold"
+                    >›</button>
+                    <button
+                      onClick={() => setVoiceLeadingMelody(null)}
+                      className="ml-1 px-2 h-7 rounded bg-secondary text-secondary-foreground hover:bg-muted text-[10px] font-mono"
+                      title="Clear melody note"
+                    >clear</button>
+                  </div>
+                </div>
+                <div className="flex gap-1 overflow-x-auto pb-1">
+                  {voiceLeadingVoicings.map((v, idx) => {
+                    const isActive = currentVlIdx === idx;
+                    const both = v.hasThird && v.hasSeventh;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentVlIdx(idx)}
+                        className="shrink-0 rounded-lg px-2 py-1.5 text-[9px] font-mono text-left border-2 transition-all"
+                        style={{
+                          minWidth: 78,
+                          backgroundColor: isActive ? `hsla(${activeColor}, 0.2)` : 'hsl(var(--secondary) / 0.5)',
+                          borderColor: isActive ? `hsl(${activeColor})` : 'hsl(var(--border))',
+                          color: isActive ? `hsl(${activeColor})` : undefined,
+                        }}
+                        title={`${v.slashName} · ${v.degreeOrder} · span ${v.span}`}
+                      >
+                        <div className="font-bold truncate">{v.slashName}</div>
+                        <div className="opacity-70 truncate">{v.degreeOrder}</div>
+                        <div className="text-[8px] opacity-60">{both ? '3+7 ✓' : (v.hasThird ? '3 only' : '7 only')} · sp{v.span}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -2812,72 +2812,54 @@ export function generateThreeNpsPattern(
   const parentIdx = NOTE_NAMES.indexOf(parentRoot);
   if (parentIdx < 0) return [];
 
-  // Build a sorted list of all scale-tone pitch classes
-  const scalePitchClasses = parentScaleSemitones.map(i => (parentIdx + i) % 12);
-  const isScaleTone = (pc: number) => scalePitchClasses.includes(pc);
+  const numStrings = tuning.length;
+  if (numStrings < 1) return [];
 
-  // The mode's root pitch class
+  // The tuning array stores pitch CLASSES (0-11), not absolute pitches. To compare
+  // pitches across strings we build an ascending absolute pitch for each open string,
+  // anchoring the lowest string at MIDI E2 (40) and ensuring each subsequent string
+  // is the smallest positive semitone delta above its predecessor.
+  const openAbs: number[] = new Array(numStrings);
+  openAbs[0] = 40 + ((tuning[0] - 4 + 12) % 12); // anchor: standard low-E pc=4 → 40
+  for (let s = 1; s < numStrings; s++) {
+    const prev = openAbs[s - 1];
+    const targetPc = ((tuning[s] % 12) + 12) % 12;
+    let candidate = prev + 1;
+    while (candidate % 12 !== targetPc) candidate++;
+    openAbs[s] = candidate;
+  }
+
   const modeRootPc = (parentIdx + parentScaleSemitones[degreeIndex]) % 12;
+  const scalePcs = parentScaleSemitones.map(i => (parentIdx + i) % 12);
+  const isScaleTone = (pc: number) => scalePcs.includes(((pc % 12) + 12) % 12);
 
-  // Find the lowest fret on string 0 (low-E) where the mode root sits in fret range 1..14
-  const lowEOpenPc = tuning[0] % 12;
+  // Find the lowest fret on string 0 where the mode root sits (fret 0..14)
   let startFret = -1;
-  for (let f = 1; f <= 14; f++) {
-    if ((lowEOpenPc + f) % 12 === modeRootPc) { startFret = f; break; }
+  for (let f = 0; f <= 14; f++) {
+    if ((openAbs[0] + f) % 12 === modeRootPc) { startFret = f; break; }
   }
   if (startFret < 0) return [];
 
-  const result: { stringIndex: number; fret: number }[] = [];
-  let currentFret = startFret;
+  // Build ascending sequence of scale-tone absolute pitches starting at startPitch.
+  const totalNotes = 3 * numStrings;
+  const startPitch = openAbs[0] + startFret;
+  const sequence: number[] = [];
+  let p = startPitch;
+  while (sequence.length < totalNotes && p <= startPitch + 60) {
+    if (isScaleTone(p % 12)) sequence.push(p);
+    p++;
+  }
+  if (sequence.length < totalNotes) return [];
 
-  for (let s = 0; s < 6; s++) {
-    const openPc = tuning[s] % 12;
-    // For string 0: start at startFret. For higher strings: find the first scale tone at or near currentFret-1
-    // (3-NPS shifts left ~5 frets between strings, but the second/third notes set the next string's start)
-    if (s === 0) {
-      // place 3 ascending scale tones starting at startFret
-      let f = startFret;
-      let placed = 0;
-      while (placed < 3 && f <= 24) {
-        if (isScaleTone((openPc + f) % 12)) {
-          result.push({ stringIndex: s, fret: f });
-          placed++;
-          f++;
-        } else {
-          f++;
-        }
-      }
-      currentFret = f - 1; // last fret used on this string
-    } else {
-      // The next string's first note is the next scale tone *above* the last note from previous string.
-      // In 3-NPS shapes, this generally lands on the same row position but a few frets lower.
-      // Find the lowest fret on this string whose pitch is the next scale tone above the previous string's last note.
-      const prevString = result[result.length - 1];
-      const prevPitch = tuning[prevString.stringIndex] + prevString.fret;
-      let placed = 0;
-      let f = Math.max(0, prevString.fret - 6);
-      // First note: the next scale tone whose absolute pitch is > prevPitch
-      while (f <= 24 && placed < 3) {
-        const absPitch = tuning[s] + f;
-        if (isScaleTone(absPitch % 12) && absPitch > prevPitch) {
-          result.push({ stringIndex: s, fret: f });
-          placed++;
-          f++;
-          break;
-        }
-        f++;
-      }
-      // Next two notes ascending on this string
-      while (f <= 24 && placed < 3) {
-        if (isScaleTone((tuning[s] + f) % 12)) {
-          result.push({ stringIndex: s, fret: f });
-          placed++;
-          f++;
-        } else {
-          f++;
-        }
-      }
-    }
+  // Lay out: notes 0,1,2 → string 0; 3,4,5 → string 1; etc.
+  const result: { stringIndex: number; fret: number }[] = [];
+  for (let i = 0; i < totalNotes; i++) {
+    const s = Math.floor(i / 3);
+    if (s >= numStrings) break;
+    const targetPitch = sequence[i];
+    const fret = targetPitch - openAbs[s];
+    if (fret < 0 || fret > 24) return result; // unreachable on assigned string
+    result.push({ stringIndex: s, fret });
   }
   return result;
 }
@@ -3460,4 +3442,187 @@ export function generateDrop3Inversions(
   }
 
   return results;
+}
+
+// ============================================================
+// VOICE LEADING — jazz comping voicing generator
+// ============================================================
+//
+// Given a chord (root + 7th-chord type), a target melody pitch (specific string +
+// fret = the highest note), and a tuning, brute-force enumerate all 3- or 4-note
+// voicings on adjacent strings ending on the chosen melody note, where:
+//   • The melody note is the highest sounding pitch
+//   • All notes belong to the chord (root, 3rd, 5th, 7th)
+//   • Span ≤ 4 frets (open strings excluded from span calculation)
+//   • Notes lie on consecutive ascending strings below the melody note
+//   • Each contains the 3rd OR the 7th — preferably both
+// Voicings are scored & sorted (both 3rd AND 7th first, then more notes, then
+// smaller span, then lower position) and deduped on identical fret patterns.
+
+export interface VoiceLeadingVoicing extends InversionVoicing {
+  hasThird: boolean;
+  hasSeventh: boolean;
+  span: number;
+  melody: { stringIndex: number; fret: number };
+}
+
+export function generateVoiceLeadingVoicings(
+  root: NoteName,
+  chordType: string,
+  melodyStringIndex: number,
+  melodyFret: number,
+  tuning: number[] = STANDARD_TUNING,
+): VoiceLeadingVoicing[] {
+  const formula = CHORD_FORMULAS[chordType];
+  if (!formula) return [];
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  if (rootIdx < 0) return [];
+
+  const intervals = formula.slice(0, 4).map(i => i % 12);
+  const chordPcs = new Set(intervals.map(i => (rootIdx + i) % 12));
+  const pcToInterval: Record<number, number> = {};
+  for (const i of intervals) pcToInterval[(rootIdx + i) % 12] = i;
+
+  const thirdInterval = intervals.find(i => i === 3 || i === 4);
+  const seventhInterval = intervals.find(i => i === 10 || i === 11);
+  if (thirdInterval === undefined && seventhInterval === undefined) return [];
+
+  // Build absolute open-string pitches (tuning[] holds pitch classes only)
+  const numStrings = tuning.length;
+  const openAbs: number[] = new Array(numStrings);
+  openAbs[0] = 40 + ((tuning[0] - 4 + 12) % 12);
+  for (let s = 1; s < numStrings; s++) {
+    const prev = openAbs[s - 1];
+    const targetPc = ((tuning[s] % 12) + 12) % 12;
+    let candidate = prev + 1;
+    while (candidate % 12 !== targetPc) candidate++;
+    openAbs[s] = candidate;
+  }
+
+  const melodyPitch = openAbs[melodyStringIndex] + melodyFret;
+  if (!chordPcs.has(melodyPitch % 12)) return [];
+
+  const results: VoiceLeadingVoicing[] = [];
+  const seen = new Set<string>();
+
+  for (const numVoices of [4, 3] as const) {
+    const numLower = numVoices - 1;
+    if (melodyStringIndex < numLower) continue;
+    const stringSetCandidates: number[][] = [];
+    {
+      const set: number[] = [];
+      for (let i = melodyStringIndex - numLower; i < melodyStringIndex; i++) set.push(i);
+      stringSetCandidates.push(set);
+    }
+    if (melodyStringIndex >= numLower + 1) {
+      for (let skip = 0; skip < numLower; skip++) {
+        const startBelow = melodyStringIndex - numLower - 1;
+        const set: number[] = [];
+        for (let i = 0; i < numLower; i++) {
+          const idx = startBelow + i + (i >= skip ? 1 : 0);
+          if (idx < 0 || idx >= melodyStringIndex) { set.length = 0; break; }
+          set.push(idx);
+        }
+        if (set.length === numLower) stringSetCandidates.push(set);
+      }
+    }
+
+    for (const stringSet of stringSetCandidates) {
+      const fretWindowLow = Math.max(0, melodyFret - 5);
+      const fretWindowHigh = melodyFret + 4;
+      const perStringOptions: { fret: number; pitch: number; interval: number }[][] = stringSet.map(si => {
+        const opts: { fret: number; pitch: number; interval: number }[] = [];
+        for (let f = 0; f <= 18; f++) {
+          if (f !== 0 && (f < fretWindowLow - 1 || f > fretWindowHigh)) continue;
+          const pitch = openAbs[si] + f;
+          if (pitch >= melodyPitch) continue;
+          const pc = pitch % 12;
+          if (!chordPcs.has(pc)) continue;
+          opts.push({ fret: f, pitch, interval: pcToInterval[pc] });
+        }
+        return opts;
+      });
+
+      const intervalNameMap: Record<number, string> = {
+        0: 'R', 2: '9', 3: '♭3', 4: '3', 5: '11', 6: '♭5', 7: '5',
+        8: '♭6', 9: '6', 10: '♭7', 11: '7', 14: '9', 17: '11', 21: '13',
+      };
+      const shortNames: Record<string, string> = {
+        'Major 7': 'maj7', 'Minor 7': 'm7', 'Dominant 7': '7',
+        'Half-Dim 7': 'ø7', 'Dim 7': 'dim7', 'Min/Maj 7': 'mM7',
+      };
+
+      const combine = (idx: number, acc: { fret: number; pitch: number; interval: number }[]) => {
+        if (idx === perStringOptions.length) {
+          const allFrets = acc.map(a => a.fret).concat([melodyFret]);
+          const allPitches = acc.map(a => a.pitch).concat([melodyPitch]);
+          for (let i = 1; i < allPitches.length; i++) {
+            if (allPitches[i] <= allPitches[i - 1]) return;
+          }
+          const fretted = allFrets.filter(f => f > 0);
+          const span = fretted.length === 0 ? 0 : Math.max(...fretted) - Math.min(...fretted);
+          if (span > 4) return;
+
+          const intervalsUsed = new Set([...acc.map(a => a.interval), pcToInterval[melodyPitch % 12]]);
+          const hasThird = thirdInterval !== undefined && intervalsUsed.has(thirdInterval);
+          const hasSeventh = seventhInterval !== undefined && intervalsUsed.has(seventhInterval);
+          if (!hasThird && !hasSeventh) return;
+
+          const frets: (number | -1)[] = Array(tuning.length).fill(-1);
+          for (let i = 0; i < acc.length; i++) frets[stringSet[i]] = acc[i].fret;
+          frets[melodyStringIndex] = melodyFret;
+
+          const sig = frets.join(',');
+          if (seen.has(sig)) return;
+          seen.add(sig);
+
+          const notes: ArpeggioPositionNote[] = [];
+          frets.forEach((f, si) => { if (f >= 0) notes.push({ stringIndex: si, fret: f }); });
+
+          const sortedByPitch = acc.concat([{ fret: melodyFret, pitch: melodyPitch, interval: pcToInterval[melodyPitch % 12] }]);
+          const degreeOrder = sortedByPitch.map(n => intervalNameMap[n.interval] || '?').join(' ');
+          const bottomNotePitch = sortedByPitch[0];
+          const topNotePitch = sortedByPitch[sortedByPitch.length - 1];
+          const bottomNoteName = NOTE_NAMES[bottomNotePitch.pitch % 12];
+          const topNoteName = NOTE_NAMES[topNotePitch.pitch % 12];
+
+          const fullName = `${root}${shortNames[chordType] || chordType}`;
+          const slashName = bottomNotePitch.interval === 0 ? fullName : `${fullName}/${bottomNoteName}`;
+          const tab = frets.map(f => f === -1 ? 'X' : f.toString(36).toUpperCase()).join('');
+
+          results.push({
+            frets, notes,
+            inversionNumber: bottomNotePitch.interval === 0 ? 0 : -1,
+            inversionLabel: `Melody on ${topNoteName}`,
+            slashName,
+            alternateName: '',
+            bottomDegree: `${intervalNameMap[bottomNotePitch.interval] || '?'} in bass`,
+            topDegree: `${intervalNameMap[topNotePitch.interval] || '?'} on top (${topNoteName})`,
+            tab,
+            chordType,
+            degreeOrder,
+            hasThird, hasSeventh, span,
+            melody: { stringIndex: melodyStringIndex, fret: melodyFret },
+          });
+          return;
+        }
+        for (const opt of perStringOptions[idx]) combine(idx + 1, [...acc, opt]);
+      };
+      combine(0, []);
+    }
+  }
+
+  const scored = results.map(v => {
+    const fretted = v.frets.filter(f => f > 0) as number[];
+    const minFret = fretted.length > 0 ? Math.min(...fretted) : 0;
+    let score = 0;
+    if (v.hasThird && v.hasSeventh) score += 100;
+    else if (v.hasThird || v.hasSeventh) score += 40;
+    score += v.notes.length * 5;
+    score -= v.span * 2;
+    score -= minFret * 0.2;
+    return { v, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, 14).map(s => s.v);
 }
