@@ -98,6 +98,22 @@ const Index = () => {
     return new Set(formula.map(i => (rootIdx + (i % 12)) % 12));
   }, [scaleViewDegreeFilter, fb.primaryScale.root, fb.primaryScale.scale]);
 
+  // Voice-leading: highlight all chord-tone positions across the fretboard so the user
+  // knows which notes are valid melody picks. Without this, clicks on non-chord-tones
+  // silently produce no voicings.
+  const voiceLeadingRefNotes = useMemo(() => {
+    if (!voiceLeadingMode || activeTab !== 'scaleview' || !scaleViewChordTones) return undefined;
+    const notes: { stringIndex: number; fret: number }[] = [];
+    for (let s = 0; s < fb.tuning.length; s++) {
+      const openPc = ((fb.tuning[s] % 12) + 12) % 12;
+      for (let f = 0; f <= 18; f++) {
+        const pc = (openPc + f) % 12;
+        if (scaleViewChordTones.has(pc)) notes.push({ stringIndex: s, fret: f });
+      }
+    }
+    return notes;
+  }, [voiceLeadingMode, activeTab, scaleViewChordTones, fb.tuning]);
+
   // 3-Notes-Per-String overlay: compute pattern for the selected mode/degree
   const threeNpsData = useMemo(() => {
     if (!threeNpsMode || activeTab !== 'scaleview' || scaleViewDegreeFilter === null) return null;
