@@ -76,6 +76,10 @@ interface ChordReferenceProps {
   setDropMode: (m: 'drop2' | 'drop3' | null) => void;
   threeNpsMode: boolean;
   setThreeNpsMode: (v: boolean) => void;
+  voiceLeadingMode: boolean;
+  setVoiceLeadingMode: (v: boolean) => void;
+  voiceLeadingMelody: { stringIndex: number; fret: number } | null;
+  setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
   onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
