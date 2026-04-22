@@ -341,7 +341,6 @@ const Index = () => {
               arpeggioPosition={fb.arpeggioPosition}
               arpOverlayOpacity={fb.arpOverlayOpacity}
               arpPathVisible={fb.arpPathVisible}
-              arpAddMode={fb.arpAddMode}
               arpAddReferenceNotes={fb.arpAddReferenceNotes}
               onArpAddClick={(si, fret) => {
                 if (voiceLeadingMode && activeTab === 'scaleview') {
