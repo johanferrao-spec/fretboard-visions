@@ -357,7 +357,7 @@ const Index = () => {
               arpeggioPosition={fb.arpeggioPosition}
               arpOverlayOpacity={fb.arpOverlayOpacity}
               arpPathVisible={fb.arpPathVisible}
-              arpAddReferenceNotes={fb.arpAddReferenceNotes}
+              arpAddReferenceNotes={voiceLeadingRefNotes ?? fb.arpAddReferenceNotes}
               onArpAddClick={(si, fret) => {
                 if (voiceLeadingMode && activeTab === 'scaleview') {
                   setVoiceLeadingMelody({ stringIndex: si, fret });
