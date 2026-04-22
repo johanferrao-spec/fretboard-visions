@@ -3487,7 +3487,19 @@ export function generateVoiceLeadingVoicings(
   const seventhInterval = intervals.find(i => i === 10 || i === 11);
   if (thirdInterval === undefined && seventhInterval === undefined) return [];
 
-  const melodyPitch = tuning[melodyStringIndex] + melodyFret;
+  // Build absolute open-string pitches (tuning[] holds pitch classes only)
+  const numStrings = tuning.length;
+  const openAbs: number[] = new Array(numStrings);
+  openAbs[0] = 40 + ((tuning[0] - 4 + 12) % 12);
+  for (let s = 1; s < numStrings; s++) {
+    const prev = openAbs[s - 1];
+    const targetPc = ((tuning[s] % 12) + 12) % 12;
+    let candidate = prev + 1;
+    while (candidate % 12 !== targetPc) candidate++;
+    openAbs[s] = candidate;
+  }
+
+  const melodyPitch = openAbs[melodyStringIndex] + melodyFret;
   if (!chordPcs.has(melodyPitch % 12)) return [];
 
   const results: VoiceLeadingVoicing[] = [];
