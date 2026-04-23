@@ -148,14 +148,30 @@ const Index = () => {
   const handlePlay = () => {
     timeline.setIsPlaying(true);
     midi.setVolume(volume);
-    midi.play(
-      timeline.chords,
-      timeline.measures,
-      timeline.bpm,
-      timeline.genre,
-      (beat) => timeline.setCurrentBeat(beat),
-      () => timeline.setIsPlaying(false),
-    );
+    if (activeTab === 'backing' && backingApi) {
+      // Backing track DAW takes over audio (richer generated tracks)
+      backingApi.play();
+      // Drive the main playhead via a simple beat counter using BPM
+      const startTime = performance.now();
+      const totalBeats = timeline.measures * 4;
+      const tick = () => {
+        if (!timeline.isPlaying) return;
+        const elapsedSec = (performance.now() - startTime) / 1000;
+        const beat = (elapsedSec * timeline.bpm / 60) % totalBeats;
+        timeline.setCurrentBeat(beat);
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    } else {
+      midi.play(
+        timeline.chords,
+        timeline.measures,
+        timeline.bpm,
+        timeline.genre,
+        (beat) => timeline.setCurrentBeat(beat),
+        () => timeline.setIsPlaying(false),
+      );
+    }
   };
 
   const handleVolumeChange = (v: number) => {
@@ -167,6 +183,7 @@ const Index = () => {
     timeline.setIsPlaying(false);
     timeline.setCurrentBeat(0);
     midi.stop();
+    backingApi?.stop();
   };
 
   const handleSeek = (beat: number) => {
