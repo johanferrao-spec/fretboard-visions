@@ -3500,7 +3500,7 @@ export function generateVoiceLeadingVoicings(
   }
 
   const melodyPitch = openAbs[melodyStringIndex] + melodyFret;
-  if (!chordPcs.has(melodyPitch % 12)) return [];
+  const melodyInterval = ((melodyPitch % 12) - rootIdx + 12) % 12;
 
   const results: VoiceLeadingVoicing[] = [];
   const seen = new Set<string>();
@@ -3563,10 +3563,12 @@ export function generateVoiceLeadingVoicings(
           const span = fretted.length === 0 ? 0 : Math.max(...fretted) - Math.min(...fretted);
           if (span > 4) return;
 
-          const intervalsUsed = new Set([...acc.map(a => a.interval), pcToInterval[melodyPitch % 12]]);
+          const intervalsUsed = new Set(acc.map(a => a.interval));
+          if (chordPcs.has(melodyPitch % 12)) intervalsUsed.add(pcToInterval[melodyPitch % 12]);
           const hasThird = thirdInterval !== undefined && intervalsUsed.has(thirdInterval);
           const hasSeventh = seventhInterval !== undefined && intervalsUsed.has(seventhInterval);
           if (!hasThird && !hasSeventh) return;
+          if (intervalsUsed.size < Math.min(2, numVoices - 1)) return;
 
           const frets: (number | -1)[] = Array(tuning.length).fill(-1);
           for (let i = 0; i < acc.length; i++) frets[stringSet[i]] = acc[i].fret;
@@ -3579,7 +3581,7 @@ export function generateVoiceLeadingVoicings(
           const notes: ArpeggioPositionNote[] = [];
           frets.forEach((f, si) => { if (f >= 0) notes.push({ stringIndex: si, fret: f }); });
 
-          const sortedByPitch = acc.concat([{ fret: melodyFret, pitch: melodyPitch, interval: pcToInterval[melodyPitch % 12] }]);
+          const sortedByPitch = acc.concat([{ fret: melodyFret, pitch: melodyPitch, interval: melodyInterval }]);
           const degreeOrder = sortedByPitch.map(n => intervalNameMap[n.interval] || '?').join(' ');
           const bottomNotePitch = sortedByPitch[0];
           const topNotePitch = sortedByPitch[sortedByPitch.length - 1];
@@ -3615,10 +3617,12 @@ export function generateVoiceLeadingVoicings(
   const scored = results.map(v => {
     const fretted = v.frets.filter(f => f > 0) as number[];
     const minFret = fretted.length > 0 ? Math.min(...fretted) : 0;
+    const melodyIsChordTone = chordPcs.has((openAbs[v.melody.stringIndex] + v.melody.fret) % 12);
     let score = 0;
     if (v.hasThird && v.hasSeventh) score += 100;
     else if (v.hasThird || v.hasSeventh) score += 40;
     score += v.notes.length * 5;
+    if (melodyIsChordTone) score += 6;
     score -= v.span * 2;
     score -= minFret * 0.2;
     return { v, score };
