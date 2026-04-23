@@ -94,6 +94,8 @@ export default function BackingTrackView({
       },
       saved: bt.savedTracks.map(t => ({ id: t.id, name: t.name })),
       regenerateAll: () => bt.regenerateAll(chords, measures, genre, true),
+      play: () => bt.play(bpm, measures),
+      stop: () => bt.stop(),
     });
   }, [bt, chords, measures, bpm, genre, registerHandlers]);
 
