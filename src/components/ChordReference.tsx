@@ -626,32 +626,35 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   );
 }
 
-function VoiceLeadingDiagram({ voicing, color, onClick }: {
+function VoiceLeadingDiagram({ voicing, color, onClick, isActive = false }: {
   voicing: VoiceLeadingVoicing;
   color: string;
   onClick?: () => void;
+  isActive?: boolean;
 }) {
   const frettedNotes = voicing.frets.filter(f => f > 0);
   const minFret = frettedNotes.length > 0 ? Math.min(...frettedNotes) : 1;
   const startFret = Math.max(1, minFret - 1);
   const numFrets = 5;
-  const cellW = 16;
-  const cellH = 22;
+  const cellW = 14;
+  const cellH = 18;
   const numStrings = 6;
-  const leftPad = 18;
-  const topPad = 16;
-  const w = leftPad + (numStrings - 1) * cellW + 14;
-  const h = topPad + numFrets * cellH + 14;
+  const leftPad = 16;
+  const topPad = 14;
+  const w = leftPad + (numStrings - 1) * cellW + 12;
+  const h = topPad + numFrets * cellH + 12;
 
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center rounded-lg border-2 px-1 py-1 transition-all"
+      className="flex flex-col items-center rounded-lg shrink-0 transition-all"
       style={{
-        borderColor: `hsl(${color})`,
-        backgroundColor: `hsla(${color}, 0.14)`,
-        width: 108,
-        minWidth: 108,
+        border: isActive ? `3px solid hsl(${color})` : `1.5px solid hsla(${color}, 0.35)`,
+        backgroundColor: isActive ? `hsla(${color}, 0.22)` : `hsla(${color}, 0.06)`,
+        boxShadow: isActive ? `0 0 10px hsla(${color}, 0.45)` : 'none',
+        padding: '3px 4px',
+        width: 100,
+        minWidth: 100,
       }}
     >
       <div className="text-[10px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
