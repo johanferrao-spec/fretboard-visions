@@ -370,6 +370,7 @@ const Index = () => {
                ghostNoteOpacity={fb.ghostNoteOpacity}
                voiceLeadingMelody={voiceLeadingMode && activeTab === 'scaleview' ? voiceLeadingMelody : null}
                voiceLeadingMelodyColor={voiceLeadingMode && activeTab === 'scaleview' && scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
+               voiceLeadingActive={voiceLeadingMode && activeTab === 'scaleview'}
                  inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
                  chordAddRootNote={chordAddRoot}
                  chordAddHasNotes={chordAddHasNotes}
