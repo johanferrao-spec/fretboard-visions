@@ -58,6 +58,10 @@ interface FretboardProps {
   threeNpsNotes?: { stringIndex: number; fret: number }[];
   /** HSL color (e.g. "120, 70%, 45%") used for 3-NPS markers. */
   threeNpsColor?: string;
+  /** Selected melody note for voice-leading mode. */
+  voiceLeadingMelody?: { stringIndex: number; fret: number } | null;
+  /** HSL color used to ring the selected melody note. */
+  voiceLeadingMelodyColor?: string | null;
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   onArpBarreDrag?: (fromStringIndex: number, toStringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
@@ -105,7 +109,7 @@ export default function Fretboard({
   identifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre, identifyRoot,
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
   arpOverlayOpacity = 0.3, arpPathVisible = true,
-  arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, threeNpsNotes, threeNpsColor, onArpAddClick, onArpBarreDrag,
+  arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, threeNpsNotes, threeNpsColor, voiceLeadingMelody, voiceLeadingMelodyColor, onArpAddClick, onArpBarreDrag,
   scaleViewChordTones,
   inversionVoicing,
   ghostNoteOpacity = 0.75,
@@ -394,14 +398,38 @@ export default function Fretboard({
   }, [identifyBarre, identifyFrets, setIdentifyBarre]);
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
+    const isVoiceLeadingMelody = voiceLeadingMelody?.stringIndex === stringIndex && voiceLeadingMelody?.fret === fret;
+    const melodyRingColor = voiceLeadingMelodyColor ? `hsl(${voiceLeadingMelodyColor})` : 'hsl(var(--accent))';
     // 3-notes-per-string overlay — highest priority. Hides everything else for clarity.
     if (threeNpsSet.size > 0) {
       const key = `${stringIndex}-${fret}`;
       if (threeNpsSet.has(key)) {
         const color = threeNpsColor ? `hsl(${threeNpsColor})` : 'hsl(var(--primary))';
-        return { backgroundColor: color, opacity: 1, ring: true, ringColor: color, greyed: false };
+        return { backgroundColor: color, opacity: 1, ring: true, ringColor: isVoiceLeadingMelody ? melodyRingColor : color, ringWidth: isVoiceLeadingMelody ? 4 : 2, greyed: false };
       }
-      return null;
+      if (scaleViewChordTones && scaleViewChordTones.size > 0) {
+        if (isOutsidePositionBox(stringIndex, fret)) return null;
+        const noteIdx = NOTE_NAMES.indexOf(note);
+        const inPrimary = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
+        if (!inPrimary) return null;
+        let ghostBg = pColor;
+        if (degreeColors) {
+          const dc = getDegreeColor(primaryScale.root, note);
+          if (dc) ghostBg = dc;
+        }
+        const isChordTone = scaleViewChordTones.has(noteIdx);
+        return {
+          backgroundColor: ghostBg,
+          opacity: isChordTone ? Math.max(ghostNoteOpacity, 0.45) : ghostNoteOpacity,
+          ring: isVoiceLeadingMelody,
+          ringColor: isVoiceLeadingMelody ? melodyRingColor : '',
+          ringWidth: isVoiceLeadingMelody ? 4 : 0,
+          greyed: false,
+        };
+      }
+      return isVoiceLeadingMelody
+        ? { backgroundColor: 'hsl(var(--muted))', opacity: 0.4, ring: true, ringColor: melodyRingColor, ringWidth: 4, greyed: false }
+        : null;
     }
 
     // Tab visualiser mode: only show tab notes
@@ -506,7 +534,7 @@ export default function Fretboard({
           if (dc) bg = dc;
         }
         // Glow effect via ring
-        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: bg, greyed: false };
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: isVoiceLeadingMelody ? melodyRingColor : bg, ringWidth: isVoiceLeadingMelody ? 4 : 2, greyed: false };
       }
       // Non-chord-tone scale notes: dimmed by ghost opacity slider
       let ghostBg = pColor;
@@ -514,7 +542,7 @@ export default function Fretboard({
         const dc = getDegreeColor(primaryScale.root, note);
         if (dc) ghostBg = dc;
       }
-      return { backgroundColor: ghostBg, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: false };
+      return { backgroundColor: ghostBg, opacity: ghostNoteOpacity, ring: isVoiceLeadingMelody, ringColor: isVoiceLeadingMelody ? melodyRingColor : '', ringWidth: isVoiceLeadingMelody ? 4 : 0, greyed: false };
     }
 
     // Inversion voicing mode: only chord notes visible, opacity dims non-voicing chord tones
@@ -539,10 +567,10 @@ export default function Fretboard({
       }
       
       if (isInVoicing) {
-        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: inversionDegreeColor ? `hsl(${inversionDegreeColor})` : 'hsl(var(--primary))', greyed: false };
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: isVoiceLeadingMelody ? melodyRingColor : (inversionDegreeColor ? `hsl(${inversionDegreeColor})` : 'hsl(var(--primary))'), ringWidth: isVoiceLeadingMelody ? 4 : 2, greyed: false };
       }
       // Chord tones not in the voicing: dimmed by ghostNoteOpacity
-      return { backgroundColor: bg, opacity: ghostNoteOpacity, ring: false, ringColor: '', greyed: false };
+      return { backgroundColor: bg, opacity: ghostNoteOpacity, ring: isVoiceLeadingMelody, ringColor: isVoiceLeadingMelody ? melodyRingColor : '', ringWidth: isVoiceLeadingMelody ? 4 : 0, greyed: false };
     }
 
 
@@ -713,7 +741,7 @@ export default function Fretboard({
     // Position box: completely hide notes outside
     if (isOutsidePositionBox(stringIndex, fret)) return null;
 
-    return { backgroundColor: bg, opacity, ring, ringColor, greyed };
+      return { backgroundColor: bg, opacity, ring: ring || isVoiceLeadingMelody, ringColor: isVoiceLeadingMelody ? melodyRingColor : ringColor, ringWidth: isVoiceLeadingMelody ? 4 : (ring ? 2 : 0), greyed };
   }
 
   const handleNoteHover = (note: NoteName) => {
@@ -1531,7 +1559,7 @@ export default function Fretboard({
                                     ? 'hsl(var(--primary-foreground))'
                                     : 'hsl(220, 20%, 8%)',
                                 fontSize: Math.max(6, noteMarkerSize * 0.35),
-                                ...(style.ring ? { boxShadow: `0 0 0 2px ${style.ringColor}` } : {}),
+                                ...(style.ring ? { boxShadow: `0 0 0 ${(style as { ringWidth?: number }).ringWidth ?? 2}px ${style.ringColor}` } : {}),
                               }}
                             >
                               {label}
