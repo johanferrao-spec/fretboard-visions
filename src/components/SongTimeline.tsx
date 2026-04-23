@@ -554,12 +554,13 @@ export default function SongTimeline({
       </div>
 
       {/* Timeline grid */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {/* Measure labels — clickable to place playhead */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        {/* Measure labels — clickable to place playhead.
+            When backing-track DAW is open, leave a 200px left spacer to align
+            with the per-track lane headers below so all grids share the same X axis. */}
         <div
           className="flex items-center cursor-pointer select-none"
           onMouseDown={(e) => {
-            // Use gridRef position mapping
             if (!gridRef.current) return;
             const beat = getRawBeatFromX(e.clientX);
             if (isPlaying) onStop();
@@ -567,25 +568,30 @@ export default function SongTimeline({
             setPlayheadDragging(true);
           }}
         >
-          <div className="w-0" />
-          {Array.from({ length: measures }, (_, m) => (
-            <div key={m} className="flex-1 text-center border-l border-border/50 first:border-l-0">
-              <span className="text-[9px] font-mono text-muted-foreground">{m + 1}</span>
-            </div>
-          ))}
+          {backingTrackActive && <div style={{ width: 200, minWidth: 200 }} />}
+          <div className="flex-1 flex items-center">
+            {Array.from({ length: measures }, (_, m) => (
+              <div key={m} className="flex-1 text-center border-l border-border/50 first:border-l-0">
+                <span className="text-[9px] font-mono text-muted-foreground">{m + 1}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Grid area */}
-        <div
-          ref={gridRef}
-          className="relative flex-1 bg-secondary/20 border-t border-border/30"
-          style={{ height: `calc(100% - 24px)` }}
-          onDrop={handleGridDrop}
-          onDragOver={handleGridDragOver}
-          onDragLeave={handleGridDragLeave}
-          onDoubleClick={handleGridDoubleClick}
-          onClick={() => setVariationPopup(null)}
-        >
+        {/* Grid wrapper — adds left header-spacer so chord grid aligns with DAW lanes */}
+        <div className="flex-1 flex min-h-0">
+          {backingTrackActive && (
+            <div style={{ width: 200, minWidth: 200 }} className="border-r border-border/30 bg-card/40" />
+          )}
+          <div
+            ref={gridRef}
+            className="relative flex-1 bg-secondary/20 border-t border-border/30"
+            onDrop={handleGridDrop}
+            onDragOver={handleGridDragOver}
+            onDragLeave={handleGridDragLeave}
+            onDoubleClick={handleGridDoubleClick}
+            onClick={() => setVariationPopup(null)}
+          >
           {/* Grid lines — beat and measure lines */}
           {Array.from({ length: totalBeats }, (_, i) => {
             const isMeasure = i % 4 === 0;
