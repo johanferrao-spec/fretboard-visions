@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import type { TrackId, TrackState } from '@/lib/backingTrackTypes';
+import type { TrackId, TrackState, MidiClip } from '@/lib/backingTrackTypes';
+import { TRACK_COLORS, TRACK_LABELS, DRUM_PITCHES } from '@/lib/backingTrackTypes';
 import type { TimelineChord, Genre } from '@/hooks/useSongTimeline';
 import TrackHeader from './TrackHeader';
-import ClipPreview from './ClipPreview';
 import { supabase } from '@/integrations/supabase/client';
+import { Copy, Trash2 } from 'lucide-react';
 
 interface TrackLaneProps {
   track: TrackState;
@@ -16,15 +17,96 @@ interface TrackLaneProps {
   chords: TimelineChord[];
   onParamChange: <K extends keyof TrackState>(key: K, value: TrackState[K]) => void;
   onRegenerate: () => void;
-  onAINotes: (notes: TrackState['notes']) => void;
-  onOpenEditor: () => void;
+  onAINotes: (notes: TrackState['clips'][number]['notes']) => void;
+  onUpdateClip: (clipId: string, patch: Partial<MidiClip>) => void;
+  onDeleteClip: (clipId: string) => void;
+  onDuplicateClip: (clipId: string) => void;
+  onOpenClipEditor: (clipId: string) => void;
 }
+
+interface DragState {
+  clipId: string;
+  mode: 'move' | 'resize-r' | 'resize-l';
+  origStart: number;
+  origDuration: number;
+  startX: number;
+  pxPerBeat: number;
+}
+
+const SNAP = 0.25;
+const snap = (b: number) => Math.max(0, Math.round(b / SNAP) * SNAP);
 
 export default function TrackLane({
   track, measures, currentBeat, isPlaying, bpm, genre, chords,
-  onParamChange, onRegenerate, onAINotes, onOpenEditor,
+  onParamChange, onRegenerate, onAINotes,
+  onUpdateClip, onDeleteClip, onDuplicateClip, onOpenClipEditor,
 }: TrackLaneProps) {
   const [aiLoading, setAiLoading] = useState(false);
+  const laneRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<DragState | null>(null);
+  const [, force] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const totalBeats = measures * 4;
+
+  // Mouse drag handling for clips
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const dx = e.clientX - d.startX;
+      const dBeats = dx / d.pxPerBeat;
+      if (d.mode === 'move') {
+        const ns = snap(d.origStart + dBeats);
+        onUpdateClip(d.clipId, { startBeat: Math.max(0, Math.min(totalBeats - SNAP, ns)) });
+      } else if (d.mode === 'resize-r') {
+        const nd = snap(d.origDuration + dBeats);
+        onUpdateClip(d.clipId, { duration: Math.max(SNAP, nd) });
+      } else if (d.mode === 'resize-l') {
+        const ns = snap(d.origStart + dBeats);
+        const nd = snap(d.origDuration - dBeats);
+        if (nd >= SNAP && ns >= 0) onUpdateClip(d.clipId, { startBeat: ns, duration: nd });
+      }
+    };
+    const onUp = () => { dragRef.current = null; force(x => x + 1); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [onUpdateClip, totalBeats]);
+
+  // Keyboard delete / copy on selected clip
+  useEffect(() => {
+    if (!selectedId) return;
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        onDeleteClip(selectedId);
+        setSelectedId(null);
+      } else if ((e.key === 'd' || e.key === 'D') && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        onDuplicateClip(selectedId);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selectedId, onDeleteClip, onDuplicateClip]);
+
+  const startDrag = (e: React.MouseEvent, clip: MidiClip, mode: DragState['mode']) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!laneRef.current) return;
+    const pxPerBeat = laneRef.current.getBoundingClientRect().width / totalBeats;
+    dragRef.current = {
+      clipId: clip.id,
+      mode,
+      origStart: clip.startBeat,
+      origDuration: clip.duration,
+      startX: e.clientX,
+      pxPerBeat,
+    };
+    setSelectedId(clip.id);
+  };
 
   const handleAIRegen = async () => {
     if (chords.length === 0) {
@@ -36,30 +118,21 @@ export default function TrackLane({
       const { data, error } = await supabase.functions.invoke('generate-backing-midi', {
         body: {
           trackType: track.id,
-          chords,
-          measures,
-          bpm,
-          genre,
+          chords, measures, bpm, genre,
           intensity: track.intensity,
           complexity: track.complexity,
         },
       });
       if (error) {
-        if ((error as any).status === 429) toast.error('Rate limit exceeded — try again shortly');
-        else if ((error as any).status === 402) toast.error('AI credits exhausted — add credits to your workspace');
+        if ((error as any).status === 429) toast.error('Rate limit exceeded');
+        else if ((error as any).status === 402) toast.error('AI credits exhausted');
         else toast.error((error as any).message || 'AI generation failed');
         return;
       }
-      if (data?.error) {
-        toast.error(data.error);
-        return;
-      }
+      if (data?.error) { toast.error(data.error); return; }
       const notes = (data?.notes || []).map((n: any, i: number) => ({
         id: `ai-${track.id}-${Date.now()}-${i}`,
-        startBeat: n.startBeat,
-        duration: n.duration,
-        pitch: n.pitch,
-        velocity: n.velocity,
+        startBeat: n.startBeat, duration: n.duration, pitch: n.pitch, velocity: n.velocity,
       }));
       onAINotes(notes);
       toast.success(`AI generated ${notes.length} ${track.id} notes`);
@@ -71,6 +144,9 @@ export default function TrackLane({
     }
   };
 
+  const color = TRACK_COLORS[track.id];
+  const playPct = (currentBeat / totalBeats) * 100;
+
   return (
     <div className="flex border-b border-border" style={{ height: 96 }}>
       <TrackHeader
@@ -80,15 +156,173 @@ export default function TrackLane({
         onAIRegenerate={handleAIRegen}
         isAILoading={aiLoading}
       />
-      <div className="flex-1 p-1.5 min-w-0">
-        <ClipPreview
-          trackId={track.id}
-          notes={track.notes}
-          measures={measures}
-          currentBeat={currentBeat}
-          isPlaying={isPlaying}
-          onOpenEditor={onOpenEditor}
-        />
+      <div className="flex-1 p-1.5 min-w-0 relative" onClick={() => setSelectedId(null)}>
+        <div
+          ref={laneRef}
+          className="relative w-full h-full rounded-md overflow-hidden"
+          style={{
+            backgroundColor: `hsl(${color} / 0.06)`,
+            border: `1px solid hsl(${color} / 0.25)`,
+          }}
+        >
+          {/* Measure grid */}
+          {Array.from({ length: measures }, (_, m) => (
+            <div
+              key={`m-${m}`}
+              className="absolute top-0 bottom-0"
+              style={{
+                left: `${(m / measures) * 100}%`,
+                borderLeft: m === 0 ? 'none' : '1.5px solid hsl(220, 15%, 28%)',
+              }}
+            />
+          ))}
+          {/* Beat sub-grid */}
+          {Array.from({ length: totalBeats }, (_, b) => (
+            b % 4 === 0 ? null : (
+              <div
+                key={`b-${b}`}
+                className="absolute top-0 bottom-0"
+                style={{
+                  left: `${(b / totalBeats) * 100}%`,
+                  borderLeft: '1px solid hsl(220, 15%, 18%)',
+                }}
+              />
+            )
+          ))}
+
+          {/* Clips */}
+          {track.clips.map(clip => {
+            const left = (clip.startBeat / totalBeats) * 100;
+            const width = (clip.duration / totalBeats) * 100;
+            const isSelected = selectedId === clip.id;
+
+            // Pitch range for clip preview
+            let minP = 127, maxP = 0;
+            if (track.id === 'drums') { minP = 30; maxP = 55; }
+            else {
+              for (const n of clip.notes) {
+                if (n.pitch < minP) minP = n.pitch;
+                if (n.pitch > maxP) maxP = n.pitch;
+              }
+              if (clip.notes.length === 0) { minP = 48; maxP = 72; }
+              const span = maxP - minP;
+              if (span < 12) {
+                const pad = (12 - span) / 2;
+                minP -= Math.ceil(pad); maxP += Math.floor(pad);
+              }
+            }
+            const pRange = maxP - minP || 1;
+
+            return (
+              <div
+                key={clip.id}
+                className={`absolute top-1 bottom-1 rounded-md overflow-hidden group cursor-grab active:cursor-grabbing select-none ${isSelected ? 'ring-2' : ''}`}
+                style={{
+                  left: `${left}%`,
+                  width: `${width}%`,
+                  backgroundColor: `hsl(${color} / 0.18)`,
+                  border: `1.5px solid hsl(${color} / ${isSelected ? 0.95 : 0.55})`,
+                  boxShadow: isSelected ? `0 0 0 2px hsl(${color} / 0.4)` : undefined,
+                  minWidth: 18,
+                }}
+                onMouseDown={(e) => {
+                  // Edge → resize handles, else move
+                  const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                  const offset = e.clientX - rect.left;
+                  if (offset > rect.width - 6) startDrag(e, clip, 'resize-r');
+                  else if (offset < 6) startDrag(e, clip, 'resize-l');
+                  else startDrag(e, clip, 'move');
+                }}
+                onClick={(e) => { e.stopPropagation(); setSelectedId(clip.id); }}
+                onDoubleClick={(e) => { e.stopPropagation(); onOpenClipEditor(clip.id); }}
+                title={`${clip.label || 'Region'} — drag to move, edges to resize, double-click to edit, Del to remove, ⌘D to duplicate`}
+              >
+                {/* Clip label */}
+                {clip.label && (
+                  <div
+                    className="absolute top-0.5 left-1.5 text-[8px] font-mono font-bold uppercase pointer-events-none z-10 truncate"
+                    style={{ color: `hsl(${color} / 1)`, textShadow: '0 0 3px hsl(0 0% 0% / 0.8)' }}
+                  >
+                    {clip.label}
+                  </div>
+                )}
+                {/* Mini notes inside clip */}
+                <div className="absolute inset-0 mt-3">
+                  {clip.notes.map(n => {
+                    if (n.startBeat >= clip.duration) return null;
+                    const nLeft = (n.startBeat / clip.duration) * 100;
+                    const nWidth = Math.max(0.6, (Math.min(n.duration, clip.duration - n.startBeat) / clip.duration) * 100);
+                    const nTop = (1 - (n.pitch - minP) / pRange) * 100;
+                    const nH = track.id === 'drums' ? 12 : Math.max(4, 100 / pRange);
+                    return (
+                      <div
+                        key={n.id}
+                        className="absolute rounded-[1px] pointer-events-none"
+                        style={{
+                          left: `${nLeft}%`,
+                          top: `${Math.max(0, Math.min(95, nTop))}%`,
+                          width: `${nWidth}%`,
+                          height: `${nH}%`,
+                          backgroundColor: `hsl(${color} / ${0.5 + (n.velocity / 127) * 0.5})`,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                {/* Empty hint */}
+                {clip.notes.length === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center text-[8px] font-mono text-muted-foreground/70 pointer-events-none">
+                    empty
+                  </div>
+                )}
+                {/* Resize handles */}
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100"
+                  style={{ backgroundColor: `hsl(${color} / 0.6)` }} />
+                <div className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100"
+                  style={{ backgroundColor: `hsl(${color} / 0.6)` }} />
+
+                {/* Action buttons (visible on hover) */}
+                {isSelected && (
+                  <div className="absolute top-0.5 right-0.5 flex gap-0.5 z-20">
+                    <button
+                      className="p-0.5 rounded bg-card/80 text-muted-foreground hover:text-primary hover:bg-card"
+                      title="Duplicate"
+                      onClick={(e) => { e.stopPropagation(); onDuplicateClip(clip.id); }}
+                    >
+                      <Copy size={9} />
+                    </button>
+                    <button
+                      className="p-0.5 rounded bg-card/80 text-muted-foreground hover:text-destructive hover:bg-card"
+                      title="Delete"
+                      onClick={(e) => { e.stopPropagation(); onDeleteClip(clip.id); }}
+                    >
+                      <Trash2 size={9} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Playhead */}
+          {(isPlaying || currentBeat > 0) && (
+            <div
+              className="absolute top-0 bottom-0 w-0.5 z-30 pointer-events-none"
+              style={{
+                left: `${playPct}%`,
+                backgroundColor: 'hsl(var(--primary))',
+                boxShadow: '0 0 4px hsl(var(--primary))',
+              }}
+            />
+          )}
+
+          {/* Empty hint */}
+          {track.clips.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-muted-foreground/60 pointer-events-none">
+              No regions — add chords to generate
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
