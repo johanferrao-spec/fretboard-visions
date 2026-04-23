@@ -449,8 +449,11 @@ export default function Fretboard({
       return null;
     }
 
-    // In arp add mode (custom voicing creation)
-    if (arpAddMode && !isChordLibraryVoicing) {
+    // In arp add mode (custom voicing creation) — but NOT in voice-leading mode,
+    // where we want clicks to register everywhere yet still defer rendering to the
+    // normal scale-view chord-tones branch (so chord tones glow brightly and the rest
+    // are dimmed by the ghost opacity slider).
+    if (arpAddMode && !isChordLibraryVoicing && !voiceLeadingActive) {
       const key = `${stringIndex}-${fret}`;
 
       // Lookahead notes — render even when outside the position box (they preview upcoming notes).
