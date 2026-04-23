@@ -1079,60 +1079,70 @@ function ScaleViewPanel({
         )}
 
         {voiceLeadingMode && !dropMode && !threeNpsMode && (
-          <div className="flex-1 rounded-xl p-3 border-2 self-stretch min-w-0" style={{ borderColor: 'hsl(280 80% 60% / 0.4)', backgroundColor: 'hsl(280 80% 60% / 0.08)' }}>
+          <div className="flex-1 rounded-xl p-2 border-2 self-stretch min-w-0" style={{ borderColor: 'hsl(280 80% 60% / 0.4)', backgroundColor: 'hsl(280 80% 60% / 0.08)' }}>
             {degreeFilter === null ? (
-              <div className="text-[11px] font-mono text-muted-foreground leading-relaxed">
+              <div className="text-[11px] font-mono text-muted-foreground leading-relaxed p-1">
                 <span className="font-bold" style={{ color: 'hsl(280 80% 70%)' }}>Voice Leading mode.</span> Pick a degree above and click any note on the fretboard to use it as your melody (top voice). Jazz comping voicings will appear here.
-              </div>
-            ) : !voiceLeadingMelody ? (
-              <div className="text-[11px] font-mono text-muted-foreground leading-relaxed">
-                <span className="font-bold" style={{ color: 'hsl(280 80% 70%)' }}>Click a note on the fretboard</span> to set the melody (top voice) for {diatonicLabels[degreeFilter].label7}.
-              </div>
-            ) : voiceLeadingVoicings.length === 0 ? (
-              <div className="text-[11px] font-mono text-muted-foreground italic">
-                No voicings found for that melody note. Pick another note.
               </div>
             ) : (
               <div className="space-y-1.5">
+                {/* Header row: chord label · count · open-string toggle · clear */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-[10px] font-mono">
                     <span className="font-bold" style={{ color: `hsl(${activeColor})` }}>{diatonicLabels[degreeFilter].label7}</span>
-                    <span className="text-muted-foreground"> · melody locked</span>
+                    {voiceLeadingMelody ? (
+                      <span className="text-muted-foreground"> · {filteredVlVoicings.length} voicing{filteredVlVoicings.length === 1 ? '' : 's'}</span>
+                    ) : (
+                      <span className="text-muted-foreground"> · click a fretboard note for melody</span>
+                    )}
                   </div>
-                  <div className="flex gap-1 items-center">
-                    <button
-                      onClick={() => setCurrentVlIdx((i) => Math.max(0, i - 1))}
-                      disabled={currentVlIdx === 0}
-                      className="w-7 h-7 rounded bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 text-base font-bold"
-                    >‹</button>
-                    <span className="text-[10px] font-mono text-muted-foreground tabular-nums w-12 text-center">{currentVlIdx + 1}/{voiceLeadingVoicings.length}</span>
-                    <button
-                      onClick={() => setCurrentVlIdx((i) => Math.min(voiceLeadingVoicings.length - 1, i + 1))}
-                      disabled={currentVlIdx >= voiceLeadingVoicings.length - 1}
-                      className="w-7 h-7 rounded bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30 text-base font-bold"
-                    >›</button>
-                    <button
-                      onClick={() => setVoiceLeadingMelody(null)}
-                      className="ml-1 px-2 h-7 rounded bg-secondary text-secondary-foreground hover:bg-muted text-[10px] font-mono"
-                      title="Clear melody note"
-                    >clear</button>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <VoiceLeadingDiagram voicing={voiceLeadingVoicings[currentVlIdx]} color={activeColor || '0, 0%, 60%'} />
-                  <div className="min-w-0 text-[10px] font-mono text-muted-foreground space-y-1">
-                    <div>{voiceLeadingVoicings[currentVlIdx].slashName}</div>
-                    <div>{voiceLeadingVoicings[currentVlIdx].degreeOrder}</div>
-                    <div>
-                      {(voiceLeadingVoicings[currentVlIdx].hasThird && voiceLeadingVoicings[currentVlIdx].hasSeventh)
-                        ? 'Contains 3rd + 7th'
-                        : voiceLeadingVoicings[currentVlIdx].hasThird
-                          ? 'Contains 3rd'
-                          : 'Contains 7th'}
-                      {' · '}span {voiceLeadingVoicings[currentVlIdx].span}
-                    </div>
+                  <div className="flex gap-1.5 items-center">
+                    <label className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider cursor-pointer select-none" style={{ color: hideOpenStrings ? 'hsl(280 80% 70%)' : 'hsl(var(--muted-foreground))' }}>
+                      <input
+                        type="checkbox"
+                        checked={hideOpenStrings}
+                        onChange={(e) => setHideOpenStrings(e.target.checked)}
+                        className="accent-purple-500 h-3 w-3"
+                      />
+                      No open strings
+                    </label>
+                    {voiceLeadingMelody && (
+                      <button
+                        onClick={() => setVoiceLeadingMelody(null)}
+                        className="px-2 h-6 rounded bg-secondary text-secondary-foreground hover:bg-muted text-[9px] font-mono"
+                        title="Clear melody note"
+                      >clear</button>
+                    )}
                   </div>
                 </div>
+
+                {/* Voicings grid — multiple visible at once */}
+                {!voiceLeadingMelody ? (
+                  <div className="text-[11px] font-mono text-muted-foreground italic p-2">
+                    Click any note on the fretboard to set the melody (top voice).
+                  </div>
+                ) : filteredVlVoicings.length === 0 ? (
+                  <div className="text-[11px] font-mono text-muted-foreground italic p-2">
+                    {voiceLeadingVoicings.length === 0
+                      ? 'No voicings found for that melody note. Pick another note.'
+                      : 'All matching voicings use open strings — disable the filter to see them.'}
+                  </div>
+                ) : (
+                  <div
+                    className="flex gap-1 overflow-x-auto pb-1"
+                    style={{ scrollbarWidth: 'thin' }}
+                  >
+                    {filteredVlVoicings.map((v, idx) => (
+                      <VoiceLeadingDiagram
+                        key={idx}
+                        voicing={v}
+                        color={activeColor || '0, 0%, 60%'}
+                        isActive={idx === currentVlIdx}
+                        onClick={() => setCurrentVlIdx(idx)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
