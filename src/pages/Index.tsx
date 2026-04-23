@@ -102,13 +102,13 @@ const Index = () => {
   // knows which notes are valid melody picks. Without this, clicks on non-chord-tones
   // silently produce no voicings.
   const voiceLeadingRefNotes = useMemo(() => {
-    if (!voiceLeadingMode || activeTab !== 'scaleview' || !scaleViewChordTones) return undefined;
+    if (!voiceLeadingMode || activeTab !== 'scaleview') return undefined;
     const notes: { stringIndex: number; fret: number }[] = [];
     for (let s = 0; s < fb.tuning.length; s++) {
       const openPc = ((fb.tuning[s] % 12) + 12) % 12;
       for (let f = 0; f <= 18; f++) {
         const pc = (openPc + f) % 12;
-        if (scaleViewChordTones.has(pc)) notes.push({ stringIndex: s, fret: f });
+        if (!scaleViewChordTones || scaleViewChordTones.has(pc)) notes.push({ stringIndex: s, fret: f });
       }
     }
     return notes;
@@ -370,6 +370,8 @@ const Index = () => {
                inversionVoicing={activeInversionVoicing}
                scaleViewChordTones={scaleViewChordTones}
                ghostNoteOpacity={fb.ghostNoteOpacity}
+               voiceLeadingMelody={voiceLeadingMode && activeTab === 'scaleview' ? voiceLeadingMelody : null}
+               voiceLeadingMelodyColor={voiceLeadingMode && activeTab === 'scaleview' && scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
                  inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
                  chordAddRootNote={chordAddRoot}
                  chordAddHasNotes={chordAddHasNotes}

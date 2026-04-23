@@ -626,6 +626,74 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
   );
 }
 
+function VoiceLeadingDiagram({ voicing, color, onClick }: {
+  voicing: VoiceLeadingVoicing;
+  color: string;
+  onClick?: () => void;
+}) {
+  const frettedNotes = voicing.frets.filter(f => f > 0);
+  const minFret = frettedNotes.length > 0 ? Math.min(...frettedNotes) : 1;
+  const startFret = Math.max(1, minFret - 1);
+  const numFrets = 5;
+  const cellW = 16;
+  const cellH = 22;
+  const numStrings = 6;
+  const leftPad = 18;
+  const topPad = 16;
+  const w = leftPad + (numStrings - 1) * cellW + 14;
+  const h = topPad + numFrets * cellH + 14;
+
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center rounded-lg border-2 px-1 py-1 transition-all"
+      style={{
+        borderColor: `hsl(${color})`,
+        backgroundColor: `hsla(${color}, 0.14)`,
+        width: 108,
+        minWidth: 108,
+      }}
+    >
+      <div className="text-[10px] font-mono font-bold mb-0.5 leading-tight" style={{ color: `hsl(${color})` }}>
+        {voicing.slashName}
+      </div>
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        <text x={4} y={topPad + 10} fontSize={9} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+        {Array.from({ length: numStrings }, (_, si) => (
+          <line key={`s${si}`} x1={leftPad + si * cellW} y1={topPad} x2={leftPad + si * cellW} y2={topPad + numFrets * cellH}
+            stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={0.5} />
+        ))}
+        {Array.from({ length: numFrets + 1 }, (_, i) => (
+          <line key={`f${i}`} x1={leftPad} y1={topPad + i * cellH} x2={leftPad + (numStrings - 1) * cellW} y2={topPad + i * cellH}
+            stroke="hsl(var(--muted-foreground))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.5} />
+        ))}
+        {Array.from({ length: numStrings }, (_, si) => {
+          if (voicing.frets[si] === -1) {
+            return <text key={`m${si}`} x={leftPad + si * cellW} y={topPad - 4} fontSize={9} fill="hsl(var(--muted-foreground))" textAnchor="middle" fontFamily="monospace" opacity={0.5}>✕</text>;
+          }
+          if (voicing.frets[si] === 0) {
+            return <circle key={`o${si}`} cx={leftPad + si * cellW} cy={topPad - 6} r={4} fill="none" stroke={`hsl(${color})`} strokeWidth={1.5} />;
+          }
+          return null;
+        })}
+        {voicing.frets.map((fret, si) => {
+          if (fret <= 0) return null;
+          const fretPos = fret - startFret;
+          if (fretPos < 0 || fretPos >= numFrets) return null;
+          const isMelody = voicing.melody.stringIndex === si && voicing.melody.fret === fret;
+          return (
+            <circle key={`n${si}`} cx={leftPad + si * cellW} cy={topPad + fretPos * cellH + cellH / 2} r={isMelody ? 7 : 6}
+              fill={isMelody ? 'hsl(var(--accent))' : `hsl(${color})`} opacity={0.95} />
+          );
+        })}
+      </svg>
+      <div className="text-[8px] font-mono mt-0.5 leading-tight text-center text-muted-foreground">
+        {voicing.degreeOrder}
+      </div>
+    </button>
+  );
+}
+
 function ScaleViewPanel({
   primaryScale, degreeFilter, setDegreeFilter,
   inversionStringGroup, setInversionStringGroup,
@@ -1004,14 +1072,14 @@ function ScaleViewPanel({
               </div>
             ) : voiceLeadingVoicings.length === 0 ? (
               <div className="text-[11px] font-mono text-muted-foreground italic">
-                No voicings: melody note isn't a chord tone of {diatonicLabels[degreeFilter].label7}. Pick another note.
+                No voicings found for that melody note. Pick another note.
               </div>
             ) : (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-[10px] font-mono">
                     <span className="font-bold" style={{ color: `hsl(${activeColor})` }}>{diatonicLabels[degreeFilter].label7}</span>
-                    <span className="text-muted-foreground"> · melody {NOTE_NAMES[(STANDARD_TUNING[voiceLeadingMelody.stringIndex] + voiceLeadingMelody.fret + 4) % 12]}{/* this label is approximate; the active voicing card below shows the precise top note */}</span>
+                    <span className="text-muted-foreground"> · melody locked</span>
                   </div>
                   <div className="flex gap-1 items-center">
                     <button
@@ -1032,29 +1100,20 @@ function ScaleViewPanel({
                     >clear</button>
                   </div>
                 </div>
-                <div className="flex gap-1 overflow-x-auto pb-1">
-                  {voiceLeadingVoicings.map((v, idx) => {
-                    const isActive = currentVlIdx === idx;
-                    const both = v.hasThird && v.hasSeventh;
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => setCurrentVlIdx(idx)}
-                        className="shrink-0 rounded-lg px-2 py-1.5 text-[9px] font-mono text-left border-2 transition-all"
-                        style={{
-                          minWidth: 78,
-                          backgroundColor: isActive ? `hsla(${activeColor}, 0.2)` : 'hsl(var(--secondary) / 0.5)',
-                          borderColor: isActive ? `hsl(${activeColor})` : 'hsl(var(--border))',
-                          color: isActive ? `hsl(${activeColor})` : undefined,
-                        }}
-                        title={`${v.slashName} · ${v.degreeOrder} · span ${v.span}`}
-                      >
-                        <div className="font-bold truncate">{v.slashName}</div>
-                        <div className="opacity-70 truncate">{v.degreeOrder}</div>
-                        <div className="text-[8px] opacity-60">{both ? '3+7 ✓' : (v.hasThird ? '3 only' : '7 only')} · sp{v.span}</div>
-                      </button>
-                    );
-                  })}
+                <div className="flex items-start gap-3">
+                  <VoiceLeadingDiagram voicing={voiceLeadingVoicings[currentVlIdx]} color={activeColor || '0, 0%, 60%'} />
+                  <div className="min-w-0 text-[10px] font-mono text-muted-foreground space-y-1">
+                    <div>{voiceLeadingVoicings[currentVlIdx].slashName}</div>
+                    <div>{voiceLeadingVoicings[currentVlIdx].degreeOrder}</div>
+                    <div>
+                      {(voiceLeadingVoicings[currentVlIdx].hasThird && voiceLeadingVoicings[currentVlIdx].hasSeventh)
+                        ? 'Contains 3rd + 7th'
+                        : voiceLeadingVoicings[currentVlIdx].hasThird
+                          ? 'Contains 3rd'
+                          : 'Contains 7th'}
+                      {' · '}span {voiceLeadingVoicings[currentVlIdx].span}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
