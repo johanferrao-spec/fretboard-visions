@@ -329,6 +329,41 @@ const Index = () => {
               <span className="text-[10px] font-mono text-muted-foreground w-5">{fb.maxFrets}</span>
             </div>
 
+            {/* Metronome toggle + draggable BPM */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setMetronomeOn(v => !v)}
+                className={`px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider transition-colors flex items-center gap-1 ${
+                  metronomeOn
+                    ? 'bg-primary text-primary-foreground shadow-[0_0_8px_hsl(var(--primary)/0.5)]'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                }`}
+                title={metronomeOn ? 'Metronome ON — click to mute' : 'Metronome OFF — click to enable'}
+              >
+                <span aria-hidden>🎵</span>
+                <span>{metronomeOn ? 'On' : 'Off'}</span>
+              </button>
+              <div
+                className={`w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center select-none cursor-ns-resize ${bpmDragging ? 'ring-1 ring-primary' : ''}`}
+                style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
+                title="BPM — drag up/down to change, double-click to type"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setBpmDragging(true);
+                  bpmDragRef.current = { startY: e.clientY, startBpm: timeline.bpm };
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  const next = window.prompt('BPM (40-300)', String(timeline.bpm));
+                  if (next == null) return;
+                  const v = Math.max(40, Math.min(300, Number(next) || timeline.bpm));
+                  timeline.setBpm(v);
+                }}
+              >
+                {timeline.bpm}
+              </div>
+            </div>
+
             {/* Master opacity slider */}
             <div className="flex items-center gap-1">
               <span className="text-[9px] font-mono text-muted-foreground uppercase">Opacity:</span>
