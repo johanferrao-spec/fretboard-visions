@@ -806,9 +806,13 @@ function ScaleViewPanel({
 
   // Apply octave shift to inversion voicing
   useEffect(() => {
-    if (voiceLeadingMode && voiceLeadingVoicings.length > 0) {
-      const idx = Math.min(currentVlIdx, voiceLeadingVoicings.length - 1);
-      onSetInversionVoicing?.(voiceLeadingVoicings[idx]);
+    if (voiceLeadingMode && filteredVlVoicings.length > 0) {
+      const idx = Math.min(currentVlIdx, filteredVlVoicings.length - 1);
+      onSetInversionVoicing?.(filteredVlVoicings[idx]);
+      return;
+    }
+    if (voiceLeadingMode && filteredVlVoicings.length === 0) {
+      onSetInversionVoicing?.(null);
       return;
     }
     if (dropMode && inversionStringGroup !== null && inversions.length > 0) {
@@ -827,7 +831,7 @@ function ScaleViewPanel({
     } else {
       onSetInversionVoicing?.(null);
     }
-  }, [dropMode, inversionStringGroup, inversions, currentInvIdx, onSetInversionVoicing, octaveShift, voiceLeadingMode, voiceLeadingVoicings, currentVlIdx]);
+  }, [dropMode, inversionStringGroup, inversions, currentInvIdx, onSetInversionVoicing, octaveShift, voiceLeadingMode, filteredVlVoicings, currentVlIdx]);
 
   useEffect(() => {
     setOctaveShift(0);
