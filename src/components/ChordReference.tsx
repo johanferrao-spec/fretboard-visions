@@ -1105,7 +1105,8 @@ function ScaleViewPanel({
                         type="checkbox"
                         checked={hideOpenStrings}
                         onChange={(e) => setHideOpenStrings(e.target.checked)}
-                        className="accent-purple-500 h-3 w-3"
+                        className="h-3 w-3"
+                        style={{ accentColor: 'hsl(280 80% 60%)' }}
                       />
                       No open strings
                     </label>
