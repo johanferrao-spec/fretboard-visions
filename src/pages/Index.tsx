@@ -98,6 +98,28 @@ const Index = () => {
     setChordOctaveShift(0);
   }, [fb.activeChord]);
 
+  // Metronome — ticks each beat while playing
+  useMetronome({
+    enabled: metronomeOn,
+    isPlaying: timeline.isPlaying,
+    bpm: timeline.bpm,
+    currentBeat: timeline.currentBeat,
+  });
+
+  // BPM drag (toolbar)
+  useEffect(() => {
+    if (!bpmDragging) return;
+    const onMove = (e: MouseEvent) => {
+      const dy = bpmDragRef.current.startY - e.clientY;
+      const next = Math.max(40, Math.min(300, bpmDragRef.current.startBpm + Math.round(dy / 2)));
+      timeline.setBpm(next);
+    };
+    const onUp = () => setBpmDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [bpmDragging, timeline]);
+
   // Compute chord tones for scaleView degree filter (used to dim non-chord-tones)
   const scaleViewChordTones = useMemo(() => {
     if (scaleViewDegreeFilter === null) return null;
