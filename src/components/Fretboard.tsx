@@ -531,7 +531,20 @@ export default function Fretboard({
       const noteIdx = (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note);
       const isChordTone = scaleViewChordTones.has(noteIdx);
       const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
-      if (!inP) return null;
+      if (!inP) {
+        // Voice-leading mode: keep non-scale notes visible & clickable as melody picks.
+        if (voiceLeadingActive) {
+          return {
+            backgroundColor: 'hsl(var(--muted))',
+            opacity: isVoiceLeadingMelody ? 0.6 : Math.max(0.18, ghostNoteOpacity * 0.45),
+            ring: isVoiceLeadingMelody,
+            ringColor: isVoiceLeadingMelody ? melodyRingColor : '',
+            ringWidth: isVoiceLeadingMelody ? 4 : 0,
+            greyed: false,
+          };
+        }
+        return null;
+      }
       if (isChordTone) {
         let bg = inversionDegreeColor ? `hsl(${inversionDegreeColor})` : pColor;
         if (degreeColors) {
