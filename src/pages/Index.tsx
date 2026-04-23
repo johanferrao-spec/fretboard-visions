@@ -48,6 +48,8 @@ const Index = () => {
     remove: (id: string) => void;
     saved: { id: string; name: string }[];
     regenerateAll: () => void;
+    play: () => Promise<void>;
+    stop: () => void;
   } | null>(null);
 
   // Auto-disable strings based on inversion string group when in inversion mode.
