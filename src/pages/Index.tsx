@@ -3,6 +3,7 @@ import { useFretboard } from '@/hooks/useFretboard';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import { useSongTimeline } from '@/hooks/useSongTimeline';
 import { useMidiEngine } from '@/hooks/useMidiEngine';
+import { useMetronome } from '@/hooks/useMetronome';
 import Fretboard from '@/components/Fretboard';
 import ControlPanel from '@/components/ControlPanel';
 import NoteInfoPanel from '@/components/NoteInfoPanel';
