@@ -62,6 +62,8 @@ interface FretboardProps {
   voiceLeadingMelody?: { stringIndex: number; fret: number } | null;
   /** HSL color used to ring the selected melody note. */
   voiceLeadingMelodyColor?: string | null;
+  /** When true, click handlers should accept open-string clicks (fret 0) for melody selection. */
+  voiceLeadingActive?: boolean;
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   onArpBarreDrag?: (fromStringIndex: number, toStringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
@@ -109,7 +111,7 @@ export default function Fretboard({
   identifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre, identifyRoot,
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
   arpOverlayOpacity = 0.3, arpPathVisible = true,
-  arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, threeNpsNotes, threeNpsColor, voiceLeadingMelody, voiceLeadingMelodyColor, onArpAddClick, onArpBarreDrag,
+  arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, threeNpsNotes, threeNpsColor, voiceLeadingMelody, voiceLeadingMelodyColor, voiceLeadingActive = false, onArpAddClick, onArpBarreDrag,
   scaleViewChordTones,
   inversionVoicing,
   ghostNoteOpacity = 0.75,
