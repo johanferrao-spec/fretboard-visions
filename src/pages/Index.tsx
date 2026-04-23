@@ -41,6 +41,14 @@ const Index = () => {
   const [chordAddRoot, setChordAddRoot] = useState<NoteName | null>(null);
   const [chordAddHasNotes, setChordAddHasNotes] = useState(false);
   const [chordOctaveShift, setChordOctaveShift] = useState(0);
+  // Handlers exposed by BackingTrackView so the chord timeline toolbar can show Save/Load
+  const [backingApi, setBackingApi] = useState<{
+    save: (name: string) => void;
+    load: (id: string) => void;
+    remove: (id: string) => void;
+    saved: { id: string; name: string }[];
+    regenerateAll: () => void;
+  } | null>(null);
 
   // Auto-disable strings based on inversion string group when in inversion mode.
   // Drop 3 uses a separate config (skips one inner string), so we pick the right one per drop mode.
