@@ -18,13 +18,15 @@ interface BackingTrackViewProps {
   isPlaying: boolean;
   /** Current playhead beat (driven by main timeline) */
   currentBeat: number;
-  /** Register save/load handlers with parent (so it can render them in the timeline toolbar) */
+  /** Register save/load + play/stop handlers with parent */
   registerHandlers?: (api: {
     save: (name: string) => void;
     load: (id: string) => void;
     remove: (id: string) => void;
     saved: { id: string; name: string }[];
     regenerateAll: () => void;
+    play: () => Promise<void>;
+    stop: () => void;
   }) => void;
 }
 
