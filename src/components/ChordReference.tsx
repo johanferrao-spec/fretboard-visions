@@ -780,8 +780,22 @@ function ScaleViewPanel({
     );
   }, [voiceLeadingMode, degreeFilter, voiceLeadingMelody, diatonicLabels, tuning]);
 
+  // Filter toggle: hide voicings with open strings (for jazz comping use, the
+  // user typically wants closed-position movable shapes only).
+  const [hideOpenStrings, setHideOpenStrings] = useState<boolean>(() => {
+    try { return localStorage.getItem('mf-vl-hide-open') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('mf-vl-hide-open', hideOpenStrings ? '1' : '0'); } catch {/*ignore*/}
+  }, [hideOpenStrings]);
+
+  const filteredVlVoicings = useMemo(() => {
+    if (!hideOpenStrings) return voiceLeadingVoicings;
+    return voiceLeadingVoicings.filter(v => !v.frets.some(f => f === 0));
+  }, [voiceLeadingVoicings, hideOpenStrings]);
+
   const [currentVlIdx, setCurrentVlIdx] = useState(0);
-  useEffect(() => { setCurrentVlIdx(0); }, [voiceLeadingVoicings]);
+  useEffect(() => { setCurrentVlIdx(0); }, [filteredVlVoicings]);
 
   useEffect(() => {
     setCurrentInvIdx(0);
