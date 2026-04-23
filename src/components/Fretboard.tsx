@@ -570,7 +570,20 @@ export default function Fretboard({
       const key = `${stringIndex}-${fret}`;
       const isInVoicing = inversionNoteSet.has(key);
       const isChordTone = scaleViewChordTones && scaleViewChordTones.has(noteIdx);
-      if (!isChordTone && !isInVoicing) return null; // Voice-leading melody may be a non-chord tone
+      if (!isChordTone && !isInVoicing) {
+        // In voice-leading mode, allow non-chord-tone clicks (e.g., to repick the melody)
+        if (voiceLeadingActive) {
+          return {
+            backgroundColor: 'hsl(var(--muted))',
+            opacity: isVoiceLeadingMelody ? 0.6 : Math.max(0.18, ghostNoteOpacity * 0.45),
+            ring: isVoiceLeadingMelody,
+            ringColor: isVoiceLeadingMelody ? melodyRingColor : '',
+            ringWidth: isVoiceLeadingMelody ? 4 : 0,
+            greyed: false,
+          };
+        }
+        return null;
+      }
       
       // Use the chord root for degree colors in inversion mode
       const chordRoot = inversionVoicing.notes.length > 0
