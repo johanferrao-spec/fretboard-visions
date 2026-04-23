@@ -176,6 +176,8 @@ export default function SongTimeline({
   const handleGridDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragPreview(null);
+    // Use raw beat for hit-testing existing chords (more accurate than snapped grid beat)
+    const rawBeat = getRawBeatFromX(e.clientX);
     const beat = getBeatFromX(e.clientX);
     const dur = 2; // half a bar default
 
@@ -183,7 +185,15 @@ export default function SongTimeline({
     if (degreeData) {
       const { degree } = JSON.parse(degreeData);
       const dc = diatonicChords[degree];
-      // Remove any overlapping chords
+      // If the drop position is INSIDE an existing chord region → set as bass note (slash chord)
+      const hostChord = chords.find(c => rawBeat >= c.startBeat && rawBeat < c.startBeat + c.duration);
+      if (hostChord) {
+        // Toggle: if already that bass, clear it
+        const newBass = hostChord.bassNote === dc.root ? undefined : dc.root;
+        onSetChordBass?.(hostChord.id, newBass);
+        return;
+      }
+      // Otherwise add a new chord region (replacing overlaps)
       const existingOverlaps = chords.filter(c => {
         const cEnd = c.startBeat + c.duration;
         return (beat < cEnd && beat + dur > c.startBeat);
@@ -205,7 +215,7 @@ export default function SongTimeline({
       existingOverlaps.forEach(c => onRemoveChord(c.id));
       onAddChord(root, chordType, beat, dur);
     } catch {}
-  }, [getBeatFromX, onAddChord, chords, diatonicChords, onRemoveChord]);
+  }, [getBeatFromX, getRawBeatFromX, onAddChord, chords, diatonicChords, onRemoveChord, onSetChordBass]);
 
   const handleGridDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
