@@ -7,20 +7,38 @@ import { jitterTime, jitterVelocity } from './humanize';
 let nextId = 1;
 const newId = (prefix: string) => `${prefix}-${nextId++}`;
 
+// ─── Pseudo-random helpers ──────────────────────────────────────────
+// Deterministic-ish: still uses Math.random but biased by a "variation seed"
+// so that each chord region gets unique-feeling variation.
+const rand = () => Math.random();
+const chance = (p: number) => Math.random() < p;
+const pickWeighted = <T,>(items: T[], weights: number[]): T => {
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return items[i];
+  }
+  return items[items.length - 1];
+};
+
 function chordPitches(root: string, chordType: string, octave: number = 4): number[] {
   const formula = CHORD_FORMULAS[chordType];
   const rootIdx = NOTE_NAMES.indexOf(root as any);
   if (rootIdx < 0) return [];
   if (!formula) return [60 + rootIdx];
-  const base = (octave + 1) * 12 + rootIdx; // MIDI: C-1=0 → C4=60
+  const base = (octave + 1) * 12 + rootIdx;
   return formula.map(i => base + i);
 }
 
 /**
- * intensity: 0..1  → density / velocity / fills
- * complexity: 0..1 → syncopation, passing tones, extensions, variation
+ * intensity: 0..1  → density / velocity / fills / ghost notes
+ * complexity: 0..1 → syncopation, passing tones, extensions, voicing variety
  */
 
+// ───────────────────────────────────────────────────────────────────────
+// PIANO — comping with rhythmic patterns, voicing inversions, anticipation
+// ───────────────────────────────────────────────────────────────────────
 export function generatePiano(
   chords: TimelineChord[],
   measures: number,
@@ -28,66 +46,124 @@ export function generatePiano(
   complexity: number,
 ): MidiNote[] {
   const notes: MidiNote[] = [];
-  // Step grid: subdivisions per beat — more dense at higher intensity
-  const subdivPerBeat = intensity > 0.66 ? 4 : intensity > 0.33 ? 2 : 1;
 
-  for (const chord of chords) {
-    const pitches = chordPitches(chord.root, chord.chordType, 4);
+  // Pre-built rhythmic templates (in 16ths, length 16 per bar)
+  // 1 = strong hit, 0.6 = medium, 0.3 = soft/ghost, 0 = rest
+  const rhythmLibrary: number[][] = [
+    // Sparse pad
+    [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+    // Charleston (jazz)
+    [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    // 2+3+3 clave-ish
+    [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0],
+    // Off-beat comp
+    [0, 0, 0.6, 0, 1, 0, 0.6, 0, 0, 0, 0.6, 0, 1, 0, 0.6, 0],
+    // Steady 8ths
+    [1, 0, 0.6, 0, 0.8, 0, 0.6, 0, 1, 0, 0.6, 0, 0.8, 0, 0.6, 0],
+    // Syncopated busy
+    [1, 0, 0.5, 0.7, 0, 0.6, 0, 0.8, 1, 0, 0.5, 0.7, 0, 0.6, 0, 0.8],
+    // Anticipation push (and-of-4 leads next)
+    [1, 0, 0, 0, 0.8, 0, 0, 0, 0.8, 0, 0, 0, 0, 0, 0.7, 0],
+  ];
+
+  for (let ci = 0; ci < chords.length; ci++) {
+    const chord = chords[ci];
+    let pitches = chordPitches(chord.root, chord.chordType, 4);
     if (pitches.length === 0) continue;
 
-    // Add 9/13 extensions at high complexity
-    if (complexity > 0.6 && pitches.length >= 3) {
-      pitches.push(pitches[0] + 14); // 9th
-    }
-    if (complexity > 0.85) {
-      pitches.push(pitches[0] + 21); // 13th
+    // Voicing diversity — choose inversion based on complexity & a per-chord roll
+    const inversionRoll = Math.random();
+    if (complexity > 0.3 && inversionRoll < 0.4) {
+      // 1st inversion — bottom note up an octave
+      pitches = [...pitches.slice(1), pitches[0] + 12];
+    } else if (complexity > 0.55 && inversionRoll < 0.65) {
+      // 2nd inversion
+      pitches = [...pitches.slice(2), pitches[0] + 12, pitches[1] + 12];
     }
 
-    const totalSteps = Math.round(chord.duration * subdivPerBeat);
-    const isComping = intensity > 0.4;
+    // Drop the lowest note for a rootless voicing (jazz)
+    const rootless = complexity > 0.7 && chance(0.4);
+    if (rootless && pitches.length >= 3) pitches = pitches.slice(1);
 
-    if (!isComping) {
-      // Sustain block chord
-      for (const p of pitches) {
+    // Add 7th color
+    if (complexity > 0.4 && pitches.length >= 3 && !chance(0.3)) {
+      const formula = CHORD_FORMULAS[chord.chordType];
+      const has7 = formula && formula.length >= 4;
+      if (!has7) pitches.push(pitches[0] + 10); // dominant 7
+    }
+    // Tensions (9, 13)
+    if (complexity > 0.6 && chance(0.5)) pitches.push(pitches[0] + 14);
+    if (complexity > 0.85 && chance(0.4)) pitches.push(pitches[0] + 21);
+
+    // Cap voice count
+    while (pitches.length > 5) pitches.pop();
+
+    // Pick rhythm template — weight depends on intensity
+    const rhythmIdx = (() => {
+      const weights = rhythmLibrary.map((_, i) => {
+        // sparse early, busy at high intensity
+        const sparseness = i / rhythmLibrary.length;
+        return Math.max(0.05, 1 - Math.abs(sparseness - intensity) * 1.6);
+      });
+      return rhythmLibrary.indexOf(pickWeighted(rhythmLibrary, weights));
+    })();
+    const baseRhythm = rhythmLibrary[rhythmIdx];
+
+    // Walk through chord region in 16ths
+    const sixteenths = Math.round(chord.duration * 4);
+    for (let s = 0; s < sixteenths; s++) {
+      const stepInBar = s % 16;
+      let strength = baseRhythm[stepInBar];
+      if (strength === 0) continue;
+
+      // Random subtraction for organic feel
+      if (chance(0.15 - intensity * 0.1)) continue;
+
+      // Anticipation push: occasionally hit on the and-of-4 to lead into next chord
+      const isAnticipation = ci < chords.length - 1
+        && s === sixteenths - 2
+        && complexity > 0.5
+        && chance(0.5);
+
+      const beat = chord.startBeat + s / 4;
+      const dur = (strength >= 1 ? 1.5 : 0.9) / 4;
+      const baseVel = strength === 1 ? 88 : strength >= 0.6 ? 72 : 50;
+      const vel = jitterVelocity(baseVel + intensity * 10, 14);
+
+      // Voicing rotation — alternate full / upper / lower halves
+      let voicing = pitches;
+      if (s % 2 === 1 && complexity > 0.4) {
+        voicing = pitches.slice(Math.floor(pitches.length / 3));
+      }
+      if (s % 4 === 3 && complexity > 0.6 && chance(0.5)) {
+        // a single high color tone for variety
+        voicing = [pitches[pitches.length - 1] + (chance(0.5) ? 0 : 7)];
+      }
+
+      // If this is anticipation, use NEXT chord's pitches
+      if (isAnticipation) {
+        const next = chords[ci + 1];
+        const nextPitches = chordPitches(next.root, next.chordType, 4);
+        if (nextPitches.length) voicing = nextPitches.slice(0, 3);
+      }
+
+      for (const p of voicing) {
         notes.push({
           id: newId('p'),
-          startBeat: jitterTime(chord.startBeat, 0.01),
-          duration: chord.duration * 0.95,
+          startBeat: jitterTime(beat, 0.012),
+          duration: dur,
           pitch: p,
-          velocity: jitterVelocity(70, 8),
+          velocity: vel,
         });
-      }
-    } else {
-      // Comping: pick rhythm pattern
-      for (let s = 0; s < totalSteps; s++) {
-        const beat = chord.startBeat + s / subdivPerBeat;
-        // syncopation skip pattern based on complexity
-        const skip = complexity > 0.5
-          ? (s % 3 === 1)
-          : (s % 2 === 1 && Math.random() > intensity);
-        if (skip && Math.random() > complexity) continue;
-
-        const dur = 1 / subdivPerBeat * 0.85;
-        // Voice: alternate full chord vs upper extensions
-        const voiceUpper = s % 2 === 1 && complexity > 0.4;
-        const voicing = voiceUpper ? pitches.slice(1) : pitches;
-        const vel = jitterVelocity(s === 0 ? 85 : 65, 14);
-
-        for (const p of voicing) {
-          notes.push({
-            id: newId('p'),
-            startBeat: jitterTime(beat, 0.012),
-            duration: dur,
-            pitch: p,
-            velocity: vel,
-          });
-        }
       }
     }
   }
   return notes;
 }
 
+// ───────────────────────────────────────────────────────────────────────
+// BASS — root motion, walking, octaves, chromatic approach, ghost notes
+// ───────────────────────────────────────────────────────────────────────
 export function generateBass(
   chords: TimelineChord[],
   measures: number,
@@ -96,55 +172,108 @@ export function generateBass(
   genre: Genre,
 ): MidiNote[] {
   const notes: MidiNote[] = [];
-  const subdivPerBeat = intensity > 0.7 ? 2 : 1;
 
-  for (const chord of chords) {
+  for (let ci = 0; ci < chords.length; ci++) {
+    const chord = chords[ci];
     const rootIdx = NOTE_NAMES.indexOf(chord.root as any);
     if (rootIdx < 0) continue;
     const formula = CHORD_FORMULAS[chord.chordType] || [0, 4, 7];
-    const rootPitch = 36 + rootIdx; // C2 = 36
-    const fifth = rootPitch + 7;
-    const third = rootPitch + (formula[1] ?? 4);
-    const seventh = rootPitch + (formula[3] ?? 10);
+    const root = 36 + rootIdx;
+    const fifth = root + 7;
+    const third = root + (formula[1] ?? 4);
+    const seventh = root + (formula[3] ?? 10);
+    const octave = root + 12;
 
-    const totalSteps = Math.round(chord.duration * subdivPerBeat);
+    // Resolve target for next chord (for chromatic approach)
+    let targetNext = root;
+    if (ci < chords.length - 1) {
+      const nIdx = NOTE_NAMES.indexOf(chords[ci + 1].root as any);
+      if (nIdx >= 0) targetNext = 36 + nIdx;
+    }
 
-    if (genre === 'Jazz' && complexity > 0.5) {
-      // Walking bass: 1, 2, 3, chromatic approach
-      const walk = [rootPitch, third, fifth, rootPitch + 11, rootPitch];
-      const stepsPerBeat = 1;
-      const totalBeats = Math.floor(chord.duration);
-      for (let b = 0; b < totalBeats; b++) {
-        const idx = b % walk.length;
-        notes.push({
-          id: newId('b'),
-          startBeat: jitterTime(chord.startBeat + b, 0.01),
-          duration: 0.9,
-          pitch: walk[idx],
-          velocity: jitterVelocity(80, 10),
-        });
+    const beats = Math.floor(chord.duration);
+    const pushNote = (beat: number, pitch: number, vel: number, dur = 0.9) => {
+      notes.push({
+        id: newId('b'),
+        startBeat: jitterTime(beat, 0.012),
+        duration: dur,
+        pitch,
+        velocity: jitterVelocity(vel, 8),
+      });
+    };
+
+    if (genre === 'Jazz' && intensity > 0.3) {
+      // Walking bass — quarter notes, mix of chord tones + chromatic approaches
+      const tones = [root, third, fifth, seventh].filter(t => Math.abs(t - root) <= 12);
+      for (let b = 0; b < beats; b++) {
+        const beat = chord.startBeat + b;
+        let pitch: number;
+        if (b === 0) pitch = root;
+        else if (b === beats - 1 && ci < chords.length - 1 && complexity > 0.4) {
+          // Chromatic approach to next root
+          pitch = targetNext + (chance(0.5) ? -1 : 1);
+        } else if (complexity > 0.5 && chance(0.3)) {
+          // Passing tone (any scale step)
+          pitch = root + ([2, 5, 9][Math.floor(Math.random() * 3)]);
+        } else {
+          pitch = tones[Math.floor(Math.random() * tones.length)];
+        }
+        pushNote(beat, pitch, b === 0 ? 95 : 78);
       }
     } else {
-      // Rock/Pop: root + fifth pattern
-      const pattern = complexity > 0.5
-        ? [rootPitch, rootPitch, fifth, rootPitch, rootPitch, third, fifth, rootPitch]
-        : [rootPitch, rootPitch, fifth, rootPitch];
-      for (let s = 0; s < totalSteps; s++) {
-        const idx = s % pattern.length;
-        const beat = chord.startBeat + s / subdivPerBeat;
-        notes.push({
-          id: newId('b'),
-          startBeat: jitterTime(beat, 0.012),
-          duration: 1 / subdivPerBeat * 0.9,
-          pitch: pattern[idx],
-          velocity: jitterVelocity(s === 0 ? 95 : 78, 10),
-        });
+      // Rock/Pop — root focus with selectable patterns, ghost notes, fills
+      const patterns: number[][][] = [
+        // [pitch-index pattern], 0=root,1=fifth,2=octave,3=third,4=ghost
+        // Steady root quarters
+        [[0], [0], [0], [0]],
+        // Root-fifth alternation
+        [[0], [1], [0], [1]],
+        // Root, root, fifth, root
+        [[0], [0], [1], [0]],
+        // Eighth-note root w/ off-beat fifth
+        [[0, 1], [0, 1], [0, 1], [0, 1]],
+        // Driving 8ths
+        [[0, 0], [0, 0], [0, 0], [0, 1]],
+        // Syncopated push (and-of-2)
+        [[0], [0, 1], [0], [3, 1]],
+      ];
+      const idx = Math.min(patterns.length - 1, Math.floor(intensity * patterns.length + complexity * 2 * Math.random()));
+      const pat = patterns[Math.max(0, idx)];
+
+      for (let b = 0; b < beats; b++) {
+        const slot = pat[b % pat.length];
+        for (let s = 0; s < slot.length; s++) {
+          const subBeat = chord.startBeat + b + s / slot.length;
+          let pitch = root;
+          switch (slot[s]) {
+            case 0: pitch = root; break;
+            case 1: pitch = fifth; break;
+            case 2: pitch = octave; break;
+            case 3: pitch = third; break;
+          }
+          // Ghost note variation at high complexity
+          const isGhost = complexity > 0.6 && s > 0 && chance(0.18);
+          const vel = isGhost ? 45 : (b === 0 && s === 0 ? 100 : 80);
+          pushNote(subBeat, pitch, vel, 0.4);
+        }
+      }
+
+      // Chromatic / scalar fill on last beat into next chord
+      if (ci < chords.length - 1 && intensity > 0.5 && complexity > 0.4 && chance(0.6)) {
+        const fillBeat = chord.startBeat + beats - 1;
+        const stepDir = targetNext >= root ? 1 : -1;
+        for (let i = 0; i < 4; i++) {
+          pushNote(fillBeat + i / 4, targetNext - stepDir * (3 - i), 70, 0.22);
+        }
       }
     }
   }
   return notes;
 }
 
+// ───────────────────────────────────────────────────────────────────────
+// DRUMS — pattern banks per genre, intensity-driven density, fills
+// ───────────────────────────────────────────────────────────────────────
 export function generateDrums(
   chords: TimelineChord[],
   measures: number,
@@ -153,80 +282,193 @@ export function generateDrums(
   genre: Genre,
 ): MidiNote[] {
   const notes: MidiNote[] = [];
-  const totalBeats = measures * 4;
 
-  // 16-step pattern per measure, indexed in 16th notes
-  // Pick base pattern by genre
-  const patterns: Record<Genre, { kick: number[]; snare: number[]; hihat: number[]; ride?: number[] }> = {
-    Rock: { kick: [0, 8], snare: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14] },
-    Pop:  { kick: [0, 6, 8], snare: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14] },
-    Jazz: { kick: [0, 10], snare: [6, 14], hihat: [], ride: [0, 3, 6, 8, 9, 12, 15] },
+  // Per-genre pattern banks (each pattern: 16 steps)
+  const banks: Record<Genre, { kick: number[][]; snare: number[][]; hihat: number[][]; ride?: number[] }> = {
+    Rock: {
+      kick: [
+        [0, 8],
+        [0, 6, 8],
+        [0, 8, 10],
+        [0, 6, 8, 14],
+      ],
+      snare: [
+        [4, 12],
+        [4, 12],
+        [4, 11, 12],
+      ],
+      hihat: [
+        [0, 2, 4, 6, 8, 10, 12, 14],
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+      ],
+    },
+    Pop: {
+      kick: [
+        [0, 6, 8],
+        [0, 8],
+        [0, 6, 8, 10],
+      ],
+      snare: [
+        [4, 12],
+        [4, 12, 14],
+      ],
+      hihat: [
+        [0, 2, 4, 6, 8, 10, 12, 14],
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+      ],
+    },
+    Jazz: {
+      kick: [
+        [0, 10],
+        [0],
+        [0, 7, 10],
+      ],
+      snare: [
+        [6, 14],
+        [4, 14],
+      ],
+      hihat: [[2, 10]], // foot hi-hat on 2 & 4
+      ride: [0, 3, 6, 8, 9, 12, 15],
+    },
   };
-  const pat = patterns[genre];
 
   for (let m = 0; m < measures; m++) {
     const measureBase = m * 4;
+    const isFillMeasure = (m === measures - 1) || (m > 0 && m % 4 === 3 && chance(0.5));
+    const isFill = isFillMeasure && intensity > 0.4;
 
-    // Add fill on last measure if intensity high
-    const isFillMeasure = intensity > 0.6 && m === measures - 1 && measures > 1;
+    // Pick a pattern variant per measure for variety
+    const bank = banks[genre];
+    const kickPat = bank.kick[Math.floor(Math.random() * bank.kick.length)];
+    const snarePat = bank.snare[Math.floor(Math.random() * bank.snare.length)];
+    const hatVariantIdx = intensity > 0.7 ? bank.hihat.length - 1 : Math.floor(Math.random() * bank.hihat.length);
+    const hatPat = bank.hihat[hatVariantIdx];
 
-    pat.kick.forEach(step => {
+    // KICK — sometimes drop the and-of-3 hit for variety
+    kickPat.forEach(step => {
+      if (chance(0.08)) return; // tiny chance to skip
       notes.push({
         id: newId('d'),
         startBeat: jitterTime(measureBase + step / 4, 0.008),
         duration: 0.25,
         pitch: DRUM_PITCHES.kick,
-        velocity: jitterVelocity(110, 8),
+        velocity: jitterVelocity(105 + (step === 0 ? 8 : 0), 10),
       });
     });
 
-    pat.snare.forEach(step => {
+    // SNARE — main backbeat
+    snarePat.forEach(step => {
       notes.push({
         id: newId('d'),
         startBeat: jitterTime(measureBase + step / 4, 0.008),
         duration: 0.25,
         pitch: DRUM_PITCHES.snare,
-        velocity: jitterVelocity(95, 12),
+        velocity: jitterVelocity(95, 10),
       });
     });
 
-    // Hihat density scales with intensity
-    const hiSteps = intensity > 0.8 ? [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] : pat.hihat;
-    hiSteps.forEach((step, i) => {
-      // accent on downbeats
-      const isAccent = step % 4 === 0;
-      // ghost notes at high complexity
-      if (complexity > 0.7 && i % 4 === 2 && Math.random() > 0.5) return;
-      notes.push({
-        id: newId('d'),
-        startBeat: jitterTime(measureBase + step / 4, 0.006),
-        duration: 0.1,
-        pitch: DRUM_PITCHES.hihat,
-        velocity: jitterVelocity(isAccent ? 80 : 55, 10),
+    // GHOST snares at high complexity
+    if (complexity > 0.55) {
+      const ghostSteps = [3, 7, 11, 15];
+      ghostSteps.forEach(step => {
+        if (chance(complexity * 0.4)) {
+          notes.push({
+            id: newId('d'),
+            startBeat: jitterTime(measureBase + step / 4, 0.012),
+            duration: 0.12,
+            pitch: DRUM_PITCHES.snare,
+            velocity: jitterVelocity(38, 8),
+          });
+        }
       });
-    });
+    }
 
-    if (pat.ride) {
-      pat.ride.forEach(step => {
+    // HI-HAT
+    if (!isFill || genre === 'Jazz') {
+      hatPat.forEach((step, i) => {
+        const isAccent = step % 4 === 0;
+        // Open hat on the and-of-4 sometimes
+        if (complexity > 0.4 && step === 14 && chance(0.3)) {
+          notes.push({
+            id: newId('d'),
+            startBeat: jitterTime(measureBase + step / 4, 0.006),
+            duration: 0.3,
+            pitch: DRUM_PITCHES.hihat,
+            velocity: jitterVelocity(85, 6),
+          });
+          return;
+        }
+        if (complexity > 0.7 && i % 4 === 2 && chance(0.4)) return; // dropped
+        notes.push({
+          id: newId('d'),
+          startBeat: jitterTime(measureBase + step / 4, 0.006),
+          duration: 0.1,
+          pitch: DRUM_PITCHES.hihat,
+          velocity: jitterVelocity(isAccent ? 78 : 52, 10),
+        });
+      });
+    }
+
+    // RIDE for Jazz
+    if (bank.ride && genre === 'Jazz' && !isFill) {
+      bank.ride.forEach(step => {
         notes.push({
           id: newId('d'),
           startBeat: jitterTime(measureBase + step / 4, 0.008),
           duration: 0.2,
           pitch: DRUM_PITCHES.ride,
-          velocity: jitterVelocity(70, 10),
+          velocity: jitterVelocity(70, 8),
         });
       });
     }
 
-    // Snare fill on the last beat of fill measure
-    if (isFillMeasure) {
-      for (let i = 0; i < 4; i++) {
+    // FILL on last beat of fill measure
+    if (isFill) {
+      // Choose fill type
+      const fillType = Math.floor(Math.random() * 3);
+      const fillBeat = measureBase + 3;
+      if (fillType === 0) {
+        // 16th-note snare roll
+        for (let i = 0; i < 4; i++) {
+          notes.push({
+            id: newId('d'),
+            startBeat: fillBeat + i / 4,
+            duration: 0.18,
+            pitch: DRUM_PITCHES.snare,
+            velocity: jitterVelocity(70 + i * 8, 6),
+          });
+        }
+      } else if (fillType === 1) {
+        // Tom run (snare + tom alternating)
+        for (let i = 0; i < 4; i++) {
+          notes.push({
+            id: newId('d'),
+            startBeat: fillBeat + i / 4,
+            duration: 0.18,
+            pitch: i % 2 === 0 ? DRUM_PITCHES.snare : DRUM_PITCHES.tom,
+            velocity: jitterVelocity(85, 8),
+          });
+        }
+      } else {
+        // Kick + snare flam
+        for (let i = 0; i < 4; i++) {
+          notes.push({
+            id: newId('d'),
+            startBeat: fillBeat + i / 4,
+            duration: 0.2,
+            pitch: i < 2 ? DRUM_PITCHES.kick : DRUM_PITCHES.snare,
+            velocity: jitterVelocity(95, 6),
+          });
+        }
+      }
+      // Crash on next measure 1 (if exists, otherwise loop start)
+      if (m < measures - 1) {
         notes.push({
           id: newId('d'),
-          startBeat: measureBase + 3 + i / 4,
-          duration: 0.2,
-          pitch: DRUM_PITCHES.snare,
-          velocity: jitterVelocity(80 + i * 5, 8),
+          startBeat: measureBase + 4,
+          duration: 0.5,
+          pitch: DRUM_PITCHES.ride,
+          velocity: 110,
         });
       }
     }

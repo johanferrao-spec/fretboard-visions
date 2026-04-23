@@ -41,6 +41,16 @@ const Index = () => {
   const [chordAddRoot, setChordAddRoot] = useState<NoteName | null>(null);
   const [chordAddHasNotes, setChordAddHasNotes] = useState(false);
   const [chordOctaveShift, setChordOctaveShift] = useState(0);
+  // Handlers exposed by BackingTrackView so the chord timeline toolbar can show Save/Load
+  const [backingApi, setBackingApi] = useState<{
+    save: (name: string) => void;
+    load: (id: string) => void;
+    remove: (id: string) => void;
+    saved: { id: string; name: string }[];
+    regenerateAll: () => void;
+    play: () => Promise<void>;
+    stop: () => void;
+  } | null>(null);
 
   // Auto-disable strings based on inversion string group when in inversion mode.
   // Drop 3 uses a separate config (skips one inner string), so we pick the right one per drop mode.
@@ -138,14 +148,30 @@ const Index = () => {
   const handlePlay = () => {
     timeline.setIsPlaying(true);
     midi.setVolume(volume);
-    midi.play(
-      timeline.chords,
-      timeline.measures,
-      timeline.bpm,
-      timeline.genre,
-      (beat) => timeline.setCurrentBeat(beat),
-      () => timeline.setIsPlaying(false),
-    );
+    if (activeTab === 'backing' && backingApi) {
+      // Backing track DAW takes over audio (richer generated tracks)
+      backingApi.play();
+      // Drive the main playhead via a simple beat counter using BPM
+      const startTime = performance.now();
+      const totalBeats = timeline.measures * 4;
+      const tick = () => {
+        if (!timeline.isPlaying) return;
+        const elapsedSec = (performance.now() - startTime) / 1000;
+        const beat = (elapsedSec * timeline.bpm / 60) % totalBeats;
+        timeline.setCurrentBeat(beat);
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    } else {
+      midi.play(
+        timeline.chords,
+        timeline.measures,
+        timeline.bpm,
+        timeline.genre,
+        (beat) => timeline.setCurrentBeat(beat),
+        () => timeline.setIsPlaying(false),
+      );
+    }
   };
 
   const handleVolumeChange = (v: number) => {
@@ -157,6 +183,7 @@ const Index = () => {
     timeline.setIsPlaying(false);
     timeline.setCurrentBeat(0);
     midi.stop();
+    backingApi?.stop();
   };
 
   const handleSeek = (beat: number) => {
@@ -539,6 +566,12 @@ const Index = () => {
             setKeyMode={setKeyMode}
             onSeek={handleSeek}
             onSetChordBass={timeline.setChordBass}
+            backingTrackActive={activeTab === 'backing'}
+            onCloseBackingTrack={() => setActiveTab(null)}
+            onSaveBackingTrack={(name) => backingApi?.save(name)}
+            onLoadBackingTrack={(id) => backingApi?.load(id)}
+            onDeleteBackingTrack={(id) => backingApi?.remove(id)}
+            savedBackingTracks={backingApi?.saved || []}
           />
         </div>
 
@@ -557,6 +590,10 @@ const Index = () => {
               measures={timeline.measures}
               bpm={timeline.bpm}
               genre={timeline.genre}
+              volume={volume}
+              isPlaying={timeline.isPlaying}
+              currentBeat={timeline.currentBeat}
+              registerHandlers={(api) => setBackingApi(api)}
             />
           )}
         </div>
