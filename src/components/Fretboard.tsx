@@ -62,6 +62,8 @@ interface FretboardProps {
   voiceLeadingMelody?: { stringIndex: number; fret: number } | null;
   /** HSL color used to ring the selected melody note. */
   voiceLeadingMelodyColor?: string | null;
+  /** When true, click handlers should accept open-string clicks (fret 0) for melody selection. */
+  voiceLeadingActive?: boolean;
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   onArpBarreDrag?: (fromStringIndex: number, toStringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
@@ -109,7 +111,7 @@ export default function Fretboard({
   identifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre, identifyRoot,
   tuning, tuningLabels, playingChordTones, arpeggioPosition,
   arpOverlayOpacity = 0.3, arpPathVisible = true,
-  arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, threeNpsNotes, threeNpsColor, voiceLeadingMelody, voiceLeadingMelodyColor, onArpAddClick, onArpBarreDrag,
+  arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, threeNpsNotes, threeNpsColor, voiceLeadingMelody, voiceLeadingMelodyColor, voiceLeadingActive = false, onArpAddClick, onArpBarreDrag,
   scaleViewChordTones,
   inversionVoicing,
   ghostNoteOpacity = 0.75,
@@ -399,7 +401,9 @@ export default function Fretboard({
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
     const isVoiceLeadingMelody = voiceLeadingMelody?.stringIndex === stringIndex && voiceLeadingMelody?.fret === fret;
-    const melodyRingColor = voiceLeadingMelodyColor ? `hsl(${voiceLeadingMelodyColor})` : 'hsl(var(--accent))';
+    // Use a fixed high-contrast colour for the melody-note ring so it stands out
+    // even when the degree colour matches surrounding chord-tone glow rings.
+    const melodyRingColor = 'hsl(45 100% 55%)';
     // 3-notes-per-string overlay — highest priority. Hides everything else for clarity.
     if (threeNpsSet.size > 0) {
       const key = `${stringIndex}-${fret}`;
@@ -447,8 +451,11 @@ export default function Fretboard({
       return null;
     }
 
-    // In arp add mode (custom voicing creation)
-    if (arpAddMode && !isChordLibraryVoicing) {
+    // In arp add mode (custom voicing creation) — but NOT in voice-leading mode,
+    // where we want clicks to register everywhere yet still defer rendering to the
+    // normal scale-view chord-tones branch (so chord tones glow brightly and the rest
+    // are dimmed by the ghost opacity slider).
+    if (arpAddMode && !isChordLibraryVoicing && !voiceLeadingActive) {
       const key = `${stringIndex}-${fret}`;
 
       // Lookahead notes — render even when outside the position box (they preview upcoming notes).
@@ -526,7 +533,20 @@ export default function Fretboard({
       const noteIdx = (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note);
       const isChordTone = scaleViewChordTones.has(noteIdx);
       const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
-      if (!inP) return null;
+      if (!inP) {
+        // Voice-leading mode: keep non-scale notes visible & clickable as melody picks.
+        if (voiceLeadingActive) {
+          return {
+            backgroundColor: 'hsl(var(--muted))',
+            opacity: isVoiceLeadingMelody ? 0.6 : Math.max(0.18, ghostNoteOpacity * 0.45),
+            ring: isVoiceLeadingMelody,
+            ringColor: isVoiceLeadingMelody ? melodyRingColor : '',
+            ringWidth: isVoiceLeadingMelody ? 4 : 0,
+            greyed: false,
+          };
+        }
+        return null;
+      }
       if (isChordTone) {
         let bg = inversionDegreeColor ? `hsl(${inversionDegreeColor})` : pColor;
         if (degreeColors) {
@@ -552,7 +572,20 @@ export default function Fretboard({
       const key = `${stringIndex}-${fret}`;
       const isInVoicing = inversionNoteSet.has(key);
       const isChordTone = scaleViewChordTones && scaleViewChordTones.has(noteIdx);
-      if (!isChordTone && !isInVoicing) return null; // Voice-leading melody may be a non-chord tone
+      if (!isChordTone && !isInVoicing) {
+        // In voice-leading mode, allow non-chord-tone clicks (e.g., to repick the melody)
+        if (voiceLeadingActive) {
+          return {
+            backgroundColor: 'hsl(var(--muted))',
+            opacity: isVoiceLeadingMelody ? 0.6 : Math.max(0.18, ghostNoteOpacity * 0.45),
+            ring: isVoiceLeadingMelody,
+            ringColor: isVoiceLeadingMelody ? melodyRingColor : '',
+            ringWidth: isVoiceLeadingMelody ? 4 : 0,
+            greyed: false,
+          };
+        }
+        return null;
+      }
       
       // Use the chord root for degree colors in inversion mode
       const chordRoot = inversionVoicing.notes.length > 0
@@ -1482,7 +1515,7 @@ export default function Fretboard({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (arpAddMode && onArpAddClick && fret > 0) {
+                              if (arpAddMode && onArpAddClick && (fret > 0 || voiceLeadingActive)) {
                                 onArpAddClick(stringIdx, fret);
                               } else if (identifyMode) {
                                 // Simple toggle like chord library — barre is preserved by useEffect

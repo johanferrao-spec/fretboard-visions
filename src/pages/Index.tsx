@@ -98,21 +98,19 @@ const Index = () => {
     return new Set(formula.map(i => (rootIdx + (i % 12)) % 12));
   }, [scaleViewDegreeFilter, fb.primaryScale.root, fb.primaryScale.scale]);
 
-  // Voice-leading: highlight all chord-tone positions across the fretboard so the user
-  // knows which notes are valid melody picks. Without this, clicks on non-chord-tones
-  // silently produce no voicings.
+  // Voice-leading: register EVERY fretboard position as a clickable target so the user
+  // can pick any note as their melody (top voice). Chord tones are still emphasized
+  // visually via scaleViewChordTones, but every position must accept clicks.
   const voiceLeadingRefNotes = useMemo(() => {
     if (!voiceLeadingMode || activeTab !== 'scaleview') return undefined;
     const notes: { stringIndex: number; fret: number }[] = [];
     for (let s = 0; s < fb.tuning.length; s++) {
-      const openPc = ((fb.tuning[s] % 12) + 12) % 12;
       for (let f = 0; f <= 18; f++) {
-        const pc = (openPc + f) % 12;
-        if (!scaleViewChordTones || scaleViewChordTones.has(pc)) notes.push({ stringIndex: s, fret: f });
+        notes.push({ stringIndex: s, fret: f });
       }
     }
     return notes;
-  }, [voiceLeadingMode, activeTab, scaleViewChordTones, fb.tuning]);
+  }, [voiceLeadingMode, activeTab, fb.tuning]);
 
   // 3-Notes-Per-String overlay: compute pattern for the selected mode/degree
   const threeNpsData = useMemo(() => {
@@ -372,6 +370,7 @@ const Index = () => {
                ghostNoteOpacity={fb.ghostNoteOpacity}
                voiceLeadingMelody={voiceLeadingMode && activeTab === 'scaleview' ? voiceLeadingMelody : null}
                voiceLeadingMelodyColor={voiceLeadingMode && activeTab === 'scaleview' && scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
+               voiceLeadingActive={voiceLeadingMode && activeTab === 'scaleview'}
                  inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
                  chordAddRootNote={chordAddRoot}
                  chordAddHasNotes={chordAddHasNotes}
