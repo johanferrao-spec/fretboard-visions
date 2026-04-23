@@ -15,10 +15,28 @@ export interface MidiNote {
   velocity: number;
 }
 
+/**
+ * A MIDI region/clip on a track lane. Holds its own notes (in clip-local beat coords).
+ */
+export interface MidiClip {
+  id: string;
+  /** Lane start position, in beats */
+  startBeat: number;
+  /** Length in beats */
+  duration: number;
+  /** Notes in clip-local beat coordinates (0..duration) */
+  notes: MidiNote[];
+  /** Source chord id for tooltip / regen */
+  sourceChordId?: string;
+  /** Optional chord label cached for display */
+  label?: string;
+}
+
 export interface TrackState {
   id: TrackId;
   name: string;
-  notes: MidiNote[];
+  /** Region/clip-based content (Logic-style) */
+  clips: MidiClip[];
   intensity: number; // 0..1
   complexity: number; // 0..1
   muted: boolean;
@@ -57,3 +75,21 @@ export const TRACK_LABELS: Record<TrackId, string> = {
   bass: 'Bass',
   drums: 'Drums',
 };
+
+/** Flatten clips back to absolute-beat MidiNote list (for scheduling/preview). */
+export function flattenClips(clips: MidiClip[]): MidiNote[] {
+  const out: MidiNote[] = [];
+  for (const clip of clips) {
+    for (const n of clip.notes) {
+      // Skip notes that fall outside clip duration (e.g. after resize)
+      if (n.startBeat >= clip.duration) continue;
+      const dur = Math.min(n.duration, clip.duration - n.startBeat);
+      out.push({
+        ...n,
+        startBeat: clip.startBeat + n.startBeat,
+        duration: dur,
+      });
+    }
+  }
+  return out;
+}
