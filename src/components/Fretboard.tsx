@@ -401,7 +401,9 @@ export default function Fretboard({
 
   function getNoteStyle(note: NoteName, stringIndex: number, fret: number) {
     const isVoiceLeadingMelody = voiceLeadingMelody?.stringIndex === stringIndex && voiceLeadingMelody?.fret === fret;
-    const melodyRingColor = voiceLeadingMelodyColor ? `hsl(${voiceLeadingMelodyColor})` : 'hsl(var(--accent))';
+    // Use a fixed high-contrast colour for the melody-note ring so it stands out
+    // even when the degree colour matches surrounding chord-tone glow rings.
+    const melodyRingColor = 'hsl(45 100% 55%)';
     // 3-notes-per-string overlay — highest priority. Hides everything else for clarity.
     if (threeNpsSet.size > 0) {
       const key = `${stringIndex}-${fret}`;
