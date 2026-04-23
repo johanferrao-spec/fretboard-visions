@@ -54,6 +54,8 @@ export default function SongTimeline({
   onPlay, onStop, onAddChord, onMoveChord, onResizeChord, onRemoveChord, onClearTimeline, onTrimOverlaps,
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
   onSeek, onSetChordBass,
+  backingTrackActive, onCloseBackingTrack,
+  onSaveBackingTrack, onLoadBackingTrack, onDeleteBackingTrack, savedBackingTracks = [],
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragChord, setDragChord] = useState<string | null>(null);
@@ -61,6 +63,9 @@ export default function SongTimeline({
   const [playheadDragging, setPlayheadDragging] = useState(false);
   const [dragPreview, setDragPreview] = useState<{ beat: number; root: NoteName; chordType: string } | null>(null);
   const [bpmDragging, setBpmDragging] = useState(false);
+  const [showSavePop, setShowSavePop] = useState(false);
+  const [showLoadPop, setShowLoadPop] = useState(false);
+  const [saveName, setSaveName] = useState('');
   const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
   const [variationPopup, setVariationPopup] = useState<{
     chordId: string;
