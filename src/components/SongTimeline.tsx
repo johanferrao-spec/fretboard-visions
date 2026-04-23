@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, Trash2, Music, X } from 'lucide-react';
+import { Play, Square, Trash2, Music, X, ChevronDown, Save, FolderOpen } from 'lucide-react';
 import type { TimelineChord, SnapValue, Genre } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
@@ -38,6 +38,13 @@ interface SongTimelineProps {
   setKeyMode: (m: KeyMode) => void;
   onSeek?: (beat: number) => void;
   onSetChordBass?: (id: string, bassNote: NoteName | undefined) => void;
+  /** When backing-track tab is open, show extra controls in the toolbar */
+  backingTrackActive?: boolean;
+  onCloseBackingTrack?: () => void;
+  onSaveBackingTrack?: (name: string) => void;
+  onLoadBackingTrack?: (id: string) => void;
+  onDeleteBackingTrack?: (id: string) => void;
+  savedBackingTracks?: { id: string; name: string }[];
 }
 
 export default function SongTimeline({
