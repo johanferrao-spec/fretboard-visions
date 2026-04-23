@@ -547,6 +547,12 @@ const Index = () => {
             setKeyMode={setKeyMode}
             onSeek={handleSeek}
             onSetChordBass={timeline.setChordBass}
+            backingTrackActive={activeTab === 'backing'}
+            onCloseBackingTrack={() => setActiveTab(null)}
+            onSaveBackingTrack={(name) => backingApi?.save(name)}
+            onLoadBackingTrack={(id) => backingApi?.load(id)}
+            onDeleteBackingTrack={(id) => backingApi?.remove(id)}
+            savedBackingTracks={backingApi?.saved || []}
           />
         </div>
 
@@ -565,6 +571,10 @@ const Index = () => {
               measures={timeline.measures}
               bpm={timeline.bpm}
               genre={timeline.genre}
+              volume={volume}
+              isPlaying={timeline.isPlaying}
+              currentBeat={timeline.currentBeat}
+              registerHandlers={(api) => setBackingApi(api)}
             />
           )}
         </div>
