@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   noteAtFret, isNoteInSelection, getIntervalName, getExtendedIntervalName, getDiatonicChord,
-  NoteName, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND, INTERVAL_TO_POSITION,
+  NoteName, NOTE_NAMES, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND, INTERVAL_TO_POSITION,
   getVoicingsForChord, getArpeggioSequence, getDiatonicArpeggioType, getMidiNote, findNotePositions,
   type ChordVoicing, type ArpeggioPosition,
 } from '@/lib/music';
@@ -549,11 +549,10 @@ export default function Fretboard({
     if (inversionVoicing && inversionNoteSet.size > 0) {
       if (isOutsidePositionBox(stringIndex, fret)) return null;
       const noteIdx = (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note);
-      const isChordTone = scaleViewChordTones && scaleViewChordTones.has(noteIdx);
-      if (!isChordTone) return null; // Notes outside chord are completely invisible
-      
       const key = `${stringIndex}-${fret}`;
       const isInVoicing = inversionNoteSet.has(key);
+      const isChordTone = scaleViewChordTones && scaleViewChordTones.has(noteIdx);
+      if (!isChordTone && !isInVoicing) return null; // Voice-leading melody may be a non-chord tone
       
       // Use the chord root for degree colors in inversion mode
       const chordRoot = inversionVoicing.notes.length > 0
