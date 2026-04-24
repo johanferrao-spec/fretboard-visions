@@ -390,9 +390,14 @@ const Index = () => {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setMetronomeOn(v => !v)}
-                className={`px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider transition-colors flex items-center gap-1 ${
+                key={metronomePulse}
+                className={`px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider transition-all duration-100 flex items-center gap-1 ${
                   metronomeOn
-                    ? 'bg-primary text-primary-foreground shadow-[0_0_8px_hsl(var(--primary)/0.5)]'
+                    ? (metronomePulse % 4 === 1
+                        ? 'bg-accent text-accent-foreground scale-110 shadow-[0_0_14px_hsl(var(--accent)/0.9)]'
+                        : metronomePulse > 0
+                          ? 'bg-primary text-primary-foreground scale-105 shadow-[0_0_10px_hsl(var(--primary)/0.7)]'
+                          : 'bg-primary text-primary-foreground shadow-[0_0_8px_hsl(var(--primary)/0.5)]')
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                 }`}
                 title={metronomeOn ? 'Metronome ON — click to mute' : 'Metronome OFF — click to enable'}
