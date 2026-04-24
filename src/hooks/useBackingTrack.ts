@@ -101,13 +101,8 @@ export function useBackingTrack() {
     if (!initPromiseRef.current) {
       initPromiseRef.current = (async () => {
         await Tone.start();
-        try {
-          const context = Tone.getContext() as Tone.Context & { updateInterval?: number };
-          context.lookAhead = 0.005;
-          if (typeof context.updateInterval === 'number') {
-            context.updateInterval = 0.01;
-          }
-        } catch {}
+        // Only mark as initialized AFTER Tone.start() resolves successfully,
+        // so a failed init can be retried on the next user gesture.
         isInitRef.current = true;
       })().finally(() => {
         initPromiseRef.current = null;
@@ -277,11 +272,12 @@ export function useBackingTrack() {
     schedulePlayhead((b) => setCurrentBeat(b));
     setupLoop(measures);
     Tone.getTransport().position = 0;
-    const startDelay = Math.max(0.005, Math.min(0.01, Tone.getContext().lookAhead || 0.005));
-    const startAudioTime = Tone.now() + startDelay;
+    const startAudioTime = Tone.now() + 0.05;
+    // eslint-disable-next-line no-console
+    console.log('[backing] AudioContext state:', Tone.getContext().state);
     Tone.getTransport().start(startAudioTime);
     setIsPlaying(true);
-    return { startAudioTime, startPerfTime: performance.now() + startDelay * 1000 };
+    return { startAudioTime, startPerfTime: performance.now() + 50 };
   }, [init, tracks]);
 
   const stop = useCallback(() => {
