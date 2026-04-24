@@ -198,13 +198,9 @@ const Index = () => {
     return () => window.cancelAnimationFrame(frameId);
   }, [activeTab, timeline.isPlaying, timeline.bpm, timeline.measures, timeline.setCurrentBeat]);
 
-  // Pre-warm the backing-track audio engine the moment the user opens the
-  // Backing Track tab, so the first press of Space has zero startup delay.
-  useEffect(() => {
-    if (activeTab === 'backing' && backingApi) {
-      backingApi.prewarm().catch(() => {});
-    }
-  }, [activeTab, backingApi]);
+  // Note: prewarm is intentionally NOT called from a useEffect — browsers
+  // require a real user gesture to unlock audio. The pointerdown/keydown
+  // listener below handles warming on the user's first interaction.
 
   useEffect(() => {
     if (!backingApi) return;
