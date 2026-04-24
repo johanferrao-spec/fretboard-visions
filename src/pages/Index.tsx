@@ -122,7 +122,19 @@ const Index = () => {
   const { primeAudio: primeMetronomeAudio } = useMetronome({
     enabled: metronomeOn,
     bpm: metronomeBpm,
-    onTick: (i) => setMetronomePulse(i + 1),
+    onTick: (i) => {
+      setMetronomePulse(i + 1);
+      // Flash on every beat; downbeat (i % 4 === 0) is accent (green), others yellow.
+      const kind: 'accent' | 'beat' = i % 4 === 0 ? 'accent' : 'beat';
+      setMetronomeFlash(kind);
+      if (metronomeFlashTimerRef.current !== null) {
+        window.clearTimeout(metronomeFlashTimerRef.current);
+      }
+      metronomeFlashTimerRef.current = window.setTimeout(() => {
+        setMetronomeFlash(null);
+        metronomeFlashTimerRef.current = null;
+      }, 90);
+    },
   });
 
   // Metronome BPM drag (toolbar)
