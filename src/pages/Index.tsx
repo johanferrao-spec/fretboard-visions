@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import * as Tone from 'tone';
 import { useFretboard } from '@/hooks/useFretboard';
 import type { ChordSelection } from '@/hooks/useFretboard';
 import { useSongTimeline } from '@/hooks/useSongTimeline';
