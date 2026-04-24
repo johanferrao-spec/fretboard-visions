@@ -27,6 +27,8 @@ const Index = () => {
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomePulse, setMetronomePulse] = useState(0);
+  const [metronomeFlash, setMetronomeFlash] = useState<'accent' | 'beat' | null>(null);
+  const metronomeFlashTimerRef = useRef<number | null>(null);
   const [bpmDragging, setBpmDragging] = useState(false);
   const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
   const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
@@ -120,7 +122,19 @@ const Index = () => {
   const { primeAudio: primeMetronomeAudio } = useMetronome({
     enabled: metronomeOn,
     bpm: metronomeBpm,
-    onTick: (i) => setMetronomePulse(i + 1),
+    onTick: (i) => {
+      setMetronomePulse(i + 1);
+      // Flash on every beat; downbeat (i % 4 === 0) is accent (green), others yellow.
+      const kind: 'accent' | 'beat' = i % 4 === 0 ? 'accent' : 'beat';
+      setMetronomeFlash(kind);
+      if (metronomeFlashTimerRef.current !== null) {
+        window.clearTimeout(metronomeFlashTimerRef.current);
+      }
+      metronomeFlashTimerRef.current = window.setTimeout(() => {
+        setMetronomeFlash(null);
+        metronomeFlashTimerRef.current = null;
+      }, 90);
+    },
   });
 
   // Metronome BPM drag (toolbar)
@@ -151,13 +165,14 @@ const Index = () => {
     return () => navigator.mediaDevices?.removeEventListener?.('devicechange', refresh);
   }, []);
 
-  // Apply selected sinkId to Tone's AudioContext
+  // Apply selected sinkId to Tone's AudioContext (skip 'default' to avoid disrupting playback)
   useEffect(() => {
+    if (selectedSinkId === 'default') return;
     const ctx = Tone.getContext().rawContext as AudioContext & { setSinkId?: (id: string) => Promise<void> };
     if (typeof ctx.setSinkId === 'function') {
       ctx.setSinkId(selectedSinkId).catch(() => { /* ignore */ });
     }
-  }, [selectedSinkId, audioOutputs]);
+  }, [selectedSinkId]);
 
   useEffect(() => {
     if (activeTab !== 'backing' || !timeline.isPlaying) return;
@@ -387,32 +402,25 @@ const Index = () => {
                   primeMetronomeAudio();
                   setMetronomeOn(v => !v);
                 }}
-                key={metronomePulse}
                 style={
-                  metronomeOn
-                    ? metronomePulse % 4 === 1
+                  metronomeOn && metronomeFlash === 'accent'
+                    ? {
+                        backgroundColor: 'hsl(var(--beginner-green))',
+                        color: 'hsl(220 20% 8%)',
+                        boxShadow: '0 0 14px hsl(var(--beginner-green) / 0.9)',
+                        transform: 'scale(1.1)',
+                      }
+                    : metronomeOn && metronomeFlash === 'beat'
                       ? {
-                          backgroundColor: 'hsl(var(--beginner-green))',
+                          backgroundColor: 'hsl(var(--beginner-yellow))',
                           color: 'hsl(220 20% 8%)',
-                          boxShadow: '0 0 14px hsl(var(--beginner-green) / 0.9)',
-                          transform: 'scale(1.1)',
+                          boxShadow: '0 0 10px hsl(var(--beginner-yellow) / 0.7)',
+                          transform: 'scale(1.05)',
                         }
-                      : metronomePulse > 0
-                        ? {
-                            backgroundColor: 'hsl(var(--beginner-yellow))',
-                            color: 'hsl(220 20% 8%)',
-                            boxShadow: '0 0 10px hsl(var(--beginner-yellow) / 0.7)',
-                            transform: 'scale(1.05)',
-                          }
-                        : {
-                            backgroundColor: 'hsl(var(--beginner-yellow))',
-                            color: 'hsl(220 20% 8%)',
-                            boxShadow: '0 0 8px hsl(var(--beginner-yellow) / 0.5)',
-                          }
-                    : undefined
+                      : undefined
                 }
                 className={`px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider transition-all duration-100 flex items-center gap-1 ${
-                  metronomeOn ? '' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  metronomeOn && metronomeFlash ? '' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                 }`}
                 title={metronomeOn ? 'Metronome ON — click to mute' : 'Metronome OFF — click to enable'}
               >
