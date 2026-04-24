@@ -27,6 +27,8 @@ const Index = () => {
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomePulse, setMetronomePulse] = useState(0);
+  const [metronomeFlash, setMetronomeFlash] = useState<'accent' | 'beat' | null>(null);
+  const metronomeFlashTimerRef = useRef<number | null>(null);
   const [bpmDragging, setBpmDragging] = useState(false);
   const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
   const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
