@@ -23,6 +23,7 @@ const Index = () => {
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
   const [volume, setVolume] = useState(0.7);
   const [metronomeOn, setMetronomeOn] = useState(false);
+  const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [bpmDragging, setBpmDragging] = useState(false);
   const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
   const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
@@ -98,27 +99,22 @@ const Index = () => {
     setChordOctaveShift(0);
   }, [fb.activeChord]);
 
-  // Metronome — ticks each beat while playing
-  useMetronome({
-    enabled: metronomeOn,
-    isPlaying: timeline.isPlaying,
-    bpm: timeline.bpm,
-    currentBeat: timeline.currentBeat,
-  });
+  // Metronome — fully standalone (independent of any timeline / playback)
+  useMetronome({ enabled: metronomeOn, bpm: metronomeBpm });
 
-  // BPM drag (toolbar)
+  // Metronome BPM drag (toolbar)
   useEffect(() => {
     if (!bpmDragging) return;
     const onMove = (e: MouseEvent) => {
       const dy = bpmDragRef.current.startY - e.clientY;
       const next = Math.max(40, Math.min(300, bpmDragRef.current.startBpm + Math.round(dy / 2)));
-      timeline.setBpm(next);
+      setMetronomeBpm(next);
     };
     const onUp = () => setBpmDragging(false);
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [bpmDragging, timeline]);
+  }, [bpmDragging]);
 
   // Compute chord tones for scaleView degree filter (used to dim non-chord-tones)
   const scaleViewChordTones = useMemo(() => {
@@ -350,17 +346,17 @@ const Index = () => {
                 onMouseDown={(e) => {
                   e.preventDefault();
                   setBpmDragging(true);
-                  bpmDragRef.current = { startY: e.clientY, startBpm: timeline.bpm };
+                  bpmDragRef.current = { startY: e.clientY, startBpm: metronomeBpm };
                 }}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
-                  const next = window.prompt('BPM (40-300)', String(timeline.bpm));
+                  const next = window.prompt('Metronome BPM (40-300)', String(metronomeBpm));
                   if (next == null) return;
-                  const v = Math.max(40, Math.min(300, Number(next) || timeline.bpm));
-                  timeline.setBpm(v);
+                  const v = Math.max(40, Math.min(300, Number(next) || metronomeBpm));
+                  setMetronomeBpm(v);
                 }}
               >
-                {timeline.bpm}
+                {metronomeBpm}
               </div>
             </div>
 
