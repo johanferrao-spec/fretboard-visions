@@ -53,10 +53,13 @@ const Index = () => {
     remove: (id: string) => void;
     saved: { id: string; name: string }[];
     regenerateAll: () => void;
-    play: () => Promise<void>;
+    play: () => Promise<{ startAudioTime: number; startPerfTime: number }>;
     stop: () => void;
+    prewarm: () => Promise<void>;
   } | null>(null);
   const backingPlayheadBeatRef = useRef(0);
+  // Anchor (perf-time ms) of when audio actually starts; null until play begins.
+  const playStartPerfRef = useRef<number | null>(null);
 
   useEffect(() => {
     backingPlayheadBeatRef.current = timeline.currentBeat;
