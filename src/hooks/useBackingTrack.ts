@@ -277,7 +277,7 @@ export function useBackingTrack() {
     console.log('[backing] AudioContext state:', Tone.getContext().state);
     Tone.getTransport().start(startAudioTime);
     setIsPlaying(true);
-    return { startAudioTime, startPerfTime: performance.now() + startDelay * 1000 };
+    return { startAudioTime, startPerfTime: performance.now() + 50 };
   }, [init, tracks]);
 
   const stop = useCallback(() => {
