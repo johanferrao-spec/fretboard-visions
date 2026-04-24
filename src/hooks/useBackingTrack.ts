@@ -91,11 +91,8 @@ export function useBackingTrack() {
   const init = useCallback(async () => {
     if (isInitRef.current) return;
     await Tone.start();
-    // Snappier start: shrink Tone's scheduling lookahead so notes fire close to
-    // the requested time. Default is 0.1s which makes "press space → hear sound"
-    // feel sluggish. 0.02s is enough headroom on modern browsers.
     try {
-      Tone.getContext().lookAhead = 0.02;
+      Tone.getContext().lookAhead = 0.01;
     } catch {}
     instRef.current = createInstruments();
     isInitRef.current = true;
@@ -109,7 +106,7 @@ export function useBackingTrack() {
     if (isInitRef.current) return;
     try {
       await Tone.start();
-      try { Tone.getContext().lookAhead = 0.02; } catch {}
+      try { Tone.getContext().lookAhead = 0.01; } catch {}
       instRef.current = createInstruments();
       isInitRef.current = true;
     } catch {}
@@ -260,13 +257,11 @@ export function useBackingTrack() {
     schedulePlayhead((b) => setCurrentBeat(b));
     setupLoop(measures);
     Tone.getTransport().position = 0;
-    // Anchor the start a tiny bit in the future so scheduled notes at beat 0
-    // actually have time to fire. Returning the audio + perf timestamps lets
-    // the visual playhead lock to the audio rather than racing ahead.
-    const startAudioTime = Tone.now() + 0.05;
+    const startDelay = Math.max(0.01, Tone.getContext().lookAhead || 0);
+    const startAudioTime = Tone.now() + startDelay;
     Tone.getTransport().start(startAudioTime);
     setIsPlaying(true);
-    return { startAudioTime, startPerfTime: performance.now() + 50 };
+    return { startAudioTime, startPerfTime: performance.now() + startDelay * 1000 };
   }, [init, tracks]);
 
   const stop = useCallback(() => {
