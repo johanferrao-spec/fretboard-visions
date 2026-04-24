@@ -16,12 +16,11 @@ export function scheduleTrack(
 ) {
   for (const n of notes) {
     const beats = n.startBeat;
-    // Convert beats → bars:beats:sixteenths
     const bars = Math.floor(beats / 4);
     const beatInt = Math.floor(beats % 4);
-    const sixteenth = Math.round((beats % 1) * 4);
-    const remainder = (beats % 1) * 4 - sixteenth;
-    // Use seconds offset for any sub-16th jitter
+    const sixteenthFloat = (beats % 1) * 4;
+    const sixteenth = Math.floor(sixteenthFloat);
+    const remainder = sixteenthFloat - sixteenth;
     const baseTime = `${bars}:${beatInt}:${sixteenth}`;
     const microOffset = remainder * (60 / Tone.getTransport().bpm.value) / 4;
     const dur = (n.duration * 60) / Tone.getTransport().bpm.value;

@@ -65,9 +65,9 @@ export const DRUM_PITCHES = {
 } as const;
 
 export const TRACK_COLORS: Record<TrackId, string> = {
-  piano: '210, 80%, 60%',
-  bass: '30, 80%, 55%',
-  drums: '340, 70%, 60%',
+  piano: '210 80% 60%',
+  bass: '30 80% 55%',
+  drums: '340 70% 60%',
 };
 
 export const TRACK_LABELS: Record<TrackId, string> = {
