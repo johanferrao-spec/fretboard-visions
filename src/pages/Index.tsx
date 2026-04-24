@@ -151,13 +151,14 @@ const Index = () => {
     return () => navigator.mediaDevices?.removeEventListener?.('devicechange', refresh);
   }, []);
 
-  // Apply selected sinkId to Tone's AudioContext
+  // Apply selected sinkId to Tone's AudioContext (skip 'default' to avoid disrupting playback)
   useEffect(() => {
+    if (selectedSinkId === 'default') return;
     const ctx = Tone.getContext().rawContext as AudioContext & { setSinkId?: (id: string) => Promise<void> };
     if (typeof ctx.setSinkId === 'function') {
       ctx.setSinkId(selectedSinkId).catch(() => { /* ignore */ });
     }
-  }, [selectedSinkId, audioOutputs]);
+  }, [selectedSinkId]);
 
   useEffect(() => {
     if (activeTab !== 'backing' || !timeline.isPlaying) return;
