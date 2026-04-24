@@ -25,8 +25,9 @@ interface BackingTrackViewProps {
     remove: (id: string) => void;
     saved: { id: string; name: string }[];
     regenerateAll: () => void;
-    play: () => Promise<void>;
+    play: () => Promise<{ startAudioTime: number; startPerfTime: number }>;
     stop: () => void;
+    prewarm: () => Promise<void>;
   }) => void;
 }
 
@@ -74,6 +75,7 @@ export default function BackingTrackView({
       return latestBtRef.current.play(bpm, measures);
     },
     stop: () => latestBtRef.current.stop(),
+    prewarm: () => latestBtRef.current.prewarm(),
   }), [savedItems]);
 
   // Sync master volume from parent

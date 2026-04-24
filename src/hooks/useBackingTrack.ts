@@ -352,6 +352,7 @@ export function useBackingTrack() {
     currentBeat,
     play,
     stop,
+    prewarm,
     setMasterVolume,
     savedTracks,
     save,
