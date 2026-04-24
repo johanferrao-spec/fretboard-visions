@@ -113,7 +113,7 @@ const Index = () => {
   }, [fb.activeChord]);
 
   // Metronome — fully standalone (independent of any timeline / playback)
-  useMetronome({
+  const { primeAudio: primeMetronomeAudio } = useMetronome({
     enabled: metronomeOn,
     bpm: metronomeBpm,
     onTick: (i) => setMetronomePulse(i + 1),
