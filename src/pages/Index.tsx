@@ -137,6 +137,28 @@ const Index = () => {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [bpmDragging]);
 
+  // Enumerate audio output devices
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        if (!navigator.mediaDevices?.enumerateDevices) return;
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        setAudioOutputs(devices.filter(d => d.kind === 'audiooutput'));
+      } catch (e) { /* ignore */ }
+    };
+    refresh();
+    navigator.mediaDevices?.addEventListener?.('devicechange', refresh);
+    return () => navigator.mediaDevices?.removeEventListener?.('devicechange', refresh);
+  }, []);
+
+  // Apply selected sinkId to Tone's AudioContext
+  useEffect(() => {
+    const ctx = Tone.getContext().rawContext as AudioContext & { setSinkId?: (id: string) => Promise<void> };
+    if (typeof ctx.setSinkId === 'function') {
+      ctx.setSinkId(selectedSinkId).catch(() => { /* ignore */ });
+    }
+  }, [selectedSinkId, audioOutputs]);
+
   useEffect(() => {
     if (activeTab !== 'backing' || !timeline.isPlaying) return;
 
