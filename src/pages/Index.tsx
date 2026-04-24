@@ -23,6 +23,7 @@ const Index = () => {
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
   const [volume, setVolume] = useState(0.7);
   const [metronomeOn, setMetronomeOn] = useState(false);
+  const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [bpmDragging, setBpmDragging] = useState(false);
   const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
   const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
