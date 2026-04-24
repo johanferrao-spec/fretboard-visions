@@ -29,6 +29,8 @@ const Index = () => {
   const [metronomePulse, setMetronomePulse] = useState(0);
   const [bpmDragging, setBpmDragging] = useState(false);
   const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
+  const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
+  const [selectedSinkId, setSelectedSinkId] = useState<string>('default');
   const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
   const [keyMode, setKeyMode] = useState<KeyMode>(() => scaleToKeyMode(fb.primaryScale.scale));
   const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tabvis' | null>(null);
