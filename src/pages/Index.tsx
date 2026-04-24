@@ -420,7 +420,7 @@ const Index = () => {
                       : undefined
                 }
                 className={`px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider transition-all duration-100 flex items-center gap-1 ${
-                  metronomeOn ? '' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  metronomeOn && metronomeFlash ? '' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                 }`}
                 title={metronomeOn ? 'Metronome ON — click to mute' : 'Metronome OFF — click to enable'}
               >
