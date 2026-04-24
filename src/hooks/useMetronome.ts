@@ -10,11 +10,15 @@ export function useMetronome(opts: {
   bpm: number;
   /** Beats per bar (default 4) */
   beatsPerBar?: number;
+  /** Called on every tick (for visual flashing) */
+  onTick?: (beatIndex: number) => void;
 }) {
-  const { enabled, bpm, beatsPerBar = 4 } = opts;
+  const { enabled, bpm, beatsPerBar = 4, onTick } = opts;
   const ctxRef = useRef<AudioContext | null>(null);
   const beatCountRef = useRef<number>(0);
   const intervalRef = useRef<number | null>(null);
+  const onTickRef = useRef(onTick);
+  onTickRef.current = onTick;
 
   // Create / resume audio context when enabled
   useEffect(() => {
@@ -46,6 +50,10 @@ export function useMetronome(opts: {
     if (!ctx) return;
 
     const tick = () => {
+      // Browsers may suspend the context; always try to resume so sound returns.
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
       const isAccent = beatCountRef.current % beatsPerBar === 0;
       const now = ctx.currentTime;
       const osc = ctx.createOscillator();
@@ -58,6 +66,7 @@ export function useMetronome(opts: {
       osc.connect(gain).connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.06);
+      onTickRef.current?.(beatCountRef.current);
       beatCountRef.current += 1;
     };
 
