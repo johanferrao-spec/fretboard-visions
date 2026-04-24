@@ -402,7 +402,6 @@ const Index = () => {
                   primeMetronomeAudio();
                   setMetronomeOn(v => !v);
                 }}
-                key={metronomePulse}
                 style={
                   metronomeOn && metronomeFlash === 'accent'
                     ? {
