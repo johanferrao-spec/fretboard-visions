@@ -13,6 +13,7 @@ import SongTimeline from '@/components/SongTimeline';
 import BackingTrackView from '@/components/BackingTrack/BackingTrackView';
 import type { NoteName } from '@/lib/music';
 import type { TabNote, TabData } from '@/components/TabVisualiser';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
@@ -28,6 +29,8 @@ const Index = () => {
   const [metronomePulse, setMetronomePulse] = useState(0);
   const [bpmDragging, setBpmDragging] = useState(false);
   const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
+  const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
+  const [selectedSinkId, setSelectedSinkId] = useState<string>('default');
   const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
   const [keyMode, setKeyMode] = useState<KeyMode>(() => scaleToKeyMode(fb.primaryScale.scale));
   const [activeTab, setActiveTab] = useState<'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tabvis' | null>(null);
@@ -133,6 +136,28 @@ const Index = () => {
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [bpmDragging]);
+
+  // Enumerate audio output devices
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        if (!navigator.mediaDevices?.enumerateDevices) return;
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        setAudioOutputs(devices.filter(d => d.kind === 'audiooutput'));
+      } catch (e) { /* ignore */ }
+    };
+    refresh();
+    navigator.mediaDevices?.addEventListener?.('devicechange', refresh);
+    return () => navigator.mediaDevices?.removeEventListener?.('devicechange', refresh);
+  }, []);
+
+  // Apply selected sinkId to Tone's AudioContext
+  useEffect(() => {
+    const ctx = Tone.getContext().rawContext as AudioContext & { setSinkId?: (id: string) => Promise<void> };
+    if (typeof ctx.setSinkId === 'function') {
+      ctx.setSinkId(selectedSinkId).catch(() => { /* ignore */ });
+    }
+  }, [selectedSinkId, audioOutputs]);
 
   useEffect(() => {
     if (activeTab !== 'backing' || !timeline.isPlaying) return;
@@ -297,9 +322,29 @@ const Index = () => {
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
-        <h1 className="text-lg font-display font-bold text-foreground tracking-tight">
-          <span className="text-primary">Maps</span> &amp; <span className="text-primary">Facts</span> for Jazz Cats
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-lg font-display font-bold text-foreground tracking-tight">
+            <span className="text-primary">Maps</span> &amp; <span className="text-primary">Facts</span> for Jazz Cats
+          </h1>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Output</span>
+            <Select value={selectedSinkId} onValueChange={setSelectedSinkId}>
+              <SelectTrigger className="h-7 w-48 text-xs">
+                <SelectValue placeholder="Default device" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default device</SelectItem>
+                {audioOutputs
+                  .filter(d => d.deviceId && d.deviceId !== 'default')
+                  .map(d => (
+                    <SelectItem key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Output ${d.deviceId.slice(0, 6)}`}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
           Guitar Fretboard Visualizer
         </div>
