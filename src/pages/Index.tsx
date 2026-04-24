@@ -322,9 +322,29 @@ const Index = () => {
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
-        <h1 className="text-lg font-display font-bold text-foreground tracking-tight">
-          <span className="text-primary">Maps</span> &amp; <span className="text-primary">Facts</span> for Jazz Cats
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-lg font-display font-bold text-foreground tracking-tight">
+            <span className="text-primary">Maps</span> &amp; <span className="text-primary">Facts</span> for Jazz Cats
+          </h1>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Output</span>
+            <Select value={selectedSinkId} onValueChange={setSelectedSinkId}>
+              <SelectTrigger className="h-7 w-48 text-xs">
+                <SelectValue placeholder="Default device" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default device</SelectItem>
+                {audioOutputs
+                  .filter(d => d.deviceId && d.deviceId !== 'default')
+                  .map(d => (
+                    <SelectItem key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Output ${d.deviceId.slice(0, 6)}`}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
           Guitar Fretboard Visualizer
         </div>
