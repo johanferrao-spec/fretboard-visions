@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef } from 'react';
  * Standalone Web-Audio metronome. Completely independent of any timeline / playback.
  * When `enabled` is true it ticks on its own internal interval at `bpm` BPM.
  * First beat of every bar gets a higher pitch (accent).
+ *
+ * Uses a Web Audio lookahead scheduler for sample-accurate timing — beats are
+ * scheduled ahead of time against ctx.currentTime, with a short setInterval
+ * loop driving the scheduling (not the actual audio playback).
  */
 export function useMetronome(opts: {
   enabled: boolean;
@@ -35,7 +39,6 @@ export function useMetronome(opts: {
       }
     }
     if (ctxRef.current && ctxRef.current.state !== 'running') {
-      // Fire-and-forget; resume() returns a promise but the gesture is what matters.
       ctxRef.current.resume().catch(() => {});
     }
   }, []);
@@ -46,7 +49,7 @@ export function useMetronome(opts: {
     primeAudio();
   }, [enabled, primeAudio]);
 
-  // Drive the tick loop
+  // Drive the tick loop with a Web Audio lookahead scheduler
   useEffect(() => {
     if (!enabled) {
       if (intervalRef.current !== null) {
@@ -56,34 +59,60 @@ export function useMetronome(opts: {
       beatCountRef.current = 0;
       return;
     }
+
+    // Lazily create the AudioContext inside the effect so it never hits a null ref.
+    if (!ctxRef.current) {
+      try {
+        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+        ctxRef.current = new Ctx();
+      } catch {
+        return;
+      }
+    }
     const ctx = ctxRef.current;
     if (!ctx) return;
+
+    const LOOKAHEAD_MS = 25;
+    const SCHEDULE_AHEAD_S = 0.1;
+    const safeBpm = Math.max(20, Math.min(400, bpm));
+    const secondsPerBeat = 60 / safeBpm;
+
+    // Schedule a single beat at an absolute AudioContext time.
+    const scheduleBeat = (time: number, beatIndex: number) => {
+      const isAccent = beatIndex % beatsPerBar === 0;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = isAccent ? 1600 : 1000;
+      osc.type = 'square';
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.exponentialRampToValueAtTime(isAccent ? 0.45 : 0.3, time + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.06);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(time);
+      osc.stop(time + 0.07);
+
+      // Fire visual tick callback at (approximately) the audible moment.
+      const delayMs = Math.max(0, (time - ctx.currentTime) * 1000);
+      window.setTimeout(() => onTickRef.current?.(beatIndex), delayMs);
+    };
+
+    // Start scheduling slightly in the future so the first beat is clean.
+    let nextBeatTime = ctx.currentTime + 0.05;
 
     const tick = () => {
       // Browsers may suspend the context; always try to resume so sound returns.
       if (ctx.state !== 'running') {
         ctx.resume().catch(() => {});
       }
-      const isAccent = beatCountRef.current % beatsPerBar === 0;
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = isAccent ? 1600 : 1000;
-      osc.type = 'square';
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(isAccent ? 0.45 : 0.3, now + 0.002);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.07);
-      onTickRef.current?.(beatCountRef.current);
-      beatCountRef.current += 1;
+      while (nextBeatTime < ctx.currentTime + SCHEDULE_AHEAD_S) {
+        scheduleBeat(nextBeatTime, beatCountRef.current);
+        nextBeatTime += secondsPerBeat;
+        beatCountRef.current += 1;
+      }
     };
 
-    // Tick immediately on enable, then on interval
     tick();
-    const intervalMs = 60000 / Math.max(20, Math.min(400, bpm));
-    intervalRef.current = window.setInterval(tick, intervalMs);
+    intervalRef.current = window.setInterval(tick, LOOKAHEAD_MS);
     return () => {
       if (intervalRef.current !== null) {
         window.clearInterval(intervalRef.current);

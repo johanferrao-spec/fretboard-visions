@@ -407,15 +407,11 @@ const Index = () => {
                     ? {
                         backgroundColor: 'hsl(var(--beginner-green))',
                         color: 'hsl(220 20% 8%)',
-                        boxShadow: '0 0 14px hsl(var(--beginner-green) / 0.9)',
-                        transform: 'scale(1.1)',
                       }
                     : metronomeOn && metronomeFlash === 'beat'
                       ? {
                           backgroundColor: 'hsl(var(--beginner-yellow))',
                           color: 'hsl(220 20% 8%)',
-                          boxShadow: '0 0 10px hsl(var(--beginner-yellow) / 0.7)',
-                          transform: 'scale(1.05)',
                         }
                       : undefined
                 }
