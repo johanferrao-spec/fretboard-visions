@@ -326,6 +326,68 @@ const Index = () => {
         <main className={`flex-1 flex ${isVertical ? 'flex-row' : 'flex-col'} min-w-0 overflow-auto`}>
           {/* Toolbar above fretboard */}
           <div className="flex items-center gap-2 px-4 py-2 border-b border-border flex-wrap shrink-0">
+            {/* Metronome toggle + draggable BPM (far left) */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  // Prime AudioContext synchronously inside the user gesture so
+                  // browsers (especially Safari) actually allow sound to play.
+                  primeMetronomeAudio();
+                  setMetronomeOn(v => !v);
+                }}
+                key={metronomePulse}
+                style={
+                  metronomeOn
+                    ? metronomePulse % 4 === 1
+                      ? {
+                          backgroundColor: 'hsl(var(--beginner-green))',
+                          color: 'hsl(220 20% 8%)',
+                          boxShadow: '0 0 14px hsl(var(--beginner-green) / 0.9)',
+                          transform: 'scale(1.1)',
+                        }
+                      : metronomePulse > 0
+                        ? {
+                            backgroundColor: 'hsl(var(--beginner-yellow))',
+                            color: 'hsl(220 20% 8%)',
+                            boxShadow: '0 0 10px hsl(var(--beginner-yellow) / 0.7)',
+                            transform: 'scale(1.05)',
+                          }
+                        : {
+                            backgroundColor: 'hsl(var(--beginner-yellow))',
+                            color: 'hsl(220 20% 8%)',
+                            boxShadow: '0 0 8px hsl(var(--beginner-yellow) / 0.5)',
+                          }
+                    : undefined
+                }
+                className={`px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider transition-all duration-100 flex items-center gap-1 ${
+                  metronomeOn ? '' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                }`}
+                title={metronomeOn ? 'Metronome ON — click to mute' : 'Metronome OFF — click to enable'}
+              >
+                <span aria-hidden>🎵</span>
+                <span>{metronomeOn ? 'On' : 'Off'}</span>
+              </button>
+              <div
+                className={`w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center select-none cursor-ns-resize ${bpmDragging ? 'ring-1 ring-primary' : ''}`}
+                style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
+                title="BPM — drag up/down to change, double-click to type"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setBpmDragging(true);
+                  bpmDragRef.current = { startY: e.clientY, startBpm: metronomeBpm };
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  const next = window.prompt('Metronome BPM (40-300)', String(metronomeBpm));
+                  if (next == null) return;
+                  const v = Math.max(40, Math.min(300, Number(next) || metronomeBpm));
+                  setMetronomeBpm(v);
+                }}
+              >
+                {metronomeBpm}
+              </div>
+            </div>
+
             {/* Orientation toggle */}
             <button
               onClick={() => fb.setOrientation(fb.orientation === 'horizontal' ? 'vertical' : 'horizontal')}
