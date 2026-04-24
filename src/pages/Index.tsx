@@ -56,6 +56,15 @@ const Index = () => {
     play: () => Promise<void>;
     stop: () => void;
   } | null>(null);
+  const backingPlayheadBeatRef = useRef(0);
+
+  useEffect(() => {
+    backingPlayheadBeatRef.current = timeline.currentBeat;
+  }, [timeline.currentBeat]);
+
+  const handleRegisterBackingApi = useCallback((api: NonNullable<typeof backingApi>) => {
+    setBackingApi(api);
+  }, []);
 
   // Auto-disable strings based on inversion string group when in inversion mode.
   // Drop 3 uses a separate config (skips one inner string), so we pick the right one per drop mode.
@@ -116,6 +125,25 @@ const Index = () => {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [bpmDragging]);
 
+  useEffect(() => {
+    if (activeTab !== 'backing' || !timeline.isPlaying) return;
+
+    const totalBeats = Math.max(1, timeline.measures * 4);
+    const startTime = performance.now();
+    const startBeat = backingPlayheadBeatRef.current;
+    let frameId = 0;
+
+    const tick = () => {
+      const elapsedSeconds = (performance.now() - startTime) / 1000;
+      const nextBeat = (startBeat + (elapsedSeconds * timeline.bpm) / 60) % totalBeats;
+      timeline.setCurrentBeat(nextBeat);
+      frameId = window.requestAnimationFrame(tick);
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [activeTab, timeline.isPlaying, timeline.bpm, timeline.measures, timeline.setCurrentBeat]);
+
   // Compute chord tones for scaleView degree filter (used to dim non-chord-tones)
   const scaleViewChordTones = useMemo(() => {
     if (scaleViewDegreeFilter === null) return null;
@@ -171,19 +199,7 @@ const Index = () => {
     timeline.setIsPlaying(true);
     midi.setVolume(volume);
     if (activeTab === 'backing' && backingApi) {
-      // Backing track DAW takes over audio (richer generated tracks)
       backingApi.play();
-      // Drive the main playhead via a simple beat counter using BPM
-      const startTime = performance.now();
-      const totalBeats = timeline.measures * 4;
-      const tick = () => {
-        if (!timeline.isPlaying) return;
-        const elapsedSec = (performance.now() - startTime) / 1000;
-        const beat = (elapsedSec * timeline.bpm / 60) % totalBeats;
-        timeline.setCurrentBeat(beat);
-        requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
     } else {
       midi.play(
         timeline.chords,
@@ -650,7 +666,7 @@ const Index = () => {
               volume={volume}
               isPlaying={timeline.isPlaying}
               currentBeat={timeline.currentBeat}
-              registerHandlers={(api) => setBackingApi(api)}
+              registerHandlers={handleRegisterBackingApi}
             />
           )}
         </div>

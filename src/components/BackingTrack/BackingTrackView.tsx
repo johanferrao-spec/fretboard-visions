@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
 import type { TimelineChord, Genre } from '@/hooks/useSongTimeline';
@@ -36,11 +36,50 @@ export default function BackingTrackView({
   const bt = useBackingTrack();
   const [openClip, setOpenClip] = useState<{ trackId: TrackId; clipId: string } | null>(null);
   const [hasGenerated, setHasGenerated] = useState(false);
+  const latestBtRef = useRef(bt);
+  const latestTimelineRef = useRef({ chords, measures, bpm, genre });
+
+  latestBtRef.current = bt;
+
+  useEffect(() => {
+    latestTimelineRef.current = { chords, measures, bpm, genre };
+  }, [chords, measures, bpm, genre]);
+
+  const savedItems = useMemo(
+    () => bt.savedTracks.map(t => ({ id: t.id, name: t.name })),
+    [bt.savedTracks],
+  );
+
+  const registeredApi = useMemo(() => ({
+    save: (name: string) => {
+      const { chords, measures, bpm, genre } = latestTimelineRef.current;
+      latestBtRef.current.save(name, chords, measures, bpm, genre);
+      toast.success(`Saved "${name}"`);
+    },
+    load: (id: string) => {
+      const loaded = latestBtRef.current.load(id);
+      if (loaded) toast.success(`Loaded "${loaded.name}"`);
+    },
+    remove: (id: string) => {
+      latestBtRef.current.remove(id);
+      toast('Backing track deleted');
+    },
+    saved: savedItems,
+    regenerateAll: () => {
+      const { chords, measures, genre } = latestTimelineRef.current;
+      latestBtRef.current.regenerateAll(chords, measures, genre, true);
+    },
+    play: () => {
+      const { bpm, measures } = latestTimelineRef.current;
+      return latestBtRef.current.play(bpm, measures);
+    },
+    stop: () => latestBtRef.current.stop(),
+  }), [savedItems]);
 
   // Sync master volume from parent
   useEffect(() => {
     bt.setMasterVolume(volume);
-  }, [volume, bt]);
+  }, [volume, bt.setMasterVolume]);
 
   // Auto-generate first time we have chords
   useEffect(() => {
@@ -48,15 +87,14 @@ export default function BackingTrackView({
       bt.regenerateAll(chords, measures, genre, true);
       setHasGenerated(true);
     }
-  }, [chords, measures, genre, hasGenerated, bt]);
+  }, [chords, measures, genre, hasGenerated, bt.regenerateAll]);
 
   // Re-generate non-edited tracks when chords/measures/genre change
   useEffect(() => {
     if (hasGenerated && chords.length > 0) {
       bt.regenerateAll(chords, measures, genre, false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chords, measures, genre]);
+  }, [chords, measures, genre, hasGenerated, bt.regenerateAll]);
 
   // Re-generate a track when its intensity/complexity changes
   const trackKey = (id: TrackId) =>
@@ -79,25 +117,8 @@ export default function BackingTrackView({
 
   // Register save/load with parent (so they appear in the chord timeline toolbar)
   useEffect(() => {
-    registerHandlers?.({
-      save: (name: string) => {
-        bt.save(name, chords, measures, bpm, genre);
-        toast.success(`Saved "${name}"`);
-      },
-      load: (id: string) => {
-        const loaded = bt.load(id);
-        if (loaded) toast.success(`Loaded "${loaded.name}"`);
-      },
-      remove: (id: string) => {
-        bt.remove(id);
-        toast('Backing track deleted');
-      },
-      saved: bt.savedTracks.map(t => ({ id: t.id, name: t.name })),
-      regenerateAll: () => bt.regenerateAll(chords, measures, genre, true),
-      play: () => bt.play(bpm, measures),
-      stop: () => bt.stop(),
-    });
-  }, [bt, chords, measures, bpm, genre, registerHandlers]);
+    registerHandlers?.(registeredApi);
+  }, [registerHandlers, registeredApi]);
 
   const openClipNotes = openClip ? bt.tracks[openClip.trackId].clips.find(c => c.id === openClip.clipId) : null;
 
