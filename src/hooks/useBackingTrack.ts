@@ -272,8 +272,9 @@ export function useBackingTrack() {
     schedulePlayhead((b) => setCurrentBeat(b));
     setupLoop(measures);
     Tone.getTransport().position = 0;
-    const startDelay = Math.max(0.005, Math.min(0.01, Tone.getContext().lookAhead || 0.005));
-    const startAudioTime = Tone.now() + startDelay;
+    const startAudioTime = Tone.now() + 0.05;
+    // eslint-disable-next-line no-console
+    console.log('[backing] AudioContext state:', Tone.getContext().state);
     Tone.getTransport().start(startAudioTime);
     setIsPlaying(true);
     return { startAudioTime, startPerfTime: performance.now() + startDelay * 1000 };
