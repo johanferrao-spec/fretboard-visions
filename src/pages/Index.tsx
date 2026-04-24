@@ -346,17 +346,17 @@ const Index = () => {
                 onMouseDown={(e) => {
                   e.preventDefault();
                   setBpmDragging(true);
-                  bpmDragRef.current = { startY: e.clientY, startBpm: timeline.bpm };
+                  bpmDragRef.current = { startY: e.clientY, startBpm: metronomeBpm };
                 }}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
-                  const next = window.prompt('BPM (40-300)', String(timeline.bpm));
+                  const next = window.prompt('Metronome BPM (40-300)', String(metronomeBpm));
                   if (next == null) return;
-                  const v = Math.max(40, Math.min(300, Number(next) || timeline.bpm));
-                  timeline.setBpm(v);
+                  const v = Math.max(40, Math.min(300, Number(next) || metronomeBpm));
+                  setMetronomeBpm(v);
                 }}
               >
-                {timeline.bpm}
+                {metronomeBpm}
               </div>
             </div>
 
