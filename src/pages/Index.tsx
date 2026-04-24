@@ -53,10 +53,13 @@ const Index = () => {
     remove: (id: string) => void;
     saved: { id: string; name: string }[];
     regenerateAll: () => void;
-    play: () => Promise<void>;
+    play: () => Promise<{ startAudioTime: number; startPerfTime: number }>;
     stop: () => void;
+    prewarm: () => Promise<void>;
   } | null>(null);
   const backingPlayheadBeatRef = useRef(0);
+  // Anchor (perf-time ms) of when audio actually starts; null until play begins.
+  const playStartPerfRef = useRef<number | null>(null);
 
   useEffect(() => {
     backingPlayheadBeatRef.current = timeline.currentBeat;
@@ -129,20 +132,33 @@ const Index = () => {
     if (activeTab !== 'backing' || !timeline.isPlaying) return;
 
     const totalBeats = Math.max(1, timeline.measures * 4);
-    const startTime = performance.now();
     const startBeat = backingPlayheadBeatRef.current;
     let frameId = 0;
 
     const tick = () => {
-      const elapsedSeconds = (performance.now() - startTime) / 1000;
-      const nextBeat = (startBeat + (elapsedSeconds * timeline.bpm) / 60) % totalBeats;
-      timeline.setCurrentBeat(nextBeat);
+      // Wait for audio anchor to be set, then advance from THAT moment.
+      // Until the anchor exists (a few ms while Tone schedules), hold the
+      // playhead at startBeat so it doesn't race ahead of the sound.
+      const anchor = playStartPerfRef.current;
+      if (anchor !== null) {
+        const elapsedSeconds = Math.max(0, (performance.now() - anchor) / 1000);
+        const nextBeat = (startBeat + (elapsedSeconds * timeline.bpm) / 60) % totalBeats;
+        timeline.setCurrentBeat(nextBeat);
+      }
       frameId = window.requestAnimationFrame(tick);
     };
 
     frameId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frameId);
   }, [activeTab, timeline.isPlaying, timeline.bpm, timeline.measures, timeline.setCurrentBeat]);
+
+  // Pre-warm the backing-track audio engine the moment the user opens the
+  // Backing Track tab, so the first press of Space has zero startup delay.
+  useEffect(() => {
+    if (activeTab === 'backing' && backingApi) {
+      backingApi.prewarm().catch(() => {});
+    }
+  }, [activeTab, backingApi]);
 
   // Compute chord tones for scaleView degree filter (used to dim non-chord-tones)
   const scaleViewChordTones = useMemo(() => {
@@ -199,7 +215,14 @@ const Index = () => {
     timeline.setIsPlaying(true);
     midi.setVolume(volume);
     if (activeTab === 'backing' && backingApi) {
-      backingApi.play();
+      // Reset anchor; the RAF will hold the playhead until the audio start
+      // time is known, eliminating the visible "playhead-runs-then-sound" gap.
+      playStartPerfRef.current = null;
+      backingApi.play().then(({ startPerfTime }) => {
+        playStartPerfRef.current = startPerfTime;
+      }).catch(() => {
+        playStartPerfRef.current = performance.now();
+      });
     } else {
       midi.play(
         timeline.chords,
@@ -222,6 +245,7 @@ const Index = () => {
     timeline.setCurrentBeat(0);
     midi.stop();
     backingApi?.stop();
+    playStartPerfRef.current = null;
   };
 
   const handleSeek = (beat: number) => {
