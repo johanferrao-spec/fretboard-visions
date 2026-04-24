@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
  * Standalone Web-Audio metronome. Completely independent of any timeline / playback.
@@ -20,9 +20,12 @@ export function useMetronome(opts: {
   const onTickRef = useRef(onTick);
   onTickRef.current = onTick;
 
-  // Create / resume audio context when enabled
-  useEffect(() => {
-    if (!enabled) return;
+  /**
+   * Synchronously create AND resume the AudioContext. MUST be called from
+   * inside a real user-gesture handler (click/keydown) — otherwise the browser
+   * will leave the context suspended and no sound will be heard.
+   */
+  const primeAudio = useCallback(() => {
     if (!ctxRef.current) {
       try {
         const Ctx = window.AudioContext || (window as any).webkitAudioContext;
@@ -31,10 +34,17 @@ export function useMetronome(opts: {
         return;
       }
     }
-    if (ctxRef.current?.state === 'suspended') {
+    if (ctxRef.current && ctxRef.current.state !== 'running') {
+      // Fire-and-forget; resume() returns a promise but the gesture is what matters.
       ctxRef.current.resume().catch(() => {});
     }
-  }, [enabled]);
+  }, []);
+
+  // Fallback: if context wasn't primed, try (may fail silently in Safari).
+  useEffect(() => {
+    if (!enabled) return;
+    primeAudio();
+  }, [enabled, primeAudio]);
 
   // Drive the tick loop
   useEffect(() => {
@@ -51,7 +61,7 @@ export function useMetronome(opts: {
 
     const tick = () => {
       // Browsers may suspend the context; always try to resume so sound returns.
-      if (ctx.state === 'suspended') {
+      if (ctx.state !== 'running') {
         ctx.resume().catch(() => {});
       }
       const isAccent = beatCountRef.current % beatsPerBar === 0;
@@ -61,11 +71,11 @@ export function useMetronome(opts: {
       osc.frequency.value = isAccent ? 1600 : 1000;
       osc.type = 'square';
       gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(isAccent ? 0.35 : 0.22, now + 0.002);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(isAccent ? 0.45 : 0.3, now + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
       osc.connect(gain).connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.06);
+      osc.stop(now + 0.07);
       onTickRef.current?.(beatCountRef.current);
       beatCountRef.current += 1;
     };
@@ -88,4 +98,6 @@ export function useMetronome(opts: {
     ctxRef.current?.close().catch(() => {});
     ctxRef.current = null;
   }, []);
+
+  return { primeAudio };
 }
