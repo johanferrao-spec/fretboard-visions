@@ -236,6 +236,12 @@ const Index = () => {
   const handlePlay = () => {
     timeline.setIsPlaying(true);
     midi.setVolume(volume);
+    // Synchronously kick Tone.js inside the user gesture so audio is allowed.
+    try {
+      Tone.start();
+      const ctx = Tone.getContext().rawContext as AudioContext;
+      if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
+    } catch {}
     if (activeTab === 'backing' && backingApi) {
       // Reset anchor; the RAF will hold the playhead until the audio start
       // time is known, eliminating the visible "playhead-runs-then-sound" gap.
