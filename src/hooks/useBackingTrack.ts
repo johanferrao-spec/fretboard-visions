@@ -101,13 +101,8 @@ export function useBackingTrack() {
     if (!initPromiseRef.current) {
       initPromiseRef.current = (async () => {
         await Tone.start();
-        try {
-          const context = Tone.getContext() as Tone.Context & { updateInterval?: number };
-          context.lookAhead = 0.005;
-          if (typeof context.updateInterval === 'number') {
-            context.updateInterval = 0.01;
-          }
-        } catch {}
+        // Only mark as initialized AFTER Tone.start() resolves successfully,
+        // so a failed init can be retried on the next user gesture.
         isInitRef.current = true;
       })().finally(() => {
         initPromiseRef.current = null;
