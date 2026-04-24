@@ -160,6 +160,22 @@ const Index = () => {
     }
   }, [activeTab, backingApi]);
 
+  useEffect(() => {
+    if (!backingApi) return;
+
+    const warm = () => {
+      backingApi.prewarm().catch(() => {});
+    };
+
+    window.addEventListener('pointerdown', warm, { passive: true });
+    window.addEventListener('keydown', warm);
+
+    return () => {
+      window.removeEventListener('pointerdown', warm);
+      window.removeEventListener('keydown', warm);
+    };
+  }, [backingApi]);
+
   // Compute chord tones for scaleView degree filter (used to dim non-chord-tones)
   const scaleViewChordTones = useMemo(() => {
     if (scaleViewDegreeFilter === null) return null;
