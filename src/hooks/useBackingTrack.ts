@@ -60,6 +60,7 @@ export function useBackingTrack() {
 
   const instRef = useRef<EngineInstruments | null>(null);
   const isInitRef = useRef(false);
+  const initPromiseRef = useRef<Promise<void> | null>(null);
   const muteRefs = useRef<Record<TrackId, { current: boolean }>>({
     piano: { current: false },
     bass: { current: false },
@@ -88,29 +89,48 @@ export function useBackingTrack() {
     });
   }, [tracks]);
 
-  const init = useCallback(async () => {
-    if (isInitRef.current) return;
-    await Tone.start();
-    try {
-      Tone.getContext().lookAhead = 0.01;
-    } catch {}
-    instRef.current = createInstruments();
-    isInitRef.current = true;
+  const ensureInstruments = useCallback(() => {
+    if (!instRef.current) {
+      instRef.current = createInstruments();
+    }
   }, []);
+
+  const init = useCallback(async () => {
+    ensureInstruments();
+    if (isInitRef.current) return;
+    if (!initPromiseRef.current) {
+      initPromiseRef.current = (async () => {
+        await Tone.start();
+        try {
+          const context = Tone.getContext() as Tone.Context & { updateInterval?: number };
+          context.lookAhead = 0.005;
+          if (typeof context.updateInterval === 'number') {
+            context.updateInterval = 0.01;
+          }
+        } catch {}
+        isInitRef.current = true;
+      })().finally(() => {
+        initPromiseRef.current = null;
+      });
+    }
+    await initPromiseRef.current;
+  }, [ensureInstruments]);
 
   /**
    * Pre-warm the audio engine so the FIRST press of play has no delay.
    * Safe to call from any user gesture; subsequent calls are no-ops.
    */
   const prewarm = useCallback(async () => {
+    ensureInstruments();
     if (isInitRef.current) return;
     try {
-      await Tone.start();
-      try { Tone.getContext().lookAhead = 0.01; } catch {}
-      instRef.current = createInstruments();
-      isInitRef.current = true;
+      await init();
     } catch {}
-  }, []);
+  }, [ensureInstruments, init]);
+
+  useEffect(() => {
+    ensureInstruments();
+  }, [ensureInstruments]);
 
   const regenerateTrack = useCallback((
     trackId: TrackId,
@@ -257,7 +277,7 @@ export function useBackingTrack() {
     schedulePlayhead((b) => setCurrentBeat(b));
     setupLoop(measures);
     Tone.getTransport().position = 0;
-    const startDelay = Math.max(0.01, Tone.getContext().lookAhead || 0);
+    const startDelay = Math.max(0.005, Math.min(0.01, Tone.getContext().lookAhead || 0.005));
     const startAudioTime = Tone.now() + startDelay;
     Tone.getTransport().start(startAudioTime);
     setIsPlaying(true);

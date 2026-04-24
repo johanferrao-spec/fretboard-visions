@@ -157,6 +157,11 @@ function chooseCell(cells: DrumCell[], complexity: number): DrumCell {
   return pickWeighted(cells, weights.map(w => Math.max(0.05, w)));
 }
 
+function swingOffset(step: number, genre: Genre, amount: number) {
+  if (genre !== 'Jazz' || step % 2 === 0) return 0;
+  return 0.1 + amount * 0.12;
+}
+
 // ─── FILLS — composed by length and intensity ──────────────────────
 function generateFill(
   measureBase: number,
@@ -222,6 +227,7 @@ export function generateDrums(
 ): MidiNote[] {
   const notes: MidiNote[] = [];
   const useRide = genre === 'Jazz' || (intensity > 0.75 && chance(0.35));
+  const swing = genre === 'Jazz' ? 0.75 + complexity * 0.15 : 0;
 
   const pushNote = (beat: number, pitch: number, vel: number, dur = 0.25) => {
     notes.push({
@@ -241,40 +247,48 @@ export function generateDrums(
     const phrasePos = m % phraseLen;
     const isPhraseEnd = phrasePos === phraseLen - 1;
     // Fill probability climbs with intensity & at the end of phrases
-    const fillProb = isPhraseEnd ? 0.7 + intensity * 0.25 : (m === measures - 1 ? 0.85 : intensity * 0.12);
+      const fillProb = genre === 'Jazz'
+        ? (isPhraseEnd ? 0.18 + intensity * 0.14 : intensity * 0.04)
+        : (isPhraseEnd ? 0.7 + intensity * 0.25 : (m === measures - 1 ? 0.85 : intensity * 0.12));
     const wantFill = chance(fillProb);
-    const fillBeats = wantFill ? (intensity > 0.6 && chance(0.4) ? 2 : 1) : 0;
+      const fillBeats = wantFill
+        ? (genre === 'Jazz' ? 1 : (intensity > 0.6 && chance(0.4) ? 2 : 1))
+        : 0;
     const isCrashBar = (m === 0) || (m > 0 && (m - 1) % phraseLen === phraseLen - 1 && chance(0.85));
 
     // Choose cells for this measure
     const kickCell  = chooseCell(KICK_CELLS[genre],  complexity);
     const snareCell = chooseCell(SNARE_CELLS[genre], complexity);
-    const cymbalCells = useRide && genre === 'Jazz'
+      const cymbalCells = useRide && genre === 'Jazz'
       ? [{ steps: JAZZ_RIDE, weight: 1, busyness: 0.5 }]
       : HAT_CELLS[genre];
     const cymbalCell = chooseCell(cymbalCells, complexity);
 
     // ── Render KICK ──
-    for (let s = 0; s < 16; s++) {
+      for (let s = 0; s < 16; s++) {
       const v = kickCell.steps[s];
       if (!v) continue;
       // Skip notes that fall inside the fill region
       if (s >= 16 - fillBeats * 4) continue;
       // Random note drop for organic feel
-      if (chance(0.05 - intensity * 0.04)) continue;
-      const baseVel = (s === 0 ? 110 : 100) * (0.7 + intensity * 0.4);
-      pushNote(measureBase + s / 4, DRUM_PITCHES.kick, baseVel, 0.2);
+        if (chance(genre === 'Jazz' ? 0.12 : 0.05 - intensity * 0.04)) continue;
+        const baseVel = genre === 'Jazz'
+          ? (s === 0 ? 54 : 44) * (0.75 + intensity * 0.2)
+          : (s === 0 ? 110 : 100) * (0.7 + intensity * 0.4);
+        pushNote(measureBase + s / 4 + swingOffset(s, genre, swing), DRUM_PITCHES.kick, baseVel, genre === 'Jazz' ? 0.16 : 0.2);
     }
 
     // ── Render SNARE backbeat ──
-    for (let s = 0; s < 16; s++) {
+      for (let s = 0; s < 16; s++) {
       const v = snareCell.steps[s];
       if (!v) continue;
       if (s >= 16 - fillBeats * 4) continue;
-      if (chance(0.04)) continue;
+        if (chance(genre === 'Jazz' ? 0.1 : 0.04)) continue;
       const accent = s === 4 || s === 12;
-      const vel = (accent ? 102 : 88) * (0.65 + intensity * 0.45);
-      pushNote(measureBase + s / 4, DRUM_PITCHES.snare, vel, 0.22);
+        const vel = genre === 'Jazz'
+          ? (accent ? 58 : 46) * (0.85 + intensity * 0.2)
+          : (accent ? 102 : 88) * (0.65 + intensity * 0.45);
+        pushNote(measureBase + s / 4 + swingOffset(s, genre, swing), DRUM_PITCHES.snare, vel, genre === 'Jazz' ? 0.12 : 0.22);
     }
 
     // ── GHOST snares (complexity-driven) ──
@@ -282,17 +296,17 @@ export function generateDrums(
       const ghostSteps = [3, 7, 11, 15, 2, 6, 10, 14];
       ghostSteps.forEach(step => {
         if (step >= 16 - fillBeats * 4) return;
-        const p = (complexity - 0.35) * 0.6;
+        const p = genre === 'Jazz' ? (complexity - 0.35) * 0.28 : (complexity - 0.35) * 0.6;
         if (chance(p)) {
           // Don't double-up on existing snare hits
           if (snareCell.steps[step]) return;
-          pushNote(measureBase + step / 4, DRUM_PITCHES.snare, 38 + complexity * 20, 0.1);
+          pushNote(measureBase + step / 4 + swingOffset(step, genre, swing), DRUM_PITCHES.snare, genre === 'Jazz' ? 28 + complexity * 10 : 38 + complexity * 20, 0.1);
         }
       });
     }
 
     // ── Render CYMBAL (hat or ride) ──
-    for (let s = 0; s < 16; s++) {
+      for (let s = 0; s < 16; s++) {
       const v = cymbalCell.steps[s];
       if (!v) continue;
       if (s >= 16 - fillBeats * 4) continue;
@@ -303,14 +317,16 @@ export function generateDrums(
       }
       // High complexity: random hat drops for syncopation
       if (complexity > 0.7 && s % 2 === 1 && chance(0.3)) continue;
-      const pitch = useRide && genre === 'Jazz' ? DRUM_PITCHES.ride
+        const pitch = useRide && genre === 'Jazz' ? DRUM_PITCHES.ride
         : (useRide && intensity > 0.75 ? DRUM_PITCHES.ride : DRUM_PITCHES.hihat);
-      const vel = v * (0.6 + intensity * 0.5);
-      pushNote(measureBase + s / 4, pitch, vel, pitch === DRUM_PITCHES.hihat ? 0.1 : 0.2);
+        const vel = genre === 'Jazz'
+          ? v * (0.42 + intensity * 0.18)
+          : v * (0.6 + intensity * 0.5);
+        pushNote(measureBase + s / 4 + swingOffset(s, genre, swing), pitch, vel, pitch === DRUM_PITCHES.hihat ? 0.08 : 0.2);
     }
 
     // ── CRASH on bar 1 of new phrase ──
-    if (isCrashBar) {
+    if (isCrashBar && genre !== 'Jazz') {
       pushNote(measureBase, DRUM_PITCHES.ride, 115 * (0.75 + intensity * 0.3), 0.6);
     }
 
@@ -345,8 +361,10 @@ export function generatePiano(
   measures: number,
   intensity: number,
   complexity: number,
+  genre: Genre,
 ): MidiNote[] {
   const notes: MidiNote[] = [];
+  const jazzSwing = genre === 'Jazz' ? 0.12 + complexity * 0.08 : 0;
 
   for (let ci = 0; ci < chords.length; ci++) {
     const chord = chords[ci];
@@ -386,7 +404,7 @@ export function generatePiano(
       if (b === fullBeats - 1 && complexity > 0.7 && chance(0.35)) voicing = [pitches[pitches.length - 1] + 7]; // single high color
 
       cell.hits.forEach((off, i) => {
-        const beat = beatStart + off;
+        const beat = beatStart + off + (genre === 'Jazz' && off % 1 !== 0 ? jazzSwing : 0);
         const isAnticipation = ci < chords.length - 1 && b === fullBeats - 1 && off >= 0.5 && complexity > 0.5 && chance(0.45);
         let v = voicing;
         if (isAnticipation) {
@@ -541,7 +559,7 @@ export function generateAllTracks(
   complexities: { piano: number; bass: number; drums: number },
 ): Record<TrackId, MidiNote[]> {
   return {
-    piano: generatePiano(chords, measures, intensities.piano, complexities.piano),
+    piano: generatePiano(chords, measures, intensities.piano, complexities.piano, genre),
     bass:  generateBass(chords, measures, intensities.bass, complexities.bass, genre),
     drums: generateDrums(chords, measures, intensities.drums, complexities.drums, genre),
   };
