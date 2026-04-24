@@ -28,34 +28,35 @@ export function createInstruments(): EngineInstruments {
   }).connect(master);
 
   const kick = new Tone.MembraneSynth({
-    pitchDecay: 0.05,
-    octaves: 6,
-    envelope: { attack: 0.001, decay: 0.25, sustain: 0, release: 0.2 },
-    volume: -4,
+    pitchDecay: 0.04,
+    octaves: 7,
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.001, decay: 0.32, sustain: 0.01, release: 0.4 },
+    volume: -2,
   }).connect(master);
 
   const snare = new Tone.NoiseSynth({
-    noise: { type: 'white' },
-    envelope: { attack: 0.001, decay: 0.16, sustain: 0, release: 0.1 },
-    volume: -10,
+    noise: { type: 'white', playbackRate: 3 },
+    envelope: { attack: 0.001, decay: 0.13, sustain: 0, release: 0.08 },
+    volume: -8,
   }).connect(master);
 
   const hihat = new Tone.MetalSynth({
-    envelope: { attack: 0.001, decay: 0.05, release: 0.01 },
-    harmonicity: 5.1,
-    modulationIndex: 32,
-    resonance: 4000,
-    octaves: 1.5,
-    volume: -22,
+    envelope: { attack: 0.001, decay: 0.04, release: 0.01 },
+    harmonicity: 8.5,
+    modulationIndex: 40,
+    resonance: 6000,
+    octaves: 1.2,
+    volume: -24,
   }).connect(master);
 
   const ride = new Tone.MetalSynth({
-    envelope: { attack: 0.001, decay: 0.18, release: 0.05 },
-    harmonicity: 5.1,
-    modulationIndex: 16,
-    resonance: 5200,
-    octaves: 1,
-    volume: -20,
+    envelope: { attack: 0.001, decay: 0.22, release: 0.08 },
+    harmonicity: 6.2,
+    modulationIndex: 22,
+    resonance: 5500,
+    octaves: 1.1,
+    volume: -18,
   }).connect(master);
 
   return { piano, bass, kick, snare, hihat, ride, master };
