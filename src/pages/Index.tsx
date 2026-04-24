@@ -167,12 +167,12 @@ const Index = () => {
       backingApi.prewarm().catch(() => {});
     };
 
-    window.addEventListener('pointerdown', warm, { passive: true });
-    window.addEventListener('keydown', warm);
+    window.addEventListener('pointerdown', warm, { passive: true, capture: true });
+    window.addEventListener('keydown', warm, { capture: true });
 
     return () => {
-      window.removeEventListener('pointerdown', warm);
-      window.removeEventListener('keydown', warm);
+      window.removeEventListener('pointerdown', warm, true);
+      window.removeEventListener('keydown', warm, true);
     };
   }, [backingApi]);
 
