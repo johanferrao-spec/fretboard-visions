@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, Plus } from 'lucide-react';
+import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List } from 'lucide-react';
 import type { TimelineChord, SnapValue, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
