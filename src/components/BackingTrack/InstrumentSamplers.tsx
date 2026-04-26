@@ -625,7 +625,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
             {(() => {
               const cx = 400, cy = 240, w = 110, h = 110;
               return (
-                <g {...partProps('tom2')}>
+                <g {...partProps('tom1')}>
                   <rect x={cx - w/2} y={cy} width={w} height={h} fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
                   <ellipse cx={cx} cy={cy} rx={w/2} ry={16} fill={SKIN_FILL} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
                   <ellipse cx={cx} cy={cy + h} rx={w/2} ry={12} fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
