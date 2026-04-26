@@ -282,8 +282,7 @@ export default function TrackLane({
                 data-role="drum-block"
                 className="absolute top-1 bottom-1 left-0 right-0 rounded-md select-none"
                 style={{
-                  backgroundColor: 'hsl(330, 80%, 65% / 0.35)',
-                  border: '1.5px solid hsl(330, 80%, 65% / 0.7)',
+                  backgroundColor: 'hsl(330, 75%, 60%)',
                   cursor: onAddDrumFill ? 'copy' : 'default',
                 }}
                 title="Click an empty area to add a drum fill"
