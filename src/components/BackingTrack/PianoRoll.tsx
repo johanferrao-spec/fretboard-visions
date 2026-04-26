@@ -20,9 +20,13 @@ const pitchLabel = (p: number) => `${NOTE_LETTERS[p % 12]}${Math.floor(p / 12) -
 const DRUM_LABELS: Record<number, string> = {
   [DRUM_PITCHES.kick]: 'Kick',
   [DRUM_PITCHES.snare]: 'Snare',
-  [DRUM_PITCHES.hihat]: 'Hi-Hat',
+  [DRUM_PITCHES.hihat_closed]: 'Closed Hat',
+  [DRUM_PITCHES.hihat_pedal]: 'Pedal Hat',
+  [DRUM_PITCHES.hihat_open]: 'Open Hat',
   [DRUM_PITCHES.ride]: 'Ride',
-  [DRUM_PITCHES.tom]: 'Tom',
+  [DRUM_PITCHES.crash]: 'Crash',
+  [DRUM_PITCHES.tom1]: 'Tom 1',
+  [DRUM_PITCHES.tom2]: 'Floor Tom',
 };
 
 let nextNoteId = 1;
@@ -42,7 +46,17 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
   // Pitch range
   const isDrums = trackId === 'drums';
   const visiblePitches = isDrums
-    ? [DRUM_PITCHES.kick, DRUM_PITCHES.snare, DRUM_PITCHES.hihat, DRUM_PITCHES.ride].sort((a, b) => b - a)
+    ? [
+        DRUM_PITCHES.crash,
+        DRUM_PITCHES.ride,
+        DRUM_PITCHES.hihat_open,
+        DRUM_PITCHES.hihat_pedal,
+        DRUM_PITCHES.hihat_closed,
+        DRUM_PITCHES.tom1,
+        DRUM_PITCHES.tom2,
+        DRUM_PITCHES.snare,
+        DRUM_PITCHES.kick,
+      ].sort((a, b) => b - a)
     : (() => {
         const range: number[] = [];
         for (let p = 84; p >= 36; p--) range.push(p);

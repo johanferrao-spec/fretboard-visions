@@ -269,10 +269,10 @@ function generateUserFill(
   // 1) Crash on the very first downbeat
   pushNote(startBeat, DRUM_PITCHES.crash, 100 + intensity * 20, 0.6);
 
-  // 2) Foot hat on 2 & 4 of every bar in the fill (keeps the time)
+  // 2) Foot (pedal) hat on 2 & 4 of every bar in the fill (keeps the time)
   for (let b = 0; b < lengthBars; b++) {
-    pushNote(startBeat + b * 4 + 1, DRUM_PITCHES.hihat, 60 + intensity * 15, 0.05);
-    pushNote(startBeat + b * 4 + 3, DRUM_PITCHES.hihat, 60 + intensity * 15, 0.05);
+    pushNote(startBeat + b * 4 + 1, DRUM_PITCHES.hihat_pedal, 60 + intensity * 15, 0.05);
+    pushNote(startBeat + b * 4 + 3, DRUM_PITCHES.hihat_pedal, 60 + intensity * 15, 0.05);
   }
 
   // 3) Snare build — start at 8th notes, switch to 16th notes halfway,
@@ -429,9 +429,9 @@ function generateJazzDrums(
       pushNote(base + r, DRUM_PITCHES.ride, vel, 0.22);
     }
 
-    // FOOT HI-HAT on 2 & 4
-    pushNote(base + 1, DRUM_PITCHES.hihat, 60 + rand() * 18, 0.06);
-    pushNote(base + 3, DRUM_PITCHES.hihat, 62 + rand() * 18, 0.06);
+    // FOOT (PEDAL) HI-HAT on 2 & 4
+    pushNote(base + 1, DRUM_PITCHES.hihat_pedal, 60 + rand() * 18, 0.06);
+    pushNote(base + 3, DRUM_PITCHES.hihat_pedal, 62 + rand() * 18, 0.06);
 
     // SNARE ghosts/accents
     for (const s of bar.snare) {
@@ -545,19 +545,34 @@ export function generateDrums(
       });
     }
 
-    // CYMBAL
+    // CYMBAL (hi-hat groove). Closed by default; open hat on the "and" of 4
+    // (step 14) for accent / push, and randomly on offbeats at high complexity.
     for (let s = 0; s < 16; s++) {
       const v = cymbalCell.steps[s];
       if (!v) continue;
       if (s >= 16 - fillBeats * 4) continue;
+      // Strong accent on the "and of 4" — use open hi-hat to push into next bar.
       if (s === 14 && complexity > 0.5 && chance(0.25)) {
-        pushNote(measureBase + s / 4, DRUM_PITCHES.hihat, 95 * (0.7 + intensity * 0.35), 0.45);
+        pushNote(measureBase + s / 4, DRUM_PITCHES.hihat_open, 95 * (0.7 + intensity * 0.35), 0.45);
         continue;
       }
       if (complexity > 0.7 && s % 2 === 1 && chance(0.3)) continue;
-      const pitch = useRide && intensity > 0.75 ? DRUM_PITCHES.ride : DRUM_PITCHES.hihat;
+      // Pick articulation: ride at high intensity, otherwise closed hat,
+      // with occasional open hats on the "&" (odd steps) for groove.
+      const isOffbeat = s % 2 === 1;
+      let pitch: number;
+      if (useRide && intensity > 0.75) {
+        pitch = DRUM_PITCHES.ride;
+      } else if (isOffbeat && complexity > 0.55 && chance(0.18)) {
+        pitch = DRUM_PITCHES.hihat_open;
+      } else {
+        pitch = DRUM_PITCHES.hihat_closed;
+      }
       const vel = v * (0.6 + intensity * 0.5);
-      pushNote(measureBase + s / 4 + swingOffset(s, genre, swing), pitch, vel, pitch === DRUM_PITCHES.hihat ? 0.08 : 0.2);
+      const dur = pitch === DRUM_PITCHES.hihat_closed ? 0.08
+                : pitch === DRUM_PITCHES.hihat_open ? 0.35
+                : 0.2;
+      pushNote(measureBase + s / 4 + swingOffset(s, genre, swing), pitch, vel, dur);
     }
 
     // CRASH on bar 1 of new phrase
