@@ -319,7 +319,18 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
               <div
                 key={s.id}
                 className={`group flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted/50 ${isActive ? 'bg-muted/70' : ''}`}
-                onClick={() => { lib.selectSample(slot, s.id); previewSample(s); }}
+                onClick={() => {
+                  // Hi-hat slots are grouped: choosing any hi-hat sample
+                  // from a kit reassigns all 3 hi-hat slots to that kit.
+                  const isHihat = slot === 'drums:hihat_closed' || slot === 'drums:hihat_pedal' || slot === 'drums:hihat_open';
+                  const kit = isHihat ? lib.kitForSampleId(s.id) : null;
+                  if (isHihat && kit) {
+                    lib.selectHihatGroup(kit);
+                  } else {
+                    lib.selectSample(slot, s.id);
+                  }
+                  previewSample(s);
+                }}
               >
                 <span
                   className="w-2.5 h-2.5 rounded-sm shrink-0"
@@ -419,7 +430,12 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                     key={part}
                     onClick={() => {
                       setSelection({ instrument: 'drums', part });
-                      lib.selectSample(slotKey, entryToUse.id);
+                      const isHihat = part === 'hihat_closed' || part === 'hihat_pedal' || part === 'hihat_open';
+                      if (isHihat) {
+                        lib.selectHihatGroup(viewKit);
+                      } else {
+                        lib.selectSample(slotKey, entryToUse.id);
+                      }
                       previewSample(entryToUse);
                     }}
                     onDragOver={(e) => { e.preventDefault(); setDragOver(slotKey); }}
@@ -515,10 +531,17 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
               <ellipse cx="78" cy="190" rx="6" ry="2.5" fill={HARDWARE_DARK} />
               <rect x="76" y="178" width="4" height="12" fill={HARDWARE_DARK} />
             </g>
-            {/* Pedal hat — foot pedal at bottom of stand */}
+            {/* Pedal hat — foot pedal at the bottom of the hi-hat stand.
+                Plays the dedicated pedal sample. */}
             <g {...partProps('hihat_pedal')}>
-              <rect x="35" y="378" width="55" height="14" rx="2" fill={partFill('hihat_pedal') === CYMBAL_FILL ? HARDWARE_DARK : partFill('hihat_pedal')} stroke={partStroke('hihat_pedal')} strokeWidth={partStrokeWidth('hihat_pedal')} />
-              <circle cx="40" cy="385" r="3" fill={HARDWARE} />
+              {/* base plate */}
+              <rect x="30" y="388" width="65" height="8" rx="1.5" fill={HARDWARE_DARK} stroke={partStroke('hihat_pedal')} strokeWidth={partStrokeWidth('hihat_pedal')} />
+              {/* angled foot board */}
+              <polygon points="42,388 92,388 88,372 50,372" fill={partFill('hihat_pedal') === CYMBAL_FILL ? HARDWARE_DARK : partFill('hihat_pedal')} stroke={partStroke('hihat_pedal')} strokeWidth={partStrokeWidth('hihat_pedal')} />
+              {/* heel hinge */}
+              <circle cx="42" cy="388" r="3" fill={HARDWARE} />
+              {/* pull-rod connecting pedal to cymbal stack */}
+              <line x1="78" y1="370" x2="78" y2="220" stroke={HARDWARE} strokeWidth="2" strokeDasharray="2 3" opacity="0.7" />
             </g>
 
             {/* ============ RACK TOM (above kick, slightly left) ====== */}

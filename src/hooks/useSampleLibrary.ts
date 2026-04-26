@@ -151,6 +151,33 @@ export function useSampleLibrary() {
     });
   }, []);
 
+  /** Determine which kit a given sample id belongs to (built-in or user-tagged). */
+  const kitForSampleId = useCallback((id: string): DrumKitGenre | null => {
+    if (id.startsWith('kit:')) {
+      const k = getBuiltInKitSample(id);
+      return k ? k.kit : null;
+    }
+    const u = samples.find(s => s.id === id);
+    return u?.kit ?? null;
+  }, [samples]);
+
+  /** Select hi-hat samples for ALL 3 hi-hat slots (closed/pedal/open) from
+   *  the given kit. Prefer user samples tagged to that kit; fall back to
+   *  the built-in kit piece. Used when the user picks any hi-hat sample
+   *  from a different kit — the whole hi-hat group follows. */
+  const selectHihatGroup = useCallback((kit: DrumKitGenre) => {
+    setActive(prev => {
+      const next = { ...prev };
+      (['hihat_closed', 'hihat_pedal', 'hihat_open'] as DrumPart[]).forEach(part => {
+        const slot = `drums:${part}` as const;
+        const tagged = samples.find(s => s.slot === slot && s.kit === kit);
+        next[slot] = tagged ? tagged.id : `kit:${kit.toLowerCase()}:${part}`;
+      });
+      writeActive(next);
+      return next;
+    });
+  }, [samples]);
+
   /**
    * Samples available for a given slot. For drum slots: returns ALL built-in
    * kit samples for that part (across every kit) PLUS any user uploads. For
@@ -242,6 +269,8 @@ export function useSampleLibrary() {
     addSample,
     removeSample,
     selectSample,
+    selectHihatGroup,
+    kitForSampleId,
     samplesForSlot,
     resolveSlot,
     activeEntryFor,
