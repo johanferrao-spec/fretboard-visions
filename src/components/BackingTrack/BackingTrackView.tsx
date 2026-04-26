@@ -132,7 +132,7 @@ export default function BackingTrackView({
       <div className="flex items-center gap-2 px-3 py-1 border-b border-border bg-card shrink-0">
         <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Backing Track</span>
         <button
-          onClick={() => bt.regenerateAll(chords, measures, genre, true)}
+          onClick={() => bt.regenerateAll(chords, measures, genre, true, groove)}
           className="px-2 py-0.5 rounded-md text-[9px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-muted transition-colors flex items-center gap-1"
           title="Regenerate all tracks"
         >
@@ -157,7 +157,7 @@ export default function BackingTrackView({
             genre={genre}
             chords={chords}
             onParamChange={(k, v) => bt.setTrackParam(id, k, v)}
-            onRegenerate={() => bt.regenerateTrack(id, chords, measures, genre)}
+            onRegenerate={() => bt.regenerateTrack(id, chords, measures, genre, groove)}
             onAINotes={(notes) => bt.setTrackNotes(id, notes, chords)}
             onUpdateClip={(clipId, patch) => bt.updateClip(id, clipId, patch)}
             onDeleteClip={(clipId) => bt.deleteClip(id, clipId)}

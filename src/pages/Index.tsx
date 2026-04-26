@@ -729,6 +729,8 @@ const Index = () => {
             setBpm={timeline.setBpm}
             genre={timeline.genre}
             setGenre={timeline.setGenre}
+            groove={timeline.groove}
+            setGroove={timeline.setGroove}
             snap={timeline.snap}
             setSnap={timeline.setSnap}
             isPlaying={timeline.isPlaying}
@@ -775,6 +777,7 @@ const Index = () => {
               measures={timeline.measures}
               bpm={timeline.bpm}
               genre={timeline.genre}
+              groove={timeline.groove}
               volume={volume}
               isPlaying={timeline.isPlaying}
               currentBeat={timeline.currentBeat}
