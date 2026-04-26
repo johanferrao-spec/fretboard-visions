@@ -661,6 +661,9 @@ export default function SongTimeline({
               getChordColor={getChordColor}
               onAddBars={() => setMeasures(Math.min(32, measures + 4))}
               onSeek={(beat) => { if (isPlaying) onStop(); onSeek?.(beat); }}
+              onAddChord={onAddChord}
+              onRemoveChord={onRemoveChord}
+              diatonicChords={diatonicChords}
             />
           ) : (
           <div
