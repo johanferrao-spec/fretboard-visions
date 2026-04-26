@@ -112,6 +112,8 @@ export function useBackingTrack() {
       initPromiseRef.current = (async () => {
         await startToneAudio();
         ensureInstruments();
+        // Wait for sample buffers (jazz kit) to finish loading before first play.
+        try { await Tone.loaded(); } catch {}
         // Only mark as initialized AFTER Tone.start() resolves successfully,
         // so a failed init can be retried on the next user gesture.
         isInitRef.current = true;
