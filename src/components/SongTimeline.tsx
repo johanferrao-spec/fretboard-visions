@@ -462,6 +462,9 @@ export default function SongTimeline({
             <span>Backing</span>
           </button>
         )}
+
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] font-mono text-muted-foreground uppercase">Snap</span>
           {(['1/4', '1/8', '1/16'] as SnapValue[]).map(s => (
             <button
               key={s}
