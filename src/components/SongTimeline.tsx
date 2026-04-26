@@ -434,6 +434,7 @@ export default function SongTimeline({
             <option value="Pop">Pop</option>
             <option value="Jazz">Jazz</option>
             <option value="Funk">Funk</option>
+            <option value="Latin">Latin</option>
           </select>
         </div>
 

@@ -25,12 +25,8 @@ const Index = () => {
   const midi = useMidiEngine();
   const sampleLib = useSampleLibrary();
   const resolveUserSample = useCallback(
-    (slot: string) => {
-      const id = sampleLib.active[slot];
-      if (!id) return null;
-      return sampleLib.samples.find(s => s.id === id) || null;
-    },
-    [sampleLib.active, sampleLib.samples],
+    (slot: string) => sampleLib.resolveSlot(slot),
+    [sampleLib.resolveSlot],
   );
   const [showCustomTuning, setShowCustomTuning] = useState(false);
   const [customTuningName, setCustomTuningName] = useState('');
@@ -72,7 +68,7 @@ const Index = () => {
     remove: (id: string) => void;
     saved: { id: string; name: string }[];
     regenerateAll: () => void;
-    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre, resolveUserSample?: (slot: string) => import('@/lib/sampleStorage').StoredSample | null) => Promise<{ startAudioTime: number; startPerfTime: number }>;
+    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre, resolveUserSample?: import('@/hooks/engine/scheduler').UserSampleResolver) => Promise<{ startAudioTime: number; startPerfTime: number }>;
     stop: () => void;
     prewarm: () => Promise<void>;
   } | null>(null);

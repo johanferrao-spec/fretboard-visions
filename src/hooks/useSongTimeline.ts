@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import type { NoteName } from '@/lib/music';
 
 export type SnapValue = '1/4' | '1/8' | '1/16';
-export type Genre = 'Jazz' | 'Rock' | 'Pop' | 'Funk';
+export type Genre = 'Jazz' | 'Rock' | 'Pop' | 'Funk' | 'Latin';
 /** Groove preset id (1-based). Currently only Funk has a real groove template. */
 export type GrooveId = 1;
 

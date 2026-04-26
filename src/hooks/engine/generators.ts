@@ -86,6 +86,11 @@ const KICK_CELLS: Record<Genre, DrumCell[]> = {
     { steps: bar([0, 6, 8, 14]),                      weight: 1.0, busyness: 0.4 },
     { steps: bar([0, 3, 8, 11, 14]),                  weight: 0.8, busyness: 0.7 },
   ],
+  Latin: [
+    // Tumbao-style: anticipated kick on the "and of 2" + downbeat 3
+    { steps: bar([0, 6, 8]),                          weight: 1.0, busyness: 0.3 },
+    { steps: bar([0, 6, 8, 14]),                      weight: 0.7, busyness: 0.6 },
+  ],
 };
 
 // ─── SNARE CELLS — main backbeat patterns ──────────────────────────
@@ -111,6 +116,11 @@ const SNARE_CELLS: Record<Genre, DrumCell[]> = {
     { steps: bar([4, 12]),                            weight: 1.0, busyness: 0.3 },
     { steps: bar([4, 10, 12, 14]),                    weight: 0.6, busyness: 0.7 },
   ],
+  Latin: [
+    // Cross-stick / rim feel on 3, light ghosts
+    { steps: bar([8]),                                weight: 1.0, busyness: 0.0 },
+    { steps: bar([4, 12]),                            weight: 0.5, busyness: 0.6 },
+  ],
 };
 
 // ─── HI-HAT CELLS ──────────────────────────────────────────────────
@@ -134,6 +144,11 @@ const HAT_CELLS: Record<Genre, DrumCell[]> = {
   Funk: [
     { steps: stepsAll(78, 55),                        weight: 1.0, busyness: 0.5 },
     { steps: barVel([0, 2, 4, 6, 8, 10, 12, 14], [80, 55, 80, 55, 80, 55, 80, 55]), weight: 0.7, busyness: 0.2 },
+  ],
+  Latin: [
+    // Steady 8ths, lightly accented like cascara
+    { steps: barVel([0, 2, 4, 6, 8, 10, 12, 14], [85, 55, 70, 55, 85, 55, 70, 55]), weight: 1.0, busyness: 0.3 },
+    { steps: stepsAll(72, 50),                        weight: 0.6, busyness: 0.7 },
   ],
 };
 

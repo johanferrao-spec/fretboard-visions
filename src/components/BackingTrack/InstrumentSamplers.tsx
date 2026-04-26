@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trash2, Music, Upload } from 'lucide-react';
-import type { DrumPart, SamplerInstrument } from '@/lib/backingTrackTypes';
-import { useSampleLibrary, PART_COLORS, type SlotKey } from '@/hooks/useSampleLibrary';
-import type { StoredSample } from '@/lib/sampleStorage';
+import type { DrumPart } from '@/lib/backingTrackTypes';
+import { useSampleLibrary, type SlotKey, type SampleListEntry } from '@/hooks/useSampleLibrary';
+import { KIT_COLORS, KIT_PARTS, type DrumKitGenre } from '@/lib/builtInKits';
 
 interface Props {
   /** Master volume so the preview button matches playback level. */
@@ -19,6 +19,56 @@ function selectionToSlot(sel: Selection): SlotKey {
   return sel.instrument;
 }
 
+const PART_LABEL: Record<DrumPart, string> = {
+  kick: 'Kick',
+  snare: 'Snare',
+  hihat: 'Hi-Hat',
+  ride: 'Ride',
+  tom1: 'Tom 1',
+  tom2: 'Tom 2',
+  crash: 'Crash',
+};
+
+/** Tiny inline icon glyphs for each drum part — drawn as simple SVGs. */
+function PartIcon({ part, color, size = 18 }: { part: DrumPart; color: string; size?: number }) {
+  const s = size;
+  const fill = `hsl(${color})`;
+  const stroke = 'hsl(var(--border))';
+  if (part === 'kick') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="8" fill={fill} stroke={stroke} strokeWidth="1" />
+        <circle cx="10" cy="10" r="2.5" fill="hsl(220 10% 12%)" />
+      </svg>
+    );
+  }
+  if (part === 'snare') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="7" fill={fill} stroke={stroke} strokeWidth="1" />
+        <line x1="3" y1="10" x2="17" y2="10" stroke="hsl(220 10% 25%)" strokeWidth="0.8" />
+      </svg>
+    );
+  }
+  if (part === 'hihat' || part === 'ride' || part === 'crash') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="8" fill={fill} stroke={stroke} strokeWidth="1" />
+        <circle cx="10" cy="10" r="5" fill="none" stroke="hsl(220 10% 25%)" strokeWidth="0.6" />
+        <circle cx="10" cy="10" r="3" fill="none" stroke="hsl(220 10% 25%)" strokeWidth="0.6" />
+        <circle cx="10" cy="10" r="1.2" fill="hsl(220 10% 12%)" />
+      </svg>
+    );
+  }
+  // toms
+  return (
+    <svg width={s} height={s} viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="7" fill={fill} stroke={stroke} strokeWidth="1" />
+      <circle cx="10" cy="10" r="4" fill="none" stroke="hsl(220 10% 25%)" strokeWidth="0.6" />
+    </svg>
+  );
+}
+
 export default function InstrumentSamplers({ volume }: Props) {
   const lib = useSampleLibrary();
   const [selection, setSelection] = useState<Selection>({ instrument: 'drums', part: 'snare' });
@@ -28,20 +78,20 @@ export default function InstrumentSamplers({ volume }: Props) {
 
   const slot = selectionToSlot(selection);
   const slotSamples = lib.samplesForSlot(slot);
-  const activeSample = lib.activeSampleFor(slot);
+  const activeEntry = lib.activeEntryFor(slot);
 
-  // Build a map of slot -> active color so we can tint the SVG parts.
+  // Map each drum part -> its currently active kit color for tinting the SVG.
   const partTints = useMemo(() => {
     const tints: Partial<Record<DrumPart, string>> = {};
-    (['kick','snare','hihat','ride','tom1','tom2','crash'] as DrumPart[]).forEach(part => {
-      const a = lib.activeSampleFor(`drums:${part}` as SlotKey);
+    KIT_PARTS.forEach(part => {
+      const a = lib.activeEntryFor(`drums:${part}` as SlotKey);
       if (a) tints[part] = a.color;
     });
     return tints;
   }, [lib]);
 
-  const bassActive = lib.activeSampleFor('bass');
-  const keysActive = lib.activeSampleFor('keys');
+  const bassActive = lib.activeEntryFor('bass');
+  const keysActive = lib.activeEntryFor('keys');
 
   const handleDrop = async (e: React.DragEvent, dropSlot: SlotKey) => {
     e.preventDefault();
@@ -51,7 +101,6 @@ export default function InstrumentSamplers({ volume }: Props) {
     if (!file) return;
     if (!/^audio\//.test(file.type) && !/\.(wav|mp3|ogg|m4a|aiff?)$/i.test(file.name)) return;
     await lib.addSample(dropSlot, file);
-    // Switch the right-panel selection to where the sample landed.
     if (dropSlot.startsWith('drums:')) {
       const part = dropSlot.split(':')[1] as DrumPart;
       setSelection({ instrument: 'drums', part });
@@ -67,12 +116,13 @@ export default function InstrumentSamplers({ volume }: Props) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const previewSample = (s: StoredSample) => {
+  const previewSample = (entry: SampleListEntry) => {
+    if (entry.kind !== 'user' || !entry.userSample) return; // built-ins don't have a previewable blob
     if (previewRef.current) {
       previewRef.current.pause();
       previewRef.current.src = '';
     }
-    const url = URL.createObjectURL(s.blob);
+    const url = URL.createObjectURL(entry.userSample.blob);
     const a = new Audio(url);
     a.volume = Math.max(0, Math.min(1, volume));
     a.play().catch(() => {});
@@ -87,7 +137,23 @@ export default function InstrumentSamplers({ volume }: Props) {
     }
   }, []);
 
-  // Helpers for rendering a clickable + droppable kit part on the SVG.
+  // ── Drum SVG helpers (top-down view) ──────────────────────────────
+  const STROKE_DEFAULT = 'hsl(220 10% 50%)';
+  const DEFAULT_FILL = 'hsl(220 12% 28%)';
+  const partFill = (part: DrumPart) => {
+    const tint = partTints[part];
+    return tint ? `hsl(${tint})` : DEFAULT_FILL;
+  };
+  const isPartSelected = (part: DrumPart) =>
+    selection.instrument === 'drums' && selection.part === part;
+  const isPartDragOver = (part: DrumPart) => dragOver === `drums:${part}`;
+  const partStroke = (part: DrumPart) =>
+    isPartSelected(part) ? 'hsl(var(--primary))' :
+    isPartDragOver(part) ? 'hsl(var(--beginner-yellow))' :
+    STROKE_DEFAULT;
+  const partStrokeWidth = (part: DrumPart) =>
+    isPartSelected(part) || isPartDragOver(part) ? 2.5 : 1;
+
   const partProps = (part: DrumPart) => ({
     onClick: () => setSelection({ instrument: 'drums', part }),
     onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOver(`drums:${part}` as SlotKey); },
@@ -96,58 +162,48 @@ export default function InstrumentSamplers({ volume }: Props) {
     style: { cursor: 'pointer' as const },
   });
 
-  const isPartSelected = (part: DrumPart) =>
-    selection.instrument === 'drums' && selection.part === part;
-  const isPartDragOver = (part: DrumPart) => dragOver === `drums:${part}`;
-
-  // Default fallback fill for kit parts (when no active sample).
-  const DEFAULT_FILL = 'hsl(220 12% 28%)';
-  const STROKE_DEFAULT = 'hsl(220 10% 50%)';
-  const partFill = (part: DrumPart) => {
-    const tint = partTints[part];
-    if (tint) return `hsl(${tint})`;
-    return DEFAULT_FILL;
-  };
-  const partStroke = (part: DrumPart) =>
-    isPartSelected(part) ? 'hsl(var(--primary))' :
-    isPartDragOver(part) ? 'hsl(var(--beginner-yellow))' :
-    STROKE_DEFAULT;
-  const partStrokeWidth = (part: DrumPart) =>
-    isPartSelected(part) || isPartDragOver(part) ? 2.5 : 1;
-
   return (
     <div className="flex h-full bg-card border-t border-border overflow-hidden">
-      {/* LEFT: sample list + parameters for current selection */}
-      <div className="w-64 shrink-0 border-r border-border flex flex-col">
+      {/* LEFT COLUMN: drum-part icons + sample list */}
+      <div className="w-72 shrink-0 border-r border-border flex flex-col">
         <div className="px-3 py-2 border-b border-border">
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
-            {selection.instrument === 'drums' ? `Drums · ${selection.part}` : selection.instrument === 'bass' ? 'Bass sampler' : 'Keys sampler'}
+            {selection.instrument === 'drums' ? `Drums · ${PART_LABEL[selection.part]}` : selection.instrument === 'bass' ? 'Bass sampler' : 'Keys sampler'}
           </div>
           <div className="text-[10px] font-mono text-foreground mt-0.5 truncate">
-            {activeSample ? activeSample.name : 'No sample selected'}
+            {activeEntry ? activeEntry.name : 'No sample selected'}
           </div>
         </div>
 
-        {/* Parameters (placeholders for now — gain/tune-style controls common to all samplers) */}
-        <div className="px-3 py-2 border-b border-border space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] font-mono uppercase text-muted-foreground w-12">Gain</span>
-            <input type="range" min={0} max={100} defaultValue={80} className="flex-1 accent-primary" />
+        {/* Drum-part icon picker (only when drums selected) */}
+        {selection.instrument === 'drums' && (
+          <div className="px-2 py-2 border-b border-border grid grid-cols-4 gap-1">
+            {KIT_PARTS.map(part => {
+              const tint = partTints[part];
+              const sel = isPartSelected(part);
+              return (
+                <button
+                  key={part}
+                  onClick={() => setSelection({ instrument: 'drums', part })}
+                  className={`flex flex-col items-center gap-0.5 py-1.5 rounded border transition-colors ${
+                    sel ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/40'
+                  }`}
+                  title={PART_LABEL[part]}
+                >
+                  <PartIcon part={part} color={tint || '220 10% 40%'} />
+                  <span className="text-[8px] font-mono uppercase text-muted-foreground">{PART_LABEL[part]}</span>
+                </button>
+              );
+            })}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] font-mono uppercase text-muted-foreground w-12">Tune</span>
-            <input type="range" min={-12} max={12} defaultValue={0} className="flex-1 accent-primary" />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] font-mono uppercase text-muted-foreground w-12">Decay</span>
-            <input type="range" min={0} max={100} defaultValue={70} className="flex-1 accent-primary" />
-          </div>
-        </div>
+        )}
 
         {/* Sample list for the active slot */}
         <div className="flex-1 overflow-y-auto">
           <div className="px-3 py-2 flex items-center justify-between">
-            <span className="text-[9px] font-mono uppercase text-muted-foreground">Samples</span>
+            <span className="text-[9px] font-mono uppercase text-muted-foreground">
+              {selection.instrument === 'drums' ? 'Samples (all kits)' : 'Samples'}
+            </span>
             <button
               onClick={handleUploadClick}
               className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-muted flex items-center gap-1"
@@ -169,7 +225,7 @@ export default function InstrumentSamplers({ volume }: Props) {
             </div>
           )}
           {slotSamples.map(s => {
-            const isActive = activeSample?.id === s.id;
+            const isActive = activeEntry?.id === s.id;
             return (
               <div
                 key={s.id}
@@ -180,73 +236,138 @@ export default function InstrumentSamplers({ volume }: Props) {
                   className="w-2.5 h-2.5 rounded-sm shrink-0"
                   style={{ backgroundColor: `hsl(${s.color})` }}
                 />
-                <span className="text-[10px] font-mono text-foreground truncate flex-1">{s.name}</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); previewSample(s); }}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-                  title="Preview"
-                >
-                  <Music size={11} />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); lib.removeSample(s.id); }}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                  title="Delete"
-                >
-                  <Trash2 size={11} />
-                </button>
+                <span className="text-[10px] font-mono text-foreground truncate flex-1">
+                  {s.kind === 'builtin' ? <span className="opacity-70">{s.kit}</span> : s.name}
+                  {s.kind === 'builtin' && <span className="ml-1">{s.part}</span>}
+                </span>
+                {s.kind === 'user' && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); previewSample(s); }}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+                      title="Preview"
+                    >
+                      <Music size={11} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); lib.removeSample(s.id); }}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      title="Delete"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </>
+                )}
               </div>
             );
           })}
         </div>
+
+        {/* Quick "apply whole kit" buttons */}
+        {selection.instrument === 'drums' && (
+          <div className="px-2 py-2 border-t border-border">
+            <div className="text-[9px] font-mono uppercase text-muted-foreground mb-1">Apply kit</div>
+            <div className="grid grid-cols-4 gap-1">
+              {(Object.keys(KIT_COLORS) as DrumKitGenre[]).map(kit => (
+                <button
+                  key={kit}
+                  onClick={() => lib.applyKitForAllParts(kit)}
+                  className="text-[9px] font-mono uppercase rounded py-1 border border-border hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: `hsl(${KIT_COLORS[kit]} / 0.3)`, color: 'hsl(var(--foreground))' }}
+                  title={`Set every drum to the ${kit} kit`}
+                >
+                  {kit}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* RIGHT: vector art for all three instruments */}
+      {/* CENTER + RIGHT: vector art for all three instruments */}
       <div className="flex-1 flex items-stretch justify-around gap-3 p-3 overflow-x-auto">
-        {/* DRUM KIT */}
-        <div className="flex flex-col items-center min-w-[280px]">
-          <svg viewBox="0 0 280 180" className="w-full h-full max-h-[180px]">
-            {/* Crash (left top) */}
+        {/* DRUM KIT — top-down view */}
+        <div className="flex flex-col items-center min-w-[320px] flex-1">
+          <svg viewBox="0 0 320 220" className="w-full h-full max-h-[200px]">
+            {/* Crash (top-left, large cymbal) */}
             <g {...partProps('crash')}>
-              <ellipse cx="40" cy="40" rx="28" ry="6" fill={partFill('crash')} stroke={partStroke('crash')} strokeWidth={partStrokeWidth('crash')} />
-              <line x1="40" y1="40" x2="40" y2="115" stroke={STROKE_DEFAULT} strokeWidth={1.2} />
+              <circle cx="60" cy="55" r="38" fill={partFill('crash')} stroke={partStroke('crash')} strokeWidth={partStrokeWidth('crash')} />
+              <circle cx="60" cy="55" r="28" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
+              <circle cx="60" cy="55" r="20" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
+              <circle cx="60" cy="55" r="12" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
+              <circle cx="60" cy="55" r="2" fill="hsl(220 10% 12%)" />
             </g>
-            {/* Hi-hat (right top) */}
-            <g {...partProps('hihat')}>
-              <ellipse cx="240" cy="50" rx="22" ry="5" fill={partFill('hihat')} stroke={partStroke('hihat')} strokeWidth={partStrokeWidth('hihat')} />
-              <ellipse cx="240" cy="56" rx="22" ry="5" fill={partFill('hihat')} stroke={partStroke('hihat')} strokeWidth={partStrokeWidth('hihat')} opacity={0.7} />
-              <line x1="240" y1="56" x2="240" y2="125" stroke={STROKE_DEFAULT} strokeWidth={1.2} />
-            </g>
-            {/* Ride (right back) */}
+
+            {/* Ride (top-right, large cymbal) */}
             <g {...partProps('ride')}>
-              <ellipse cx="210" cy="35" rx="32" ry="7" fill={partFill('ride')} stroke={partStroke('ride')} strokeWidth={partStrokeWidth('ride')} />
-              <line x1="210" y1="35" x2="210" y2="100" stroke={STROKE_DEFAULT} strokeWidth={1.2} />
+              <circle cx="260" cy="55" r="42" fill={partFill('ride')} stroke={partStroke('ride')} strokeWidth={partStrokeWidth('ride')} />
+              <circle cx="260" cy="55" r="32" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
+              <circle cx="260" cy="55" r="22" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
+              <circle cx="260" cy="55" r="12" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
+              <circle cx="260" cy="55" r="2" fill="hsl(220 10% 12%)" />
             </g>
-            {/* Tom 1 */}
+
+            {/* Hi-hat (far left, smaller stacked cymbals) */}
+            <g {...partProps('hihat')}>
+              <circle cx="30" cy="155" r="22" fill={partFill('hihat')} stroke={partStroke('hihat')} strokeWidth={partStrokeWidth('hihat')} />
+              <circle cx="30" cy="155" r="15" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.6" />
+              <circle cx="30" cy="155" r="8" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.6" />
+              <circle cx="30" cy="155" r="1.5" fill="hsl(220 10% 12%)" />
+            </g>
+
+            {/* Tom 1 (centre-back-left) */}
             <g {...partProps('tom1')}>
-              <ellipse cx="105" cy="75" rx="22" ry="6" fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
-              <path d={`M 83 75 L 87 110 L 123 110 L 127 75 Z`} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} opacity={0.8} />
+              <circle cx="125" cy="100" r="26" fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
+              <circle cx="125" cy="100" r="20" fill="none" stroke="hsl(220 10% 25% / 0.4)" strokeWidth="0.6" />
+              {/* lugs */}
+              {[0,1,2,3,4,5].map(i => {
+                const ang = (i * Math.PI) / 3;
+                const x = 125 + Math.cos(ang) * 26;
+                const y = 100 + Math.sin(ang) * 26;
+                return <rect key={i} x={x-2} y={y-1.5} width="4" height="3" fill="hsl(220 10% 30%)" />;
+              })}
             </g>
-            {/* Tom 2 */}
+
+            {/* Tom 2 (centre-back-right) */}
             <g {...partProps('tom2')}>
-              <ellipse cx="160" cy="78" rx="24" ry="6" fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
-              <path d={`M 136 78 L 140 115 L 180 115 L 184 78 Z`} fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} opacity={0.8} />
+              <circle cx="195" cy="100" r="28" fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
+              <circle cx="195" cy="100" r="22" fill="none" stroke="hsl(220 10% 25% / 0.4)" strokeWidth="0.6" />
+              {[0,1,2,3,4,5].map(i => {
+                const ang = (i * Math.PI) / 3;
+                const x = 195 + Math.cos(ang) * 28;
+                const y = 100 + Math.sin(ang) * 28;
+                return <rect key={i} x={x-2} y={y-1.5} width="4" height="3" fill="hsl(220 10% 30%)" />;
+              })}
             </g>
-            {/* Snare (front center-left) */}
+
+            {/* Snare (front-left) */}
             <g {...partProps('snare')}>
-              <ellipse cx="70" cy="120" rx="28" ry="7" fill={partFill('snare')} stroke={partStroke('snare')} strokeWidth={partStrokeWidth('snare')} />
-              <path d={`M 42 120 L 46 145 L 94 145 L 98 120 Z`} fill={partFill('snare')} stroke={partStroke('snare')} strokeWidth={partStrokeWidth('snare')} opacity={0.85} />
+              <circle cx="100" cy="170" r="32" fill={partFill('snare')} stroke={partStroke('snare')} strokeWidth={partStrokeWidth('snare')} />
+              <circle cx="100" cy="170" r="25" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.7" />
+              {/* snare wires across the centre */}
+              <line x1="72" y1="170" x2="128" y2="170" stroke="hsl(45 25% 75%)" strokeWidth="0.8" opacity="0.7" />
+              {[0,1,2,3,4,5,6,7].map(i => {
+                const ang = (i * Math.PI) / 4;
+                const x = 100 + Math.cos(ang) * 32;
+                const y = 170 + Math.sin(ang) * 32;
+                return <rect key={i} x={x-2} y={y-1.5} width="4" height="3" fill="hsl(220 10% 30%)" />;
+              })}
             </g>
-            {/* Kick drum (front-center, large) */}
+
+            {/* Kick (front-centre, largest circle — viewed from above as a wide drum) */}
             <g {...partProps('kick')}>
-              <ellipse cx="140" cy="135" rx="46" ry="11" fill={partFill('kick')} stroke={partStroke('kick')} strokeWidth={partStrokeWidth('kick')} />
-              <path d={`M 94 135 L 100 175 L 180 175 L 186 135 Z`} fill={partFill('kick')} stroke={partStroke('kick')} strokeWidth={partStrokeWidth('kick')} opacity={0.9} />
-              <circle cx="140" cy="155" r="6" fill="hsl(220 10% 15%)" stroke={STROKE_DEFAULT} strokeWidth={0.8} />
+              <circle cx="220" cy="170" r="44" fill={partFill('kick')} stroke={partStroke('kick')} strokeWidth={partStrokeWidth('kick')} />
+              <circle cx="220" cy="170" r="34" fill="none" stroke="hsl(220 10% 25% / 0.4)" strokeWidth="0.7" />
+              <circle cx="220" cy="170" r="6" fill="hsl(220 10% 12%)" />
+              {[0,1,2,3,4,5,6,7].map(i => {
+                const ang = (i * Math.PI) / 4;
+                const x = 220 + Math.cos(ang) * 44;
+                const y = 170 + Math.sin(ang) * 44;
+                return <rect key={i} x={x-2.5} y={y-2} width="5" height="4" fill="hsl(220 10% 30%)" />;
+              })}
             </g>
-            {/* Floor tom (right front) */}
-            <g {...partProps('ride')} style={{ display: 'none' }} />
           </svg>
-          <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">Drums</div>
+          <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">Drums (top view)</div>
         </div>
 
         {/* BASS */}
@@ -258,35 +379,27 @@ export default function InstrumentSamplers({ volume }: Props) {
           onDrop={(e) => handleDrop(e, 'bass')}
           style={{ cursor: 'pointer' }}
         >
-          <svg viewBox="0 0 100 180" className="h-full max-h-[180px]">
-            {/* Headstock */}
+          <svg viewBox="0 0 100 200" className="h-full max-h-[200px]">
             <path d="M 38 5 L 62 5 L 60 28 L 40 28 Z"
                   fill={bassActive ? `hsl(${bassActive.color})` : 'hsl(30 35% 25%)'}
                   stroke={selection.instrument === 'bass' ? 'hsl(var(--primary))' : STROKE_DEFAULT}
                   strokeWidth={selection.instrument === 'bass' ? 2.5 : 1} />
-            {/* Tuning pegs */}
             {[0,1,2,3].map(i => (
               <circle key={i} cx={i % 2 === 0 ? 36 : 64} cy={10 + Math.floor(i/2)*8} r={1.8} fill={STROKE_DEFAULT} />
             ))}
-            {/* Neck */}
             <rect x="44" y="28" width="12" height="80"
                   fill={bassActive ? `hsl(${bassActive.color} / 0.7)` : 'hsl(30 30% 20%)'}
                   stroke={STROKE_DEFAULT} strokeWidth={1} />
-            {/* Frets */}
             {Array.from({length: 8}).map((_, i) => (
               <line key={i} x1="44" y1={36 + i*9} x2="56" y2={36 + i*9} stroke="hsl(45 30% 70%)" strokeWidth={0.5} />
             ))}
-            {/* Body */}
             <path d="M 22 105 Q 8 130 22 165 Q 50 178 78 165 Q 92 130 78 105 Q 65 100 50 102 Q 35 100 22 105 Z"
                   fill={bassActive ? `hsl(${bassActive.color})` : 'hsl(30 40% 30%)'}
                   stroke={selection.instrument === 'bass' ? 'hsl(var(--primary))' : STROKE_DEFAULT}
                   strokeWidth={selection.instrument === 'bass' ? 2.5 : 1} />
-            {/* Pickups */}
             <rect x="36" y="125" width="28" height="6" rx="1" fill="hsl(220 10% 15%)" />
             <rect x="36" y="142" width="28" height="6" rx="1" fill="hsl(220 10% 15%)" />
-            {/* Bridge */}
             <rect x="40" y="158" width="20" height="4" fill="hsl(45 25% 60%)" />
-            {/* Strings */}
             {[46, 48.5, 51, 53.5].map((x,i) => (
               <line key={i} x1={x} y1={28} x2={x} y2={160} stroke="hsl(45 50% 80%)" strokeWidth={0.6} />
             ))}
@@ -304,29 +417,18 @@ export default function InstrumentSamplers({ volume }: Props) {
           style={{ cursor: 'pointer' }}
         >
           <svg viewBox="0 0 240 180" className="w-full h-full max-h-[180px]">
-            {/* Casing */}
             <rect x="4" y="20" width="232" height="140" rx="6"
                   fill={keysActive ? `hsl(${keysActive.color})` : 'hsl(220 12% 18%)'}
                   stroke={selection.instrument === 'keys' ? 'hsl(var(--primary))' : STROKE_DEFAULT}
                   strokeWidth={selection.instrument === 'keys' ? 2.5 : 1} />
-            {/* Top control strip */}
             <rect x="14" y="28" width="212" height="22" rx="3" fill="hsl(220 10% 12%)" />
             {[0,1,2,3,4].map(i => (
               <circle key={i} cx={28 + i*22} cy={39} r={3.5} fill="hsl(45 35% 60%)" />
             ))}
             <rect x="150" y="32" width="68" height="14" rx="2" fill="hsl(160 60% 35%)" opacity={0.6} />
-            {/* White keys */}
             {Array.from({length: 14}).map((_, i) => (
               <rect key={`w-${i}`} x={14 + i*16} y={56} width={15} height={96} fill="hsl(45 30% 95%)" stroke="hsl(220 10% 30%)" strokeWidth={0.5} />
             ))}
-            {/* Black keys (skip pattern) */}
-            {[0,1,3,4,5,7,8,10,11,12].map((i, idx) => {
-              const positions = [10,11,13,14,15,17,18,20,21,22];
-              const w = 9;
-              const x = 14 + positions[idx]*16/1.4;
-              return null;
-            })}
-            {/* Black keys positioned by white-key index */}
             {[0,1,3,4,5,7,8,10,11,12].map(i => (
               <rect key={`b-${i}`} x={14 + i*16 + 11} y={56} width={9} height={58} fill="hsl(220 10% 10%)" stroke="hsl(220 10% 30%)" strokeWidth={0.4} />
             ))}
