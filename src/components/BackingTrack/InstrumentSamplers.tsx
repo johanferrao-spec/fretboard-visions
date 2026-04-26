@@ -431,9 +431,8 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                     {part === 'tom1' && (
                       <div className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground/70 px-1 pt-1 pb-0.5">Toms</div>
                     )}
-                  <div
-                    key={part}
-                    onClick={() => {
+                    <div
+                      onClick={() => {
                       setSelection({ instrument: 'drums', part });
                       const isHihat = part === 'hihat_closed' || part === 'hihat_pedal' || part === 'hihat_open';
                       if (isHihat) {
