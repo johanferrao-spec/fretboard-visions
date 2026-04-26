@@ -371,27 +371,33 @@ export function useBackingTrack() {
     try { disposeUserPlayers(); } catch {}
   }, []);
 
+  const addDrumFill = useCallback((startBar: number, lengthBars: number = 1) => {
+    setDrumFills(prev => [...prev, {
+      id: `fill-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+      startBar: Math.max(0, Math.floor(startBar)),
+      lengthBars: Math.max(1, Math.min(4, Math.floor(lengthBars))),
+    }]);
+  }, []);
+  const updateDrumFill = useCallback((id: string, patch: Partial<DrumFill>) => {
+    setDrumFills(prev => prev.map(f => {
+      if (f.id !== id) return f;
+      const next = { ...f, ...patch };
+      next.startBar = Math.max(0, Math.floor(next.startBar));
+      next.lengthBars = Math.max(1, Math.min(4, Math.floor(next.lengthBars)));
+      return next;
+    }));
+  }, []);
+  const removeDrumFill = useCallback((id: string) => {
+    setDrumFills(prev => prev.filter(f => f.id !== id));
+  }, []);
+
   return {
-    tracks,
-    setTrackParam,
-    setTrackClips,
-    setTrackNotes,
-    setClipNotes,
-    updateClip,
-    deleteClip,
-    duplicateClip,
-    regenerateTrack,
-    regenerateAll,
-    isPlaying,
-    currentBeat,
-    play,
-    stop,
-    prewarm,
-    setMasterVolume,
-    savedTracks,
-    save,
-    load,
-    remove,
-    reset,
+    tracks, setTrackParam, setTrackClips, setTrackNotes, setClipNotes,
+    updateClip, deleteClip, duplicateClip,
+    regenerateTrack, regenerateAll,
+    isPlaying, currentBeat,
+    play, stop, prewarm, setMasterVolume,
+    savedTracks, save, load, remove, reset,
+    drumFills, addDrumFill, updateDrumFill, removeDrumFill,
   };
 }
