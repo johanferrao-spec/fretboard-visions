@@ -8,6 +8,7 @@ import {
   KIT_CYMBAL_COLORS,
   KIT_PARTS,
   CYMBAL_PARTS,
+  colorForKitPart,
   type DrumKitGenre,
 } from '@/lib/builtInKits';
 import {
