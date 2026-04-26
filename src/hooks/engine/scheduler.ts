@@ -122,14 +122,19 @@ export function scheduleTrack(
 
       if (trackId === 'drums') {
         const part = pitchToDrumPart(n.pitch);
-        const resolution = part && resolveUserSample ? resolveUserSample(`drums:${part}`) : null;
+        // Floor tom (tom2) shares the rack-tom (tom1) sample, pitched down
+        // 2 semitones. Resolve against tom1 and apply a detune on playback.
+        const isFloorTom = part === 'tom2';
+        const resolveSlot = isFloorTom ? 'drums:tom1' : (part ? `drums:${part}` : null);
+        const resolution = resolveSlot && resolveUserSample ? resolveUserSample(resolveSlot) : null;
+        const tomPitchRate = isFloorTom ? Math.pow(2, -2 / 12) : 1;
 
         // 1) User-uploaded sample takes top priority.
         if (resolution?.kind === 'user') {
           const p = getUserPlayer(resolution.sample, inst.master);
           if (p && p.loaded) {
             try {
-              p.playbackRate = 1;
+              p.playbackRate = tomPitchRate;
               p.volume.value = Tone.gainToDb(Math.max(0.001, gain));
               p.start(t);
             } catch {}
@@ -140,6 +145,18 @@ export function scheduleTrack(
         // 2) Built-in kit selection — jazz samples or synth fallback.
         if (resolution?.kind === 'builtin') {
           if (resolution.sample.source === 'jazz-sample') {
+            // Floor tom: re-trigger the rack tom Tone.Player with a 2st detune.
+            if (isFloorTom) {
+              const pl = inst.jazzKit.kick; // jazz kit has no dedicated tom sample
+              if (pl?.loaded) {
+                try {
+                  pl.playbackRate = Math.pow(2, -2 / 12);
+                  pl.volume.value = Tone.gainToDb(Math.max(0.001, gain));
+                  pl.start(t);
+                } catch {}
+                return;
+              }
+            }
             const ok = playJazzKitSample(inst, n.pitch, t, gain);
             if (ok) return;
           }

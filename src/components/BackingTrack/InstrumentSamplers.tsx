@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trash2, Music, Upload } from 'lucide-react';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import type { Genre } from '@/hooks/useSongTimeline';
-import { useSampleLibrary, type SlotKey, type SampleListEntry } from '@/hooks/useSampleLibrary';
+import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
+import type { SlotKey, SampleListEntry } from '@/hooks/useSampleLibrary';
 import {
   KIT_COLORS,
   KIT_CYMBAL_COLORS,
@@ -43,7 +44,7 @@ const PART_LABEL: Record<DrumPart, string> = {
   hihat_pedal: 'Pedal Hat',
   hihat_open: 'Open Hat',
   ride: 'Ride',
-  tom1: 'Tom 1',
+  tom1: 'Rack Toms',
   tom2: 'Floor Tom',
   crash: 'Crash',
 };
@@ -400,7 +401,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
             </div>
             {/* Part rows */}
             <div className="px-2 py-2 space-y-1">
-              {KIT_PARTS.map(part => {
+              {KIT_PARTS.filter(p => p !== 'tom2').map(part => {
                 const slotKey = `drums:${part}` as SlotKey;
                 const userSampleForKit = lib.samples.find(s => s.slot === slotKey && s.kit === viewKit);
                 const builtInId = `kit:${viewKit.toLowerCase()}:${part}`;
@@ -624,10 +625,10 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
             {(() => {
               const cx = 400, cy = 240, w = 110, h = 110;
               return (
-                <g {...partProps('tom2')}>
-                  <rect x={cx - w/2} y={cy} width={w} height={h} fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
-                  <ellipse cx={cx} cy={cy} rx={w/2} ry={16} fill={SKIN_FILL} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
-                  <ellipse cx={cx} cy={cy + h} rx={w/2} ry={12} fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
+                <g {...partProps('tom1')}>
+                  <rect x={cx - w/2} y={cy} width={w} height={h} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
+                  <ellipse cx={cx} cy={cy} rx={w/2} ry={16} fill={SKIN_FILL} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
+                  <ellipse cx={cx} cy={cy + h} rx={w/2} ry={12} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
                   {[0,1,2,3,4,5].map(i => (
                     <rect key={i} x={cx - w/2 + 8 + i*((w-16)/5) - 1.5} y={cy + 6} width="3" height={h - 12} fill={SKIN_FILL} opacity={0.85} />
                   ))}

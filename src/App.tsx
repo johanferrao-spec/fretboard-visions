@@ -9,6 +9,7 @@ import Courses from "./pages/Courses.tsx";
 import CourseDetail from "./pages/CourseDetail.tsx";
 import CourseCreator from "./pages/CourseCreator.tsx";
 import CoursePlayer from "./pages/CoursePlayer.tsx";
+import { SampleLibraryProvider } from "@/hooks/SampleLibraryContext";
 
 const queryClient = new QueryClient();
 
@@ -17,9 +18,10 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
+      <SampleLibraryProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
           <Route path="/courses" element={<Courses />} />
           <Route path="/courses/:courseId" element={<CourseDetail />} />
           <Route path="/courses/:courseId/lessons/:tabId/edit" element={<CourseCreator />} />
@@ -27,7 +29,8 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
+        </BrowserRouter>
+      </SampleLibraryProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
