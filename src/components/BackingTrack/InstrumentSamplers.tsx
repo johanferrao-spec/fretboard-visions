@@ -202,12 +202,31 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     }
   }, []);
 
-  // ── Drum SVG helpers (top-down view) ──────────────────────────────
-  const STROKE_DEFAULT = 'hsl(220 10% 50%)';
-  const DEFAULT_FILL = 'hsl(220 12% 28%)';
+  // ── Drum SVG helpers (front-view illustration) ────────────────────
+  const STROKE_DEFAULT = 'hsl(220 10% 35%)';
+  const SKIN_FILL = 'hsl(220 8% 88%)';            // light grey drum heads
+  const HARDWARE = 'hsl(220 8% 65%)';              // chrome stands
+  const HARDWARE_DARK = 'hsl(220 10% 30%)';        // pedals & feet
+  const CYMBAL_FILL = 'hsl(42 78% 62%)';           // warm gold
+  const CYMBAL_STROKE = 'hsl(38 60% 40%)';
+
+  // Default shell colour per kit when no sample is assigned.
+  const KIT_SHELL: Record<DrumKitGenre, string> = {
+    Rock:  'hsl(0 70% 45%)',     // classic red
+    Funk:  'hsl(28 85% 50%)',    // burnt orange
+    Jazz:  'hsl(35 55% 32%)',    // vintage walnut
+    Latin: 'hsl(48 80% 50%)',    // amber yellow
+  };
+  const SHELL_FILL = KIT_SHELL[viewKit];
+  const DEFAULT_FILL = SHELL_FILL;
   const partFill = (part: DrumPart) => {
+    // Cymbals always render as gold; drums use kit shell colour (or sample tint).
+    if (part === 'crash' || part === 'ride' || part === 'hihat_closed' || part === 'hihat_open' || part === 'hihat_pedal') {
+      const tint = partTints[part];
+      return tint ? `hsl(${tint})` : CYMBAL_FILL;
+    }
     const tint = partTints[part];
-    return tint ? `hsl(${tint})` : DEFAULT_FILL;
+    return tint ? `hsl(${tint})` : SHELL_FILL;
   };
   const isPartSelected = (part: DrumPart) =>
     selection.instrument === 'drums' && selection.part === part;
