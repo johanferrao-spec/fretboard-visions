@@ -80,6 +80,10 @@ const KICK_CELLS: Record<Genre, DrumCell[]> = {
     { steps: bar([0, 6, 10]),                         weight: 0.6, busyness: 0.55 },
     { steps: bar([0, 7, 10, 13]),                     weight: 0.4, busyness: 0.85 },
   ],
+  Funk: [
+    { steps: bar([0, 6, 8, 14]),                      weight: 1.0, busyness: 0.4 },
+    { steps: bar([0, 3, 8, 11, 14]),                  weight: 0.8, busyness: 0.7 },
+  ],
 };
 
 // ─── SNARE CELLS — main backbeat patterns ──────────────────────────
@@ -101,6 +105,10 @@ const SNARE_CELLS: Record<Genre, DrumCell[]> = {
     { steps: bar([4, 14]),                            weight: 0.7, busyness: 0.4 },
     { steps: bar([6, 11, 14]),                        weight: 0.5, busyness: 0.7 },
   ],
+  Funk: [
+    { steps: bar([4, 12]),                            weight: 1.0, busyness: 0.3 },
+    { steps: bar([4, 10, 12, 14]),                    weight: 0.6, busyness: 0.7 },
+  ],
 };
 
 // ─── HI-HAT CELLS ──────────────────────────────────────────────────
@@ -120,6 +128,10 @@ const HAT_CELLS: Record<Genre, DrumCell[]> = {
     // Foot-hat on 2 & 4 only (jazz tradition; ride is the timekeeper)
     { steps: bar([2, 10]),                            weight: 1.0, busyness: 0.0 },
     { steps: bar([2, 10]),                            weight: 1.0, busyness: 0.4 },
+  ],
+  Funk: [
+    { steps: stepsAll(78, 55),                        weight: 1.0, busyness: 0.5 },
+    { steps: barVel([0, 2, 4, 6, 8, 10, 12, 14], [80, 55, 80, 55, 80, 55, 80, 55]), weight: 0.7, busyness: 0.2 },
   ],
 };
 
