@@ -427,6 +427,10 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                 const isDragOverThis = dragOver === slotKey;
                 const isSelected = selection.instrument === 'drums' && selection.part === part;
                 return (
+                  <div key={part}>
+                    {part === 'tom1' && (
+                      <div className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground/70 px-1 pt-1 pb-0.5">Toms</div>
+                    )}
                   <div
                     key={part}
                     onClick={() => {
