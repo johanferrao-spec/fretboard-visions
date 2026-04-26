@@ -125,8 +125,20 @@ export default function SongTimeline({
     const chord = chords.find(c => c.id === resizeChord);
     if (!chord) return;
     const onMove = (e: MouseEvent) => {
-      const beat = getBeatFromX(e.clientX);
-      const newDur = beat - chord.startBeat;
+      // Allow the trailing edge to reach the very end of the final bar.
+      // getBeatFromX clamps to totalBeats - snapGrid (so new regions can't be
+      // placed past the last grid cell), which would otherwise prevent a
+      // region from ever extending all the way to totalBeats.
+      const rect = gridRef.current?.getBoundingClientRect();
+      let endBeat: number;
+      if (rect) {
+        const raw = ((e.clientX - rect.left) / rect.width) * totalBeats;
+        const snapped = Math.round(raw / snapGrid) * snapGrid;
+        endBeat = Math.max(0, Math.min(totalBeats, snapped));
+      } else {
+        endBeat = getBeatFromX(e.clientX);
+      }
+      const newDur = endBeat - chord.startBeat;
       if (newDur >= snapGrid) onResizeChord(resizeChord, newDur);
     };
     const onUp = () => { setResizeChord(null); onTrimOverlaps(); };
