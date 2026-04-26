@@ -793,15 +793,14 @@ export function generateAllTracks(
   intensities: { piano: number; bass: number; drums: number },
   complexities: { piano: number; bass: number; drums: number },
   groove?: GrooveId,
+  drumFills: DrumFill[] = [],
 ): Record<TrackId, MidiNote[]> {
-  // Funk uses an imported MIDI groove template (rhythm + feel preserved,
-  // pitches transposed to follow the user's chords on the timeline).
   if (genre === 'Funk' && groove === 1) {
     return generateAllFromGroove(GROOVE_FUNK_1, chords, measures, intensities, complexities);
   }
   return {
     piano: generatePiano(chords, measures, intensities.piano, complexities.piano, genre),
     bass:  generateBass(chords, measures, intensities.bass, complexities.bass, genre),
-    drums: generateDrums(chords, measures, intensities.drums, complexities.drums, genre),
+    drums: generateDrums(chords, measures, intensities.drums, complexities.drums, genre, drumFills),
   };
 }
