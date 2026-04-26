@@ -100,10 +100,6 @@ export function scheduleTrack(
   genre: Genre = 'Rock',
   resolveUserSample?: UserSampleResolver,
 ) {
-  // Bass / keys user samplers anchor pitch via playbackRate.
-  const BASS_ROOT = 40; // E2
-  const KEYS_ROOT = 60; // C4
-
   for (const n of notes) {
     const beats = n.startBeat;
     const bars = Math.floor(beats / 4);
