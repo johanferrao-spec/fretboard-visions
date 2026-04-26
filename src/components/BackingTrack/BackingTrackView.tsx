@@ -156,7 +156,7 @@ export default function BackingTrackView({
             chords={chords}
             onParamChange={(k, v) => bt.setTrackParam(id, k, v)}
             onRegenerate={() => bt.regenerateTrack(id, chords, measures, genre, groove)}
-            onAINotes={(notes) => bt.setTrackNotes(id, notes, chords)}
+            onAINotes={(notes) => bt.setTrackNotes(id, notes, measures)}
             onUpdateClip={(clipId, patch) => bt.updateClip(id, clipId, patch)}
             onDeleteClip={(clipId) => bt.deleteClip(id, clipId)}
             onDuplicateClip={(clipId) => bt.duplicateClip(id, clipId)}
