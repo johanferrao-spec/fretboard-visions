@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Tone from 'tone';
 import type { TimelineChord, Genre, GrooveId } from './useSongTimeline';
-import type { BackingTrack, MidiClip, MidiNote, TrackId, TrackState } from '@/lib/backingTrackTypes';
+import type { BackingTrack, MidiClip, MidiNote, TrackId, TrackState, DrumFill } from '@/lib/backingTrackTypes';
 import { TRACK_LABELS, flattenClips } from '@/lib/backingTrackTypes';
 import { generateAllTracks } from './engine/generators';
 import { createInstruments, disposeInstruments, type EngineInstruments } from './engine/instruments';
@@ -58,6 +58,9 @@ export function useBackingTrack() {
   const [savedTracks, setSavedTracks] = useState<BackingTrack[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
+  const [drumFills, setDrumFills] = useState<DrumFill[]>([]);
+  const drumFillsRef = useRef<DrumFill[]>([]);
+  drumFillsRef.current = drumFills;
 
   const instRef = useRef<EngineInstruments | null>(null);
   const isInitRef = useRef(false);
@@ -149,7 +152,7 @@ export function useBackingTrack() {
     setTracks(prev => {
       const intensities = { piano: prev.piano.intensity, bass: prev.bass.intensity, drums: prev.drums.intensity };
       const complexities = { piano: prev.piano.complexity, bass: prev.bass.complexity, drums: prev.drums.complexity };
-      const generated = generateAllTracks(chords, measures, genre, intensities, complexities, groove);
+      const generated = generateAllTracks(chords, measures, genre, intensities, complexities, groove, drumFillsRef.current);
       return {
         ...prev,
         [trackId]: {
@@ -171,7 +174,7 @@ export function useBackingTrack() {
     setTracks(prev => {
       const intensities = { piano: prev.piano.intensity, bass: prev.bass.intensity, drums: prev.drums.intensity };
       const complexities = { piano: prev.piano.complexity, bass: prev.bass.complexity, drums: prev.drums.complexity };
-      const generated = generateAllTracks(chords, measures, genre, intensities, complexities, groove);
+      const generated = generateAllTracks(chords, measures, genre, intensities, complexities, groove, drumFillsRef.current);
       const next: Record<TrackId, TrackState> = { ...prev };
       (Object.keys(prev) as TrackId[]).forEach(id => {
         if (force || !prev[id].manuallyEdited) {
@@ -368,27 +371,33 @@ export function useBackingTrack() {
     try { disposeUserPlayers(); } catch {}
   }, []);
 
+  const addDrumFill = useCallback((startBar: number, lengthBars: number = 1) => {
+    setDrumFills(prev => [...prev, {
+      id: `fill-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+      startBar: Math.max(0, Math.floor(startBar)),
+      lengthBars: Math.max(1, Math.min(4, Math.floor(lengthBars))),
+    }]);
+  }, []);
+  const updateDrumFill = useCallback((id: string, patch: Partial<DrumFill>) => {
+    setDrumFills(prev => prev.map(f => {
+      if (f.id !== id) return f;
+      const next = { ...f, ...patch };
+      next.startBar = Math.max(0, Math.floor(next.startBar));
+      next.lengthBars = Math.max(1, Math.min(4, Math.floor(next.lengthBars)));
+      return next;
+    }));
+  }, []);
+  const removeDrumFill = useCallback((id: string) => {
+    setDrumFills(prev => prev.filter(f => f.id !== id));
+  }, []);
+
   return {
-    tracks,
-    setTrackParam,
-    setTrackClips,
-    setTrackNotes,
-    setClipNotes,
-    updateClip,
-    deleteClip,
-    duplicateClip,
-    regenerateTrack,
-    regenerateAll,
-    isPlaying,
-    currentBeat,
-    play,
-    stop,
-    prewarm,
-    setMasterVolume,
-    savedTracks,
-    save,
-    load,
-    remove,
-    reset,
+    tracks, setTrackParam, setTrackClips, setTrackNotes, setClipNotes,
+    updateClip, deleteClip, duplicateClip,
+    regenerateTrack, regenerateAll,
+    isPlaying, currentBeat,
+    play, stop, prewarm, setMasterVolume,
+    savedTracks, save, load, remove, reset,
+    drumFills, addDrumFill, updateDrumFill, removeDrumFill,
   };
 }
