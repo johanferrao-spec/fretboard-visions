@@ -101,6 +101,66 @@ export default function TrackLane({
     return () => window.removeEventListener('keydown', handler);
   }, [selectedId, onDeleteClip, onDuplicateClip]);
 
+  // Mouse drag for drum fills
+  useEffect(() => {
+    if (!isDrums) return;
+    const onMove = (e: MouseEvent) => {
+      const f = fillDragRef.current;
+      if (!f || !onUpdateDrumFill) return;
+      const dx = e.clientX - f.startX;
+      const dBars = dx / f.pxPerBar;
+      if (f.mode === 'move') {
+        const ns = Math.round(f.origStart + dBars);
+        onUpdateDrumFill(f.id, {
+          startBar: Math.max(0, Math.min(measures - f.origLen, ns)),
+        });
+      } else if (f.mode === 'resize-r') {
+        const nLen = Math.round(f.origLen + dBars);
+        onUpdateDrumFill(f.id, {
+          lengthBars: Math.max(1, Math.min(4, Math.min(measures - f.origStart, nLen))),
+        });
+      } else if (f.mode === 'resize-l') {
+        const ns = Math.round(f.origStart + dBars);
+        const nLen = Math.round(f.origLen - dBars);
+        if (nLen >= 1 && nLen <= 4 && ns >= 0) {
+          onUpdateDrumFill(f.id, { startBar: ns, lengthBars: nLen });
+        }
+      }
+    };
+    const onUp = () => { fillDragRef.current = null; force(x => x + 1); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [isDrums, onUpdateDrumFill, measures]);
+
+  // Keyboard delete on selected drum fill
+  useEffect(() => {
+    if (!selectedFillId || !onRemoveDrumFill) return;
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        onRemoveDrumFill(selectedFillId);
+        setSelectedFillId(null);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selectedFillId, onRemoveDrumFill]);
+
+  const startFillDrag = (e: React.MouseEvent, fill: DrumFill, mode: 'move' | 'resize-l' | 'resize-r') => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!laneRef.current) return;
+    const pxPerBar = laneRef.current.getBoundingClientRect().width / measures;
+    fillDragRef.current = {
+      id: fill.id, mode, origStart: fill.startBar, origLen: fill.lengthBars,
+      startX: e.clientX, pxPerBar,
+    };
+    setSelectedFillId(fill.id);
+  };
+
   const startDrag = (e: React.MouseEvent, clip: MidiClip, mode: DragState['mode']) => {
     e.preventDefault();
     e.stopPropagation();
