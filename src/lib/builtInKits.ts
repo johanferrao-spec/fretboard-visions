@@ -67,7 +67,7 @@ export const BUILT_IN_KIT_SAMPLES: BuiltInKitSample[] = (Object.keys(KIT_COLORS)
       name: `${kit} ${part}`,
       kit,
       part,
-      color: KIT_COLORS[kit],
+      color: colorForKitPart(kit, part),
       // Only the Jazz kit currently has loaded audio samples; others fall back
       // to the synthesised voices. Even within Jazz, only kick/snare/hihat/ride
       // have wav files — toms/crash use the synth fallback.
