@@ -65,6 +65,34 @@ export function useSongTimeline() {
     setChords(prev => prev.map(c => c.id === id ? { ...c, duration: snapped } : c));
   }, [snap]);
 
+  const resizeChordRange = useCallback((id: string, newStartBeat: number, newDuration: number) => {
+    const grid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
+    const totalBeats = measures * 4;
+    const nextStart = Math.max(0, Math.round(newStartBeat / grid) * grid);
+    const nextEnd = Math.min(totalBeats, Math.max(nextStart + grid, Math.round((newStartBeat + newDuration) / grid) * grid));
+    const nextDuration = Math.max(grid, nextEnd - nextStart);
+
+    setChords(prev => prev.flatMap(chord => {
+      if (chord.id === id) return [{ ...chord, startBeat: nextStart, duration: nextDuration }];
+
+      const chordStart = chord.startBeat;
+      const chordEnd = chord.startBeat + chord.duration;
+      if (chordEnd <= nextStart || chordStart >= nextEnd) return [chord];
+
+      if (chordStart < nextStart && chordEnd > nextStart && chordEnd <= nextEnd) {
+        const duration = nextStart - chordStart;
+        return duration >= grid ? [{ ...chord, duration }] : [];
+      }
+
+      if (chordStart >= nextStart && chordStart < nextEnd && chordEnd > nextEnd) {
+        const duration = chordEnd - nextEnd;
+        return duration >= grid ? [{ ...chord, startBeat: nextEnd, duration }] : [];
+      }
+
+      return [];
+    }));
+  }, [measures, snap]);
+
   const removeChord = useCallback((id: string) => {
     setChords(prev => prev.filter(c => c.id !== id));
   }, []);
@@ -109,7 +137,7 @@ export function useSongTimeline() {
     isPlaying, setIsPlaying,
     currentBeat, setCurrentBeat,
     panelHeight, setPanelHeight,
-    addChord, moveChord, resizeChord, removeChord, setChordBass, clearTimeline, trimOverlaps,
+    addChord, moveChord, resizeChord, resizeChordRange, removeChord, setChordBass, clearTimeline, trimOverlaps,
     snapToBeat,
   };
 }
