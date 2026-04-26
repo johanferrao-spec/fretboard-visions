@@ -7,6 +7,7 @@ import {
   getChordDegree, SCALE_DEGREE_COLORS, ROMAN_NUMERALS, ROMAN_NUMERALS_MINOR,
   type ChordVariation, type KeyMode,
 } from '@/lib/music';
+import CellGridView from './ChordCellGrid';
 
 interface SongTimelineProps {
   chords: TimelineChord[];
