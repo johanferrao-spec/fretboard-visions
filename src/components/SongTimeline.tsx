@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen } from 'lucide-react';
+import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List } from 'lucide-react';
 import type { TimelineChord, SnapValue, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
@@ -7,6 +7,7 @@ import {
   getChordDegree, SCALE_DEGREE_COLORS, ROMAN_NUMERALS, ROMAN_NUMERALS_MINOR,
   type ChordVariation, type KeyMode,
 } from '@/lib/music';
+import CellGridView from './ChordCellGrid';
 
 interface SongTimelineProps {
   chords: TimelineChord[];
@@ -69,6 +70,7 @@ export default function SongTimeline({
   const [showSavePop, setShowSavePop] = useState(false);
   const [showLoadPop, setShowLoadPop] = useState(false);
   const [saveName, setSaveName] = useState('');
+  const [cellView, setCellView] = useState(false);
   const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
   const [variationPopup, setVariationPopup] = useState<{
     chordId: string;
@@ -321,10 +323,14 @@ export default function SongTimeline({
     return degree < 0;
   };
 
+  // In cell view, grow vertically as more rows of cells are added (each row ≈ 90px tall + gap).
+  const cellRows = cellView ? Math.max(1, Math.ceil(Math.ceil(measures / 4) / 4)) : 0;
+  const containerHeight = cellView ? 50 + cellRows * 100 : 160;
+
   return (
     <div
       className="border-t border-border bg-card flex flex-col shrink-0"
-      style={{ height: 160 }}
+      style={{ height: containerHeight }}
     >
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0 flex-wrap">
@@ -601,6 +607,7 @@ export default function SongTimeline({
         <div
           className="flex items-center cursor-pointer select-none"
           onMouseDown={(e) => {
+            if (cellView) return;
             if (!gridRef.current) return;
             const beat = getRawBeatFromX(e.clientX);
             if (isPlaying) onStop();
@@ -608,21 +615,54 @@ export default function SongTimeline({
             setPlayheadDragging(true);
           }}
         >
-          {backingTrackActive && <div style={{ width: 200, minWidth: 200 }} />}
-          <div className="flex-1 flex items-center">
-            {Array.from({ length: measures }, (_, m) => (
-              <div key={m} className="flex-1 text-center border-l border-border/50 first:border-l-0">
-                <span className="text-[9px] font-mono text-muted-foreground">{m + 1}</span>
-              </div>
-            ))}
-          </div>
+          {backingTrackActive && (
+            <div
+              style={{ width: 200, minWidth: 200 }}
+              className="flex items-center gap-1 px-2 h-5"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Chords</span>
+              <button
+                onClick={() => setCellView(v => !v)}
+                className={`ml-auto px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider flex items-center gap-1 transition-colors ${
+                  cellView
+                    ? 'bg-primary/30 text-primary hover:bg-primary/40'
+                    : 'bg-secondary text-muted-foreground hover:bg-muted'
+                }`}
+                title={cellView ? 'Switch to linear view' : 'Switch to cell view'}
+              >
+                {cellView ? <List size={9} /> : <LayoutGrid size={9} />}
+                Switch View
+              </button>
+            </div>
+          )}
+          {!cellView && (
+            <div className="flex-1 flex items-center">
+              {Array.from({ length: measures }, (_, m) => (
+                <div key={m} className="flex-1 text-center border-l border-border/50 first:border-l-0">
+                  <span className="text-[9px] font-mono text-muted-foreground">{m + 1}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Grid wrapper — adds left header-spacer so chord grid aligns with DAW lanes */}
         <div className="flex-1 flex min-h-0">
-          {backingTrackActive && (
+          {backingTrackActive && !cellView && (
             <div style={{ width: 200, minWidth: 200 }} className="border-r border-border/30 bg-card/40" />
           )}
+          {cellView ? (
+            <CellGridView
+              measures={measures}
+              chords={chords}
+              currentBeat={currentBeat}
+              totalBeats={totalBeats}
+              getChordColor={getChordColor}
+              onAddBars={() => setMeasures(Math.min(32, measures + 4))}
+              onSeek={(beat) => { if (isPlaying) onStop(); onSeek?.(beat); }}
+            />
+          ) : (
           <div
             ref={gridRef}
             className="relative flex-1 bg-secondary/20 border-t border-border/30"
@@ -860,6 +900,7 @@ export default function SongTimeline({
             </div>
           )}
         </div>
+        )}
         </div>
       </div>
     </div>
