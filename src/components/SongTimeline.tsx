@@ -57,7 +57,7 @@ export default function SongTimeline({
   onPlay, onStop, onAddChord, onMoveChord, onResizeChord, onRemoveChord, onClearTimeline, onTrimOverlaps,
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
   onSeek, onSetChordBass,
-  backingTrackActive, onCloseBackingTrack,
+  backingTrackActive, onOpenBackingTrack, onCloseBackingTrack,
   onSaveBackingTrack, onLoadBackingTrack, onDeleteBackingTrack, savedBackingTracks = [],
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
