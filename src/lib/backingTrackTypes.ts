@@ -61,6 +61,7 @@ export const DRUM_PITCHES = {
   snare: 38,
   hihat: 42,
   ride: 51,
+  tom: 45,
   tom1: 45,
   tom2: 47,
   crash: 49,
