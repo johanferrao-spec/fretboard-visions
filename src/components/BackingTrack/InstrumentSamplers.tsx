@@ -202,12 +202,31 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     }
   }, []);
 
-  // ── Drum SVG helpers (top-down view) ──────────────────────────────
-  const STROKE_DEFAULT = 'hsl(220 10% 50%)';
-  const DEFAULT_FILL = 'hsl(220 12% 28%)';
+  // ── Drum SVG helpers (front-view illustration) ────────────────────
+  const STROKE_DEFAULT = 'hsl(220 10% 35%)';
+  const SKIN_FILL = 'hsl(220 8% 88%)';            // light grey drum heads
+  const HARDWARE = 'hsl(220 8% 65%)';              // chrome stands
+  const HARDWARE_DARK = 'hsl(220 10% 30%)';        // pedals & feet
+  const CYMBAL_FILL = 'hsl(42 78% 62%)';           // warm gold
+  const CYMBAL_STROKE = 'hsl(38 60% 40%)';
+
+  // Default shell colour per kit when no sample is assigned.
+  const KIT_SHELL: Record<DrumKitGenre, string> = {
+    Rock:  'hsl(0 70% 45%)',     // classic red
+    Funk:  'hsl(28 85% 50%)',    // burnt orange
+    Jazz:  'hsl(35 55% 32%)',    // vintage walnut
+    Latin: 'hsl(48 80% 50%)',    // amber yellow
+  };
+  const SHELL_FILL = KIT_SHELL[viewKit];
+  const DEFAULT_FILL = SHELL_FILL;
   const partFill = (part: DrumPart) => {
+    // Cymbals always render as gold; drums use kit shell colour (or sample tint).
+    if (part === 'crash' || part === 'ride' || part === 'hihat_closed' || part === 'hihat_open' || part === 'hihat_pedal') {
+      const tint = partTints[part];
+      return tint ? `hsl(${tint})` : CYMBAL_FILL;
+    }
     const tint = partTints[part];
-    return tint ? `hsl(${tint})` : DEFAULT_FILL;
+    return tint ? `hsl(${tint})` : SHELL_FILL;
   };
   const isPartSelected = (part: DrumPart) =>
     selection.instrument === 'drums' && selection.part === part;
@@ -442,101 +461,158 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
       <div className="flex-1 flex items-stretch justify-around gap-3 p-3 overflow-x-auto">
         {/* DRUM KIT — top-down view */}
         <div className="flex flex-col items-center min-w-[320px] flex-1">
-          <svg viewBox="0 0 320 220" className="w-full h-full max-h-[200px]">
-            {/* KICK — back-centre, large drum sitting behind the rack tom.
-                Rendered FIRST so the rack tom and snare overlap on top of it
-                (matches the reference: kick is partially hidden under the toms). */}
-            <g {...partProps('kick')}>
-              <circle cx="160" cy="105" r="52" fill={partFill('kick')} stroke={partStroke('kick')} strokeWidth={partStrokeWidth('kick')} />
-              {/* tension lugs around the rim */}
-              {[0,1,2,3,4,5,6,7,8,9].map(i => {
-                const ang = (i * Math.PI) / 5 - Math.PI / 2;
-                const x = 160 + Math.cos(ang) * 52;
-                const y = 105 + Math.sin(ang) * 52;
-                return <rect key={i} x={x-3} y={y-2} width="6" height="4" fill="hsl(220 10% 25%)" />;
-              })}
-            </g>
+          <svg viewBox="0 0 460 400" className="w-full h-full max-h-[260px]">
+            {/* Helper renderers ---------------------------------------- */}
+            {/* Tension lugs along the front face of a cylindrical shell */}
+            {/* — drawn inline per drum below for clarity.               */}
 
-            {/* Crash (top-left, large cymbal) — drawn over the kick */}
+            {/* ============ HARDWARE (drawn first, behind drums) ====== */}
+            {/* Hi-hat stand (far left) */}
+            <line x1="78" y1="200" x2="78" y2="370" stroke={HARDWARE} strokeWidth="4" />
+            <line x1="78" y1="370" x2="40" y2="395" stroke={HARDWARE} strokeWidth="3" />
+            <line x1="78" y1="370" x2="115" y2="395" stroke={HARDWARE} strokeWidth="3" />
+            <rect x="30" y="390" width="55" height="10" rx="2" fill={HARDWARE_DARK} />
+            {/* Crash stand */}
+            <line x1="95" y1="80" x2="160" y2="320" stroke={HARDWARE} strokeWidth="3" />
+            <circle cx="135" cy="220" r="5" fill={HARDWARE} />
+            {/* Ride stand */}
+            <line x1="395" y1="80" x2="330" y2="320" stroke={HARDWARE} strokeWidth="3" />
+            <circle cx="355" cy="220" r="5" fill={HARDWARE} />
+            {/* Snare stand */}
+            <line x1="155" y1="280" x2="125" y2="395" stroke={HARDWARE} strokeWidth="3" />
+            <line x1="195" y1="280" x2="225" y2="395" stroke={HARDWARE} strokeWidth="3" />
+            <line x1="175" y1="280" x2="175" y2="395" stroke={HARDWARE} strokeWidth="3" />
+            {/* Floor tom legs */}
+            <line x1="365" y1="320" x2="345" y2="395" stroke={HARDWARE} strokeWidth="3" />
+            <line x1="445" y1="320" x2="455" y2="395" stroke={HARDWARE} strokeWidth="3" />
+
+            {/* ============ CRASH (top-left cymbal) =================== */}
             <g {...partProps('crash')}>
-              <circle cx="55" cy="55" r="42" fill={partFill('crash')} stroke={partStroke('crash')} strokeWidth={partStrokeWidth('crash')} />
-              {[34, 26, 18, 10].map(r => (
-                <circle key={r} cx="55" cy="55" r={r} fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
-              ))}
-              <circle cx="55" cy="55" r="2" fill="hsl(220 10% 12%)" />
+              <ellipse cx="95" cy="80" rx="80" ry="18" fill={partFill('crash')} stroke={CYMBAL_STROKE} strokeWidth={partStrokeWidth('crash')} />
+              <ellipse cx="95" cy="78" rx="80" ry="18" fill="none" stroke={partStroke('crash')} strokeWidth={partStrokeWidth('crash')} />
+              <ellipse cx="95" cy="80" rx="8" ry="3" fill={HARDWARE_DARK} />
+              <rect x="93" y="68" width="4" height="10" fill={HARDWARE_DARK} />
             </g>
 
-            {/* Ride (top-right, large cymbal) */}
+            {/* ============ RIDE (top-right cymbal) =================== */}
             <g {...partProps('ride')}>
-              <circle cx="265" cy="55" r="44" fill={partFill('ride')} stroke={partStroke('ride')} strokeWidth={partStrokeWidth('ride')} />
-              {[36, 28, 20, 12].map(r => (
-                <circle key={r} cx="265" cy="55" r={r} fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
-              ))}
-              <circle cx="265" cy="55" r="2" fill="hsl(220 10% 12%)" />
+              <ellipse cx="395" cy="80" rx="80" ry="18" fill={partFill('ride')} stroke={CYMBAL_STROKE} strokeWidth={partStrokeWidth('ride')} />
+              <ellipse cx="395" cy="78" rx="80" ry="18" fill="none" stroke={partStroke('ride')} strokeWidth={partStrokeWidth('ride')} />
+              <ellipse cx="395" cy="80" rx="8" ry="3" fill={HARDWARE_DARK} />
+              <rect x="393" y="68" width="4" height="10" fill={HARDWARE_DARK} />
             </g>
 
-            {/* Rack tom — mounted on top of the kick, slightly left of centre */}
-            <g {...partProps('tom1')}>
-              <circle cx="135" cy="115" r="28" fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
-              <circle cx="135" cy="115" r="20" fill="none" stroke="hsl(220 10% 25% / 0.4)" strokeWidth="0.6" />
-              <circle cx="135" cy="115" r="2" fill="hsl(220 10% 12%)" />
-              {[0,1,2,3,4,5,6,7].map(i => {
-                const ang = (i * Math.PI) / 4;
-                const x = 135 + Math.cos(ang) * 28;
-                const y = 115 + Math.sin(ang) * 28;
-                return <rect key={i} x={x-2} y={y-1.5} width="4" height="3" fill="hsl(220 10% 30%)" />;
-              })}
-            </g>
-
-            {/* Hi-hat stack (top-left of snare) — three articulations rendered
-                as a small stand with closed (top), open (middle ring), pedal
-                (foot at the bottom). Each is its own click target. */}
-            {/* Open hi-hat — middle ring, slightly larger to suggest "open" */}
+            {/* ============ HI-HAT (left side, two cymbals stacked) === */}
+            {/* Open hat — bottom cymbal */}
             <g {...partProps('hihat_open')}>
-              <circle cx="35" cy="135" r="14" fill={partFill('hihat_open')} stroke={partStroke('hihat_open')} strokeWidth={partStrokeWidth('hihat_open')} opacity={0.85} />
-              <circle cx="35" cy="135" r="10" fill="none" stroke="hsl(220 10% 25% / 0.45)" strokeWidth="0.6" />
-              <circle cx="35" cy="135" r="6"  fill="none" stroke="hsl(220 10% 25% / 0.35)" strokeWidth="0.5" />
+              <ellipse cx="78" cy="210" rx="48" ry="9" fill={partFill('hihat_open')} stroke={CYMBAL_STROKE} strokeWidth={partStrokeWidth('hihat_open')} />
+              <ellipse cx="78" cy="208" rx="48" ry="9" fill="none" stroke={partStroke('hihat_open')} strokeWidth={partStrokeWidth('hihat_open')} />
             </g>
-            {/* Closed hi-hat — top cymbal sitting just above the open one */}
+            {/* Closed hat — top cymbal sitting on the open one */}
             <g {...partProps('hihat_closed')}>
-              <circle cx="35" cy="120" r="13" fill={partFill('hihat_closed')} stroke={partStroke('hihat_closed')} strokeWidth={partStrokeWidth('hihat_closed')} />
-              <circle cx="35" cy="120" r="9" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.6" />
-              <circle cx="35" cy="120" r="2" fill="hsl(220 10% 12%)" />
+              <ellipse cx="78" cy="195" rx="48" ry="9" fill={partFill('hihat_closed')} stroke={CYMBAL_STROKE} strokeWidth={partStrokeWidth('hihat_closed')} />
+              <ellipse cx="78" cy="193" rx="48" ry="9" fill="none" stroke={partStroke('hihat_closed')} strokeWidth={partStrokeWidth('hihat_closed')} />
+              <ellipse cx="78" cy="190" rx="6" ry="2.5" fill={HARDWARE_DARK} />
+              <rect x="76" y="178" width="4" height="12" fill={HARDWARE_DARK} />
             </g>
-            {/* Pedal hi-hat — small foot pedal/cymbal at the bottom of the stand */}
+            {/* Pedal hat — foot pedal at bottom of stand */}
             <g {...partProps('hihat_pedal')}>
-              <ellipse cx="35" cy="200" rx="12" ry="3.5" fill={partFill('hihat_pedal')} stroke={partStroke('hihat_pedal')} strokeWidth={partStrokeWidth('hihat_pedal')} />
-              <rect x="33" y="148" width="4" height="50" fill="hsl(220 10% 25%)" opacity="0.55" />
-              <rect x="22" y="204" width="26" height="4" rx="1" fill="hsl(220 10% 22%)" />
+              <rect x="35" y="378" width="55" height="14" rx="2" fill={partFill('hihat_pedal') === CYMBAL_FILL ? HARDWARE_DARK : partFill('hihat_pedal')} stroke={partStroke('hihat_pedal')} strokeWidth={partStrokeWidth('hihat_pedal')} />
+              <circle cx="40" cy="385" r="3" fill={HARDWARE} />
             </g>
 
-            {/* Snare (front-left, with hi-hat stand symbolised by the small left cymbal stack) */}
-            <g {...partProps('snare')}>
-              <circle cx="80" cy="165" r="34" fill={partFill('snare')} stroke={partStroke('snare')} strokeWidth={partStrokeWidth('snare')} />
-              <circle cx="80" cy="165" r="26" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.7" />
-              <circle cx="80" cy="165" r="2" fill="hsl(220 10% 12%)" />
-              {[0,1,2,3,4,5,6,7,8,9].map(i => {
-                const ang = (i * Math.PI) / 5;
-                const x = 80 + Math.cos(ang) * 34;
-                const y = 165 + Math.sin(ang) * 34;
-                return <rect key={i} x={x-2} y={y-1.5} width="4" height="3" fill="hsl(220 10% 30%)" />;
-              })}
-            </g>
+            {/* ============ RACK TOM (above kick, slightly left) ====== */}
+            {/* Rendered before kick so the kick (which we draw next) shows
+                in front; matches reference where toms sit on top of kick. */}
+            {(() => {
+              const cx = 175, cy = 200, w = 90, h = 75;
+              return (
+                <g {...partProps('tom1')}>
+                  {/* shell (cylinder side) */}
+                  <rect x={cx - w/2} y={cy} width={w} height={h} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
+                  {/* skin (top ellipse) */}
+                  <ellipse cx={cx} cy={cy} rx={w/2} ry={14} fill={SKIN_FILL} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
+                  {/* bottom rim */}
+                  <ellipse cx={cx} cy={cy + h} rx={w/2} ry={10} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
+                  {/* tension lugs */}
+                  {[0,1,2,3,4].map(i => (
+                    <rect key={i} x={cx - w/2 + 8 + i*((w-16)/4) - 1.5} y={cy + 6} width="3" height={h - 12} fill={SKIN_FILL} opacity={0.85} />
+                  ))}
+                </g>
+              );
+            })()}
 
-            {/* Floor tom (front-right, largest of the toms) — re-uses the tom2 slot */}
-            <g {...partProps('tom2')}>
-              <circle cx="245" cy="165" r="42" fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
-              <circle cx="245" cy="165" r="32" fill="none" stroke="hsl(220 10% 25% / 0.4)" strokeWidth="0.7" />
-              <circle cx="245" cy="165" r="3" fill="hsl(220 10% 12%)" />
-              {[0,1,2,3,4,5,6,7,8,9].map(i => {
-                const ang = (i * Math.PI) / 5;
-                const x = 245 + Math.cos(ang) * 42;
-                const y = 165 + Math.sin(ang) * 42;
-                return <rect key={i} x={x-2.5} y={y-2} width="5" height="4" fill="hsl(220 10% 30%)" />;
-              })}
-            </g>
+            {/* ============ RACK TOM 2 (decorative, mirrors tom1) ===== */}
+            {/* Uses tom1 slot too — same sample, just visual duplicate. */}
+            {(() => {
+              const cx = 280, cy = 200, w = 90, h = 75;
+              return (
+                <g {...partProps('tom1')} opacity={0.95}>
+                  <rect x={cx - w/2} y={cy} width={w} height={h} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
+                  <ellipse cx={cx} cy={cy} rx={w/2} ry={14} fill={SKIN_FILL} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
+                  <ellipse cx={cx} cy={cy + h} rx={w/2} ry={10} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
+                  {[0,1,2,3,4].map(i => (
+                    <rect key={i} x={cx - w/2 + 8 + i*((w-16)/4) - 1.5} y={cy + 6} width="3" height={h - 12} fill={SKIN_FILL} opacity={0.85} />
+                  ))}
+                </g>
+              );
+            })()}
+
+            {/* ============ KICK (front-centre, partially behind toms)  */}
+            {(() => {
+              const cx = 230, cy = 320, r = 78;
+              return (
+                <g {...partProps('kick')}>
+                  {/* Shell front-face circle (the head we see straight on) */}
+                  <circle cx={cx} cy={cy} r={r} fill={partFill('kick')} stroke={partStroke('kick')} strokeWidth={partStrokeWidth('kick')} />
+                  <circle cx={cx} cy={cy} r={r - 12} fill={SKIN_FILL} stroke={partStroke('kick')} strokeWidth={partStrokeWidth('kick')} />
+                  {/* tension lugs around the rim */}
+                  {Array.from({length: 10}).map((_, i) => {
+                    const ang = (i * Math.PI * 2) / 10 - Math.PI / 2;
+                    const x = cx + Math.cos(ang) * (r - 6);
+                    const y = cy + Math.sin(ang) * (r - 6);
+                    return <rect key={i} x={x - 2} y={y - 4} width="4" height="8" fill={SKIN_FILL} opacity={0.9} transform={`rotate(${(ang*180/Math.PI)+90} ${x} ${y})`} />;
+                  })}
+                  {/* bass-drum pedal */}
+                  <rect x={cx - 8} y={cy + r - 4} width="16" height="40" fill={HARDWARE_DARK} />
+                  <rect x={cx - 18} y={cy + r + 36} width="36" height="10" rx="2" fill={HARDWARE_DARK} />
+                  {/* tom mount post */}
+                  <rect x={cx - 2} y={cy - r - 14} width="4" height="14" fill={HARDWARE} />
+                </g>
+              );
+            })()}
+
+            {/* ============ SNARE (front-left) ======================== */}
+            {(() => {
+              const cx = 175, cy = 290, w = 90, h = 50;
+              return (
+                <g {...partProps('snare')}>
+                  <rect x={cx - w/2} y={cy} width={w} height={h} fill={partFill('snare')} stroke={partStroke('snare')} strokeWidth={partStrokeWidth('snare')} />
+                  <ellipse cx={cx} cy={cy} rx={w/2} ry={12} fill={SKIN_FILL} stroke={partStroke('snare')} strokeWidth={partStrokeWidth('snare')} />
+                  <ellipse cx={cx} cy={cy + h} rx={w/2} ry={8} fill={partFill('snare')} stroke={partStroke('snare')} strokeWidth={partStrokeWidth('snare')} />
+                  {[0,1,2,3,4,5].map(i => (
+                    <rect key={i} x={cx - w/2 + 6 + i*((w-12)/5) - 1.5} y={cy + 4} width="3" height={h - 8} fill={SKIN_FILL} opacity={0.85} />
+                  ))}
+                </g>
+              );
+            })()}
+
+            {/* ============ FLOOR TOM (front-right) =================== */}
+            {(() => {
+              const cx = 400, cy = 240, w = 110, h = 110;
+              return (
+                <g {...partProps('tom2')}>
+                  <rect x={cx - w/2} y={cy} width={w} height={h} fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
+                  <ellipse cx={cx} cy={cy} rx={w/2} ry={16} fill={SKIN_FILL} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
+                  <ellipse cx={cx} cy={cy + h} rx={w/2} ry={12} fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
+                  {[0,1,2,3,4,5].map(i => (
+                    <rect key={i} x={cx - w/2 + 8 + i*((w-16)/5) - 1.5} y={cy + 6} width="3" height={h - 12} fill={SKIN_FILL} opacity={0.85} />
+                  ))}
+                </g>
+              );
+            })()}
           </svg>
-          <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">Drums (top view)</div>
+          <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">Drum kit · {viewKit}</div>
         </div>
 
         {/* BASS — genre-specific icon */}
