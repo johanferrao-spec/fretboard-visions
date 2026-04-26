@@ -6,9 +6,15 @@ import type { Genre } from '@/hooks/useSongTimeline';
 import { midiToNote, velocityToGain } from './humanize';
 import { getUserPlayer } from './userSamples';
 import type { StoredSample } from '@/lib/sampleStorage';
+import type { BuiltInKitSample } from '@/lib/builtInKits';
 
-/** Resolver: given a slot key (e.g. 'drums:snare', 'bass', 'keys'), return active user sample or null. */
-export type UserSampleResolver = (slot: string) => StoredSample | null;
+/** A resolved sample for a slot — may be a user-uploaded blob OR a built-in kit choice. */
+export type SampleResolution =
+  | { kind: 'user'; sample: StoredSample }
+  | { kind: 'builtin'; sample: BuiltInKitSample };
+
+/** Resolver: given a slot key (e.g. 'drums:snare', 'bass', 'keys'), return active resolution or null. */
+export type UserSampleResolver = (slot: string) => SampleResolution | null;
 
 /** Map MIDI drum pitch -> our DrumPart slot key. */
 function pitchToDrumPart(pitch: number): DrumPart | null {
@@ -24,6 +30,53 @@ function pitchToDrumPart(pitch: number): DrumPart | null {
   }
 }
 
+/** Trigger a synthesised drum voice for a given pitch. */
+function playSynthDrum(inst: EngineInstruments, pitch: number, dur: number, t: number, gain: number) {
+  switch (pitch) {
+    case DRUM_PITCHES.kick:
+      inst.kick.triggerAttackRelease('C1', dur, t, gain);
+      break;
+    case DRUM_PITCHES.snare:
+      inst.snare.triggerAttackRelease(dur, t, gain);
+      break;
+    case DRUM_PITCHES.hihat:
+      inst.hihat.triggerAttackRelease('C5', dur * 0.5, t, gain);
+      break;
+    case DRUM_PITCHES.ride:
+      inst.ride.triggerAttackRelease('C5', dur, t, gain);
+      break;
+    case DRUM_PITCHES.tom1:
+      inst.kick.triggerAttackRelease('G2', dur, t, gain * 0.9);
+      break;
+    case DRUM_PITCHES.tom2:
+      inst.kick.triggerAttackRelease('D2', dur, t, gain * 0.9);
+      break;
+    case DRUM_PITCHES.crash:
+      inst.ride.triggerAttackRelease('G5', dur * 1.2, t, gain);
+      break;
+    default:
+      inst.snare.triggerAttackRelease(dur, t, gain);
+  }
+}
+
+/** Trigger a Jazz acoustic kit Tone.Player for a given pitch (only kick/snare/hihat/ride exist). */
+function playJazzKitSample(inst: EngineInstruments, pitch: number, t: number, gain: number) {
+  const playSample = (pl: Tone.Player) => {
+    if (!pl.loaded) return;
+    try {
+      pl.volume.value = Tone.gainToDb(Math.max(0.001, gain));
+      pl.start(t);
+    } catch {}
+  };
+  switch (pitch) {
+    case DRUM_PITCHES.kick:  playSample(inst.jazzKit.kick);  return true;
+    case DRUM_PITCHES.snare: playSample(inst.jazzKit.snare); return true;
+    case DRUM_PITCHES.hihat: playSample(inst.jazzKit.hihat); return true;
+    case DRUM_PITCHES.ride:  playSample(inst.jazzKit.ride);  return true;
+    default: return false;
+  }
+}
+
 /**
  * Schedule a single track's notes on the Transport.
  * Returns no value — caller is expected to call Transport.cancel() before re-scheduling.
@@ -36,9 +89,8 @@ export function scheduleTrack(
   genre: Genre = 'Rock',
   resolveUserSample?: UserSampleResolver,
 ) {
-  const useJazzKit = genre === 'Jazz';
-  // Bass / keys user samplers anchor at MIDI 60 (C4) — pitch shift via playbackRate.
-  const BASS_ROOT = 40; // E2 — typical bass guitar low E
+  // Bass / keys user samplers anchor pitch via playbackRate.
+  const BASS_ROOT = 40; // E2
   const KEYS_ROOT = 60; // C4
 
   for (const n of notes) {
@@ -58,11 +110,12 @@ export function scheduleTrack(
       const t = time + microOffset;
 
       if (trackId === 'drums') {
-        // 1) User sample takes priority if assigned for this drum part.
         const part = pitchToDrumPart(n.pitch);
-        const userSample = part && resolveUserSample ? resolveUserSample(`drums:${part}`) : null;
-        if (userSample) {
-          const p = getUserPlayer(userSample, inst.master);
+        const resolution = part && resolveUserSample ? resolveUserSample(`drums:${part}`) : null;
+
+        // 1) User-uploaded sample takes top priority.
+        if (resolution?.kind === 'user') {
+          const p = getUserPlayer(resolution.sample, inst.master);
           if (p && p.loaded) {
             try {
               p.playbackRate = 1;
@@ -72,45 +125,25 @@ export function scheduleTrack(
             return;
           }
         }
-        // 2) Jazz acoustic kit
-        if (useJazzKit) {
-          const playSample = (pl: Tone.Player) => {
-            if (!pl.loaded) return;
-            try {
-              pl.volume.value = Tone.gainToDb(Math.max(0.001, gain));
-              pl.start(t);
-            } catch {}
-          };
-          switch (n.pitch) {
-            case DRUM_PITCHES.kick:  playSample(inst.jazzKit.kick);  break;
-            case DRUM_PITCHES.snare: playSample(inst.jazzKit.snare); break;
-            case DRUM_PITCHES.hihat: playSample(inst.jazzKit.hihat); break;
-            case DRUM_PITCHES.ride:  playSample(inst.jazzKit.ride);  break;
-            default: playSample(inst.jazzKit.snare);
+
+        // 2) Built-in kit selection — jazz samples or synth fallback.
+        if (resolution?.kind === 'builtin') {
+          if (resolution.sample.source === 'jazz-sample') {
+            const ok = playJazzKitSample(inst, n.pitch, t, gain);
+            if (ok) return;
           }
+          // synth (or jazz-sample miss) → synthesised voice
+          playSynthDrum(inst, n.pitch, dur, t, gain);
           return;
         }
-        // 3) Synth fallback
-        switch (n.pitch) {
-          case DRUM_PITCHES.kick:
-            inst.kick.triggerAttackRelease('C1', dur, t, gain);
-            break;
-          case DRUM_PITCHES.snare:
-            inst.snare.triggerAttackRelease(dur, t, gain);
-            break;
-          case DRUM_PITCHES.hihat:
-            inst.hihat.triggerAttackRelease('C5', dur * 0.5, t, gain);
-            break;
-          case DRUM_PITCHES.ride:
-            inst.ride.triggerAttackRelease('C5', dur, t, gain);
-            break;
-          default:
-            inst.snare.triggerAttackRelease(dur, t, gain);
-        }
+
+        // 3) No selection → default by genre (jazz uses jazz kit, others synth).
+        if (genre === 'Jazz' && playJazzKitSample(inst, n.pitch, t, gain)) return;
+        playSynthDrum(inst, n.pitch, dur, t, gain);
       } else if (trackId === 'bass') {
-        const userSample = resolveUserSample?.('bass');
-        if (userSample) {
-          const p = getUserPlayer(userSample, inst.master);
+        const resolution = resolveUserSample?.('bass');
+        if (resolution?.kind === 'user') {
+          const p = getUserPlayer(resolution.sample, inst.master);
           if (p && p.loaded) {
             try {
               const semis = n.pitch - BASS_ROOT;
@@ -123,9 +156,9 @@ export function scheduleTrack(
         }
         inst.bass.triggerAttackRelease(midiToNote(n.pitch), dur, t, gain);
       } else if (trackId === 'piano') {
-        const userSample = resolveUserSample?.('keys');
-        if (userSample) {
-          const p = getUserPlayer(userSample, inst.master);
+        const resolution = resolveUserSample?.('keys');
+        if (resolution?.kind === 'user') {
+          const p = getUserPlayer(resolution.sample, inst.master);
           if (p && p.loaded) {
             try {
               const semis = n.pitch - KEYS_ROOT;
