@@ -60,19 +60,6 @@ export default function CellGridView({
               }`}
               style={{ flex: `1 1 calc(${100 / CELLS_PER_ROW}% - 0.75rem)`, maxWidth: `calc(${100 / CELLS_PER_ROW}% - 0.75rem)`, minWidth: 200 }}
             >
-          const cellStartBeat = cellIdx * beatsPerCell;
-          const cellEndBeat = cellStartBeat + beatsPerCell;
-          const isActive = currentBeat >= cellStartBeat && currentBeat < cellEndBeat;
-
-          return (
-            <div
-              key={cellIdx}
-              className={`rounded-md p-1.5 transition-all bg-card/60 ${
-                isActive
-                  ? 'ring-2 ring-primary shadow-[0_0_12px_hsl(var(--primary)/0.5)]'
-                  : 'ring-1 ring-border/40'
-              }`}
-            >
               <div className="flex items-center justify-between mb-1 px-0.5">
                 <span className="text-[8px] font-mono uppercase text-muted-foreground tracking-wider">
                   Bars {cellIdx * BARS_PER_CELL + 1}-{cellIdx * BARS_PER_CELL + BARS_PER_CELL}
