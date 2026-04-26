@@ -31,13 +31,30 @@ export interface BuiltInKitSample {
   source: 'jazz-sample' | 'synth';
 }
 
-/** Per-genre kit shell color (HSL string, no wrapper). */
+/** Per-genre kit shell color (HSL string, no wrapper). Used for drum SHELLS only. */
 export const KIT_COLORS: Record<DrumKitGenre, string> = {
   Funk:  '215 85% 58%', // blue
   Jazz:  '145 60% 45%', // green
   Rock:  '0 75% 55%',   // red
   Latin: '25 90% 55%',  // orange
 };
+
+/** Per-genre cymbal color — bronze/brass variations (NOT the shell color). */
+export const KIT_CYMBAL_COLORS: Record<DrumKitGenre, string> = {
+  Funk:  '38 65% 55%',  // warm brass
+  Jazz:  '32 55% 48%',  // dark bronze
+  Rock:  '20 70% 50%',  // hot bronze (reddish)
+  Latin: '45 80% 58%',  // bright brass
+};
+
+/** Drum parts that are cymbals (use bronze coloring instead of kit shell color). */
+export const CYMBAL_PARTS: ReadonlySet<DrumPart> = new Set(['hihat', 'ride', 'crash']);
+
+/** Return the appropriate color for a given (kit, part): bronze for cymbals,
+ *  shell color for drums. */
+export function colorForKitPart(kit: DrumKitGenre, part: DrumPart): string {
+  return CYMBAL_PARTS.has(part) ? KIT_CYMBAL_COLORS[kit] : KIT_COLORS[kit];
+}
 
 /** Drum parts available on every kit. */
 export const KIT_PARTS: DrumPart[] = ['kick', 'snare', 'hihat', 'ride', 'tom1', 'tom2', 'crash'];
