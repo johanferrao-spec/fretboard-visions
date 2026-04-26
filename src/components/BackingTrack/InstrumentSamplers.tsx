@@ -236,7 +236,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   return (
     <div className="flex h-full bg-card border-t border-border overflow-hidden">
       {/* LEFT COLUMN: per-piece header + sample list (no part-icon grid) */}
-      <div className="w-72 shrink-0 border-r border-border flex flex-col">
+      <div className="w-72 shrink-0 border-r border-border flex flex-col overflow-y-auto">
         <div className="px-3 py-2 border-b border-border">
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
             {selection.instrument === 'drums' ? `Drums · ${PART_LABEL[selection.part]}` : selection.instrument === 'bass' ? 'Bass sampler' : 'Keys sampler'}
