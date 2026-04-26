@@ -363,11 +363,26 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
               })}
             </g>
 
-            {/* Hi-hat pedal cymbal (small, between snare and kick at the front) */}
-            <g {...partProps('hihat')}>
-              <circle cx="155" cy="200" r="10" fill={partFill('hihat')} stroke={partStroke('hihat')} strokeWidth={partStrokeWidth('hihat')} />
-              <rect x="151" y="200" width="8" height="18" fill="hsl(220 10% 25%)" opacity="0.6" />
-              <line x1="148" y1="200" x2="162" y2="200" stroke="hsl(220 10% 15%)" strokeWidth="0.6" />
+            {/* Hi-hat stack (top-left of snare) — three articulations rendered
+                as a small stand with closed (top), open (middle ring), pedal
+                (foot at the bottom). Each is its own click target. */}
+            {/* Open hi-hat — middle ring, slightly larger to suggest "open" */}
+            <g {...partProps('hihat_open')}>
+              <circle cx="35" cy="135" r="14" fill={partFill('hihat_open')} stroke={partStroke('hihat_open')} strokeWidth={partStrokeWidth('hihat_open')} opacity={0.85} />
+              <circle cx="35" cy="135" r="10" fill="none" stroke="hsl(220 10% 25% / 0.45)" strokeWidth="0.6" />
+              <circle cx="35" cy="135" r="6"  fill="none" stroke="hsl(220 10% 25% / 0.35)" strokeWidth="0.5" />
+            </g>
+            {/* Closed hi-hat — top cymbal sitting just above the open one */}
+            <g {...partProps('hihat_closed')}>
+              <circle cx="35" cy="120" r="13" fill={partFill('hihat_closed')} stroke={partStroke('hihat_closed')} strokeWidth={partStrokeWidth('hihat_closed')} />
+              <circle cx="35" cy="120" r="9" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.6" />
+              <circle cx="35" cy="120" r="2" fill="hsl(220 10% 12%)" />
+            </g>
+            {/* Pedal hi-hat — small foot pedal/cymbal at the bottom of the stand */}
+            <g {...partProps('hihat_pedal')}>
+              <ellipse cx="35" cy="200" rx="12" ry="3.5" fill={partFill('hihat_pedal')} stroke={partStroke('hihat_pedal')} strokeWidth={partStrokeWidth('hihat_pedal')} />
+              <rect x="33" y="148" width="4" height="50" fill="hsl(220 10% 25%)" opacity="0.55" />
+              <rect x="22" y="204" width="26" height="4" rx="1" fill="hsl(220 10% 22%)" />
             </g>
 
             {/* Snare (front-left, with hi-hat stand symbolised by the small left cymbal stack) */}
