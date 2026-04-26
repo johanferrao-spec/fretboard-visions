@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Play, Square, Trash2, Music, X, ChevronDown, Save, FolderOpen } from 'lucide-react';
-import type { TimelineChord, SnapValue, Genre } from '@/hooks/useSongTimeline';
+import type { TimelineChord, SnapValue, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
   NOTE_NAMES, CHORD_FORMULAS, getDiatonicChords, getChordVariations,
@@ -16,6 +16,8 @@ interface SongTimelineProps {
   setBpm: (v: number) => void;
   genre: Genre;
   setGenre: (v: Genre) => void;
+  groove: GrooveId;
+  setGroove: (v: GrooveId) => void;
   snap: SnapValue;
   setSnap: (v: SnapValue) => void;
   isPlaying: boolean;
@@ -49,7 +51,7 @@ interface SongTimelineProps {
 
 export default function SongTimeline({
   chords, measures, setMeasures, bpm, setBpm,
-  genre, setGenre, snap, setSnap,
+  genre, setGenre, groove, setGroove, snap, setSnap,
   isPlaying, currentBeat, panelHeight, setPanelHeight,
   onPlay, onStop, onAddChord, onMoveChord, onResizeChord, onRemoveChord, onClearTimeline, onTrimOverlaps,
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
@@ -418,6 +420,21 @@ export default function SongTimeline({
             <option value="Rock">Rock</option>
             <option value="Pop">Pop</option>
             <option value="Jazz">Jazz</option>
+            <option value="Funk">Funk</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] font-mono text-muted-foreground uppercase">Groove</span>
+          <select
+            value={groove}
+            onChange={e => setGroove(Number(e.target.value) as GrooveId)}
+            disabled={genre !== 'Funk'}
+            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
+            title={genre === 'Funk' ? 'Pick a groove preset' : 'Grooves are available for the Funk genre'}
+          >
+            <option value={1}>1</option>
           </select>
         </div>
 
