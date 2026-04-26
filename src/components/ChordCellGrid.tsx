@@ -22,6 +22,7 @@ interface CellGridViewProps {
   onRemoveChord: (id: string) => void;
   onMoveChord: (id: string, newStartBeat: number) => void;
   onResizeChord: (id: string, newDuration: number) => void;
+  onResizeChordRange: (id: string, newStartBeat: number, newDuration: number) => void;
   diatonicChords: DiatonicChord[];
 }
 
@@ -41,7 +42,7 @@ const MIN_DURATION = 1; // minimum chord length in beats
 export default function CellGridView({
   measures, chords, currentBeat,
   getChordColor, onAddBars, onSeek,
-  onAddChord, onRemoveChord, onMoveChord, onResizeChord,
+  onAddChord, onRemoveChord, onMoveChord, onResizeChord, onResizeChordRange,
   diatonicChords,
 }: CellGridViewProps) {
   const beatsPerCell = BARS_PER_CELL * BEATS_PER_BAR;
