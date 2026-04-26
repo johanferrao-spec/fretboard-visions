@@ -68,7 +68,20 @@ export function createInstruments(): EngineInstruments {
     volume: -18,
   }).connect(master);
 
-  return { piano, bass, kick, snare, hihat, ride, master };
+  // Jazz acoustic kit — real samples (loaded async)
+  const jazzKick  = new Tone.Player({ url: '/samples/jazz/kick.wav',  volume: 0 }).connect(master);
+  const jazzSnare = new Tone.Player({ url: '/samples/jazz/snare.wav', volume: -2 }).connect(master);
+  const jazzHihat = new Tone.Player({ url: '/samples/jazz/hihat.wav', volume: -8 }).connect(master);
+  const jazzRide  = new Tone.Player({ url: '/samples/jazz/ride.wav',  volume: -4 }).connect(master);
+  const jazzKit: JazzKit = {
+    kick: jazzKick,
+    snare: jazzSnare,
+    hihat: jazzHihat,
+    ride: jazzRide,
+    loaded: Tone.loaded(),
+  };
+
+  return { piano, bass, kick, snare, hihat, ride, jazzKit, master };
 }
 
 export function disposeInstruments(inst: EngineInstruments) {
@@ -78,5 +91,9 @@ export function disposeInstruments(inst: EngineInstruments) {
   inst.snare.dispose();
   inst.hihat.dispose();
   inst.ride.dispose();
+  inst.jazzKit.kick.dispose();
+  inst.jazzKit.snare.dispose();
+  inst.jazzKit.hihat.dispose();
+  inst.jazzKit.ride.dispose();
   inst.master.dispose();
 }
