@@ -316,78 +316,80 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
         {/* DRUM KIT — top-down view */}
         <div className="flex flex-col items-center min-w-[320px] flex-1">
           <svg viewBox="0 0 320 220" className="w-full h-full max-h-[200px]">
-            {/* Crash (top-left, large cymbal) */}
+            {/* KICK — back-centre, large drum sitting behind the rack tom.
+                Rendered FIRST so the rack tom and snare overlap on top of it
+                (matches the reference: kick is partially hidden under the toms). */}
+            <g {...partProps('kick')}>
+              <circle cx="160" cy="105" r="52" fill={partFill('kick')} stroke={partStroke('kick')} strokeWidth={partStrokeWidth('kick')} />
+              {/* tension lugs around the rim */}
+              {[0,1,2,3,4,5,6,7,8,9].map(i => {
+                const ang = (i * Math.PI) / 5 - Math.PI / 2;
+                const x = 160 + Math.cos(ang) * 52;
+                const y = 105 + Math.sin(ang) * 52;
+                return <rect key={i} x={x-3} y={y-2} width="6" height="4" fill="hsl(220 10% 25%)" />;
+              })}
+            </g>
+
+            {/* Crash (top-left, large cymbal) — drawn over the kick */}
             <g {...partProps('crash')}>
-              <circle cx="60" cy="55" r="38" fill={partFill('crash')} stroke={partStroke('crash')} strokeWidth={partStrokeWidth('crash')} />
-              <circle cx="60" cy="55" r="28" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
-              <circle cx="60" cy="55" r="20" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
-              <circle cx="60" cy="55" r="12" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
-              <circle cx="60" cy="55" r="2" fill="hsl(220 10% 12%)" />
+              <circle cx="55" cy="55" r="42" fill={partFill('crash')} stroke={partStroke('crash')} strokeWidth={partStrokeWidth('crash')} />
+              {[34, 26, 18, 10].map(r => (
+                <circle key={r} cx="55" cy="55" r={r} fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
+              ))}
+              <circle cx="55" cy="55" r="2" fill="hsl(220 10% 12%)" />
             </g>
 
             {/* Ride (top-right, large cymbal) */}
             <g {...partProps('ride')}>
-              <circle cx="260" cy="55" r="42" fill={partFill('ride')} stroke={partStroke('ride')} strokeWidth={partStrokeWidth('ride')} />
-              <circle cx="260" cy="55" r="32" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
-              <circle cx="260" cy="55" r="22" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
-              <circle cx="260" cy="55" r="12" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
-              <circle cx="260" cy="55" r="2" fill="hsl(220 10% 12%)" />
+              <circle cx="265" cy="55" r="44" fill={partFill('ride')} stroke={partStroke('ride')} strokeWidth={partStrokeWidth('ride')} />
+              {[36, 28, 20, 12].map(r => (
+                <circle key={r} cx="265" cy="55" r={r} fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.8" />
+              ))}
+              <circle cx="265" cy="55" r="2" fill="hsl(220 10% 12%)" />
             </g>
 
-            {/* Hi-hat (far left, smaller stacked cymbals) */}
-            <g {...partProps('hihat')}>
-              <circle cx="30" cy="155" r="22" fill={partFill('hihat')} stroke={partStroke('hihat')} strokeWidth={partStrokeWidth('hihat')} />
-              <circle cx="30" cy="155" r="15" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.6" />
-              <circle cx="30" cy="155" r="8" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.6" />
-              <circle cx="30" cy="155" r="1.5" fill="hsl(220 10% 12%)" />
-            </g>
-
-            {/* Tom 1 (centre-back-left) */}
+            {/* Rack tom — mounted on top of the kick, slightly left of centre */}
             <g {...partProps('tom1')}>
-              <circle cx="125" cy="100" r="26" fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
-              <circle cx="125" cy="100" r="20" fill="none" stroke="hsl(220 10% 25% / 0.4)" strokeWidth="0.6" />
-              {[0,1,2,3,4,5].map(i => {
-                const ang = (i * Math.PI) / 3;
-                const x = 125 + Math.cos(ang) * 26;
-                const y = 100 + Math.sin(ang) * 26;
+              <circle cx="135" cy="115" r="28" fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
+              <circle cx="135" cy="115" r="20" fill="none" stroke="hsl(220 10% 25% / 0.4)" strokeWidth="0.6" />
+              <circle cx="135" cy="115" r="2" fill="hsl(220 10% 12%)" />
+              {[0,1,2,3,4,5,6,7].map(i => {
+                const ang = (i * Math.PI) / 4;
+                const x = 135 + Math.cos(ang) * 28;
+                const y = 115 + Math.sin(ang) * 28;
                 return <rect key={i} x={x-2} y={y-1.5} width="4" height="3" fill="hsl(220 10% 30%)" />;
               })}
             </g>
 
-            {/* Tom 2 (centre-back-right) */}
-            <g {...partProps('tom2')}>
-              <circle cx="195" cy="100" r="28" fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
-              <circle cx="195" cy="100" r="22" fill="none" stroke="hsl(220 10% 25% / 0.4)" strokeWidth="0.6" />
-              {[0,1,2,3,4,5].map(i => {
-                const ang = (i * Math.PI) / 3;
-                const x = 195 + Math.cos(ang) * 28;
-                const y = 100 + Math.sin(ang) * 28;
-                return <rect key={i} x={x-2} y={y-1.5} width="4" height="3" fill="hsl(220 10% 30%)" />;
-              })}
+            {/* Hi-hat pedal cymbal (small, between snare and kick at the front) */}
+            <g {...partProps('hihat')}>
+              <circle cx="155" cy="200" r="10" fill={partFill('hihat')} stroke={partStroke('hihat')} strokeWidth={partStrokeWidth('hihat')} />
+              <rect x="151" y="200" width="8" height="18" fill="hsl(220 10% 25%)" opacity="0.6" />
+              <line x1="148" y1="200" x2="162" y2="200" stroke="hsl(220 10% 15%)" strokeWidth="0.6" />
             </g>
 
-            {/* Snare (front-left) */}
+            {/* Snare (front-left, with hi-hat stand symbolised by the small left cymbal stack) */}
             <g {...partProps('snare')}>
-              <circle cx="100" cy="170" r="32" fill={partFill('snare')} stroke={partStroke('snare')} strokeWidth={partStrokeWidth('snare')} />
-              <circle cx="100" cy="170" r="25" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.7" />
-              <line x1="72" y1="170" x2="128" y2="170" stroke="hsl(45 25% 75%)" strokeWidth="0.8" opacity="0.7" />
-              {[0,1,2,3,4,5,6,7].map(i => {
-                const ang = (i * Math.PI) / 4;
-                const x = 100 + Math.cos(ang) * 32;
-                const y = 170 + Math.sin(ang) * 32;
+              <circle cx="80" cy="165" r="34" fill={partFill('snare')} stroke={partStroke('snare')} strokeWidth={partStrokeWidth('snare')} />
+              <circle cx="80" cy="165" r="26" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.7" />
+              <circle cx="80" cy="165" r="2" fill="hsl(220 10% 12%)" />
+              {[0,1,2,3,4,5,6,7,8,9].map(i => {
+                const ang = (i * Math.PI) / 5;
+                const x = 80 + Math.cos(ang) * 34;
+                const y = 165 + Math.sin(ang) * 34;
                 return <rect key={i} x={x-2} y={y-1.5} width="4" height="3" fill="hsl(220 10% 30%)" />;
               })}
             </g>
 
-            {/* Kick (front-centre, largest circle) */}
-            <g {...partProps('kick')}>
-              <circle cx="220" cy="170" r="44" fill={partFill('kick')} stroke={partStroke('kick')} strokeWidth={partStrokeWidth('kick')} />
-              <circle cx="220" cy="170" r="34" fill="none" stroke="hsl(220 10% 25% / 0.4)" strokeWidth="0.7" />
-              <circle cx="220" cy="170" r="6" fill="hsl(220 10% 12%)" />
-              {[0,1,2,3,4,5,6,7].map(i => {
-                const ang = (i * Math.PI) / 4;
-                const x = 220 + Math.cos(ang) * 44;
-                const y = 170 + Math.sin(ang) * 44;
+            {/* Floor tom (front-right, largest of the toms) — re-uses the tom2 slot */}
+            <g {...partProps('tom2')}>
+              <circle cx="245" cy="165" r="42" fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
+              <circle cx="245" cy="165" r="32" fill="none" stroke="hsl(220 10% 25% / 0.4)" strokeWidth="0.7" />
+              <circle cx="245" cy="165" r="3" fill="hsl(220 10% 12%)" />
+              {[0,1,2,3,4,5,6,7,8,9].map(i => {
+                const ang = (i * Math.PI) / 5;
+                const x = 245 + Math.cos(ang) * 42;
+                const y = 165 + Math.sin(ang) * 42;
                 return <rect key={i} x={x-2.5} y={y-2} width="5" height="4" fill="hsl(220 10% 30%)" />;
               })}
             </g>
