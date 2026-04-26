@@ -44,7 +44,7 @@ const PART_LABEL: Record<DrumPart, string> = {
   hihat_pedal: 'Pedal Hat',
   hihat_open: 'Open Hat',
   ride: 'Ride',
-  tom1: 'Tom 1',
+  tom1: 'Rack Toms',
   tom2: 'Floor Tom',
   crash: 'Crash',
 };
