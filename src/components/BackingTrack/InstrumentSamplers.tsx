@@ -199,7 +199,11 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     isPartSelected(part) || isPartDragOver(part) ? 2.5 : 1;
 
   const partProps = (part: DrumPart) => ({
-    onClick: () => setSelection({ instrument: 'drums', part }),
+    onClick: () => {
+      setSelection({ instrument: 'drums', part });
+      // Preview whatever sample is currently active for this part.
+      previewSample(lib.activeEntryFor(`drums:${part}` as SlotKey));
+    },
     onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOver(`drums:${part}` as SlotKey); },
     onDragLeave: () => setDragOver(null),
     onDrop: (e: React.DragEvent) => handleDrop(e, `drums:${part}` as SlotKey),
