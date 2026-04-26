@@ -82,6 +82,10 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     try { localStorage.setItem(KEYS_VARIANT_KEY, keysVariant); } catch {}
   }, [keysVariant]);
 
+  /** Which kit the overview panel is currently viewing. Defaults to the kit
+   *  of the active drum-part selection (or Rock). */
+  const [viewKit, setViewKit] = useState<DrumKitGenre>('Rock');
+
   /** Pending file dropped on a drum slot — awaiting kit choice from the dialog. */
   const [pendingDrop, setPendingDrop] = useState<{ slot: SlotKey; file: File } | null>(null);
 
