@@ -38,10 +38,12 @@ function selectionToSlot(sel: Selection): SlotKey {
 const PART_LABEL: Record<DrumPart, string> = {
   kick: 'Kick',
   snare: 'Snare',
-  hihat: 'Hi-Hat',
+  hihat_closed: 'Closed Hat',
+  hihat_pedal: 'Pedal Hat',
+  hihat_open: 'Open Hat',
   ride: 'Ride',
   tom1: 'Tom 1',
-  tom2: 'Tom 2',
+  tom2: 'Floor Tom',
   crash: 'Crash',
 };
 
