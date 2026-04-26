@@ -401,7 +401,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
             </div>
             {/* Part rows */}
             <div className="px-2 py-2 space-y-1">
-              {KIT_PARTS.map(part => {
+              {KIT_PARTS.filter(p => p !== 'tom2').map(part => {
                 const slotKey = `drums:${part}` as SlotKey;
                 const userSampleForKit = lib.samples.find(s => s.slot === slotKey && s.kit === viewKit);
                 const builtInId = `kit:${viewKit.toLowerCase()}:${part}`;
