@@ -23,6 +23,15 @@ const Index = () => {
   const fb = useFretboard();
   const timeline = useSongTimeline();
   const midi = useMidiEngine();
+  const sampleLib = useSampleLibrary();
+  const resolveUserSample = useCallback(
+    (slot: string) => {
+      const id = sampleLib.active[slot];
+      if (!id) return null;
+      return sampleLib.samples.find(s => s.id === id) || null;
+    },
+    [sampleLib.active, sampleLib.samples],
+  );
   const [showCustomTuning, setShowCustomTuning] = useState(false);
   const [customTuningName, setCustomTuningName] = useState('');
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
