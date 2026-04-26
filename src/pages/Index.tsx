@@ -270,7 +270,7 @@ const Index = () => {
       playStartPerfRef.current = null;
       try {
         await backingApi.prewarm();
-        const { startPerfTime } = await backingApi.play();
+        const { startPerfTime } = await backingApi.play(timeline.bpm, timeline.measures, timeline.genre);
         timeline.setIsPlaying(true);
         playStartPerfRef.current = startPerfTime;
       } catch (error) {
