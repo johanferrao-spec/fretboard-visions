@@ -17,6 +17,9 @@ export interface StoredSample {
   slot: string;
   /** Display color (HSL string) for the part/sample chip */
   color: string;
+  /** Optional kit tag (Funk | Jazz | Rock | Latin) for drum-slot samples.
+   *  Used so that "Apply kit" prefers user samples tagged for that kit. */
+  kit?: 'Funk' | 'Jazz' | 'Rock' | 'Latin';
   /** Audio MIME type */
   mime: string;
   /** Stored blob */

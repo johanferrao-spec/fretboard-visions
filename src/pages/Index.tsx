@@ -795,7 +795,7 @@ const Index = () => {
             </div>
             {/* Instrument samplers — pinned bottom strip */}
             <div className="h-[220px] shrink-0">
-              <InstrumentSamplers volume={volume} />
+              <InstrumentSamplers volume={volume} genre={timeline.genre} />
             </div>
           </div>
         )}

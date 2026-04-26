@@ -3,8 +3,10 @@ import { deleteSample, getAllSamples, putSample, type StoredSample } from '@/lib
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import {
   BUILT_IN_KIT_SAMPLES,
+  colorForKitPart,
   defaultActiveKitMap,
   getBuiltInKitSample,
+  KIT_COLORS,
   KIT_PARTS,
   type BuiltInKitSample,
   type DrumKitGenre,
@@ -18,8 +20,7 @@ import type { SampleResolution } from './engine/scheduler';
  */
 export type SlotKey = `drums:${DrumPart}` | 'bass' | 'keys';
 
-/** Per-sample tint within a slot — cycles through these so each user sample
- *  in a slot gets its own colour swatch. Built-in samples use their kit colour. */
+/** Per-sample tint within a slot — used for non-drum (bass/keys) user uploads. */
 const SAMPLE_TINTS = [
   '210 80% 60%', '0 75% 60%', '50 90% 55%', '160 65% 50%',
   '280 70% 60%', '25 85% 55%', '320 70% 60%', '180 70% 50%',
@@ -74,16 +75,25 @@ export function useSampleLibrary() {
     return () => { cancelled = true; };
   }, []);
 
-  const addSample = useCallback(async (slot: SlotKey, file: File) => {
+  const addSample = useCallback(async (slot: SlotKey, file: File, kit?: DrumKitGenre) => {
     const id = `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const existingForSlot = samples.filter(s => s.slot === slot);
-    const usedColors = new Set(existingForSlot.map(s => s.color));
-    const color = SAMPLE_TINTS.find(c => !usedColors.has(c)) || SAMPLE_TINTS[existingForSlot.length % SAMPLE_TINTS.length];
+    const isDrum = slot.startsWith('drums:');
+    const part = isDrum ? (slot.split(':')[1] as DrumPart) : null;
+    let color: string;
+    if (isDrum && kit && part) {
+      // Drum samples tagged to a kit inherit the kit's color (bronze for cymbals).
+      color = colorForKitPart(kit, part);
+    } else {
+      const existingForSlot = samples.filter(s => s.slot === slot);
+      const usedColors = new Set(existingForSlot.map(s => s.color));
+      color = SAMPLE_TINTS.find(c => !usedColors.has(c)) || SAMPLE_TINTS[existingForSlot.length % SAMPLE_TINTS.length];
+    }
     const stored: StoredSample = {
       id,
       name: file.name,
       slot,
       color,
+      kit: isDrum ? kit : undefined,
       mime: file.type || 'audio/wav',
       blob: file,
       createdAt: Date.now(),
@@ -131,6 +141,7 @@ export function useSampleLibrary() {
         name: s.name,
         color: s.color,
         kind: 'user' as const,
+        kit: s.kit,
         userSample: s,
       }));
 
@@ -183,20 +194,23 @@ export function useSampleLibrary() {
     }
     const u = samples.find(s => s.id === id);
     if (!u) return null;
-    return { id: u.id, name: u.name, color: u.color, kind: 'user', userSample: u };
+    return { id: u.id, name: u.name, color: u.color, kind: 'user', kit: u.kit, userSample: u };
   }, [active, samples]);
 
-  /** Apply an entire genre kit to all drum parts in one click. */
+  /** Apply an entire genre kit to all drum parts. For each part, prefer a
+   *  user-uploaded sample tagged to this kit; fall back to the built-in. */
   const applyKitForAllParts = useCallback((kit: DrumKitGenre) => {
     setActive(prev => {
       const next = { ...prev };
       for (const part of KIT_PARTS) {
-        next[`drums:${part}`] = `kit:${kit.toLowerCase()}:${part}`;
+        const slot = `drums:${part}` as const;
+        const tagged = samples.find(s => s.slot === slot && s.kit === kit);
+        next[slot] = tagged ? tagged.id : `kit:${kit.toLowerCase()}:${part}`;
       }
       writeActive(next);
       return next;
     });
-  }, []);
+  }, [samples]);
 
   return {
     samples,
