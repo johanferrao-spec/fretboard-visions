@@ -366,7 +366,7 @@ const Index = () => {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+      <div className={`flex-1 flex flex-col lg:flex-row min-h-0 ${activeTab === 'backing' ? 'hidden' : ''}`}>
         {/* Side panel — controls */}
         <aside className="lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
           <div className="p-3">
