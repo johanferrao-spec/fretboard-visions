@@ -6,6 +6,7 @@ import { TRACK_LABELS, flattenClips } from '@/lib/backingTrackTypes';
 import { generateAllTracks } from './engine/generators';
 import { createInstruments, disposeInstruments, type EngineInstruments } from './engine/instruments';
 import { scheduleTrack, schedulePlayhead, setupLoop } from './engine/scheduler';
+import { disposeUserPlayers } from './engine/userSamples';
 
 const STORAGE_KEY = 'mf-backing-tracks';
 
@@ -364,7 +365,7 @@ export function useBackingTrack() {
       instRef.current = null;
       isInitRef.current = false;
     }
-    try { (require('./engine/userSamples') as typeof import('./engine/userSamples')).disposeUserPlayers(); } catch {}
+    try { disposeUserPlayers(); } catch {}
   }, []);
 
   return {
