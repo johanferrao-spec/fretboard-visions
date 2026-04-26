@@ -275,26 +275,16 @@ export default function TrackLane({
             )
           ))}
 
-          {/* Drum lane: solid pink block + draggable red fill regions */}
+          {/* Drum lane: draggable red fill regions overlay (clips render below with notes) */}
           {isDrums && (
             <>
+              {/* Invisible click-catcher to add fills on empty pink area between clips */}
               <div
                 data-role="drum-block"
-                className="absolute top-1 bottom-1 left-0 right-0 rounded-md select-none"
-                style={{
-                  backgroundColor: 'hsl(330, 75%, 60%)',
-                  cursor: onAddDrumFill ? 'copy' : 'default',
-                }}
+                className="absolute inset-0 select-none"
+                style={{ cursor: onAddDrumFill ? 'copy' : 'default' }}
                 title="Click an empty area to add a drum fill"
-              >
-                <div
-                  data-role="drum-block"
-                  className="absolute top-0.5 left-1.5 text-[8px] font-mono font-bold uppercase pointer-events-none"
-                  style={{ color: 'hsl(330, 90%, 90%)', textShadow: '0 0 3px hsl(0 0% 0% / 0.8)' }}
-                >
-                  Drums — click to add fill
-                </div>
-              </div>
+              />
 
               {/* Red fill regions */}
               {drumFills.map(fill => {
@@ -310,7 +300,7 @@ export default function TrackLane({
                       width: `${width}%`,
                       backgroundColor: 'hsl(0, 80%, 50%)',
                       boxShadow: isSel ? '0 0 0 2px hsl(0, 90%, 75%)' : undefined,
-                      zIndex: 5,
+                      zIndex: 15,
                     }}
                     onMouseDown={(e) => {
                       const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
@@ -347,8 +337,8 @@ export default function TrackLane({
             </>
           )}
 
-          {/* Clips (non-drum tracks) */}
-          {!isDrums && track.clips.map(clip => {
+          {/* Clips (all tracks, including drums) */}
+          {track.clips.map(clip => {
             const left = (clip.startBeat / totalBeats) * 100;
             const width = (clip.duration / totalBeats) * 100;
             const isSelected = selectedId === clip.id;
@@ -474,7 +464,7 @@ export default function TrackLane({
           )}
 
           {/* Empty hint */}
-          {!isDrums && track.clips.length === 0 && (
+          {track.clips.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-muted-foreground/60 pointer-events-none">
               No regions — add chords to generate
             </div>
