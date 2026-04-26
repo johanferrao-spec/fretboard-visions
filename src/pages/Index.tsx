@@ -12,7 +12,7 @@ import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import BackingTrackView from '@/components/BackingTrack/BackingTrackView';
 import InstrumentSamplers from '@/components/BackingTrack/InstrumentSamplers';
-import { useSampleLibrary } from '@/hooks/useSampleLibrary';
+import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
 import { ChevronUp } from 'lucide-react';
 import type { NoteName } from '@/lib/music';
 import type { TabNote, TabData } from '@/components/TabVisualiser';

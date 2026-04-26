@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trash2, Music, Upload } from 'lucide-react';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import type { Genre } from '@/hooks/useSongTimeline';
-import { useSampleLibrary, type SlotKey, type SampleListEntry } from '@/hooks/useSampleLibrary';
+import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
+import type { SlotKey, SampleListEntry } from '@/hooks/useSampleLibrary';
 import {
   KIT_COLORS,
   KIT_CYMBAL_COLORS,
