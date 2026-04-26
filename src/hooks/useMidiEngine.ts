@@ -165,9 +165,17 @@ export function useMidiEngine() {
     onBeatUpdate: (beat: number) => void,
     onStop: () => void,
   ) => {
+    // Ensure the AudioContext is resumed in the same call stack as the user
+    // gesture that triggered playback — must run BEFORE init().
+    await Tone.start();
+    const rawCtx = Tone.getContext().rawContext as AudioContext;
+    if (rawCtx && rawCtx.state !== 'running') {
+      try { await rawCtx.resume(); } catch {}
+    }
     await init();
-    Tone.getTransport().bpm.value = bpm;
+    Tone.getTransport().stop();
     Tone.getTransport().cancel();
+    Tone.getTransport().bpm.value = bpm;
 
     const totalBeats = measures * 4;
     const drumPattern = DRUM_PATTERNS[genre];
