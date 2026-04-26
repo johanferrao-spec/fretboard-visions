@@ -70,6 +70,15 @@ export const DRUM_PITCHES = {
 export type DrumPart = 'kick' | 'snare' | 'hihat' | 'ride' | 'tom1' | 'tom2' | 'crash';
 export type SamplerInstrument = 'drums' | 'bass' | 'keys';
 
+/** A drummer fill scheduled at a bar position on the drums lane. */
+export interface DrumFill {
+  id: string;
+  /** 0-based bar index where the fill begins */
+  startBar: number;
+  /** Fill length in bars (1..4). The fill occupies [startBar, startBar+lengthBars). */
+  lengthBars: number;
+}
+
 export const TRACK_COLORS: Record<TrackId, string> = {
   piano: '210 80% 60%',
   bass: '30 80% 55%',
