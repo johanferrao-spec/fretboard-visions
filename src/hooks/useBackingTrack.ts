@@ -6,6 +6,7 @@ import { TRACK_LABELS, flattenClips } from '@/lib/backingTrackTypes';
 import { generateAllTracks } from './engine/generators';
 import { createInstruments, disposeInstruments, type EngineInstruments } from './engine/instruments';
 import { scheduleTrack, schedulePlayhead, setupLoop } from './engine/scheduler';
+import { disposeUserPlayers } from './engine/userSamples';
 
 const STORAGE_KEY = 'mf-backing-tracks';
 
@@ -272,6 +273,7 @@ export function useBackingTrack() {
     bpm: number,
     measures: number,
     genre: Genre = 'Rock',
+    resolveUserSample?: import('./engine/scheduler').UserSampleResolver,
   ): Promise<{ startAudioTime: number; startPerfTime: number }> => {
     await init();
     await startToneAudio();
@@ -283,7 +285,7 @@ export function useBackingTrack() {
 
     (Object.keys(tracks) as TrackId[]).forEach(id => {
       const flat = flattenClips(tracks[id].clips);
-      scheduleTrack(id, flat, inst, muteRefs.current[id], genre);
+      scheduleTrack(id, flat, inst, muteRefs.current[id], genre, resolveUserSample);
     });
 
     schedulePlayhead((b) => setCurrentBeat(b));
@@ -363,6 +365,7 @@ export function useBackingTrack() {
       instRef.current = null;
       isInitRef.current = false;
     }
+    try { disposeUserPlayers(); } catch {}
   }, []);
 
   return {

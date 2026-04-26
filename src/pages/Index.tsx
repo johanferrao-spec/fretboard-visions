@@ -11,6 +11,9 @@ import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import BackingTrackView from '@/components/BackingTrack/BackingTrackView';
+import InstrumentSamplers from '@/components/BackingTrack/InstrumentSamplers';
+import { useSampleLibrary } from '@/hooks/useSampleLibrary';
+import { ChevronUp } from 'lucide-react';
 import type { NoteName } from '@/lib/music';
 import type { TabNote, TabData } from '@/components/TabVisualiser';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,6 +23,15 @@ const Index = () => {
   const fb = useFretboard();
   const timeline = useSongTimeline();
   const midi = useMidiEngine();
+  const sampleLib = useSampleLibrary();
+  const resolveUserSample = useCallback(
+    (slot: string) => {
+      const id = sampleLib.active[slot];
+      if (!id) return null;
+      return sampleLib.samples.find(s => s.id === id) || null;
+    },
+    [sampleLib.active, sampleLib.samples],
+  );
   const [showCustomTuning, setShowCustomTuning] = useState(false);
   const [customTuningName, setCustomTuningName] = useState('');
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
@@ -60,7 +72,7 @@ const Index = () => {
     remove: (id: string) => void;
     saved: { id: string; name: string }[];
     regenerateAll: () => void;
-    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre) => Promise<{ startAudioTime: number; startPerfTime: number }>;
+    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre, resolveUserSample?: (slot: string) => import('@/lib/sampleStorage').StoredSample | null) => Promise<{ startAudioTime: number; startPerfTime: number }>;
     stop: () => void;
     prewarm: () => Promise<void>;
   } | null>(null);
@@ -270,7 +282,7 @@ const Index = () => {
       playStartPerfRef.current = null;
       try {
         await backingApi.prewarm();
-        const { startPerfTime } = await backingApi.play(timeline.bpm, timeline.measures, timeline.genre);
+        const { startPerfTime } = await backingApi.play(timeline.bpm, timeline.measures, timeline.genre, resolveUserSample);
         timeline.setIsPlaying(true);
         playStartPerfRef.current = startPerfTime;
       } catch (error) {
@@ -354,7 +366,7 @@ const Index = () => {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+      <div className={`flex-1 flex flex-col lg:flex-row min-h-0 ${activeTab === 'backing' ? 'hidden' : ''}`}>
         {/* Side panel — controls */}
         <aside className="lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
           <div className="p-3">
@@ -716,15 +728,17 @@ const Index = () => {
         </main>
       </div>
 
-      {/* Bottom area — Song Timeline always visible; expands with Backing Track when active */}
+      {/* Bottom area — Song Timeline always visible; takes over the whole space when Backing is active */}
       <div
-        className={`flex flex-col shrink-0 transition-[max-height] duration-500 ease-out`}
+        className={`flex flex-col transition-[max-height,flex-grow] duration-500 ease-out ${
+          activeTab === 'backing' ? 'flex-1' : 'shrink-0'
+        }`}
         style={{
-          maxHeight: activeTab === 'backing' ? '70vh' : '180px',
+          maxHeight: activeTab === 'backing' ? 'none' : '180px',
         }}
       >
         {/* Timeline — order shifts when backing is active so it slides up to top of this region */}
-        <div className="transition-all duration-500 ease-out">
+        <div className="transition-all duration-500 ease-out shrink-0">
           <SongTimeline
             chords={timeline.chords}
             measures={timeline.measures}
@@ -758,6 +772,7 @@ const Index = () => {
             onSeek={handleSeek}
             onSetChordBass={timeline.setChordBass}
             backingTrackActive={activeTab === 'backing'}
+            onOpenBackingTrack={() => setActiveTab('backing')}
             onCloseBackingTrack={() => setActiveTab(null)}
             onSaveBackingTrack={(name) => backingApi?.save(name)}
             onLoadBackingTrack={(id) => backingApi?.load(id)}
@@ -766,29 +781,28 @@ const Index = () => {
           />
         </div>
 
-        {/* Backing Track DAW — slides down from below the timeline with smooth animation */}
-        <div
-          className={`overflow-hidden transition-all duration-500 ease-out ${
-            activeTab === 'backing' ? 'flex-1 opacity-100' : 'flex-[0] opacity-0'
-          }`}
-          style={{
-            maxHeight: activeTab === 'backing' ? '60vh' : '0px',
-          }}
-        >
-          {activeTab === 'backing' && (
-            <BackingTrackView
-              chords={timeline.chords}
-              measures={timeline.measures}
-              bpm={timeline.bpm}
-              genre={timeline.genre}
-              groove={timeline.groove}
-              volume={volume}
-              isPlaying={timeline.isPlaying}
-              currentBeat={timeline.currentBeat}
-              registerHandlers={handleRegisterBackingApi}
-            />
-          )}
-        </div>
+        {/* Backing Track DAW — fills remaining space; instrument samplers pinned at bottom */}
+        {activeTab === 'backing' && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <BackingTrackView
+                chords={timeline.chords}
+                measures={timeline.measures}
+                bpm={timeline.bpm}
+                genre={timeline.genre}
+                groove={timeline.groove}
+                volume={volume}
+                isPlaying={timeline.isPlaying}
+                currentBeat={timeline.currentBeat}
+                registerHandlers={handleRegisterBackingApi}
+              />
+            </div>
+            {/* Instrument samplers — pinned bottom strip */}
+            <div className="h-[220px] shrink-0">
+              <InstrumentSamplers volume={volume} />
+            </div>
+          </div>
+        )}
       </div>
 
       <NoteInfoPanel
