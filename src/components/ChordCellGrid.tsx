@@ -74,7 +74,6 @@ export default function CellGridView({
       const r = resizeRef.current;
       if (!r) return;
       const dxBeats = (e.clientX - r.startX) / r.pxPerBeat;
-      const totalBeats = measures * BEATS_PER_BAR;
 
       let newStart = r.origStart;
       let newEnd = r.origStart + r.origDuration;
