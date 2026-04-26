@@ -134,17 +134,9 @@ export default function BackingTrackView({
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
-      {/* Mini info bar — just a regenerate-all button (play & volume live in main timeline) */}
+      {/* Mini info bar */}
       <div className="flex items-center gap-2 px-3 py-1 border-b border-border bg-card shrink-0">
         <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Backing Track</span>
-        <button
-          onClick={() => bt.regenerateAll(chords, measures, genre, true, groove)}
-          className="px-2 py-0.5 rounded-md text-[9px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-muted transition-colors flex items-center gap-1"
-          title="Regenerate all tracks"
-        >
-          <RefreshCw size={9} />
-          Regenerate All
-        </button>
         <span className="text-[9px] font-mono text-muted-foreground ml-auto">
           Drag clips to move • Edges to resize • Del to remove • ⌘D to duplicate
         </span>
