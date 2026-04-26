@@ -26,27 +26,18 @@ function defaultTrack(id: TrackId): TrackState {
   };
 }
 
-/**
- * Build clips per chord region from absolute-beat notes.
- * Each chord region becomes one clip; notes are stored in clip-local beats.
- */
-function buildClipsFromNotes(chords: TimelineChord[], notes: MidiNote[]): MidiClip[] {
-  return chords.map(chord => {
-    const localNotes = notes
-      .filter(n => n.startBeat >= chord.startBeat && n.startBeat < chord.startBeat + chord.duration)
-      .map(n => ({
-        ...n,
-        startBeat: n.startBeat - chord.startBeat,
-      }));
-    return {
-      id: newClipId(),
-      startBeat: chord.startBeat,
-      duration: chord.duration,
-      notes: localNotes,
-      sourceChordId: chord.id,
-      label: `${chord.root}${chord.chordType === 'Major' ? '' : chord.chordType === 'Minor' ? 'm' : ' ' + chord.chordType}${chord.bassNote ? '/' + chord.bassNote : ''}`,
-    };
-  });
+/** Build one continuous generated region from absolute-beat notes. */
+function buildGeneratedClipFromNotes(measures: number, notes: MidiNote[], label: string): MidiClip[] {
+  const duration = Math.max(4, measures * 4);
+  return [{
+    id: newClipId(),
+    startBeat: 0,
+    duration,
+    notes: notes
+      .filter(n => n.startBeat < duration)
+      .map(n => ({ ...n, startBeat: Math.max(0, n.startBeat) })),
+    label,
+  }];
 }
 
 export function useBackingTrack() {
