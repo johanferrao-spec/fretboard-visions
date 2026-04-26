@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
+import * as Tone from 'tone';
 
 /**
- * Standalone Web-Audio metronome. Completely independent of any timeline / playback.
- * When `enabled` is true it ticks on its own internal interval at `bpm` BPM.
- * First beat of every bar gets a higher pitch (accent).
+ * Standalone metronome built on top of Tone.js's shared AudioContext, so it
+ * doesn't conflict with the backing track / MIDI engine which also use Tone.
  *
  * Uses a Web Audio lookahead scheduler for sample-accurate timing — beats are
  * scheduled ahead of time against ctx.currentTime, with a short setInterval
@@ -18,28 +18,25 @@ export function useMetronome(opts: {
   onTick?: (beatIndex: number) => void;
 }) {
   const { enabled, bpm, beatsPerBar = 4, onTick } = opts;
-  const ctxRef = useRef<AudioContext | null>(null);
   const beatCountRef = useRef<number>(0);
   const intervalRef = useRef<number | null>(null);
   const onTickRef = useRef(onTick);
   onTickRef.current = onTick;
 
   /**
-   * Synchronously create AND resume the AudioContext. MUST be called from
+   * Start (and resume) the shared Tone.js AudioContext. MUST be called from
    * inside a real user-gesture handler (click/keydown) — otherwise the browser
    * will leave the context suspended and no sound will be heard.
    */
-  const primeAudio = useCallback(() => {
-    if (!ctxRef.current) {
-      try {
-        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-        ctxRef.current = new Ctx();
-      } catch {
-        return;
+  const primeAudio = useCallback(async () => {
+    try {
+      await Tone.start();
+      const ctx = Tone.getContext().rawContext as AudioContext;
+      if (ctx && ctx.state !== 'running') {
+        await ctx.resume();
       }
-    }
-    if (ctxRef.current && ctxRef.current.state !== 'running') {
-      ctxRef.current.resume().catch(() => {});
+    } catch {
+      // ignore
     }
   }, []);
 
@@ -60,16 +57,9 @@ export function useMetronome(opts: {
       return;
     }
 
-    // Lazily create the AudioContext inside the effect so it never hits a null ref.
-    if (!ctxRef.current) {
-      try {
-        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-        ctxRef.current = new Ctx();
-      } catch {
-        return;
-      }
-    }
-    const ctx = ctxRef.current;
+    // Use the shared Tone.js raw AudioContext so we don't create a second
+    // context that fights with Tone for the audio output device.
+    const ctx = Tone.getContext().rawContext as AudioContext;
     if (!ctx) return;
 
     const LOOKAHEAD_MS = 25;
@@ -121,11 +111,9 @@ export function useMetronome(opts: {
     };
   }, [enabled, bpm, beatsPerBar]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount — don't close the shared Tone context, just stop scheduling.
   useEffect(() => () => {
     if (intervalRef.current !== null) window.clearInterval(intervalRef.current);
-    ctxRef.current?.close().catch(() => {});
-    ctxRef.current = null;
   }, []);
 
   return { primeAudio };
