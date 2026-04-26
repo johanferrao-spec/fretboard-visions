@@ -260,6 +260,10 @@ const Index = () => {
       const ctx = Tone.getContext().rawContext as AudioContext;
       if (ctx && ctx.state !== 'running') await ctx.resume();
     } catch {}
+    // Both engines share Tone's global Transport — make sure the other one
+    // isn't mid-playback before we schedule, otherwise they cancel each other.
+    midi.stop();
+    backingApi?.stop();
     if (activeTab === 'backing' && backingApi) {
       // Reset anchor; the RAF will hold the playhead until the audio start
       // time is known, eliminating the visible "playhead-runs-then-sound" gap.
