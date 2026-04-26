@@ -1,21 +1,36 @@
-import { Volume2, VolumeX, Sparkles, Loader2 } from 'lucide-react';
-import type { TrackId, TrackState } from '@/lib/backingTrackTypes';
+import { Volume2, VolumeX } from 'lucide-react';
+import type { TrackState } from '@/lib/backingTrackTypes';
 import { TRACK_COLORS, TRACK_LABELS } from '@/lib/backingTrackTypes';
 
 interface TrackHeaderProps {
   track: TrackState;
   onChange: <K extends keyof TrackState>(key: K, value: TrackState[K]) => void;
-  onRegenerate: () => void;
-  onAIRegenerate: () => void;
-  isAILoading: boolean;
+  /** Kept in the type so parents don't need to change, but unused now. */
+  onRegenerate?: () => void;
+  onAIRegenerate?: () => void;
+  isAILoading?: boolean;
 }
 
-export default function TrackHeader({ track, onChange, onRegenerate, onAIRegenerate, isAILoading }: TrackHeaderProps) {
+/**
+ * A single 0–100 slider drives both the engine's `intensity` and `complexity`.
+ * Centre (50) corresponds to the previous defaults; sliding left makes the
+ * part sparser/softer ("Less"), sliding right makes it busier/louder ("More").
+ */
+export default function TrackHeader({ track, onChange }: TrackHeaderProps) {
   const color = TRACK_COLORS[track.id];
+
+  // Average the two existing values so any prior state still maps sensibly.
+  const sliderValue = Math.round(((track.intensity + track.complexity) / 2) * 100);
+
+  const handleChange = (v: number) => {
+    const norm = v / 100;
+    onChange('intensity', norm);
+    onChange('complexity', norm);
+  };
 
   return (
     <div
-      className="flex flex-col gap-1.5 p-2 border-r border-border h-full"
+      className="flex flex-col gap-2 p-2 border-r border-border h-full"
       style={{
         backgroundColor: `hsl(${color} / 0.08)`,
         width: 200,
@@ -51,49 +66,22 @@ export default function TrackHeader({ track, onChange, onRegenerate, onAIRegener
         </div>
       </div>
 
-      {/* Intensity */}
-      <div className="flex flex-col gap-0.5">
+      {/* Single More / Less slider */}
+      <div className="flex flex-col gap-1 mt-auto">
         <div className="flex items-center justify-between">
-          <span className="text-[8px] font-mono uppercase text-muted-foreground tracking-wider">Intensity</span>
-          <span className="text-[8px] font-mono text-foreground">{Math.round(track.intensity * 100)}</span>
+          <span className="text-[8px] font-mono uppercase text-muted-foreground tracking-wider">Less</span>
+          <span className="text-[8px] font-mono text-foreground">{sliderValue}</span>
+          <span className="text-[8px] font-mono uppercase text-muted-foreground tracking-wider">More</span>
         </div>
         <input
-          type="range" min={0} max={100} value={track.intensity * 100}
-          onChange={e => onChange('intensity', Number(e.target.value) / 100)}
+          type="range"
+          min={0}
+          max={100}
+          value={sliderValue}
+          onChange={(e) => handleChange(Number(e.target.value))}
           className="w-full h-1 accent-primary cursor-pointer"
+          title="Drag to make this part busier or sparser"
         />
-      </div>
-
-      {/* Complexity */}
-      <div className="flex flex-col gap-0.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[8px] font-mono uppercase text-muted-foreground tracking-wider">Complexity</span>
-          <span className="text-[8px] font-mono text-foreground">{Math.round(track.complexity * 100)}</span>
-        </div>
-        <input
-          type="range" min={0} max={100} value={track.complexity * 100}
-          onChange={e => onChange('complexity', Number(e.target.value) / 100)}
-          className="w-full h-1 accent-primary cursor-pointer"
-        />
-      </div>
-
-      <div className="flex gap-1 mt-auto">
-        <button
-          onClick={onRegenerate}
-          className="flex-1 px-1.5 py-1 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-muted transition-colors"
-          title="Regenerate using rule-based engine"
-        >
-          ↻ Pattern
-        </button>
-        <button
-          onClick={onAIRegenerate}
-          disabled={isAILoading}
-          className="flex-1 px-1.5 py-1 rounded text-[8px] font-mono uppercase tracking-wider bg-primary/20 text-primary hover:bg-primary/30 transition-colors flex items-center justify-center gap-0.5 disabled:opacity-50"
-          title="Regenerate with AI"
-        >
-          {isAILoading ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
-          AI
-        </button>
       </div>
 
       {track.manuallyEdited && (
