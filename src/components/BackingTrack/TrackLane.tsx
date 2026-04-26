@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import type { TrackId, TrackState, MidiClip } from '@/lib/backingTrackTypes';
+import type { TrackId, TrackState, MidiClip, DrumFill } from '@/lib/backingTrackTypes';
 import { TRACK_COLORS, TRACK_LABELS, DRUM_PITCHES } from '@/lib/backingTrackTypes';
 import type { TimelineChord, Genre } from '@/hooks/useSongTimeline';
 import TrackHeader from './TrackHeader';
@@ -22,6 +22,11 @@ interface TrackLaneProps {
   onDeleteClip: (clipId: string) => void;
   onDuplicateClip: (clipId: string) => void;
   onOpenClipEditor: (clipId: string) => void;
+  /** Drum-only: fill regions (red) overlaid on the pink drum block */
+  drumFills?: DrumFill[];
+  onAddDrumFill?: (startBar: number, lengthBars?: number) => void;
+  onUpdateDrumFill?: (id: string, patch: Partial<DrumFill>) => void;
+  onRemoveDrumFill?: (id: string) => void;
 }
 
 interface DragState {
@@ -40,13 +45,17 @@ export default function TrackLane({
   track, measures, currentBeat, isPlaying, bpm, genre, chords,
   onParamChange, onRegenerate, onAINotes,
   onUpdateClip, onDeleteClip, onDuplicateClip, onOpenClipEditor,
+  drumFills = [], onAddDrumFill, onUpdateDrumFill, onRemoveDrumFill,
 }: TrackLaneProps) {
   const [aiLoading, setAiLoading] = useState(false);
   const laneRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const fillDragRef = useRef<{ id: string; mode: 'move' | 'resize-l' | 'resize-r'; origStart: number; origLen: number; startX: number; pxPerBar: number; } | null>(null);
   const [, force] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedFillId, setSelectedFillId] = useState<string | null>(null);
   const totalBeats = measures * 4;
+  const isDrums = track.id === 'drums';
 
   // Mouse drag handling for clips
   useEffect(() => {
@@ -91,6 +100,66 @@ export default function TrackLane({
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [selectedId, onDeleteClip, onDuplicateClip]);
+
+  // Mouse drag for drum fills
+  useEffect(() => {
+    if (!isDrums) return;
+    const onMove = (e: MouseEvent) => {
+      const f = fillDragRef.current;
+      if (!f || !onUpdateDrumFill) return;
+      const dx = e.clientX - f.startX;
+      const dBars = dx / f.pxPerBar;
+      if (f.mode === 'move') {
+        const ns = Math.round(f.origStart + dBars);
+        onUpdateDrumFill(f.id, {
+          startBar: Math.max(0, Math.min(measures - f.origLen, ns)),
+        });
+      } else if (f.mode === 'resize-r') {
+        const nLen = Math.round(f.origLen + dBars);
+        onUpdateDrumFill(f.id, {
+          lengthBars: Math.max(1, Math.min(4, Math.min(measures - f.origStart, nLen))),
+        });
+      } else if (f.mode === 'resize-l') {
+        const ns = Math.round(f.origStart + dBars);
+        const nLen = Math.round(f.origLen - dBars);
+        if (nLen >= 1 && nLen <= 4 && ns >= 0) {
+          onUpdateDrumFill(f.id, { startBar: ns, lengthBars: nLen });
+        }
+      }
+    };
+    const onUp = () => { fillDragRef.current = null; force(x => x + 1); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [isDrums, onUpdateDrumFill, measures]);
+
+  // Keyboard delete on selected drum fill
+  useEffect(() => {
+    if (!selectedFillId || !onRemoveDrumFill) return;
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        onRemoveDrumFill(selectedFillId);
+        setSelectedFillId(null);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selectedFillId, onRemoveDrumFill]);
+
+  const startFillDrag = (e: React.MouseEvent, fill: DrumFill, mode: 'move' | 'resize-l' | 'resize-r') => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!laneRef.current) return;
+    const pxPerBar = laneRef.current.getBoundingClientRect().width / measures;
+    fillDragRef.current = {
+      id: fill.id, mode, origStart: fill.startBar, origLen: fill.lengthBars,
+      startX: e.clientX, pxPerBar,
+    };
+    setSelectedFillId(fill.id);
+  };
 
   const startDrag = (e: React.MouseEvent, clip: MidiClip, mode: DragState['mode']) => {
     e.preventDefault();
@@ -156,13 +225,29 @@ export default function TrackLane({
         onAIRegenerate={handleAIRegen}
         isAILoading={aiLoading}
       />
-      <div className="flex-1 p-1.5 min-w-0 relative" onClick={() => setSelectedId(null)}>
+      <div
+        className="flex-1 p-1.5 min-w-0 relative"
+        onClick={() => { setSelectedId(null); setSelectedFillId(null); }}
+      >
         <div
           ref={laneRef}
           className="relative w-full h-full rounded-md overflow-hidden"
           style={{
             backgroundColor: `hsl(${color} / 0.06)`,
             border: `1px solid hsl(${color} / 0.25)`,
+          }}
+          onClick={(e) => {
+            if (!isDrums || !onAddDrumFill) return;
+            // Click empty pink area → add a 1-bar fill at that bar
+            const target = e.target as HTMLElement;
+            if (target.dataset.role !== 'drum-block') return;
+            const rect = laneRef.current!.getBoundingClientRect();
+            const xPct = (e.clientX - rect.left) / rect.width;
+            const bar = Math.max(0, Math.min(measures - 1, Math.floor(xPct * measures)));
+            // Avoid creating overlapping fills
+            const overlaps = drumFills.some(f => bar >= f.startBar && bar < f.startBar + f.lengthBars);
+            if (overlaps) return;
+            onAddDrumFill(bar, 1);
           }}
         >
           {/* Measure grid */}
@@ -190,8 +275,82 @@ export default function TrackLane({
             )
           ))}
 
-          {/* Clips */}
-          {track.clips.map(clip => {
+          {/* Drum lane: solid pink block + draggable red fill regions */}
+          {isDrums && (
+            <>
+              <div
+                data-role="drum-block"
+                className="absolute top-1 bottom-1 left-0 right-0 rounded-md select-none"
+                style={{
+                  backgroundColor: 'hsl(330, 80%, 65% / 0.35)',
+                  border: '1.5px solid hsl(330, 80%, 65% / 0.7)',
+                  cursor: onAddDrumFill ? 'copy' : 'default',
+                }}
+                title="Click an empty area to add a drum fill"
+              >
+                <div
+                  data-role="drum-block"
+                  className="absolute top-0.5 left-1.5 text-[8px] font-mono font-bold uppercase pointer-events-none"
+                  style={{ color: 'hsl(330, 90%, 90%)', textShadow: '0 0 3px hsl(0 0% 0% / 0.8)' }}
+                >
+                  Drums — click to add fill
+                </div>
+              </div>
+
+              {/* Red fill regions */}
+              {drumFills.map(fill => {
+                const left = (fill.startBar / measures) * 100;
+                const width = (fill.lengthBars / measures) * 100;
+                const isSel = selectedFillId === fill.id;
+                return (
+                  <div
+                    key={fill.id}
+                    className={`absolute top-1 bottom-1 rounded-md select-none cursor-grab active:cursor-grabbing group`}
+                    style={{
+                      left: `${left}%`,
+                      width: `${width}%`,
+                      backgroundColor: 'hsl(0, 85%, 55% / 0.55)',
+                      border: `1.5px solid hsl(0, 90%, ${isSel ? 70 : 55}%)`,
+                      boxShadow: isSel ? '0 0 0 2px hsl(0, 90%, 60% / 0.5)' : undefined,
+                      zIndex: 5,
+                    }}
+                    onMouseDown={(e) => {
+                      const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                      const offset = e.clientX - rect.left;
+                      if (offset > rect.width - 8) startFillDrag(e, fill, 'resize-r');
+                      else if (offset < 8) startFillDrag(e, fill, 'resize-l');
+                      else startFillDrag(e, fill, 'move');
+                    }}
+                    onClick={(e) => { e.stopPropagation(); setSelectedFillId(fill.id); }}
+                    title={`Fill — ${fill.lengthBars} bar${fill.lengthBars > 1 ? 's' : ''} at bar ${fill.startBar + 1}. Drag to move, edges to resize, Del to remove`}
+                  >
+                    <div
+                      className="absolute top-0.5 left-1.5 text-[8px] font-mono font-bold uppercase pointer-events-none"
+                      style={{ color: 'hsl(0, 100%, 95%)', textShadow: '0 0 3px hsl(0 0% 0% / 0.9)' }}
+                    >
+                      Fill ({fill.lengthBars})
+                    </div>
+                    <div className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100"
+                      style={{ backgroundColor: 'hsl(0, 90%, 70%)' }} />
+                    <div className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100"
+                      style={{ backgroundColor: 'hsl(0, 90%, 70%)' }} />
+                    {isSel && onRemoveDrumFill && (
+                      <button
+                        className="absolute top-0.5 right-0.5 p-0.5 rounded bg-card/80 text-muted-foreground hover:text-destructive hover:bg-card z-20"
+                        title="Delete fill"
+                        onClick={(e) => { e.stopPropagation(); onRemoveDrumFill(fill.id); setSelectedFillId(null); }}
+                      >
+                        <Trash2 size={9} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
+
+          {/* Clips (non-drum tracks) */}
+          {!isDrums && track.clips.map(clip => {
             const left = (clip.startBeat / totalBeats) * 100;
             const width = (clip.duration / totalBeats) * 100;
             const isSelected = selectedId === clip.id;
@@ -317,7 +476,7 @@ export default function TrackLane({
           )}
 
           {/* Empty hint */}
-          {track.clips.length === 0 && (
+          {!isDrums && track.clips.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-muted-foreground/60 pointer-events-none">
               No regions — add chords to generate
             </div>
