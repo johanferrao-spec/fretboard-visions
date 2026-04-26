@@ -476,7 +476,7 @@ export default function TrackLane({
           )}
 
           {/* Empty hint */}
-          {track.clips.length === 0 && (
+          {!isDrums && track.clips.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-muted-foreground/60 pointer-events-none">
               No regions — add chords to generate
             </div>
