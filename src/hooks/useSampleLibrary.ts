@@ -75,16 +75,25 @@ export function useSampleLibrary() {
     return () => { cancelled = true; };
   }, []);
 
-  const addSample = useCallback(async (slot: SlotKey, file: File) => {
+  const addSample = useCallback(async (slot: SlotKey, file: File, kit?: DrumKitGenre) => {
     const id = `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const existingForSlot = samples.filter(s => s.slot === slot);
-    const usedColors = new Set(existingForSlot.map(s => s.color));
-    const color = SAMPLE_TINTS.find(c => !usedColors.has(c)) || SAMPLE_TINTS[existingForSlot.length % SAMPLE_TINTS.length];
+    const isDrum = slot.startsWith('drums:');
+    const part = isDrum ? (slot.split(':')[1] as DrumPart) : null;
+    let color: string;
+    if (isDrum && kit && part) {
+      // Drum samples tagged to a kit inherit the kit's color (bronze for cymbals).
+      color = colorForKitPart(kit, part);
+    } else {
+      const existingForSlot = samples.filter(s => s.slot === slot);
+      const usedColors = new Set(existingForSlot.map(s => s.color));
+      color = SAMPLE_TINTS.find(c => !usedColors.has(c)) || SAMPLE_TINTS[existingForSlot.length % SAMPLE_TINTS.length];
+    }
     const stored: StoredSample = {
       id,
       name: file.name,
       slot,
       color,
+      kit: isDrum ? kit : undefined,
       mime: file.type || 'audio/wav',
       blob: file,
       createdAt: Date.now(),
