@@ -143,17 +143,34 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const previewSample = (entry: SampleListEntry) => {
-    if (entry.kind !== 'user' || !entry.userSample) return;
+  /** Play a short preview of any sample entry (user upload OR jazz built-in).
+   *  Synth-based built-ins (Funk/Rock/Latin) have no preview wav — they will
+   *  silently no-op. */
+  const previewSample = (entry: SampleListEntry | null) => {
+    if (!entry) return;
     if (previewRef.current) {
-      previewRef.current.pause();
+      try { previewRef.current.pause(); } catch {}
       previewRef.current.src = '';
     }
-    const url = URL.createObjectURL(entry.userSample.blob);
+    let url: string | null = null;
+    let revoke = false;
+    if (entry.kind === 'user' && entry.userSample) {
+      url = URL.createObjectURL(entry.userSample.blob);
+      revoke = true;
+    } else if (entry.kind === 'builtin' && entry.kit === 'Jazz' && entry.part) {
+      // Jazz built-ins have wavs. Closed/Pedal/Open all share hihat.wav.
+      const fileMap: Record<string, string> = {
+        kick: 'kick', snare: 'snare', ride: 'ride',
+        hihat_closed: 'hihat', hihat_pedal: 'hihat', hihat_open: 'hihat',
+      };
+      const file = fileMap[entry.part];
+      if (file) url = `/samples/jazz/${file}.wav`;
+    }
+    if (!url) return;
     const a = new Audio(url);
     a.volume = Math.max(0, Math.min(1, volume));
     a.play().catch(() => {});
-    a.onended = () => URL.revokeObjectURL(url);
+    if (revoke) a.onended = () => URL.revokeObjectURL(url!);
     previewRef.current = a;
   };
 
