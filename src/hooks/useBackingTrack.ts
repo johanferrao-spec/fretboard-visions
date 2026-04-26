@@ -364,6 +364,7 @@ export function useBackingTrack() {
       instRef.current = null;
       isInitRef.current = false;
     }
+    try { (require('./engine/userSamples') as typeof import('./engine/userSamples')).disposeUserPlayers(); } catch {}
   }, []);
 
   return {
