@@ -269,6 +269,8 @@ export function useSampleLibrary() {
     addSample,
     removeSample,
     selectSample,
+    selectHihatGroup,
+    kitForSampleId,
     samplesForSlot,
     resolveSlot,
     activeEntryFor,
