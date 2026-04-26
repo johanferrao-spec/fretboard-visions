@@ -469,6 +469,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                     <span className={`text-[9px] font-mono ${isMissing ? 'text-muted-foreground/60 italic' : 'text-muted-foreground truncate max-w-[100px]'}`}>
                       {isMissing ? 'Drop sample' : userSampleForKit!.name}
                     </span>
+                    </div>
                   </div>
                 );
               })}
