@@ -155,6 +155,7 @@ export default function CellGridView({
       origDuration: chord.duration,
     };
     document.body.style.cursor = 'ew-resize';
+    console.log('[resize] begin', { chordId: chord.id, edge, pxPerBeat, origStart: chord.startBeat, origDuration: chord.duration });
   };
 
   const formatChordLabel = (chord: TimelineChord): string => {
