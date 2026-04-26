@@ -279,6 +279,8 @@ export function useBackingTrack() {
 
     (Object.keys(tracks) as TrackId[]).forEach(id => {
       const flat = flattenClips(tracks[id].clips);
+      // eslint-disable-next-line no-console
+      console.log(`[backing] schedule ${id}: ${flat.length} notes from ${tracks[id].clips.length} clip(s)`);
       scheduleTrack(id, flat, inst, muteRefs.current[id], genre, resolveUserSample);
     });
 
