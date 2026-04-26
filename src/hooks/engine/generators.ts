@@ -1,8 +1,10 @@
-import type { TimelineChord, Genre } from '@/hooks/useSongTimeline';
+import type { TimelineChord, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { MidiNote, TrackId } from '@/lib/backingTrackTypes';
 import { DRUM_PITCHES } from '@/lib/backingTrackTypes';
 import { NOTE_NAMES, CHORD_FORMULAS } from '@/lib/music';
 import { jitterTime, jitterVelocity } from './humanize';
+import { GROOVE_FUNK_1 } from './groove1';
+import { generateAllFromGroove } from './grooveGenerator';
 
 let nextId = 1;
 const newId = (prefix: string) => `${prefix}-${nextId++}`;
@@ -569,7 +571,13 @@ export function generateAllTracks(
   genre: Genre,
   intensities: { piano: number; bass: number; drums: number },
   complexities: { piano: number; bass: number; drums: number },
+  groove?: GrooveId,
 ): Record<TrackId, MidiNote[]> {
+  // Funk uses an imported MIDI groove template (rhythm + feel preserved,
+  // pitches transposed to follow the user's chords on the timeline).
+  if (genre === 'Funk' && groove === 1) {
+    return generateAllFromGroove(GROOVE_FUNK_1, chords, measures, intensities, complexities);
+  }
   return {
     piano: generatePiano(chords, measures, intensities.piano, complexities.piano, genre),
     bass:  generateBass(chords, measures, intensities.bass, complexities.bass, genre),
