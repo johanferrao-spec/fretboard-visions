@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List } from 'lucide-react';
+import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight } from 'lucide-react';
 import type { TimelineChord, SnapValue, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
@@ -64,7 +64,12 @@ export default function SongTimeline({
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragChord, setDragChord] = useState<string | null>(null);
-  const [resizeChord, setResizeChord] = useState<string | null>(null);
+  const [resizeChord, setResizeChord] = useState<{
+    id: string;
+    edge: 'left' | 'right';
+    origStart: number;
+    origDuration: number;
+  } | null>(null);
   const [playheadDragging, setPlayheadDragging] = useState(false);
   const [dragPreview, setDragPreview] = useState<{ beat: number; root: NoteName; chordType: string } | null>(null);
   const [bpmDragging, setBpmDragging] = useState(false);
@@ -123,33 +128,31 @@ export default function SongTimeline({
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [dragChord, getBeatFromX, onMoveChord, onTrimOverlaps]);
 
-  // Resize chord
+  // Resize chord from either edge; resize uses the range handler so dragged
+  // edges consume/shrink neighbouring chord regions while the mouse moves.
   useEffect(() => {
     if (!resizeChord) return;
-    const chord = chords.find(c => c.id === resizeChord);
-    if (!chord) return;
+    const origEnd = resizeChord.origStart + resizeChord.origDuration;
     const onMove = (e: MouseEvent) => {
-      // Allow the trailing edge to reach the very end of the final bar.
-      // getBeatFromX clamps to totalBeats - snapGrid (so new regions can't be
-      // placed past the last grid cell), which would otherwise prevent a
-      // region from ever extending all the way to totalBeats.
       const rect = gridRef.current?.getBoundingClientRect();
-      let endBeat: number;
-      if (rect) {
-        const raw = ((e.clientX - rect.left) / rect.width) * totalBeats;
-        const snapped = Math.round(raw / snapGrid) * snapGrid;
-        endBeat = Math.max(0, Math.min(totalBeats, snapped));
+      if (!rect) return;
+
+      const rawBeat = ((e.clientX - rect.left) / rect.width) * totalBeats;
+      const snappedBeat = Math.max(0, Math.min(totalBeats, Math.round(rawBeat / snapGrid) * snapGrid));
+
+      if (resizeChord.edge === 'right') {
+        const nextEnd = Math.max(resizeChord.origStart + snapGrid, snappedBeat);
+        onResizeChordRange(resizeChord.id, resizeChord.origStart, nextEnd - resizeChord.origStart);
       } else {
-        endBeat = getBeatFromX(e.clientX);
+        const nextStart = Math.min(origEnd - snapGrid, snappedBeat);
+        onResizeChordRange(resizeChord.id, nextStart, origEnd - nextStart);
       }
-      const newDur = endBeat - chord.startBeat;
-      if (newDur >= snapGrid) onResizeChord(resizeChord, newDur);
     };
     const onUp = () => { setResizeChord(null); onTrimOverlaps(); };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [resizeChord, chords, getBeatFromX, onResizeChord, snapGrid, onTrimOverlaps]);
+  }, [resizeChord, onResizeChordRange, snapGrid, totalBeats, onTrimOverlaps]);
 
   // Playhead drag
   useEffect(() => {
@@ -789,9 +792,12 @@ export default function SongTimeline({
                 }}
                 onMouseDown={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   const rect = e.currentTarget.getBoundingClientRect();
-                  if (e.clientX > rect.right - 8) {
-                    setResizeChord(chord.id);
+                  if (e.clientX < rect.left + 12) {
+                    setResizeChord({ id: chord.id, edge: 'left', origStart: chord.startBeat, origDuration: chord.duration });
+                  } else if (e.clientX > rect.right - 12) {
+                    setResizeChord({ id: chord.id, edge: 'right', origStart: chord.startBeat, origDuration: chord.duration });
                   } else {
                     setDragChord(chord.id);
                   }
@@ -810,11 +816,19 @@ export default function SongTimeline({
                 >
                   {chordLabel}{bassLabel && <span className="opacity-70">{bassLabel}</span>}
                 </span>
-                {/* Resize handle */}
+                {/* Resize handles */}
                 <div
-                  className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity rounded-r-md"
-                  style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
-                />
+                  className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center rounded-l-md"
+                  style={{ backgroundColor: 'hsl(var(--foreground) / 0.22)' }}
+                >
+                  <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
+                </div>
+                <div
+                  className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center rounded-r-md"
+                  style={{ backgroundColor: 'hsl(var(--foreground) / 0.22)' }}
+                >
+                  <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
+                </div>
               </div>
             );
           })}
