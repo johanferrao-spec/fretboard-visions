@@ -337,8 +337,8 @@ export default function TrackLane({
             </>
           )}
 
-          {/* Clips (non-drum tracks) */}
-          {!isDrums && track.clips.map(clip => {
+          {/* Clips (all tracks, including drums) */}
+          {track.clips.map(clip => {
             const left = (clip.startBeat / totalBeats) * 100;
             const width = (clip.duration / totalBeats) * 100;
             const isSelected = selectedId === clip.id;
@@ -464,7 +464,7 @@ export default function TrackLane({
           )}
 
           {/* Empty hint */}
-          {!isDrums && track.clips.length === 0 && (
+          {track.clips.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-muted-foreground/60 pointer-events-none">
               No regions — add chords to generate
             </div>
