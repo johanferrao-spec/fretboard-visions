@@ -236,7 +236,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   return (
     <div className="flex h-full bg-card border-t border-border overflow-hidden">
       {/* LEFT COLUMN: per-piece header + sample list (no part-icon grid) */}
-      <div className="w-72 shrink-0 border-r border-border flex flex-col">
+      <div className="w-72 shrink-0 border-r border-border flex flex-col overflow-y-auto">
         <div className="px-3 py-2 border-b border-border">
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
             {selection.instrument === 'drums' ? `Drums · ${PART_LABEL[selection.part]}` : selection.instrument === 'bass' ? 'Bass sampler' : 'Keys sampler'}
@@ -269,7 +269,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
         )}
 
         {/* Sample list for the active slot */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="shrink-0">
           <div className="px-3 py-2 flex items-center justify-between">
             <span className="text-[9px] font-mono uppercase text-muted-foreground">
               {selection.instrument === 'drums' ? `${PART_LABEL[selection.part]} samples` : 'Samples'}
@@ -369,7 +369,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
               })}
             </div>
             {/* Part rows */}
-            <div className="px-2 py-2 space-y-1 max-h-[260px] overflow-y-auto">
+            <div className="px-2 py-2 space-y-1">
               {KIT_PARTS.map(part => {
                 const slotKey = `drums:${part}` as SlotKey;
                 const userSampleForKit = lib.samples.find(s => s.slot === slotKey && s.kit === viewKit);
