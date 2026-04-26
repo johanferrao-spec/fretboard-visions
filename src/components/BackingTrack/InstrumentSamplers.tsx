@@ -531,10 +531,17 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
               <ellipse cx="78" cy="190" rx="6" ry="2.5" fill={HARDWARE_DARK} />
               <rect x="76" y="178" width="4" height="12" fill={HARDWARE_DARK} />
             </g>
-            {/* Pedal hat — foot pedal at bottom of stand */}
+            {/* Pedal hat — foot pedal at the bottom of the hi-hat stand.
+                Plays the dedicated pedal sample. */}
             <g {...partProps('hihat_pedal')}>
-              <rect x="35" y="378" width="55" height="14" rx="2" fill={partFill('hihat_pedal') === CYMBAL_FILL ? HARDWARE_DARK : partFill('hihat_pedal')} stroke={partStroke('hihat_pedal')} strokeWidth={partStrokeWidth('hihat_pedal')} />
-              <circle cx="40" cy="385" r="3" fill={HARDWARE} />
+              {/* base plate */}
+              <rect x="30" y="388" width="65" height="8" rx="1.5" fill={HARDWARE_DARK} stroke={partStroke('hihat_pedal')} strokeWidth={partStrokeWidth('hihat_pedal')} />
+              {/* angled foot board */}
+              <polygon points="42,388 92,388 88,372 50,372" fill={partFill('hihat_pedal') === CYMBAL_FILL ? HARDWARE_DARK : partFill('hihat_pedal')} stroke={partStroke('hihat_pedal')} strokeWidth={partStrokeWidth('hihat_pedal')} />
+              {/* heel hinge */}
+              <circle cx="42" cy="388" r="3" fill={HARDWARE} />
+              {/* pull-rod connecting pedal to cymbal stack */}
+              <line x1="78" y1="370" x2="78" y2="220" stroke={HARDWARE} strokeWidth="2" strokeDasharray="2 3" opacity="0.7" />
             </g>
 
             {/* ============ RACK TOM (above kick, slightly left) ====== */}
