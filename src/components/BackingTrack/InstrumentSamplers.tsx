@@ -405,7 +405,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                     }}
                     onDragOver={(e) => { e.preventDefault(); setDragOver(slotKey); }}
                     onDragLeave={() => setDragOver(null)}
-                    onDrop={(e) => handleDrop(e, slotKey)}
+                    onDrop={(e) => handleOverviewDrop(e, slotKey, viewKit)}
                     className={`group flex items-center gap-2 px-2 py-1 rounded cursor-pointer border transition-colors ${
                       isDragOverThis
                         ? 'border-primary bg-primary/10'
