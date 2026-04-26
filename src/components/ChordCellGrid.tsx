@@ -90,42 +90,7 @@ export default function CellGridView({
         newStart = Math.max(0, Math.min(newEnd - MIN_DURATION, snapped));
       }
 
-      const dragged = chordsRef.current.find(c => c.id === r.chordId);
-      if (!dragged) return;
-
-      // Push/shrink/remove neighbouring chords overlapping the new range.
-      for (const other of chordsRef.current) {
-        if (other.id === r.chordId) continue;
-        const oStart = other.startBeat;
-        const oEnd = other.startBeat + other.duration;
-        if (oEnd <= newStart || oStart >= newEnd) continue;
-
-        if (oStart < newStart && oEnd > newStart && oEnd <= newEnd) {
-          const newDur = newStart - oStart;
-          if (newDur >= MIN_DURATION) onResizeChord(other.id, newDur);
-          else onRemoveChord(other.id);
-          continue;
-        }
-        if (oStart >= newStart && oStart < newEnd && oEnd > newEnd) {
-          const newDur = oEnd - newEnd;
-          if (newDur >= MIN_DURATION) {
-            onMoveChord(other.id, newEnd);
-            onResizeChord(other.id, newDur);
-          } else {
-            onRemoveChord(other.id);
-          }
-          continue;
-        }
-        if (oStart >= newStart && oEnd <= newEnd) {
-          onRemoveChord(other.id);
-        }
-      }
-
-      const newDur = newEnd - newStart;
-      if (newStart !== dragged.startBeat) onMoveChord(r.chordId, newStart);
-      if (Math.abs(newDur - dragged.duration) > 0.001) {
-        onResizeChord(r.chordId, newDur);
-      }
+      onResizeChordRange(r.chordId, newStart, newEnd - newStart);
     };
     const onUp = () => {
       if (resizeRef.current) {
@@ -139,7 +104,7 @@ export default function CellGridView({
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [measures, onMoveChord, onResizeChord, onRemoveChord]);
+  }, [measures, onResizeChordRange]);
 
   const beginResize = (e: React.MouseEvent, chord: TimelineChord, edge: 'left' | 'right') => {
     e.preventDefault();
