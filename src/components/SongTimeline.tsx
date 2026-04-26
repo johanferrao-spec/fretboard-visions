@@ -663,6 +663,8 @@ export default function SongTimeline({
               onSeek={(beat) => { if (isPlaying) onStop(); onSeek?.(beat); }}
               onAddChord={onAddChord}
               onRemoveChord={onRemoveChord}
+              onMoveChord={onMoveChord}
+              onResizeChord={onResizeChord}
               diatonicChords={diatonicChords}
             />
           ) : (

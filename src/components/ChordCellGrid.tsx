@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
@@ -20,23 +20,29 @@ interface CellGridViewProps {
   onSeek: (beat: number) => void;
   onAddChord: (root: NoteName, chordType: string, startBeat: number, duration?: number) => string;
   onRemoveChord: (id: string) => void;
+  onMoveChord: (id: string, newStartBeat: number) => void;
+  onResizeChord: (id: string, newDuration: number) => void;
   diatonicChords: DiatonicChord[];
 }
 
 const BARS_PER_CELL = 4;
 const BEATS_PER_BAR = 4;
 const CELLS_PER_ROW = 4;
+const RESIZE_SNAP = 1; // snap resize to whole beats (= 1/4 of a bar)
+const MIN_DURATION = 1; // minimum chord length in beats
 
 /**
  * Cell-based view of the chord track.
  * Each cell represents 4 bars, drawn as 4 large divisions (1 per bar).
- * Drop chords from the diatonic buttons or chord library onto a division to fill that bar.
- * Cells wrap to a new row after 4 cells.
+ * Drop chords onto a division to fill that bar. Drag the thin handles on the
+ * left/right of any chord segment to resize from that side; resizing past a
+ * neighbouring chord shrinks (or removes) that neighbour.
  */
 export default function CellGridView({
   measures, chords, currentBeat,
   getChordColor, onAddBars, onSeek,
-  onAddChord, onRemoveChord, diatonicChords,
+  onAddChord, onRemoveChord, onMoveChord, onResizeChord,
+  diatonicChords,
 }: CellGridViewProps) {
   const beatsPerCell = BARS_PER_CELL * BEATS_PER_BAR;
   const totalCells = Math.max(1, Math.ceil(measures / BARS_PER_CELL));
@@ -47,6 +53,108 @@ export default function CellGridView({
       if (beat >= c.startBeat && beat < c.startBeat + c.duration) return c;
     }
     return null;
+  };
+
+  // Latest chords ref so the resize handler always sees current state.
+  const chordsRef = useRef(chords);
+  chordsRef.current = chords;
+
+  // Resize drag state.
+  const resizeRef = useRef<{
+    chordId: string;
+    edge: 'left' | 'right';
+    startX: number;
+    pxPerBeat: number;
+    origStart: number;
+    origDuration: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const r = resizeRef.current;
+      if (!r) return;
+      const dxBeats = (e.clientX - r.startX) / r.pxPerBeat;
+      const totalBeats = measures * BEATS_PER_BAR;
+
+      let newStart = r.origStart;
+      let newEnd = r.origStart + r.origDuration;
+
+      if (r.edge === 'right') {
+        const raw = r.origStart + r.origDuration + dxBeats;
+        const snapped = Math.round(raw / RESIZE_SNAP) * RESIZE_SNAP;
+        newEnd = Math.max(r.origStart + MIN_DURATION, Math.min(totalBeats, snapped));
+      } else {
+        const raw = r.origStart + dxBeats;
+        const snapped = Math.round(raw / RESIZE_SNAP) * RESIZE_SNAP;
+        newStart = Math.max(0, Math.min(newEnd - MIN_DURATION, snapped));
+      }
+
+      const dragged = chordsRef.current.find(c => c.id === r.chordId);
+      if (!dragged) return;
+
+      // Push/shrink/remove neighbouring chords overlapping the new range.
+      for (const other of chordsRef.current) {
+        if (other.id === r.chordId) continue;
+        const oStart = other.startBeat;
+        const oEnd = other.startBeat + other.duration;
+        if (oEnd <= newStart || oStart >= newEnd) continue;
+
+        // Other ends inside new range, starts before → trim its right edge
+        if (oStart < newStart && oEnd > newStart && oEnd <= newEnd) {
+          const newDur = newStart - oStart;
+          if (newDur >= MIN_DURATION) onResizeChord(other.id, newDur);
+          else onRemoveChord(other.id);
+          continue;
+        }
+        // Other starts inside new range, extends past → push its left edge
+        if (oStart >= newStart && oStart < newEnd && oEnd > newEnd) {
+          const newDur = oEnd - newEnd;
+          if (newDur >= MIN_DURATION) {
+            onMoveChord(other.id, newEnd);
+            onResizeChord(other.id, newDur);
+          } else {
+            onRemoveChord(other.id);
+          }
+          continue;
+        }
+        // Other fully inside new range → remove
+        if (oStart >= newStart && oEnd <= newEnd) {
+          onRemoveChord(other.id);
+        }
+      }
+
+      // Apply new bounds to the dragged chord
+      if (newStart !== dragged.startBeat) onMoveChord(r.chordId, newStart);
+      const newDur = newEnd - newStart;
+      if (Math.abs(newDur - dragged.duration) > 0.001 || newStart !== dragged.startBeat) {
+        onResizeChord(r.chordId, newDur);
+      }
+    };
+    const onUp = () => { resizeRef.current = null; document.body.style.cursor = ''; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [measures, onMoveChord, onResizeChord, onRemoveChord]);
+
+  const beginResize = (e: React.MouseEvent, chord: TimelineChord, edge: 'left' | 'right') => {
+    e.preventDefault();
+    e.stopPropagation();
+    const barEl = (e.currentTarget as HTMLElement).closest('[data-bar-div]') as HTMLElement | null;
+    if (!barEl) return;
+    const rect = barEl.getBoundingClientRect();
+    const pxPerBeat = rect.width / BEATS_PER_BAR;
+    resizeRef.current = {
+      chordId: chord.id,
+      edge,
+      startX: e.clientX,
+      pxPerBeat,
+      origStart: chord.startBeat,
+      origDuration: chord.duration,
+    };
+    document.body.style.cursor = 'ew-resize';
   };
 
   const formatChordLabel = (chord: TimelineChord): string => {
@@ -178,6 +286,7 @@ export default function CellGridView({
                   return (
                     <div
                       key={divIdx}
+                      data-bar-div
                       onClick={(e) => { e.stopPropagation(); onSeek(barStartBeat); }}
                       onDoubleClick={(e) => {
                         e.stopPropagation();
@@ -224,6 +333,13 @@ export default function CellGridView({
                           );
                         }
 
+                        // Resize handles only at the chord's TRUE edges (not at bar boundaries
+                        // mid-chord), so a chord spanning multiple bars only shows its handles
+                        // on the bar(s) where its real start/end live.
+                        const isChordTrueStart = Math.abs(seg.start - seg.chord.startBeat) < 0.001;
+                        const isChordTrueEnd =
+                          Math.abs(seg.end - (seg.chord.startBeat + seg.chord.duration)) < 0.001;
+
                         return (
                           <div
                             key={segIdx}
@@ -232,12 +348,12 @@ export default function CellGridView({
                               background: `hsl(${getChordColor(seg.chord)})`,
                               opacity: 0.9,
                             }}
-                            className="flex items-center justify-center px-0.5 min-w-0"
-                            title={`${formatChordLabel(seg.chord)} (${segLength} beat${segLength === 1 ? '' : 's'})`}
+                            className="flex items-center justify-center px-0.5 min-w-0 relative group/seg"
+                            title={`${formatChordLabel(seg.chord)} (${segLength} beat${segLength === 1 ? '' : 's'}) — drag edges to resize`}
                           >
                             {showName && (
                               <span
-                                className="text-[11px] font-mono font-bold truncate"
+                                className="text-[11px] font-mono font-bold truncate pointer-events-none"
                                 style={{ color: '#000' }}
                               >
                                 {formatChordLabel(seg.chord)}
@@ -245,6 +361,28 @@ export default function CellGridView({
                                   <span className="opacity-70">/{seg.chord.bassNote}</span>
                                 )}
                               </span>
+                            )}
+                            {/* Left resize handle */}
+                            {isChordTrueStart && (
+                              <div
+                                onMouseDown={(e) => beginResize(e, seg.chord!, 'left')}
+                                onClick={(e) => e.stopPropagation()}
+                                onDoubleClick={(e) => e.stopPropagation()}
+                                className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover/seg:opacity-100 transition-opacity z-10"
+                                style={{ background: 'rgba(0,0,0,0.45)' }}
+                                title="Drag to resize from left"
+                              />
+                            )}
+                            {/* Right resize handle */}
+                            {isChordTrueEnd && (
+                              <div
+                                onMouseDown={(e) => beginResize(e, seg.chord!, 'right')}
+                                onClick={(e) => e.stopPropagation()}
+                                onDoubleClick={(e) => e.stopPropagation()}
+                                className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover/seg:opacity-100 transition-opacity z-10"
+                                style={{ background: 'rgba(0,0,0,0.45)' }}
+                                title="Drag to resize from right"
+                              />
                             )}
                           </div>
                         );
