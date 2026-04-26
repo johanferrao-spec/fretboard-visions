@@ -3,7 +3,9 @@ import * as Tone from 'tone';
 export interface JazzKit {
   kick: Tone.Player;
   snare: Tone.Player;
-  hihat: Tone.Player;
+  hihat_closed: Tone.Player;
+  hihat_pedal: Tone.Player;
+  hihat_open: Tone.Player;
   ride: Tone.Player;
   loaded: Promise<void>;
 }
@@ -68,15 +70,21 @@ export function createInstruments(): EngineInstruments {
     volume: -18,
   }).connect(master);
 
-  // Jazz acoustic kit — real samples (loaded async)
+  // Jazz acoustic kit — real samples (loaded async). We currently ship one
+  // hi-hat wav; reuse it for closed/pedal/open with different volumes until
+  // dedicated articulation samples are added.
   const jazzKick  = new Tone.Player({ url: '/samples/jazz/kick.wav',  volume: 0 }).connect(master);
   const jazzSnare = new Tone.Player({ url: '/samples/jazz/snare.wav', volume: -2 }).connect(master);
-  const jazzHihat = new Tone.Player({ url: '/samples/jazz/hihat.wav', volume: -8 }).connect(master);
+  const jazzHihatClosed = new Tone.Player({ url: '/samples/jazz/hihat.wav', volume: -8 }).connect(master);
+  const jazzHihatPedal  = new Tone.Player({ url: '/samples/jazz/hihat.wav', volume: -14 }).connect(master);
+  const jazzHihatOpen   = new Tone.Player({ url: '/samples/jazz/hihat.wav', volume: -4 }).connect(master);
   const jazzRide  = new Tone.Player({ url: '/samples/jazz/ride.wav',  volume: -4 }).connect(master);
   const jazzKit: JazzKit = {
     kick: jazzKick,
     snare: jazzSnare,
-    hihat: jazzHihat,
+    hihat_closed: jazzHihatClosed,
+    hihat_pedal: jazzHihatPedal,
+    hihat_open: jazzHihatOpen,
     ride: jazzRide,
     loaded: Tone.loaded(),
   };
@@ -93,7 +101,9 @@ export function disposeInstruments(inst: EngineInstruments) {
   inst.ride.dispose();
   inst.jazzKit.kick.dispose();
   inst.jazzKit.snare.dispose();
-  inst.jazzKit.hihat.dispose();
+  inst.jazzKit.hihat_closed.dispose();
+  inst.jazzKit.hihat_pedal.dispose();
+  inst.jazzKit.hihat_open.dispose();
   inst.jazzKit.ride.dispose();
   inst.master.dispose();
 }

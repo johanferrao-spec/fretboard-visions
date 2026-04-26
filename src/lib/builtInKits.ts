@@ -48,7 +48,7 @@ export const KIT_CYMBAL_COLORS: Record<DrumKitGenre, string> = {
 };
 
 /** Drum parts that are cymbals (use bronze coloring instead of kit shell color). */
-export const CYMBAL_PARTS: ReadonlySet<DrumPart> = new Set(['hihat', 'ride', 'crash']);
+export const CYMBAL_PARTS: ReadonlySet<DrumPart> = new Set<DrumPart>(['hihat_closed', 'hihat_pedal', 'hihat_open', 'ride', 'crash']);
 
 /** Return the appropriate color for a given (kit, part): bronze for cymbals,
  *  shell color for drums. */
@@ -57,7 +57,7 @@ export function colorForKitPart(kit: DrumKitGenre, part: DrumPart): string {
 }
 
 /** Drum parts available on every kit. */
-export const KIT_PARTS: DrumPart[] = ['kick', 'snare', 'hihat', 'ride', 'tom1', 'tom2', 'crash'];
+export const KIT_PARTS: DrumPart[] = ['kick', 'snare', 'hihat_closed', 'hihat_pedal', 'hihat_open', 'ride', 'tom1', 'tom2', 'crash'];
 
 /** Build the full set of built-in samples for all kits. */
 export const BUILT_IN_KIT_SAMPLES: BuiltInKitSample[] = (Object.keys(KIT_COLORS) as DrumKitGenre[])
@@ -71,7 +71,7 @@ export const BUILT_IN_KIT_SAMPLES: BuiltInKitSample[] = (Object.keys(KIT_COLORS)
       // Only the Jazz kit currently has loaded audio samples; others fall back
       // to the synthesised voices. Even within Jazz, only kick/snare/hihat/ride
       // have wav files — toms/crash use the synth fallback.
-      source: kit === 'Jazz' && (part === 'kick' || part === 'snare' || part === 'hihat' || part === 'ride')
+      source: kit === 'Jazz' && (part === 'kick' || part === 'snare' || part === 'hihat_closed' || part === 'hihat_pedal' || part === 'hihat_open' || part === 'ride')
         ? 'jazz-sample'
         : 'synth',
     })),

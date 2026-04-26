@@ -32,8 +32,11 @@ function mapDrumPitch(pitch: number): number {
   if (pitch >= 37 && pitch <= 40) return DRUM_PITCHES.snare;
   // Toms (low → high) → snare (closest available timbre)
   if (pitch === 41 || pitch === 43 || pitch === 45 || pitch === 47 || pitch === 48 || pitch === 50) return DRUM_PITCHES.snare;
-  // Closed/pedal/open hi-hat: 42, 44, 46
-  if (pitch === 42 || pitch === 44 || pitch === 46) return DRUM_PITCHES.hihat;
+  // Hi-hat articulations preserved separately so closed/pedal/open route to
+  // their own sample slots in the scheduler.
+  if (pitch === 42) return DRUM_PITCHES.hihat_closed;
+  if (pitch === 44) return DRUM_PITCHES.hihat_pedal;
+  if (pitch === 46) return DRUM_PITCHES.hihat_open;
   // Cymbals: 49 crash, 51 ride, 52 china, 53 ride bell, 55 splash, 57 crash 2, 59 ride 2
   if (pitch === 49 || pitch === 51 || pitch === 52 || pitch === 53 || pitch === 55 || pitch === 57 || pitch === 59) return DRUM_PITCHES.ride;
   // Anything else → snare fallback

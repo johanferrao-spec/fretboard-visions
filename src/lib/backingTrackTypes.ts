@@ -59,7 +59,12 @@ export interface BackingTrack {
 export const DRUM_PITCHES = {
   kick: 36,
   snare: 38,
-  hihat: 42,
+  /** Closed hi-hat (GM 42) */
+  hihat_closed: 42,
+  /** Pedal / foot hi-hat (GM 44) */
+  hihat_pedal: 44,
+  /** Open hi-hat (GM 46) */
+  hihat_open: 46,
   ride: 51,
   tom: 45,
   tom1: 45,
@@ -67,7 +72,16 @@ export const DRUM_PITCHES = {
   crash: 49,
 } as const;
 
-export type DrumPart = 'kick' | 'snare' | 'hihat' | 'ride' | 'tom1' | 'tom2' | 'crash';
+export type DrumPart =
+  | 'kick'
+  | 'snare'
+  | 'hihat_closed'
+  | 'hihat_pedal'
+  | 'hihat_open'
+  | 'ride'
+  | 'tom1'
+  | 'tom2'
+  | 'crash';
 export type SamplerInstrument = 'drums' | 'bass' | 'keys';
 
 /** A drummer fill scheduled at a bar position on the drums lane. */

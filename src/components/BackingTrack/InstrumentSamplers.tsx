@@ -8,6 +8,7 @@ import {
   KIT_CYMBAL_COLORS,
   KIT_PARTS,
   CYMBAL_PARTS,
+  colorForKitPart,
   type DrumKitGenre,
 } from '@/lib/builtInKits';
 import {
@@ -38,10 +39,12 @@ function selectionToSlot(sel: Selection): SlotKey {
 const PART_LABEL: Record<DrumPart, string> = {
   kick: 'Kick',
   snare: 'Snare',
-  hihat: 'Hi-Hat',
+  hihat_closed: 'Closed Hat',
+  hihat_pedal: 'Pedal Hat',
+  hihat_open: 'Open Hat',
   ride: 'Ride',
   tom1: 'Tom 1',
-  tom2: 'Tom 2',
+  tom2: 'Floor Tom',
   crash: 'Crash',
 };
 
@@ -79,6 +82,10 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   useEffect(() => {
     try { localStorage.setItem(KEYS_VARIANT_KEY, keysVariant); } catch {}
   }, [keysVariant]);
+
+  /** Which kit the overview panel is currently viewing. Defaults to the kit
+   *  of the active drum-part selection (or Rock). */
+  const [viewKit, setViewKit] = useState<DrumKitGenre>('Rock');
 
   /** Pending file dropped on a drum slot — awaiting kit choice from the dialog. */
   const [pendingDrop, setPendingDrop] = useState<{ slot: SlotKey; file: File } | null>(null);
@@ -129,6 +136,22 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     }
   };
 
+  /** Drop handler for kit-overview rows: kit is implicit (the panel's viewKit),
+   *  so we bypass the picker dialog and store immediately. */
+  const handleOverviewDrop = async (e: React.DragEvent, dropSlot: SlotKey, kit: DrumKitGenre) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(null);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    if (!/^audio\//.test(file.type) && !/\.(wav|mp3|ogg|m4a|aiff?)$/i.test(file.name)) return;
+    await lib.addSample(dropSlot, file, kit);
+    if (dropSlot.startsWith('drums:')) {
+      const part = dropSlot.split(':')[1] as DrumPart;
+      setSelection({ instrument: 'drums', part });
+    }
+  };
+
   const handleUploadClick = () => fileInputRef.current?.click();
   const handleFiles = async (files: FileList | null) => {
     if (!files || !files[0]) return;
@@ -141,17 +164,34 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const previewSample = (entry: SampleListEntry) => {
-    if (entry.kind !== 'user' || !entry.userSample) return;
+  /** Play a short preview of any sample entry (user upload OR jazz built-in).
+   *  Synth-based built-ins (Funk/Rock/Latin) have no preview wav — they will
+   *  silently no-op. */
+  const previewSample = (entry: SampleListEntry | null) => {
+    if (!entry) return;
     if (previewRef.current) {
-      previewRef.current.pause();
+      try { previewRef.current.pause(); } catch {}
       previewRef.current.src = '';
     }
-    const url = URL.createObjectURL(entry.userSample.blob);
+    let url: string | null = null;
+    let revoke = false;
+    if (entry.kind === 'user' && entry.userSample) {
+      url = URL.createObjectURL(entry.userSample.blob);
+      revoke = true;
+    } else if (entry.kind === 'builtin' && entry.kit === 'Jazz' && entry.part) {
+      // Jazz built-ins have wavs. Closed/Pedal/Open all share hihat.wav.
+      const fileMap: Record<string, string> = {
+        kick: 'kick', snare: 'snare', ride: 'ride',
+        hihat_closed: 'hihat', hihat_pedal: 'hihat', hihat_open: 'hihat',
+      };
+      const file = fileMap[entry.part];
+      if (file) url = `/samples/jazz/${file}.wav`;
+    }
+    if (!url) return;
     const a = new Audio(url);
     a.volume = Math.max(0, Math.min(1, volume));
     a.play().catch(() => {});
-    a.onended = () => URL.revokeObjectURL(url);
+    if (revoke) a.onended = () => URL.revokeObjectURL(url!);
     previewRef.current = a;
   };
 
@@ -180,7 +220,11 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     isPartSelected(part) || isPartDragOver(part) ? 2.5 : 1;
 
   const partProps = (part: DrumPart) => ({
-    onClick: () => setSelection({ instrument: 'drums', part }),
+    onClick: () => {
+      setSelection({ instrument: 'drums', part });
+      // Preview whatever sample is currently active for this part.
+      previewSample(lib.activeEntryFor(`drums:${part}` as SlotKey));
+    },
     onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOver(`drums:${part}` as SlotKey); },
     onDragLeave: () => setDragOver(null),
     onDrop: (e: React.DragEvent) => handleDrop(e, `drums:${part}` as SlotKey),
@@ -256,7 +300,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
               <div
                 key={s.id}
                 className={`group flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted/50 ${isActive ? 'bg-muted/70' : ''}`}
-                onClick={() => lib.selectSample(slot, s.id)}
+                onClick={() => { lib.selectSample(slot, s.id); previewSample(s); }}
               >
                 <span
                   className="w-2.5 h-2.5 rounded-sm shrink-0"
@@ -290,22 +334,105 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
           })}
         </div>
 
-        {/* Quick "apply whole kit" buttons */}
+        {/* KIT OVERVIEW — every part for the selected kit, missing slots
+            droppable, click a row to play that kit-part's sample. */}
         {selection.instrument === 'drums' && (
-          <div className="px-2 py-2 border-t border-border">
-            <div className="text-[9px] font-mono uppercase text-muted-foreground mb-1">Apply kit</div>
-            <div className="grid grid-cols-4 gap-1">
-              {DRUM_KITS.map(kit => (
-                <button
-                  key={kit}
-                  onClick={() => lib.applyKitForAllParts(kit)}
-                  className="text-[9px] font-mono uppercase rounded py-1 border border-border hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: `hsl(${KIT_COLORS[kit]} / 0.3)`, color: 'hsl(var(--foreground))' }}
-                  title={`Set every drum to the ${kit} kit`}
-                >
-                  {kit}
-                </button>
-              ))}
+          <div className="border-t border-border flex flex-col">
+            <div className="px-3 py-2 flex items-center justify-between">
+              <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+                Kit overview
+              </span>
+              <button
+                onClick={() => lib.applyKitForAllParts(viewKit)}
+                className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-muted"
+                title={`Set every drum part to ${viewKit}`}
+              >
+                Apply
+              </button>
+            </div>
+            {/* Kit picker tabs */}
+            <div className="grid grid-cols-4 gap-1 px-2">
+              {DRUM_KITS.map(kit => {
+                const isOn = viewKit === kit;
+                return (
+                  <button
+                    key={kit}
+                    onClick={() => setViewKit(kit)}
+                    className={`text-[9px] font-mono uppercase rounded py-1 border transition-colors ${
+                      isOn ? 'border-primary text-foreground' : 'border-border text-muted-foreground hover:bg-muted/40'
+                    }`}
+                    style={isOn ? { backgroundColor: `hsl(${KIT_COLORS[kit]} / 0.35)` } : undefined}
+                  >
+                    {kit}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Part rows */}
+            <div className="px-2 py-2 space-y-1 max-h-[260px] overflow-y-auto">
+              {KIT_PARTS.map(part => {
+                const slotKey = `drums:${part}` as SlotKey;
+                const userSampleForKit = lib.samples.find(s => s.slot === slotKey && s.kit === viewKit);
+                const builtInId = `kit:${viewKit.toLowerCase()}:${part}`;
+                const builtInEntry: SampleListEntry = {
+                  id: builtInId,
+                  name: `${viewKit} ${part}`,
+                  color: colorForKitPart(viewKit, part),
+                  kind: 'builtin',
+                  kit: viewKit,
+                  part,
+                };
+                const entryToUse: SampleListEntry = userSampleForKit
+                  ? {
+                      id: userSampleForKit.id,
+                      name: userSampleForKit.name,
+                      color: userSampleForKit.color,
+                      kind: 'user',
+                      kit: viewKit,
+                      userSample: userSampleForKit,
+                    }
+                  : builtInEntry;
+                const isMissing = !userSampleForKit;
+                const isDragOverThis = dragOver === slotKey;
+                const isSelected = selection.instrument === 'drums' && selection.part === part;
+                return (
+                  <div
+                    key={part}
+                    onClick={() => {
+                      setSelection({ instrument: 'drums', part });
+                      lib.selectSample(slotKey, entryToUse.id);
+                      previewSample(entryToUse);
+                    }}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(slotKey); }}
+                    onDragLeave={() => setDragOver(null)}
+                    onDrop={(e) => handleOverviewDrop(e, slotKey, viewKit)}
+                    className={`group flex items-center gap-2 px-2 py-1 rounded cursor-pointer border transition-colors ${
+                      isDragOverThis
+                        ? 'border-primary bg-primary/10'
+                        : isSelected
+                          ? 'border-primary/60 bg-muted/60'
+                          : isMissing
+                            ? 'border-dashed border-border/70 hover:bg-muted/30'
+                            : 'border-border hover:bg-muted/40'
+                    }`}
+                    title={isMissing ? `Drop a sample to add a ${PART_LABEL[part]} to the ${viewKit} kit` : `Click to play ${PART_LABEL[part]}`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-sm shrink-0"
+                      style={{
+                        backgroundColor: `hsl(${entryToUse.color}${isMissing ? ' / 0.35' : ''})`,
+                        border: isMissing ? '1px dashed hsl(var(--muted-foreground) / 0.5)' : undefined,
+                      }}
+                    />
+                    <span className="text-[10px] font-mono text-foreground flex-1 truncate">
+                      {PART_LABEL[part]}
+                    </span>
+                    <span className={`text-[9px] font-mono ${isMissing ? 'text-muted-foreground/60 italic' : 'text-muted-foreground truncate max-w-[100px]'}`}>
+                      {isMissing ? 'Drop sample' : userSampleForKit!.name}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -361,11 +488,26 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
               })}
             </g>
 
-            {/* Hi-hat pedal cymbal (small, between snare and kick at the front) */}
-            <g {...partProps('hihat')}>
-              <circle cx="155" cy="200" r="10" fill={partFill('hihat')} stroke={partStroke('hihat')} strokeWidth={partStrokeWidth('hihat')} />
-              <rect x="151" y="200" width="8" height="18" fill="hsl(220 10% 25%)" opacity="0.6" />
-              <line x1="148" y1="200" x2="162" y2="200" stroke="hsl(220 10% 15%)" strokeWidth="0.6" />
+            {/* Hi-hat stack (top-left of snare) — three articulations rendered
+                as a small stand with closed (top), open (middle ring), pedal
+                (foot at the bottom). Each is its own click target. */}
+            {/* Open hi-hat — middle ring, slightly larger to suggest "open" */}
+            <g {...partProps('hihat_open')}>
+              <circle cx="35" cy="135" r="14" fill={partFill('hihat_open')} stroke={partStroke('hihat_open')} strokeWidth={partStrokeWidth('hihat_open')} opacity={0.85} />
+              <circle cx="35" cy="135" r="10" fill="none" stroke="hsl(220 10% 25% / 0.45)" strokeWidth="0.6" />
+              <circle cx="35" cy="135" r="6"  fill="none" stroke="hsl(220 10% 25% / 0.35)" strokeWidth="0.5" />
+            </g>
+            {/* Closed hi-hat — top cymbal sitting just above the open one */}
+            <g {...partProps('hihat_closed')}>
+              <circle cx="35" cy="120" r="13" fill={partFill('hihat_closed')} stroke={partStroke('hihat_closed')} strokeWidth={partStrokeWidth('hihat_closed')} />
+              <circle cx="35" cy="120" r="9" fill="none" stroke="hsl(220 10% 25% / 0.5)" strokeWidth="0.6" />
+              <circle cx="35" cy="120" r="2" fill="hsl(220 10% 12%)" />
+            </g>
+            {/* Pedal hi-hat — small foot pedal/cymbal at the bottom of the stand */}
+            <g {...partProps('hihat_pedal')}>
+              <ellipse cx="35" cy="200" rx="12" ry="3.5" fill={partFill('hihat_pedal')} stroke={partStroke('hihat_pedal')} strokeWidth={partStrokeWidth('hihat_pedal')} />
+              <rect x="33" y="148" width="4" height="50" fill="hsl(220 10% 25%)" opacity="0.55" />
+              <rect x="22" y="204" width="26" height="4" rx="1" fill="hsl(220 10% 22%)" />
             </g>
 
             {/* Snare (front-left, with hi-hat stand symbolised by the small left cymbal stack) */}
@@ -400,7 +542,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
         {/* BASS — genre-specific icon */}
         <div
           className={`flex flex-col items-center min-w-[110px] rounded-md transition-colors ${dragOver === 'bass' ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
-          onClick={() => setSelection({ instrument: 'bass' })}
+          onClick={() => { setSelection({ instrument: 'bass' }); previewSample(lib.activeEntryFor('bass')); }}
           onDragOver={(e) => { e.preventDefault(); setDragOver('bass'); }}
           onDragLeave={() => setDragOver(null)}
           onDrop={(e) => handleDrop(e, 'bass')}
@@ -420,7 +562,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
         {/* KEYS — user-chosen icon variant */}
         <div
           className={`flex flex-col items-center min-w-[180px] rounded-md transition-colors ${dragOver === 'keys' ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
-          onClick={() => setSelection({ instrument: 'keys' })}
+          onClick={() => { setSelection({ instrument: 'keys' }); previewSample(lib.activeEntryFor('keys')); }}
           onDragOver={(e) => { e.preventDefault(); setDragOver('keys'); }}
           onDragLeave={() => setDragOver(null)}
           onDrop={(e) => handleDrop(e, 'keys')}

@@ -28,9 +28,28 @@ const SAMPLE_TINTS = [
 
 const ACTIVE_KEY = 'mf-active-samples';
 
+/** Migrate older slot keys: the legacy `drums:hihat` slot is now split into
+ *  closed/pedal/open. We map any pre-existing assignment to `hihat_closed`. */
+function migrateSlot(slot: string): string {
+  if (slot === 'drums:hihat') return 'drums:hihat_closed';
+  return slot;
+}
+
+/** Migrate a built-in kit id whose part name has changed. */
+function migrateActiveValue(value: string): string {
+  if (value.startsWith('kit:') && value.endsWith(':hihat')) {
+    return value.replace(/:hihat$/, ':hihat_closed');
+  }
+  return value;
+}
+
 function readActive(): Record<string, string> {
-  try { return JSON.parse(localStorage.getItem(ACTIVE_KEY) || '{}'); }
-  catch { return {}; }
+  try {
+    const raw = JSON.parse(localStorage.getItem(ACTIVE_KEY) || '{}') as Record<string, string>;
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(raw)) out[migrateSlot(k)] = migrateActiveValue(v);
+    return out;
+  } catch { return {}; }
 }
 
 function writeActive(map: Record<string, string>) {
@@ -68,7 +87,11 @@ export function useSampleLibrary() {
     let cancelled = false;
     getAllSamples().then(s => {
       if (!cancelled) {
-        setSamples(s);
+        // Migrate any legacy `drums:hihat` slot to `drums:hihat_closed`.
+        const migrated = s.map(item => item.slot === 'drums:hihat'
+          ? { ...item, slot: 'drums:hihat_closed' }
+          : item);
+        setSamples(migrated);
         setLoaded(true);
       }
     }).catch(() => setLoaded(true));
