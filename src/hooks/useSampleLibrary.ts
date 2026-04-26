@@ -3,8 +3,10 @@ import { deleteSample, getAllSamples, putSample, type StoredSample } from '@/lib
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import {
   BUILT_IN_KIT_SAMPLES,
+  colorForKitPart,
   defaultActiveKitMap,
   getBuiltInKitSample,
+  KIT_COLORS,
   KIT_PARTS,
   type BuiltInKitSample,
   type DrumKitGenre,
@@ -18,8 +20,7 @@ import type { SampleResolution } from './engine/scheduler';
  */
 export type SlotKey = `drums:${DrumPart}` | 'bass' | 'keys';
 
-/** Per-sample tint within a slot — cycles through these so each user sample
- *  in a slot gets its own colour swatch. Built-in samples use their kit colour. */
+/** Per-sample tint within a slot — used for non-drum (bass/keys) user uploads. */
 const SAMPLE_TINTS = [
   '210 80% 60%', '0 75% 60%', '50 90% 55%', '160 65% 50%',
   '280 70% 60%', '25 85% 55%', '320 70% 60%', '180 70% 50%',
