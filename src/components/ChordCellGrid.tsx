@@ -132,12 +132,12 @@ export default function CellGridView({
               <div className="grid grid-cols-4 gap-1">
                 {Array.from({ length: BARS_PER_CELL }, (_, divIdx) => {
                   const barStartBeat = cellStartBeat + divIdx * BEATS_PER_BAR;
+                  const barEndBeat = barStartBeat + BEATS_PER_BAR;
                   const barNumber = cellIdx * BARS_PER_CELL + divIdx + 1;
                   const isWithinTrack = barNumber <= measures;
-                  const chord = chordAtBeat(barStartBeat);
                   const isPlayheadBar =
                     currentBeat >= barStartBeat &&
-                    currentBeat < barStartBeat + BEATS_PER_BAR;
+                    currentBeat < barEndBeat;
                   const globalDivKey = cellIdx * BARS_PER_CELL + divIdx;
                   const isHovered = hoverDivision === globalDivKey;
 
@@ -150,58 +150,106 @@ export default function CellGridView({
                     );
                   }
 
-                  let bg = 'hsl(40, 60%, 30%)';
-                  let opacity = 0.55;
-                  let textColor = 'hsl(var(--foreground))';
-                  if (chord) {
-                    bg = `hsl(${getChordColor(chord)})`;
-                    opacity = 0.9;
-                    textColor = '#000';
+                  // Build per-bar chord segments: include any chord intersecting this bar,
+                  // clipped to the bar's bounds, plus filler "empty" segments for gaps.
+                  type Segment = { chord: TimelineChord | null; start: number; end: number };
+                  const segments: Segment[] = [];
+                  let cursor = barStartBeat;
+                  const overlapping = chords
+                    .filter(c => c.startBeat < barEndBeat && c.startBeat + c.duration > barStartBeat)
+                    .sort((a, b) => a.startBeat - b.startBeat);
+                  for (const c of overlapping) {
+                    const segStart = Math.max(barStartBeat, c.startBeat);
+                    const segEnd = Math.min(barEndBeat, c.startBeat + c.duration);
+                    if (segStart > cursor) {
+                      segments.push({ chord: null, start: cursor, end: segStart });
+                    }
+                    segments.push({ chord: c, start: segStart, end: segEnd });
+                    cursor = segEnd;
+                  }
+                  if (cursor < barEndBeat) {
+                    segments.push({ chord: null, start: cursor, end: barEndBeat });
                   }
 
+                  const dropTitle = overlapping.length > 0
+                    ? `Bar ${barNumber} — click: seek, double-click: clear`
+                    : `Bar ${barNumber} — drop a chord here`;
+
                   return (
-                    <button
+                    <div
                       key={divIdx}
                       onClick={(e) => { e.stopPropagation(); onSeek(barStartBeat); }}
                       onDoubleClick={(e) => {
                         e.stopPropagation();
-                        if (chord) onRemoveChord(chord.id);
+                        // Remove every chord overlapping this bar
+                        overlapping.forEach(c => onRemoveChord(c.id));
                       }}
                       onDragOver={(e) => handleDragOver(e, globalDivKey)}
                       onDragLeave={() => setHoverDivision(prev => prev === globalDivKey ? null : prev)}
                       onDrop={(e) => handleDrop(e, barStartBeat)}
-                      className="aspect-[3/2] rounded-sm transition-all hover:brightness-125 flex items-center justify-center px-1 relative overflow-hidden"
+                      className="aspect-[3/2] rounded-sm transition-all hover:brightness-110 flex relative overflow-hidden cursor-pointer"
                       style={{
-                        background: bg,
-                        opacity,
                         boxShadow: isPlayheadBar
                           ? 'inset 0 0 0 2px hsl(var(--primary)), 0 0 8px hsl(var(--primary) / 0.6)'
                           : isHovered
                             ? 'inset 0 0 0 2px hsl(var(--primary))'
                             : 'inset 0 0 0 1px hsl(220, 15%, 25%)',
                       }}
-                      title={
-                        chord
-                          ? `Bar ${barNumber}: ${formatChordLabel(chord)} — click: seek, double-click: remove`
-                          : `Bar ${barNumber} — drop a chord here`
-                      }
+                      title={dropTitle}
                     >
-                      {chord ? (
-                        <span
-                          className="text-[11px] font-mono font-bold truncate"
-                          style={{ color: textColor }}
-                        >
-                          {formatChordLabel(chord)}
-                          {chord.bassNote && (
-                            <span className="opacity-70">/{chord.bassNote}</span>
-                          )}
-                        </span>
-                      ) : (
-                        <span className="text-[9px] font-mono text-muted-foreground/60">
-                          {barNumber}
-                        </span>
-                      )}
-                    </button>
+                      {segments.map((seg, segIdx) => {
+                        const segLength = seg.end - seg.start;
+                        const flexBasis = `${(segLength / BEATS_PER_BAR) * 100}%`;
+                        // Show name only when segment occupies at least half the bar
+                        const showName = !!seg.chord && segLength >= BEATS_PER_BAR / 2;
+
+                        if (!seg.chord) {
+                          return (
+                            <div
+                              key={segIdx}
+                              style={{
+                                flex: `0 0 ${flexBasis}`,
+                                background: 'hsl(40, 60%, 30%)',
+                                opacity: 0.45,
+                              }}
+                              className="flex items-center justify-center"
+                            >
+                              {/* Show bar number only when the empty segment fills the whole bar */}
+                              {segLength === BEATS_PER_BAR && (
+                                <span className="text-[9px] font-mono text-muted-foreground/60">
+                                  {barNumber}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={segIdx}
+                            style={{
+                              flex: `0 0 ${flexBasis}`,
+                              background: `hsl(${getChordColor(seg.chord)})`,
+                              opacity: 0.9,
+                            }}
+                            className="flex items-center justify-center px-0.5 min-w-0"
+                            title={`${formatChordLabel(seg.chord)} (${segLength} beat${segLength === 1 ? '' : 's'})`}
+                          >
+                            {showName && (
+                              <span
+                                className="text-[11px] font-mono font-bold truncate"
+                                style={{ color: '#000' }}
+                              >
+                                {formatChordLabel(seg.chord)}
+                                {seg.chord.bassNote && (
+                                  <span className="opacity-70">/{seg.chord.bassNote}</span>
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   );
                 })}
               </div>
