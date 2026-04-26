@@ -542,7 +542,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
         {/* BASS — genre-specific icon */}
         <div
           className={`flex flex-col items-center min-w-[110px] rounded-md transition-colors ${dragOver === 'bass' ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
-          onClick={() => setSelection({ instrument: 'bass' })}
+          onClick={() => { setSelection({ instrument: 'bass' }); previewSample(lib.activeEntryFor('bass')); }}
           onDragOver={(e) => { e.preventDefault(); setDragOver('bass'); }}
           onDragLeave={() => setDragOver(null)}
           onDrop={(e) => handleDrop(e, 'bass')}
@@ -562,7 +562,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
         {/* KEYS — user-chosen icon variant */}
         <div
           className={`flex flex-col items-center min-w-[180px] rounded-md transition-colors ${dragOver === 'keys' ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
-          onClick={() => setSelection({ instrument: 'keys' })}
+          onClick={() => { setSelection({ instrument: 'keys' }); previewSample(lib.activeEntryFor('keys')); }}
           onDragOver={(e) => { e.preventDefault(); setDragOver('keys'); }}
           onDragLeave={() => setDragOver(null)}
           onDrop={(e) => handleDrop(e, 'keys')}
