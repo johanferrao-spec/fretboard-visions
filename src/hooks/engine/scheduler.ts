@@ -2,6 +2,7 @@ import * as Tone from 'tone';
 import type { MidiNote, TrackId } from '@/lib/backingTrackTypes';
 import { DRUM_PITCHES } from '@/lib/backingTrackTypes';
 import type { EngineInstruments } from './instruments';
+import type { Genre } from '@/hooks/useSongTimeline';
 import { midiToNote, velocityToGain } from './humanize';
 
 /**
@@ -13,7 +14,9 @@ export function scheduleTrack(
   notes: MidiNote[],
   inst: EngineInstruments,
   isMutedRef: { current: boolean },
+  genre: Genre = 'Rock',
 ) {
+  const useJazzKit = genre === 'Jazz';
   for (const n of notes) {
     const beats = n.startBeat;
     const bars = Math.floor(beats / 4);
@@ -30,6 +33,24 @@ export function scheduleTrack(
       if (isMutedRef.current) return;
       const t = time + microOffset;
       if (trackId === 'drums') {
+        if (useJazzKit) {
+          // Real-sample acoustic jazz kit. Players are one-shots — restart on each hit.
+          const playSample = (p: Tone.Player) => {
+            if (!p.loaded) return;
+            try {
+              p.volume.value = Tone.gainToDb(Math.max(0.001, gain));
+              p.start(t);
+            } catch {}
+          };
+          switch (n.pitch) {
+            case DRUM_PITCHES.kick:  playSample(inst.jazzKit.kick);  break;
+            case DRUM_PITCHES.snare: playSample(inst.jazzKit.snare); break;
+            case DRUM_PITCHES.hihat: playSample(inst.jazzKit.hihat); break;
+            case DRUM_PITCHES.ride:  playSample(inst.jazzKit.ride);  break;
+            default: playSample(inst.jazzKit.snare);
+          }
+          return;
+        }
         switch (n.pitch) {
           case DRUM_PITCHES.kick:
             inst.kick.triggerAttackRelease('C1', dur, t, gain);
