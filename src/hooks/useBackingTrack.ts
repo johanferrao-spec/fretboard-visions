@@ -148,7 +148,7 @@ export function useBackingTrack() {
         ...prev,
         [trackId]: {
           ...prev[trackId],
-          clips: buildClipsFromNotes(chords, generated[trackId]),
+          clips: buildGeneratedClipFromNotes(measures, generated[trackId], TRACK_LABELS[trackId]),
           manuallyEdited: false,
         },
       };
@@ -171,7 +171,7 @@ export function useBackingTrack() {
         if (force || !prev[id].manuallyEdited) {
           next[id] = {
             ...prev[id],
-            clips: buildClipsFromNotes(chords, generated[id]),
+            clips: buildGeneratedClipFromNotes(measures, generated[id], TRACK_LABELS[id]),
             manuallyEdited: false,
           };
         }
@@ -252,12 +252,12 @@ export function useBackingTrack() {
   }, []);
 
   /** Replace all notes from a flat list (used by AI generation per-track). */
-  const setTrackNotes = useCallback((trackId: TrackId, notes: MidiNote[], chords: TimelineChord[]) => {
+  const setTrackNotes = useCallback((trackId: TrackId, notes: MidiNote[], measures: number) => {
     setTracks(prev => ({
       ...prev,
       [trackId]: {
         ...prev[trackId],
-        clips: buildClipsFromNotes(chords, notes),
+        clips: buildGeneratedClipFromNotes(measures, notes, TRACK_LABELS[trackId]),
         manuallyEdited: true,
       },
     }));
@@ -332,7 +332,7 @@ export function useBackingTrack() {
       next[tid] = {
         ...defaultTrack(tid),
         ...t,
-        clips: Array.isArray(t.clips) ? t.clips : (Array.isArray(t.notes) ? buildClipsFromNotes(bt.chords, t.notes) : []),
+        clips: Array.isArray(t.clips) ? t.clips : (Array.isArray(t.notes) ? buildGeneratedClipFromNotes(bt.measures, t.notes, TRACK_LABELS[tid]) : []),
       };
     });
     setTracks(next);
