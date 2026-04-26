@@ -269,9 +269,12 @@ export function useBackingTrack() {
     measures: number,
   ): Promise<{ startAudioTime: number; startPerfTime: number }> => {
     await init();
+    await startToneAudio();
     const inst = instRef.current!;
+    const transport = Tone.getTransport();
+    transport.stop();
+    transport.cancel();
     Tone.getTransport().bpm.value = bpm;
-    clearSchedule();
 
     (Object.keys(tracks) as TrackId[]).forEach(id => {
       const flat = flattenClips(tracks[id].clips);
@@ -284,10 +287,10 @@ export function useBackingTrack() {
     const startAudioTime = Tone.now() + 0.05;
     // eslint-disable-next-line no-console
     console.log('[backing] AudioContext state:', Tone.getContext().state);
-    Tone.getTransport().start(startAudioTime);
+    transport.start(startAudioTime, 0);
     setIsPlaying(true);
     return { startAudioTime, startPerfTime: performance.now() + 50 };
-  }, [init, tracks]);
+  }, [init, startToneAudio, tracks]);
 
   const stop = useCallback(() => {
     Tone.getTransport().stop();
