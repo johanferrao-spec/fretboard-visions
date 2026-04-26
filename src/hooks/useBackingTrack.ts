@@ -271,6 +271,7 @@ export function useBackingTrack() {
   const play = useCallback(async (
     bpm: number,
     measures: number,
+    genre: Genre = 'Rock',
   ): Promise<{ startAudioTime: number; startPerfTime: number }> => {
     await init();
     await startToneAudio();
@@ -282,7 +283,7 @@ export function useBackingTrack() {
 
     (Object.keys(tracks) as TrackId[]).forEach(id => {
       const flat = flattenClips(tracks[id].clips);
-      scheduleTrack(id, flat, inst, muteRefs.current[id]);
+      scheduleTrack(id, flat, inst, muteRefs.current[id], genre);
     });
 
     schedulePlayhead((b) => setCurrentBeat(b));
