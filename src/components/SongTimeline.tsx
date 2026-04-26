@@ -451,8 +451,17 @@ export default function SongTimeline({
           </select>
         </div>
 
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Snap</span>
+        {/* Open backing-track DAW (full screen) */}
+        {!backingTrackActive && onOpenBackingTrack && (
+          <button
+            onClick={onOpenBackingTrack}
+            className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-muted transition-colors"
+            title="Open Backing Track DAW"
+          >
+            <ChevronUp size={12} />
+            <span>Backing</span>
+          </button>
+        )}
           {(['1/4', '1/8', '1/16'] as SnapValue[]).map(s => (
             <button
               key={s}
