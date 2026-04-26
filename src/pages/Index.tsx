@@ -728,15 +728,17 @@ const Index = () => {
         </main>
       </div>
 
-      {/* Bottom area — Song Timeline always visible; expands with Backing Track when active */}
+      {/* Bottom area — Song Timeline always visible; takes over the whole space when Backing is active */}
       <div
-        className={`flex flex-col shrink-0 transition-[max-height] duration-500 ease-out`}
+        className={`flex flex-col transition-[max-height,flex-grow] duration-500 ease-out ${
+          activeTab === 'backing' ? 'flex-1' : 'shrink-0'
+        }`}
         style={{
-          maxHeight: activeTab === 'backing' ? '70vh' : '180px',
+          maxHeight: activeTab === 'backing' ? 'none' : '180px',
         }}
       >
         {/* Timeline — order shifts when backing is active so it slides up to top of this region */}
-        <div className="transition-all duration-500 ease-out">
+        <div className="transition-all duration-500 ease-out shrink-0">
           <SongTimeline
             chords={timeline.chords}
             measures={timeline.measures}
@@ -770,6 +772,7 @@ const Index = () => {
             onSeek={handleSeek}
             onSetChordBass={timeline.setChordBass}
             backingTrackActive={activeTab === 'backing'}
+            onOpenBackingTrack={() => setActiveTab('backing')}
             onCloseBackingTrack={() => setActiveTab(null)}
             onSaveBackingTrack={(name) => backingApi?.save(name)}
             onLoadBackingTrack={(id) => backingApi?.load(id)}
@@ -778,29 +781,28 @@ const Index = () => {
           />
         </div>
 
-        {/* Backing Track DAW — slides down from below the timeline with smooth animation */}
-        <div
-          className={`overflow-hidden transition-all duration-500 ease-out ${
-            activeTab === 'backing' ? 'flex-1 opacity-100' : 'flex-[0] opacity-0'
-          }`}
-          style={{
-            maxHeight: activeTab === 'backing' ? '60vh' : '0px',
-          }}
-        >
-          {activeTab === 'backing' && (
-            <BackingTrackView
-              chords={timeline.chords}
-              measures={timeline.measures}
-              bpm={timeline.bpm}
-              genre={timeline.genre}
-              groove={timeline.groove}
-              volume={volume}
-              isPlaying={timeline.isPlaying}
-              currentBeat={timeline.currentBeat}
-              registerHandlers={handleRegisterBackingApi}
-            />
-          )}
-        </div>
+        {/* Backing Track DAW — fills remaining space; instrument samplers pinned at bottom */}
+        {activeTab === 'backing' && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <BackingTrackView
+                chords={timeline.chords}
+                measures={timeline.measures}
+                bpm={timeline.bpm}
+                genre={timeline.genre}
+                groove={timeline.groove}
+                volume={volume}
+                isPlaying={timeline.isPlaying}
+                currentBeat={timeline.currentBeat}
+                registerHandlers={handleRegisterBackingApi}
+              />
+            </div>
+            {/* Instrument samplers — pinned bottom strip */}
+            <div className="h-[220px] shrink-0">
+              <InstrumentSamplers volume={volume} />
+            </div>
+          </div>
+        )}
       </div>
 
       <NoteInfoPanel
