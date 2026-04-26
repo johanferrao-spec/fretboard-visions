@@ -196,17 +196,20 @@ export function useSampleLibrary() {
     return { id: u.id, name: u.name, color: u.color, kind: 'user', userSample: u };
   }, [active, samples]);
 
-  /** Apply an entire genre kit to all drum parts in one click. */
+  /** Apply an entire genre kit to all drum parts. For each part, prefer a
+   *  user-uploaded sample tagged to this kit; fall back to the built-in. */
   const applyKitForAllParts = useCallback((kit: DrumKitGenre) => {
     setActive(prev => {
       const next = { ...prev };
       for (const part of KIT_PARTS) {
-        next[`drums:${part}`] = `kit:${kit.toLowerCase()}:${part}`;
+        const slot = `drums:${part}` as const;
+        const tagged = samples.find(s => s.slot === slot && s.kit === kit);
+        next[slot] = tagged ? tagged.id : `kit:${kit.toLowerCase()}:${part}`;
       }
       writeActive(next);
       return next;
     });
-  }, []);
+  }, [samples]);
 
   return {
     samples,
