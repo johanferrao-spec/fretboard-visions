@@ -792,9 +792,12 @@ export default function SongTimeline({
                 }}
                 onMouseDown={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   const rect = e.currentTarget.getBoundingClientRect();
-                  if (e.clientX > rect.right - 8) {
-                    setResizeChord(chord.id);
+                  if (e.clientX < rect.left + 12) {
+                    setResizeChord({ id: chord.id, edge: 'left', origStart: chord.startBeat, origDuration: chord.duration });
+                  } else if (e.clientX > rect.right - 12) {
+                    setResizeChord({ id: chord.id, edge: 'right', origStart: chord.startBeat, origDuration: chord.duration });
                   } else {
                     setDragChord(chord.id);
                   }
@@ -813,11 +816,19 @@ export default function SongTimeline({
                 >
                   {chordLabel}{bassLabel && <span className="opacity-70">{bassLabel}</span>}
                 </span>
-                {/* Resize handle */}
+                {/* Resize handles */}
                 <div
-                  className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity rounded-r-md"
-                  style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
-                />
+                  className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center rounded-l-md"
+                  style={{ backgroundColor: 'hsl(var(--foreground) / 0.22)' }}
+                >
+                  <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
+                </div>
+                <div
+                  className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center rounded-r-md"
+                  style={{ backgroundColor: 'hsl(var(--foreground) / 0.22)' }}
+                >
+                  <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
+                </div>
               </div>
             );
           })}
