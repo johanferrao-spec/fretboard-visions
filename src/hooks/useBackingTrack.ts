@@ -95,37 +95,46 @@ export function useBackingTrack() {
     }
   }, []);
 
+  const startToneAudio = useCallback(async () => {
+    await Tone.start();
+    const rawContext = Tone.getContext().rawContext as AudioContext;
+    if (rawContext.state !== 'running') {
+      await rawContext.resume();
+    }
+    if (rawContext.state !== 'running') {
+      throw new Error(`AudioContext did not start: ${rawContext.state}`);
+    }
+  }, []);
+
   const init = useCallback(async () => {
-    ensureInstruments();
-    if (isInitRef.current) return;
+    if (isInitRef.current && Tone.getContext().state === 'running') return;
     if (!initPromiseRef.current) {
       initPromiseRef.current = (async () => {
-        await Tone.start();
+        await startToneAudio();
+        ensureInstruments();
         // Only mark as initialized AFTER Tone.start() resolves successfully,
         // so a failed init can be retried on the next user gesture.
         isInitRef.current = true;
-      })().finally(() => {
+      })().catch((error) => {
+        isInitRef.current = false;
+        throw error;
+      }).finally(() => {
         initPromiseRef.current = null;
       });
     }
     await initPromiseRef.current;
-  }, [ensureInstruments]);
+  }, [ensureInstruments, startToneAudio]);
 
   /**
    * Pre-warm the audio engine so the FIRST press of play has no delay.
    * Safe to call from any user gesture; subsequent calls are no-ops.
    */
   const prewarm = useCallback(async () => {
-    ensureInstruments();
     if (isInitRef.current) return;
     try {
       await init();
     } catch {}
-  }, [ensureInstruments, init]);
-
-  useEffect(() => {
-    ensureInstruments();
-  }, [ensureInstruments]);
+  }, [init]);
 
   const regenerateTrack = useCallback((
     trackId: TrackId,
