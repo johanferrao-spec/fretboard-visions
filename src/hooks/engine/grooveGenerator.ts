@@ -16,9 +16,29 @@ import type { TimelineChord } from '@/hooks/useSongTimeline';
 import type { MidiNote } from '@/lib/backingTrackTypes';
 import { NOTE_NAMES, CHORD_FORMULAS } from '@/lib/music';
 import type { GrooveTemplate, GrooveNote } from './groove1';
+import { DRUM_PITCHES } from '@/lib/backingTrackTypes';
 
 let nextId = 1;
 const newId = (prefix: string) => `${prefix}-g${nextId++}`;
+
+/**
+ * Map any General-MIDI drum pitch in the imported groove to one of the 4
+ * kit pieces our engine can synthesize (kick / snare / hi-hat / ride).
+ */
+function mapDrumPitch(pitch: number): number {
+  // Kicks: 35 acoustic bass drum, 36 bass drum 1
+  if (pitch === 35 || pitch === 36) return DRUM_PITCHES.kick;
+  // Snares & rim/clap: 37 side-stick, 38 acoustic snare, 39 hand-clap, 40 electric snare
+  if (pitch >= 37 && pitch <= 40) return DRUM_PITCHES.snare;
+  // Toms (low → high) → snare (closest available timbre)
+  if (pitch === 41 || pitch === 43 || pitch === 45 || pitch === 47 || pitch === 48 || pitch === 50) return DRUM_PITCHES.snare;
+  // Closed/pedal/open hi-hat: 42, 44, 46
+  if (pitch === 42 || pitch === 44 || pitch === 46) return DRUM_PITCHES.hihat;
+  // Cymbals: 49 crash, 51 ride, 52 china, 53 ride bell, 55 splash, 57 crash 2, 59 ride 2
+  if (pitch === 49 || pitch === 51 || pitch === 52 || pitch === 53 || pitch === 55 || pitch === 57 || pitch === 59) return DRUM_PITCHES.ride;
+  // Anything else → snare fallback
+  return DRUM_PITCHES.snare;
+}
 
 interface GenContext {
   template: GrooveTemplate;
