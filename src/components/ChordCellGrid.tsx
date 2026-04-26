@@ -286,6 +286,7 @@ export default function CellGridView({
                   return (
                     <div
                       key={divIdx}
+                      data-bar-div
                       onClick={(e) => { e.stopPropagation(); onSeek(barStartBeat); }}
                       onDoubleClick={(e) => {
                         e.stopPropagation();
@@ -332,6 +333,13 @@ export default function CellGridView({
                           );
                         }
 
+                        // Resize handles only at the chord's TRUE edges (not at bar boundaries
+                        // mid-chord), so a chord spanning multiple bars only shows its handles
+                        // on the bar(s) where its real start/end live.
+                        const isChordTrueStart = Math.abs(seg.start - seg.chord.startBeat) < 0.001;
+                        const isChordTrueEnd =
+                          Math.abs(seg.end - (seg.chord.startBeat + seg.chord.duration)) < 0.001;
+
                         return (
                           <div
                             key={segIdx}
@@ -340,12 +348,12 @@ export default function CellGridView({
                               background: `hsl(${getChordColor(seg.chord)})`,
                               opacity: 0.9,
                             }}
-                            className="flex items-center justify-center px-0.5 min-w-0"
-                            title={`${formatChordLabel(seg.chord)} (${segLength} beat${segLength === 1 ? '' : 's'})`}
+                            className="flex items-center justify-center px-0.5 min-w-0 relative group/seg"
+                            title={`${formatChordLabel(seg.chord)} (${segLength} beat${segLength === 1 ? '' : 's'}) — drag edges to resize`}
                           >
                             {showName && (
                               <span
-                                className="text-[11px] font-mono font-bold truncate"
+                                className="text-[11px] font-mono font-bold truncate pointer-events-none"
                                 style={{ color: '#000' }}
                               >
                                 {formatChordLabel(seg.chord)}
@@ -353,6 +361,28 @@ export default function CellGridView({
                                   <span className="opacity-70">/{seg.chord.bassNote}</span>
                                 )}
                               </span>
+                            )}
+                            {/* Left resize handle */}
+                            {isChordTrueStart && (
+                              <div
+                                onMouseDown={(e) => beginResize(e, seg.chord!, 'left')}
+                                onClick={(e) => e.stopPropagation()}
+                                onDoubleClick={(e) => e.stopPropagation()}
+                                className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover/seg:opacity-100 transition-opacity z-10"
+                                style={{ background: 'rgba(0,0,0,0.45)' }}
+                                title="Drag to resize from left"
+                              />
+                            )}
+                            {/* Right resize handle */}
+                            {isChordTrueEnd && (
+                              <div
+                                onMouseDown={(e) => beginResize(e, seg.chord!, 'right')}
+                                onClick={(e) => e.stopPropagation()}
+                                onDoubleClick={(e) => e.stopPropagation()}
+                                className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover/seg:opacity-100 transition-opacity z-10"
+                                style={{ background: 'rgba(0,0,0,0.45)' }}
+                                title="Drag to resize from right"
+                              />
                             )}
                           </div>
                         );
