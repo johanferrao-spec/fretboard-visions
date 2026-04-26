@@ -60,7 +60,7 @@ const Index = () => {
     remove: (id: string) => void;
     saved: { id: string; name: string }[];
     regenerateAll: () => void;
-    play: () => Promise<{ startAudioTime: number; startPerfTime: number }>;
+    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre) => Promise<{ startAudioTime: number; startPerfTime: number }>;
     stop: () => void;
     prewarm: () => Promise<void>;
   } | null>(null);
