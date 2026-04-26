@@ -279,7 +279,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
               <div
                 key={s.id}
                 className={`group flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted/50 ${isActive ? 'bg-muted/70' : ''}`}
-                onClick={() => lib.selectSample(slot, s.id)}
+                onClick={() => { lib.selectSample(slot, s.id); previewSample(s); }}
               >
                 <span
                   className="w-2.5 h-2.5 rounded-sm shrink-0"
