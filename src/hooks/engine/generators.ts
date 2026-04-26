@@ -1,5 +1,5 @@
 import type { TimelineChord, Genre, GrooveId } from '@/hooks/useSongTimeline';
-import type { MidiNote, TrackId } from '@/lib/backingTrackTypes';
+import type { MidiNote, TrackId, DrumFill } from '@/lib/backingTrackTypes';
 import { DRUM_PITCHES } from '@/lib/backingTrackTypes';
 import { NOTE_NAMES, CHORD_FORMULAS } from '@/lib/music';
 import { jitterTime, jitterVelocity } from './humanize';
