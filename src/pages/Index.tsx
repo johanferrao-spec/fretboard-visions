@@ -60,7 +60,7 @@ const Index = () => {
     remove: (id: string) => void;
     saved: { id: string; name: string }[];
     regenerateAll: () => void;
-    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre) => Promise<{ startAudioTime: number; startPerfTime: number }>;
+    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre, resolveUserSample?: (slot: string) => import('@/lib/sampleStorage').StoredSample | null) => Promise<{ startAudioTime: number; startPerfTime: number }>;
     stop: () => void;
     prewarm: () => Promise<void>;
   } | null>(null);
