@@ -162,6 +162,10 @@ export default function BackingTrackView({
             onDeleteClip={(clipId) => bt.deleteClip(id, clipId)}
             onDuplicateClip={(clipId) => bt.duplicateClip(id, clipId)}
             onOpenClipEditor={(clipId) => setOpenClip({ trackId: id, clipId })}
+            drumFills={id === 'drums' ? bt.drumFills : undefined}
+            onAddDrumFill={id === 'drums' ? bt.addDrumFill : undefined}
+            onUpdateDrumFill={id === 'drums' ? bt.updateDrumFill : undefined}
+            onRemoveDrumFill={id === 'drums' ? bt.removeDrumFill : undefined}
           />
         ))}
         {chords.length === 0 && (
