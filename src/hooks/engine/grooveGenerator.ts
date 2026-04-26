@@ -162,8 +162,8 @@ export function generateDrumsFromGroove(ctx: GenContext): MidiNote[] {
       id: newId('d'),
       startBeat: absBeat,
       duration: Math.max(0.05, note.d),
-      // Drum pitches are absolute kit pieces — keep them unchanged
-      pitch: note.p,
+      // Map every imported drum pitch to one of our 4 synthesized kit pieces
+      pitch: mapDrumPitch(note.p),
       velocity: Math.max(20, Math.min(127, Math.round(note.v * (0.75 + ctx.intensity * 0.35)))),
     });
   }
