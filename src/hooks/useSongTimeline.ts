@@ -55,9 +55,42 @@ export function useSongTimeline() {
   }, [snapToBeat, snap]);
 
   const moveChord = useCallback((id: string, newStartBeat: number) => {
-    const snapped = snapToBeat(newStartBeat);
-    setChords(prev => prev.map(c => c.id === id ? { ...c, startBeat: Math.max(0, snapped) } : c));
-  }, [snapToBeat]);
+    const grid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
+    const totalBeats = measures * 4;
+    setChords(prev => {
+      const moving = prev.find(c => c.id === id);
+      if (!moving) return prev;
+      const nextStart = Math.max(0, Math.min(totalBeats - moving.duration, snapToBeat(newStartBeat)));
+      const nextEnd = nextStart + moving.duration;
+
+      return prev.flatMap(chord => {
+        if (chord.id === id) return [{ ...chord, startBeat: nextStart }];
+
+        const cs = chord.startBeat;
+        const ce = chord.startBeat + chord.duration;
+        // No overlap
+        if (ce <= nextStart || cs >= nextEnd) return [chord];
+        // Fully covered → delete
+        if (cs >= nextStart && ce <= nextEnd) return [];
+        // Overlaps from the left → trim its tail
+        if (cs < nextStart && ce > nextStart && ce <= nextEnd) {
+          const duration = nextStart - cs;
+          return duration >= grid ? [{ ...chord, duration }] : [];
+        }
+        // Overlaps from the right → push its start
+        if (cs >= nextStart && cs < nextEnd && ce > nextEnd) {
+          const duration = ce - nextEnd;
+          return duration >= grid ? [{ ...chord, startBeat: nextEnd, duration }] : [];
+        }
+        // Moving chord straddles entirely inside an existing one → split? simpler: trim left side
+        if (cs < nextStart && ce > nextEnd) {
+          const duration = nextStart - cs;
+          return duration >= grid ? [{ ...chord, duration }] : [];
+        }
+        return [chord];
+      });
+    });
+  }, [snapToBeat, snap, measures]);
 
   const resizeChord = useCallback((id: string, newDuration: number) => {
     const grid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
