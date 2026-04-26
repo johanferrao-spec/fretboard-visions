@@ -367,14 +367,14 @@ export default function CellGridView({
                                 )}
                               </span>
                             )}
-                            {/* Left resize handle */}
+                            {/* Left resize handle — wider for easier grabbing, always visible */}
                             {isChordTrueStart && (
                               <div
                                 onMouseDown={(e) => beginResize(e, seg.chord!, 'left')}
                                 onClick={(e) => e.stopPropagation()}
                                 onDoubleClick={(e) => e.stopPropagation()}
-                                className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover/seg:opacity-100 transition-opacity z-10"
-                                style={{ background: 'rgba(0,0,0,0.45)' }}
+                                className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize z-20 hover:bg-black/40"
+                                style={{ background: 'rgba(0,0,0,0.25)' }}
                                 title="Drag to resize from left"
                               />
                             )}
@@ -384,8 +384,8 @@ export default function CellGridView({
                                 onMouseDown={(e) => beginResize(e, seg.chord!, 'right')}
                                 onClick={(e) => e.stopPropagation()}
                                 onDoubleClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover/seg:opacity-100 transition-opacity z-10"
-                                style={{ background: 'rgba(0,0,0,0.45)' }}
+                                className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize z-20 hover:bg-black/40"
+                                style={{ background: 'rgba(0,0,0,0.25)' }}
                                 title="Drag to resize from right"
                               />
                             )}
