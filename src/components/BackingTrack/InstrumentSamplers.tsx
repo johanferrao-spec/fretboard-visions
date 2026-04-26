@@ -430,7 +430,12 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                     key={part}
                     onClick={() => {
                       setSelection({ instrument: 'drums', part });
-                      lib.selectSample(slotKey, entryToUse.id);
+                      const isHihat = part === 'hihat_closed' || part === 'hihat_pedal' || part === 'hihat_open';
+                      if (isHihat) {
+                        lib.selectHihatGroup(viewKit);
+                      } else {
+                        lib.selectSample(slotKey, entryToUse.id);
+                      }
                       previewSample(entryToUse);
                     }}
                     onDragOver={(e) => { e.preventDefault(); setDragOver(slotKey); }}
