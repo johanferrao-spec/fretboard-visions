@@ -323,10 +323,14 @@ export default function SongTimeline({
     return degree < 0;
   };
 
+  // In cell view, grow vertically as more rows of cells are added (each row ≈ 90px tall + gap).
+  const cellRows = cellView ? Math.max(1, Math.ceil(Math.ceil(measures / 4) / 4)) : 0;
+  const containerHeight = cellView ? 50 + cellRows * 100 : 160;
+
   return (
     <div
       className="border-t border-border bg-card flex flex-col shrink-0"
-      style={{ height: 160 }}
+      style={{ height: containerHeight }}
     >
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0 flex-wrap">
