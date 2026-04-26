@@ -282,8 +282,7 @@ export default function TrackLane({
                 data-role="drum-block"
                 className="absolute top-1 bottom-1 left-0 right-0 rounded-md select-none"
                 style={{
-                  backgroundColor: 'hsl(330, 80%, 65% / 0.35)',
-                  border: '1.5px solid hsl(330, 80%, 65% / 0.7)',
+                  backgroundColor: 'hsl(330, 75%, 60%)',
                   cursor: onAddDrumFill ? 'copy' : 'default',
                 }}
                 title="Click an empty area to add a drum fill"
@@ -309,9 +308,8 @@ export default function TrackLane({
                     style={{
                       left: `${left}%`,
                       width: `${width}%`,
-                      backgroundColor: 'hsl(0, 85%, 55% / 0.55)',
-                      border: `1.5px solid hsl(0, 90%, ${isSel ? 70 : 55}%)`,
-                      boxShadow: isSel ? '0 0 0 2px hsl(0, 90%, 60% / 0.5)' : undefined,
+                      backgroundColor: 'hsl(0, 80%, 50%)',
+                      boxShadow: isSel ? '0 0 0 2px hsl(0, 90%, 75%)' : undefined,
                       zIndex: 5,
                     }}
                     onMouseDown={(e) => {
