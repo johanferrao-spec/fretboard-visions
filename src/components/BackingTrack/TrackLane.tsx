@@ -225,13 +225,29 @@ export default function TrackLane({
         onAIRegenerate={handleAIRegen}
         isAILoading={aiLoading}
       />
-      <div className="flex-1 p-1.5 min-w-0 relative" onClick={() => setSelectedId(null)}>
+      <div
+        className="flex-1 p-1.5 min-w-0 relative"
+        onClick={() => { setSelectedId(null); setSelectedFillId(null); }}
+      >
         <div
           ref={laneRef}
           className="relative w-full h-full rounded-md overflow-hidden"
           style={{
             backgroundColor: `hsl(${color} / 0.06)`,
             border: `1px solid hsl(${color} / 0.25)`,
+          }}
+          onClick={(e) => {
+            if (!isDrums || !onAddDrumFill) return;
+            // Click empty pink area → add a 1-bar fill at that bar
+            const target = e.target as HTMLElement;
+            if (target.dataset.role !== 'drum-block') return;
+            const rect = laneRef.current!.getBoundingClientRect();
+            const xPct = (e.clientX - rect.left) / rect.width;
+            const bar = Math.max(0, Math.min(measures - 1, Math.floor(xPct * measures)));
+            // Avoid creating overlapping fills
+            const overlaps = drumFills.some(f => bar >= f.startBar && bar < f.startBar + f.lengthBars);
+            if (overlaps) return;
+            onAddDrumFill(bar, 1);
           }}
         >
           {/* Measure grid */}
