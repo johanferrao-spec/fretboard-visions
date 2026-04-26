@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import type { TrackId, TrackState, MidiClip } from '@/lib/backingTrackTypes';
+import type { TrackId, TrackState, MidiClip, DrumFill } from '@/lib/backingTrackTypes';
 import { TRACK_COLORS, TRACK_LABELS, DRUM_PITCHES } from '@/lib/backingTrackTypes';
 import type { TimelineChord, Genre } from '@/hooks/useSongTimeline';
 import TrackHeader from './TrackHeader';
@@ -22,6 +22,11 @@ interface TrackLaneProps {
   onDeleteClip: (clipId: string) => void;
   onDuplicateClip: (clipId: string) => void;
   onOpenClipEditor: (clipId: string) => void;
+  /** Drum-only: fill regions (red) overlaid on the pink drum block */
+  drumFills?: DrumFill[];
+  onAddDrumFill?: (startBar: number, lengthBars?: number) => void;
+  onUpdateDrumFill?: (id: string, patch: Partial<DrumFill>) => void;
+  onRemoveDrumFill?: (id: string) => void;
 }
 
 interface DragState {
