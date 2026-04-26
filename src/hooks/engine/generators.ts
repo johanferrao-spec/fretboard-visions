@@ -247,120 +247,326 @@ function generateFill(
   }
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+ * USER-DESIGNATED FILL — crash-led, snare build, low-tom resolution.
+ *
+ * Layout per fill of N bars (occupies bars [startBar..startBar+N)):
+ *   • Crash on the first downbeat of the fill (bar startBar, beat 0).
+ *   • Snare density grows over the fill: starts as 8ths, accelerates to
+ *     16ths in the second half, velocities ramp from ~55 to ~110.
+ *   • The LAST beat before the fill ends is replaced by a low-tom run
+ *     (tom2 → tom1) to "set up" the return to the groove.
+ *   • Foot-hi-hat pulse on 2 & 4 is preserved through the fill so it
+ *     still feels glued to the beat.
+ * ════════════════════════════════════════════════════════════════════════ */
+function generateUserFill(
+  startBeat: number,
+  lengthBars: number,
+  intensity: number,
+  pushNote: (beat: number, pitch: number, vel: number, dur?: number) => void,
+) {
+  const lengthBeats = lengthBars * 4;
+  // 1) Crash on the very first downbeat
+  pushNote(startBeat, DRUM_PITCHES.crash, 100 + intensity * 20, 0.6);
+
+  // 2) Foot hat on 2 & 4 of every bar in the fill (keeps the time)
+  for (let b = 0; b < lengthBars; b++) {
+    pushNote(startBeat + b * 4 + 1, DRUM_PITCHES.hihat, 60 + intensity * 15, 0.05);
+    pushNote(startBeat + b * 4 + 3, DRUM_PITCHES.hihat, 60 + intensity * 15, 0.05);
+  }
+
+  // 3) Snare build — start at 8th notes, switch to 16th notes halfway,
+  //    velocity ramps from ~55 to ~108. We exclude the LAST beat which
+  //    is reserved for the tom resolution.
+  const buildEnd = lengthBeats - 1; // last beat is for toms
+  const halfPoint = buildEnd / 2;
+  let beat = 0;
+  while (beat < buildEnd - 0.001) {
+    // Sub-division: 8ths in the first half, 16ths in the second
+    const sub = beat < halfPoint ? 0.5 : 0.25;
+    const progress = beat / buildEnd;
+    const vel = 55 + progress * 50 + intensity * 10;
+    pushNote(startBeat + beat, DRUM_PITCHES.snare, vel, sub * 0.9);
+    beat += sub;
+  }
+
+  // 4) Tom resolution on the final beat — tom2 then tom1 as a "boom-boom"
+  const finalBeat = startBeat + lengthBeats - 1;
+  pushNote(finalBeat,         DRUM_PITCHES.tom2, 100 + intensity * 15, 0.25);
+  pushNote(finalBeat + 0.5,   DRUM_PITCHES.tom1, 105 + intensity * 15, 0.25);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ * JAZZ DRUMS — bar-by-bar generator modeled on Swing_jazz_groove.mid.
+ *
+ * Reference observations (171 hits across ~16 bars of "Cool Jazz Drumset 01"):
+ *   • Ride (51): 4–7 hits per bar. Always lands on beats 1, 2, 3, 4 with a
+ *     swung "skip" feel; bars vary by adding extras at ~0.65 (& of 1, swung)
+ *     ~1.65 (& of 2), ~2.65 (& of 3), ~3.65 (& of 4) and occasional
+ *     pickups at ~3.97 (a "16th-before-1"). Velocities 33–87, avg ~66.
+ *   • Foot hi-hat: rock-solid on beats 2 & 4 every bar. Vel 60–80.
+ *   • Snare: AVOIDS exact 2 & 4. Sits at ~0.7, ~1.7, ~2.7, ~3.7 (swung &-of)
+ *     with occasional accents on 2.0 or 4.0. Mostly ghost notes (vel 12–40).
+ *     1–4 hits per bar, sometimes none.
+ *   • Kick: extremely sparse. Often only on beat 1 (vel 25–55, "feathered").
+ *     Sometimes one extra hit at ~1.75 (& of 2) or ~3.95 (16th-before-1).
+ *     Many bars have NO kick at all.
+ *   • Crash: rare, only at phrase starts.
+ *   • Wide velocity range across all instruments.
+ *
+ * Variation strategy: every bar generated independently from random rolls;
+ * we keep a "fingerprint" of the previous bar and reroll up to 3 times if
+ * a bar would be identical, guaranteeing no consecutive repeats.
+ * ════════════════════════════════════════════════════════════════════════ */
+
+interface JazzBar {
+  ride: number[];   // beats positions of ride hits
+  snare: { beat: number; vel: number }[];
+  kick:  { beat: number; vel: number }[];
+}
+
+function rollJazzBar(intensity: number, complexity: number): JazzBar {
+  // ── RIDE ──
+  // Spine: 4 quarter-note hits (with tiny humanization on 2 & 4 due to swing).
+  const ride: number[] = [0, 1, 2, 3];
+  // Add &-of-X hits stochastically (swung positions ~0.65, 1.65, 2.65, 3.65).
+  // More likely as complexity rises.
+  const swingPos = [0.66, 1.66, 2.66, 3.66];
+  for (const p of swingPos) {
+    // Each spot independently — biased so ride averages 4–6 hits
+    if (chance(0.25 + complexity * 0.4)) ride.push(p);
+  }
+  // Occasional "pickup" 16th-before-1 (i.e. position 3.95) — sparingly.
+  if (chance(0.10 + intensity * 0.10)) ride.push(3.95);
+  ride.sort((a, b) => a - b);
+
+  // ── SNARE GHOSTS ──
+  // Pool of swung positions where snare ghosts/comments tend to fall.
+  const snarePool = [0.66, 1.0, 1.66, 2.0, 2.66, 3.0, 3.66];
+  const ghosts: { beat: number; vel: number }[] = [];
+  // Pick 2–4 positions (more if complexity is higher), shuffled
+  const numGhosts = 1 + Math.floor(rand() * 2 + complexity * 2.5); // 1..4
+  const shuffled = [...snarePool].sort(() => rand() - 0.5);
+  for (let i = 0; i < Math.min(numGhosts, shuffled.length); i++) {
+    const beat = shuffled[i];
+    // Most ghosts soft (12–40), occasional accent (60–95) — wide range.
+    const isAccent = chance(0.18 + intensity * 0.2);
+    const vel = isAccent
+      ? 60 + rand() * 35 + intensity * 5
+      : 14 + rand() * 26;
+    ghosts.push({ beat, vel });
+  }
+
+  // ── KICK ──
+  // Very sparse: ~50% chance of a feathered "1", small chance of an extra hit.
+  const kick: { beat: number; vel: number }[] = [];
+  if (chance(0.45 + intensity * 0.2)) {
+    // Feathered downbeat — soft
+    kick.push({ beat: 0, vel: 22 + rand() * 30 + intensity * 8 });
+  }
+  // Occasional anticipations: & of 2 (1.75) or 16th-before-1 (3.95)
+  if (chance(0.12 + complexity * 0.18)) {
+    kick.push({ beat: 1.75, vel: 18 + rand() * 25 });
+  }
+  if (chance(0.08 + complexity * 0.15)) {
+    kick.push({ beat: 3.95, vel: 30 + rand() * 35 + intensity * 10 });
+  }
+
+  return { ride, snare: ghosts, kick };
+}
+
+/** Compact signature used to detect identical consecutive bars. */
+function jazzBarSignature(b: JazzBar): string {
+  const r = b.ride.map(x => x.toFixed(2)).join(',');
+  const s = b.snare.map(x => x.beat.toFixed(2)).join(',');
+  const k = b.kick.map(x => x.beat.toFixed(2)).join(',');
+  return `${r}|${s}|${k}`;
+}
+
+function generateJazzDrums(
+  measures: number,
+  intensity: number,
+  complexity: number,
+  fills: DrumFill[],
+  pushNote: (beat: number, pitch: number, vel: number, dur?: number) => void,
+): void {
+  // Build a quick "bar is fill-covered" lookup.
+  const fillByStartBar = new Map<number, DrumFill>();
+  const coveredBars = new Set<number>();
+  for (const f of fills) {
+    fillByStartBar.set(f.startBar, f);
+    for (let i = 0; i < f.lengthBars; i++) coveredBars.add(f.startBar + i);
+  }
+
+  let prevSig = '';
+  for (let m = 0; m < measures; m++) {
+    // If this bar is the start of a fill, render the fill and skip the groove for its bars.
+    const fill = fillByStartBar.get(m);
+    if (fill) {
+      generateUserFill(m * 4, fill.lengthBars, intensity, pushNote);
+      continue;
+    }
+    // If we're inside a fill that started earlier, skip — it was already rendered.
+    if (coveredBars.has(m)) continue;
+
+    // Otherwise: roll a fresh bar, ensuring it isn't identical to the previous one.
+    let bar = rollJazzBar(intensity, complexity);
+    let attempts = 0;
+    while (jazzBarSignature(bar) === prevSig && attempts < 3) {
+      bar = rollJazzBar(intensity, complexity);
+      attempts++;
+    }
+    prevSig = jazzBarSignature(bar);
+
+    const base = m * 4;
+
+    // RIDE
+    for (const r of bar.ride) {
+      // Vel 33–87, slight accent on beats 1 & 3
+      const isMain = Math.abs(r - Math.round(r)) < 0.05 && (Math.round(r) % 2 === 0);
+      const baseVel = isMain ? 70 + rand() * 18 : 50 + rand() * 30;
+      const vel = baseVel * (0.75 + intensity * 0.25);
+      pushNote(base + r, DRUM_PITCHES.ride, vel, 0.22);
+    }
+
+    // FOOT HI-HAT on 2 & 4
+    pushNote(base + 1, DRUM_PITCHES.hihat, 60 + rand() * 18, 0.06);
+    pushNote(base + 3, DRUM_PITCHES.hihat, 62 + rand() * 18, 0.06);
+
+    // SNARE ghosts/accents
+    for (const s of bar.snare) {
+      pushNote(base + s.beat, DRUM_PITCHES.snare, s.vel, s.vel < 45 ? 0.10 : 0.18);
+    }
+
+    // KICK (feathered)
+    for (const k of bar.kick) {
+      pushNote(base + k.beat, DRUM_PITCHES.kick, k.vel, 0.16);
+    }
+  }
+}
+
 export function generateDrums(
   chords: TimelineChord[],
   measures: number,
   intensity: number,
   complexity: number,
   genre: Genre,
+  fills: DrumFill[] = [],
 ): MidiNote[] {
   const notes: MidiNote[] = [];
-  const useRide = genre === 'Jazz' || (intensity > 0.75 && chance(0.35));
-  const swing = genre === 'Jazz' ? 0.75 + complexity * 0.15 : 0;
-
   const pushNote = (beat: number, pitch: number, vel: number, dur = 0.25) => {
     notes.push({
       id: newId('d'),
       startBeat: jitterTime(beat, 0.008),
       duration: dur,
       pitch,
-      velocity: jitterVelocity(Math.max(20, Math.min(127, vel)), 8),
+      velocity: jitterVelocity(Math.max(8, Math.min(127, vel)), 6),
     });
   };
+
+  // Jazz uses its own per-bar generator, with user fills replacing whole bars.
+  if (genre === 'Jazz') {
+    generateJazzDrums(measures, intensity, complexity, fills, pushNote);
+    return notes;
+  }
+
+  // ── Other genres: existing cell-based system, with optional user fills. ──
+  const useRide = intensity > 0.75 && chance(0.35);
+  const swing = 0;
+
+  // Build a covered-bar lookup for user fills.
+  const fillByStartBar = new Map<number, DrumFill>();
+  const coveredBars = new Set<number>();
+  for (const f of fills) {
+    fillByStartBar.set(f.startBar, f);
+    for (let i = 0; i < f.lengthBars; i++) coveredBars.add(f.startBar + i);
+  }
 
   // Phrase length — Logic uses 4 or 8 bar phrases
   const phraseLen = measures >= 8 ? 4 : Math.min(4, measures);
 
   for (let m = 0; m < measures; m++) {
+    const fill = fillByStartBar.get(m);
+    if (fill) {
+      generateUserFill(m * 4, fill.lengthBars, intensity, pushNote);
+      continue;
+    }
+    if (coveredBars.has(m)) continue;
+
     const measureBase = m * 4;
     const phrasePos = m % phraseLen;
     const isPhraseEnd = phrasePos === phraseLen - 1;
-    // Fill probability climbs with intensity & at the end of phrases
-      const fillProb = genre === 'Jazz'
-        ? (isPhraseEnd ? 0.18 + intensity * 0.14 : intensity * 0.04)
-        : (isPhraseEnd ? 0.7 + intensity * 0.25 : (m === measures - 1 ? 0.85 : intensity * 0.12));
+    // When the user is driving fills explicitly, suppress automatic fills.
+    const autoFillsAllowed = fills.length === 0;
+    const fillProb = autoFillsAllowed
+      ? (isPhraseEnd ? 0.7 + intensity * 0.25 : (m === measures - 1 ? 0.85 : intensity * 0.12))
+      : 0;
     const wantFill = chance(fillProb);
-      const fillBeats = wantFill
-        ? (genre === 'Jazz' ? 1 : (intensity > 0.6 && chance(0.4) ? 2 : 1))
-        : 0;
+    const fillBeats = wantFill
+      ? (intensity > 0.6 && chance(0.4) ? 2 : 1)
+      : 0;
     const isCrashBar = (m === 0) || (m > 0 && (m - 1) % phraseLen === phraseLen - 1 && chance(0.85));
 
-    // Choose cells for this measure
     const kickCell  = chooseCell(KICK_CELLS[genre],  complexity);
     const snareCell = chooseCell(SNARE_CELLS[genre], complexity);
-      const cymbalCells = useRide && genre === 'Jazz'
-      ? [{ steps: JAZZ_RIDE, weight: 1, busyness: 0.5 }]
-      : HAT_CELLS[genre];
-    const cymbalCell = chooseCell(cymbalCells, complexity);
+    const cymbalCell = chooseCell(HAT_CELLS[genre], complexity);
 
-    // ── Render KICK ──
-      for (let s = 0; s < 16; s++) {
+    // KICK
+    for (let s = 0; s < 16; s++) {
       const v = kickCell.steps[s];
       if (!v) continue;
-      // Skip notes that fall inside the fill region
       if (s >= 16 - fillBeats * 4) continue;
-      // Random note drop for organic feel
-        if (chance(genre === 'Jazz' ? 0.12 : 0.05 - intensity * 0.04)) continue;
-        const baseVel = genre === 'Jazz'
-          ? (s === 0 ? 54 : 44) * (0.75 + intensity * 0.2)
-          : (s === 0 ? 110 : 100) * (0.7 + intensity * 0.4);
-        pushNote(measureBase + s / 4 + swingOffset(s, genre, swing), DRUM_PITCHES.kick, baseVel, genre === 'Jazz' ? 0.16 : 0.2);
+      if (chance(0.05 - intensity * 0.04)) continue;
+      const baseVel = (s === 0 ? 110 : 100) * (0.7 + intensity * 0.4);
+      pushNote(measureBase + s / 4 + swingOffset(s, genre, swing), DRUM_PITCHES.kick, baseVel, 0.2);
     }
 
-    // ── Render SNARE backbeat ──
-      for (let s = 0; s < 16; s++) {
+    // SNARE
+    for (let s = 0; s < 16; s++) {
       const v = snareCell.steps[s];
       if (!v) continue;
       if (s >= 16 - fillBeats * 4) continue;
-        if (chance(genre === 'Jazz' ? 0.1 : 0.04)) continue;
+      if (chance(0.04)) continue;
       const accent = s === 4 || s === 12;
-        const vel = genre === 'Jazz'
-          ? (accent ? 58 : 46) * (0.85 + intensity * 0.2)
-          : (accent ? 102 : 88) * (0.65 + intensity * 0.45);
-        pushNote(measureBase + s / 4 + swingOffset(s, genre, swing), DRUM_PITCHES.snare, vel, genre === 'Jazz' ? 0.12 : 0.22);
+      const vel = (accent ? 102 : 88) * (0.65 + intensity * 0.45);
+      pushNote(measureBase + s / 4 + swingOffset(s, genre, swing), DRUM_PITCHES.snare, vel, 0.22);
     }
 
-    // ── GHOST snares (complexity-driven) ──
+    // GHOST snares
     if (complexity > 0.35) {
       const ghostSteps = [3, 7, 11, 15, 2, 6, 10, 14];
       ghostSteps.forEach(step => {
         if (step >= 16 - fillBeats * 4) return;
-        const p = genre === 'Jazz' ? (complexity - 0.35) * 0.28 : (complexity - 0.35) * 0.6;
+        const p = (complexity - 0.35) * 0.6;
         if (chance(p)) {
-          // Don't double-up on existing snare hits
           if (snareCell.steps[step]) return;
-          pushNote(measureBase + step / 4 + swingOffset(step, genre, swing), DRUM_PITCHES.snare, genre === 'Jazz' ? 28 + complexity * 10 : 38 + complexity * 20, 0.1);
+          pushNote(measureBase + step / 4 + swingOffset(step, genre, swing), DRUM_PITCHES.snare, 38 + complexity * 20, 0.1);
         }
       });
     }
 
-    // ── Render CYMBAL (hat or ride) ──
-      for (let s = 0; s < 16; s++) {
+    // CYMBAL
+    for (let s = 0; s < 16; s++) {
       const v = cymbalCell.steps[s];
       if (!v) continue;
       if (s >= 16 - fillBeats * 4) continue;
-      // High complexity: occasional hat-open on the and-of-4
       if (s === 14 && complexity > 0.5 && chance(0.25)) {
         pushNote(measureBase + s / 4, DRUM_PITCHES.hihat, 95 * (0.7 + intensity * 0.35), 0.45);
         continue;
       }
-      // High complexity: random hat drops for syncopation
       if (complexity > 0.7 && s % 2 === 1 && chance(0.3)) continue;
-        const pitch = useRide && genre === 'Jazz' ? DRUM_PITCHES.ride
-        : (useRide && intensity > 0.75 ? DRUM_PITCHES.ride : DRUM_PITCHES.hihat);
-        const vel = genre === 'Jazz'
-          ? v * (0.42 + intensity * 0.18)
-          : v * (0.6 + intensity * 0.5);
-        pushNote(measureBase + s / 4 + swingOffset(s, genre, swing), pitch, vel, pitch === DRUM_PITCHES.hihat ? 0.08 : 0.2);
+      const pitch = useRide && intensity > 0.75 ? DRUM_PITCHES.ride : DRUM_PITCHES.hihat;
+      const vel = v * (0.6 + intensity * 0.5);
+      pushNote(measureBase + s / 4 + swingOffset(s, genre, swing), pitch, vel, pitch === DRUM_PITCHES.hihat ? 0.08 : 0.2);
     }
 
-    // ── CRASH on bar 1 of new phrase ──
-    if (isCrashBar && genre !== 'Jazz') {
+    // CRASH on bar 1 of new phrase
+    if (isCrashBar) {
       pushNote(measureBase, DRUM_PITCHES.ride, 115 * (0.75 + intensity * 0.3), 0.6);
     }
 
-    // ── FILL ──
-    if (fillBeats > 0) {
+    // Auto-fill (only when user hasn't placed any)
+    if (fillBeats > 0 && autoFillsAllowed) {
       generateFill(measureBase, fillBeats, intensity, complexity, pushNote);
     }
   }
