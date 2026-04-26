@@ -44,11 +44,22 @@ export default function CellGridView({
 
   return (
     <div className="flex-1 overflow-auto p-3 bg-secondary/10">
-      <div
-        className="grid gap-3"
-        style={{ gridTemplateColumns: `repeat(${CELLS_PER_ROW}, minmax(0, 1fr)) auto` }}
-      >
+      <div className="flex flex-wrap gap-3 items-stretch">
         {Array.from({ length: totalCells }, (_, cellIdx) => {
+          const cellStartBeat = cellIdx * beatsPerCell;
+          const cellEndBeat = cellStartBeat + beatsPerCell;
+          const isActive = currentBeat >= cellStartBeat && currentBeat < cellEndBeat;
+
+          return (
+            <div
+              key={cellIdx}
+              className={`rounded-md p-1.5 transition-all bg-card/60 ${
+                isActive
+                  ? 'ring-2 ring-primary shadow-[0_0_12px_hsl(var(--primary)/0.5)]'
+                  : 'ring-1 ring-border/40'
+              }`}
+              style={{ flex: `1 1 calc(${100 / CELLS_PER_ROW}% - 0.75rem)`, maxWidth: `calc(${100 / CELLS_PER_ROW}% - 0.75rem)`, minWidth: 200 }}
+            >
           const cellStartBeat = cellIdx * beatsPerCell;
           const cellEndBeat = cellStartBeat + beatsPerCell;
           const isActive = currentBeat >= cellStartBeat && currentBeat < cellEndBeat;
