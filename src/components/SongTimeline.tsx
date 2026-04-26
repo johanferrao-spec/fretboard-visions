@@ -69,6 +69,7 @@ export default function SongTimeline({
   const [showSavePop, setShowSavePop] = useState(false);
   const [showLoadPop, setShowLoadPop] = useState(false);
   const [saveName, setSaveName] = useState('');
+  const [cellView, setCellView] = useState(false);
   const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
   const [variationPopup, setVariationPopup] = useState<{
     chordId: string;
