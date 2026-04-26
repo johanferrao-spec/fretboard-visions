@@ -5,7 +5,7 @@ import type { BackingTrack, MidiClip, MidiNote, TrackId, TrackState } from '@/li
 import { TRACK_LABELS, flattenClips } from '@/lib/backingTrackTypes';
 import { generateAllTracks } from './engine/generators';
 import { createInstruments, disposeInstruments, type EngineInstruments } from './engine/instruments';
-import { clearSchedule, scheduleTrack, schedulePlayhead, setupLoop } from './engine/scheduler';
+import { scheduleTrack, schedulePlayhead, setupLoop } from './engine/scheduler';
 
 const STORAGE_KEY = 'mf-backing-tracks';
 
