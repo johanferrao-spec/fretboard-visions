@@ -275,8 +275,82 @@ export default function TrackLane({
             )
           ))}
 
-          {/* Clips */}
-          {track.clips.map(clip => {
+          {/* Drum lane: solid pink block + draggable red fill regions */}
+          {isDrums && (
+            <>
+              <div
+                data-role="drum-block"
+                className="absolute top-1 bottom-1 left-0 right-0 rounded-md select-none"
+                style={{
+                  backgroundColor: 'hsl(330, 80%, 65% / 0.35)',
+                  border: '1.5px solid hsl(330, 80%, 65% / 0.7)',
+                  cursor: onAddDrumFill ? 'copy' : 'default',
+                }}
+                title="Click an empty area to add a drum fill"
+              >
+                <div
+                  data-role="drum-block"
+                  className="absolute top-0.5 left-1.5 text-[8px] font-mono font-bold uppercase pointer-events-none"
+                  style={{ color: 'hsl(330, 90%, 90%)', textShadow: '0 0 3px hsl(0 0% 0% / 0.8)' }}
+                >
+                  Drums — click to add fill
+                </div>
+              </div>
+
+              {/* Red fill regions */}
+              {drumFills.map(fill => {
+                const left = (fill.startBar / measures) * 100;
+                const width = (fill.lengthBars / measures) * 100;
+                const isSel = selectedFillId === fill.id;
+                return (
+                  <div
+                    key={fill.id}
+                    className={`absolute top-1 bottom-1 rounded-md select-none cursor-grab active:cursor-grabbing group`}
+                    style={{
+                      left: `${left}%`,
+                      width: `${width}%`,
+                      backgroundColor: 'hsl(0, 85%, 55% / 0.55)',
+                      border: `1.5px solid hsl(0, 90%, ${isSel ? 70 : 55}%)`,
+                      boxShadow: isSel ? '0 0 0 2px hsl(0, 90%, 60% / 0.5)' : undefined,
+                      zIndex: 5,
+                    }}
+                    onMouseDown={(e) => {
+                      const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                      const offset = e.clientX - rect.left;
+                      if (offset > rect.width - 8) startFillDrag(e, fill, 'resize-r');
+                      else if (offset < 8) startFillDrag(e, fill, 'resize-l');
+                      else startFillDrag(e, fill, 'move');
+                    }}
+                    onClick={(e) => { e.stopPropagation(); setSelectedFillId(fill.id); }}
+                    title={`Fill — ${fill.lengthBars} bar${fill.lengthBars > 1 ? 's' : ''} at bar ${fill.startBar + 1}. Drag to move, edges to resize, Del to remove`}
+                  >
+                    <div
+                      className="absolute top-0.5 left-1.5 text-[8px] font-mono font-bold uppercase pointer-events-none"
+                      style={{ color: 'hsl(0, 100%, 95%)', textShadow: '0 0 3px hsl(0 0% 0% / 0.9)' }}
+                    >
+                      Fill ({fill.lengthBars})
+                    </div>
+                    <div className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100"
+                      style={{ backgroundColor: 'hsl(0, 90%, 70%)' }} />
+                    <div className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100"
+                      style={{ backgroundColor: 'hsl(0, 90%, 70%)' }} />
+                    {isSel && onRemoveDrumFill && (
+                      <button
+                        className="absolute top-0.5 right-0.5 p-0.5 rounded bg-card/80 text-muted-foreground hover:text-destructive hover:bg-card z-20"
+                        title="Delete fill"
+                        onClick={(e) => { e.stopPropagation(); onRemoveDrumFill(fill.id); setSelectedFillId(null); }}
+                      >
+                        <Trash2 size={9} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
+
+          {/* Clips (non-drum tracks) */}
+          {!isDrums && track.clips.map(clip => {
             const left = (clip.startBeat / totalBeats) * 100;
             const width = (clip.duration / totalBeats) * 100;
             const isSelected = selectedId === clip.id;
