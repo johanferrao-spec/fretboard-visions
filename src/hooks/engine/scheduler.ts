@@ -19,13 +19,15 @@ export type UserSampleResolver = (slot: string) => SampleResolution | null;
 /** Map MIDI drum pitch -> our DrumPart slot key. */
 function pitchToDrumPart(pitch: number): DrumPart | null {
   switch (pitch) {
-    case DRUM_PITCHES.kick:  return 'kick';
-    case DRUM_PITCHES.snare: return 'snare';
-    case DRUM_PITCHES.hihat: return 'hihat';
-    case DRUM_PITCHES.ride:  return 'ride';
-    case DRUM_PITCHES.tom1:  return 'tom1';
-    case DRUM_PITCHES.tom2:  return 'tom2';
-    case DRUM_PITCHES.crash: return 'crash';
+    case DRUM_PITCHES.kick:         return 'kick';
+    case DRUM_PITCHES.snare:        return 'snare';
+    case DRUM_PITCHES.hihat_closed: return 'hihat_closed';
+    case DRUM_PITCHES.hihat_pedal:  return 'hihat_pedal';
+    case DRUM_PITCHES.hihat_open:   return 'hihat_open';
+    case DRUM_PITCHES.ride:         return 'ride';
+    case DRUM_PITCHES.tom1:         return 'tom1';
+    case DRUM_PITCHES.tom2:         return 'tom2';
+    case DRUM_PITCHES.crash:        return 'crash';
     default: return null;
   }
 }
@@ -39,8 +41,15 @@ function playSynthDrum(inst: EngineInstruments, pitch: number, dur: number, t: n
     case DRUM_PITCHES.snare:
       inst.snare.triggerAttackRelease(dur, t, gain);
       break;
-    case DRUM_PITCHES.hihat:
-      inst.hihat.triggerAttackRelease('C5', dur * 0.5, t, gain);
+    case DRUM_PITCHES.hihat_closed:
+      inst.hihat.triggerAttackRelease('C5', dur * 0.4, t, gain);
+      break;
+    case DRUM_PITCHES.hihat_pedal:
+      inst.hihat.triggerAttackRelease('A4', dur * 0.35, t, gain * 0.7);
+      break;
+    case DRUM_PITCHES.hihat_open:
+      // Longer decay so the open hat sustains audibly
+      inst.hihat.triggerAttackRelease('C5', Math.max(0.4, dur * 1.4), t, gain);
       break;
     case DRUM_PITCHES.ride:
       inst.ride.triggerAttackRelease('C5', dur, t, gain);
@@ -59,7 +68,7 @@ function playSynthDrum(inst: EngineInstruments, pitch: number, dur: number, t: n
   }
 }
 
-/** Trigger a Jazz acoustic kit Tone.Player for a given pitch (only kick/snare/hihat/ride exist). */
+/** Trigger a Jazz acoustic kit Tone.Player for a given pitch. */
 function playJazzKitSample(inst: EngineInstruments, pitch: number, t: number, gain: number) {
   const playSample = (pl: Tone.Player) => {
     if (!pl.loaded) return;
@@ -69,10 +78,12 @@ function playJazzKitSample(inst: EngineInstruments, pitch: number, t: number, ga
     } catch {}
   };
   switch (pitch) {
-    case DRUM_PITCHES.kick:  playSample(inst.jazzKit.kick);  return true;
-    case DRUM_PITCHES.snare: playSample(inst.jazzKit.snare); return true;
-    case DRUM_PITCHES.hihat: playSample(inst.jazzKit.hihat); return true;
-    case DRUM_PITCHES.ride:  playSample(inst.jazzKit.ride);  return true;
+    case DRUM_PITCHES.kick:         playSample(inst.jazzKit.kick);  return true;
+    case DRUM_PITCHES.snare:        playSample(inst.jazzKit.snare); return true;
+    case DRUM_PITCHES.hihat_closed: playSample(inst.jazzKit.hihat_closed); return true;
+    case DRUM_PITCHES.hihat_pedal:  playSample(inst.jazzKit.hihat_pedal);  return true;
+    case DRUM_PITCHES.hihat_open:   playSample(inst.jazzKit.hihat_open);   return true;
+    case DRUM_PITCHES.ride:         playSample(inst.jazzKit.ride);  return true;
     default: return false;
   }
 }
