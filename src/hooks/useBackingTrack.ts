@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Tone from 'tone';
-import type { TimelineChord, Genre } from './useSongTimeline';
+import type { TimelineChord, Genre, GrooveId } from './useSongTimeline';
 import type { BackingTrack, MidiClip, MidiNote, TrackId, TrackState } from '@/lib/backingTrackTypes';
 import { TRACK_LABELS, flattenClips } from '@/lib/backingTrackTypes';
 import { generateAllTracks } from './engine/generators';
@@ -141,11 +141,12 @@ export function useBackingTrack() {
     chords: TimelineChord[],
     measures: number,
     genre: Genre,
+    groove?: GrooveId,
   ) => {
     setTracks(prev => {
       const intensities = { piano: prev.piano.intensity, bass: prev.bass.intensity, drums: prev.drums.intensity };
       const complexities = { piano: prev.piano.complexity, bass: prev.bass.complexity, drums: prev.drums.complexity };
-      const generated = generateAllTracks(chords, measures, genre, intensities, complexities);
+      const generated = generateAllTracks(chords, measures, genre, intensities, complexities, groove);
       return {
         ...prev,
         [trackId]: {
@@ -162,11 +163,12 @@ export function useBackingTrack() {
     measures: number,
     genre: Genre,
     force: boolean = false,
+    groove?: GrooveId,
   ) => {
     setTracks(prev => {
       const intensities = { piano: prev.piano.intensity, bass: prev.bass.intensity, drums: prev.drums.intensity };
       const complexities = { piano: prev.piano.complexity, bass: prev.bass.complexity, drums: prev.drums.complexity };
-      const generated = generateAllTracks(chords, measures, genre, intensities, complexities);
+      const generated = generateAllTracks(chords, measures, genre, intensities, complexities, groove);
       const next: Record<TrackId, TrackState> = { ...prev };
       (Object.keys(prev) as TrackId[]).forEach(id => {
         if (force || !prev[id].manuallyEdited) {

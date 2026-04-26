@@ -31,6 +31,11 @@ const DRUM_PATTERNS: Record<Genre, DrumPattern> = {
     hihat: [],
     ride:  [0, 3, 6, 8, 9, 12, 15], // swing pattern
   },
+  Funk: {
+    kick:  [0, 6, 8, 14],
+    snare: [4, 12],
+    hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+  },
 };
 
 // Bass patterns (scale degree offsets from root, in 16th note steps)
@@ -61,6 +66,15 @@ const BASS_PATTERNS: Record<Genre, BassPattern> = {
       { step: 4, interval: 7, duration: '8n' },
       { step: 8, interval: 4, duration: '8n' }, // 3rd
       { step: 12, interval: 7, duration: '8n' },
+    ],
+  },
+  Funk: {
+    steps: [
+      { step: 0, interval: 0, duration: '16n' },
+      { step: 3, interval: 0, duration: '16n' },
+      { step: 6, interval: 7, duration: '16n' },
+      { step: 10, interval: 0, duration: '16n' },
+      { step: 14, interval: 5, duration: '16n' },
     ],
   },
 };

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
-import type { TimelineChord, Genre } from '@/hooks/useSongTimeline';
+import type { TimelineChord, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { TrackId } from '@/lib/backingTrackTypes';
 import { useBackingTrack } from '@/hooks/useBackingTrack';
 import TrackLane from './TrackLane';
@@ -13,6 +13,7 @@ interface BackingTrackViewProps {
   measures: number;
   bpm: number;
   genre: Genre;
+  groove: GrooveId;
   /** Volume from main timeline */
   volume: number;
   /** External play state (driven by main timeline play button now) */
@@ -33,19 +34,19 @@ interface BackingTrackViewProps {
 }
 
 export default function BackingTrackView({
-  chords, measures, bpm, genre, volume, isPlaying, currentBeat, registerHandlers,
+  chords, measures, bpm, genre, groove, volume, isPlaying, currentBeat, registerHandlers,
 }: BackingTrackViewProps) {
   const bt = useBackingTrack();
   const [openClip, setOpenClip] = useState<{ trackId: TrackId; clipId: string } | null>(null);
   const [hasGenerated, setHasGenerated] = useState(false);
   const latestBtRef = useRef(bt);
-  const latestTimelineRef = useRef({ chords, measures, bpm, genre });
+  const latestTimelineRef = useRef({ chords, measures, bpm, genre, groove });
 
   latestBtRef.current = bt;
 
   useEffect(() => {
-    latestTimelineRef.current = { chords, measures, bpm, genre };
-  }, [chords, measures, bpm, genre]);
+    latestTimelineRef.current = { chords, measures, bpm, genre, groove };
+  }, [chords, measures, bpm, genre, groove]);
 
   const savedItems = useMemo(
     () => bt.savedTracks.map(t => ({ id: t.id, name: t.name })),
@@ -68,8 +69,8 @@ export default function BackingTrackView({
     },
     saved: savedItems,
     regenerateAll: () => {
-      const { chords, measures, genre } = latestTimelineRef.current;
-      latestBtRef.current.regenerateAll(chords, measures, genre, true);
+      const { chords, measures, genre, groove } = latestTimelineRef.current;
+      latestBtRef.current.regenerateAll(chords, measures, genre, true, groove);
     },
     play: () => {
       const { bpm, measures } = latestTimelineRef.current;
@@ -87,34 +88,34 @@ export default function BackingTrackView({
   // Auto-generate first time we have chords
   useEffect(() => {
     if (chords.length > 0 && !hasGenerated) {
-      bt.regenerateAll(chords, measures, genre, true);
+      bt.regenerateAll(chords, measures, genre, true, groove);
       setHasGenerated(true);
     }
-  }, [chords, measures, genre, hasGenerated, bt.regenerateAll]);
+  }, [chords, measures, genre, groove, hasGenerated, bt.regenerateAll]);
 
-  // Re-generate non-edited tracks when chords/measures/genre change
+  // Re-generate non-edited tracks when chords/measures/genre/groove change
   useEffect(() => {
     if (hasGenerated && chords.length > 0) {
-      bt.regenerateAll(chords, measures, genre, false);
+      bt.regenerateAll(chords, measures, genre, false, groove);
     }
-  }, [chords, measures, genre, hasGenerated, bt.regenerateAll]);
+  }, [chords, measures, genre, groove, hasGenerated, bt.regenerateAll]);
 
   // Re-generate a track when its intensity/complexity changes
   const trackKey = (id: TrackId) =>
     `${bt.tracks[id].intensity.toFixed(2)}-${bt.tracks[id].complexity.toFixed(2)}`;
   useEffect(() => {
     if (chords.length === 0) return;
-    if (!bt.tracks.piano.manuallyEdited) bt.regenerateTrack('piano', chords, measures, genre);
+    if (!bt.tracks.piano.manuallyEdited) bt.regenerateTrack('piano', chords, measures, genre, groove);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackKey('piano')]);
   useEffect(() => {
     if (chords.length === 0) return;
-    if (!bt.tracks.bass.manuallyEdited) bt.regenerateTrack('bass', chords, measures, genre);
+    if (!bt.tracks.bass.manuallyEdited) bt.regenerateTrack('bass', chords, measures, genre, groove);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackKey('bass')]);
   useEffect(() => {
     if (chords.length === 0) return;
-    if (!bt.tracks.drums.manuallyEdited) bt.regenerateTrack('drums', chords, measures, genre);
+    if (!bt.tracks.drums.manuallyEdited) bt.regenerateTrack('drums', chords, measures, genre, groove);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackKey('drums')]);
 
@@ -131,7 +132,7 @@ export default function BackingTrackView({
       <div className="flex items-center gap-2 px-3 py-1 border-b border-border bg-card shrink-0">
         <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Backing Track</span>
         <button
-          onClick={() => bt.regenerateAll(chords, measures, genre, true)}
+          onClick={() => bt.regenerateAll(chords, measures, genre, true, groove)}
           className="px-2 py-0.5 rounded-md text-[9px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-muted transition-colors flex items-center gap-1"
           title="Regenerate all tracks"
         >
@@ -156,7 +157,7 @@ export default function BackingTrackView({
             genre={genre}
             chords={chords}
             onParamChange={(k, v) => bt.setTrackParam(id, k, v)}
-            onRegenerate={() => bt.regenerateTrack(id, chords, measures, genre)}
+            onRegenerate={() => bt.regenerateTrack(id, chords, measures, genre, groove)}
             onAINotes={(notes) => bt.setTrackNotes(id, notes, chords)}
             onUpdateClip={(clipId, patch) => bt.updateClip(id, clipId, patch)}
             onDeleteClip={(clipId) => bt.deleteClip(id, clipId)}

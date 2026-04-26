@@ -2,7 +2,9 @@ import { useState, useCallback, useRef } from 'react';
 import type { NoteName } from '@/lib/music';
 
 export type SnapValue = '1/4' | '1/8' | '1/16';
-export type Genre = 'Jazz' | 'Rock' | 'Pop';
+export type Genre = 'Jazz' | 'Rock' | 'Pop' | 'Funk';
+/** Groove preset id (1-based). Currently only Funk has a real groove template. */
+export type GrooveId = 1;
 
 export interface TimelineChord {
   id: string;
@@ -33,6 +35,7 @@ export function useSongTimeline() {
   const [measures, setMeasures] = useState(2);
   const [bpm, setBpm] = useState(120);
   const [genre, setGenre] = useState<Genre>('Rock');
+  const [groove, setGroove] = useState<GrooveId>(1);
   const [snap, setSnap] = useState<SnapValue>('1/4');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
@@ -101,6 +104,7 @@ export function useSongTimeline() {
     measures, setMeasures,
     bpm, setBpm,
     genre, setGenre,
+    groove, setGroove,
     snap, setSnap,
     isPlaying, setIsPlaying,
     currentBeat, setCurrentBeat,
