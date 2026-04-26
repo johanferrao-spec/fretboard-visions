@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { ChevronsLeftRight, Plus } from 'lucide-react';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 
@@ -20,8 +20,7 @@ interface CellGridViewProps {
   onSeek: (beat: number) => void;
   onAddChord: (root: NoteName, chordType: string, startBeat: number, duration?: number) => string;
   onRemoveChord: (id: string) => void;
-  onMoveChord: (id: string, newStartBeat: number) => void;
-  onResizeChord: (id: string, newDuration: number) => void;
+  onResizeChordRange: (id: string, newStartBeat: number, newDuration: number) => void;
   diatonicChords: DiatonicChord[];
 }
 
@@ -41,7 +40,7 @@ const MIN_DURATION = 1; // minimum chord length in beats
 export default function CellGridView({
   measures, chords, currentBeat,
   getChordColor, onAddBars, onSeek,
-  onAddChord, onRemoveChord, onMoveChord, onResizeChord,
+  onAddChord, onRemoveChord, onResizeChordRange,
   diatonicChords,
 }: CellGridViewProps) {
   const beatsPerCell = BARS_PER_CELL * BEATS_PER_BAR;
@@ -54,10 +53,6 @@ export default function CellGridView({
     }
     return null;
   };
-
-  // Latest chords ref so the resize handler always sees current state.
-  const chordsRef = useRef(chords);
-  chordsRef.current = chords;
 
   // Resize drag state.
   const resizeRef = useRef<{
@@ -89,42 +84,7 @@ export default function CellGridView({
         newStart = Math.max(0, Math.min(newEnd - MIN_DURATION, snapped));
       }
 
-      const dragged = chordsRef.current.find(c => c.id === r.chordId);
-      if (!dragged) return;
-
-      // Push/shrink/remove neighbouring chords overlapping the new range.
-      for (const other of chordsRef.current) {
-        if (other.id === r.chordId) continue;
-        const oStart = other.startBeat;
-        const oEnd = other.startBeat + other.duration;
-        if (oEnd <= newStart || oStart >= newEnd) continue;
-
-        if (oStart < newStart && oEnd > newStart && oEnd <= newEnd) {
-          const newDur = newStart - oStart;
-          if (newDur >= MIN_DURATION) onResizeChord(other.id, newDur);
-          else onRemoveChord(other.id);
-          continue;
-        }
-        if (oStart >= newStart && oStart < newEnd && oEnd > newEnd) {
-          const newDur = oEnd - newEnd;
-          if (newDur >= MIN_DURATION) {
-            onMoveChord(other.id, newEnd);
-            onResizeChord(other.id, newDur);
-          } else {
-            onRemoveChord(other.id);
-          }
-          continue;
-        }
-        if (oStart >= newStart && oEnd <= newEnd) {
-          onRemoveChord(other.id);
-        }
-      }
-
-      const newDur = newEnd - newStart;
-      if (newStart !== dragged.startBeat) onMoveChord(r.chordId, newStart);
-      if (Math.abs(newDur - dragged.duration) > 0.001) {
-        onResizeChord(r.chordId, newDur);
-      }
+      onResizeChordRange(r.chordId, newStart, newEnd - newStart);
     };
     const onUp = () => {
       if (resizeRef.current) {
@@ -138,7 +98,7 @@ export default function CellGridView({
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [measures, onMoveChord, onResizeChord, onRemoveChord]);
+  }, [measures, onResizeChordRange]);
 
   const beginResize = (e: React.MouseEvent, chord: TimelineChord, edge: 'left' | 'right') => {
     e.preventDefault();
@@ -373,10 +333,12 @@ export default function CellGridView({
                                 onMouseDown={(e) => beginResize(e, seg.chord!, 'left')}
                                 onClick={(e) => e.stopPropagation()}
                                 onDoubleClick={(e) => e.stopPropagation()}
-                                className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize z-20 hover:bg-black/40"
-                                style={{ background: 'rgba(0,0,0,0.25)' }}
+                                className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center hover:brightness-125"
+                                style={{ background: 'hsl(var(--foreground) / 0.35)' }}
                                 title="Drag to resize from left"
-                              />
+                              >
+                                <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
+                              </div>
                             )}
                             {/* Right resize handle */}
                             {isChordTrueEnd && (
@@ -384,10 +346,12 @@ export default function CellGridView({
                                 onMouseDown={(e) => beginResize(e, seg.chord!, 'right')}
                                 onClick={(e) => e.stopPropagation()}
                                 onDoubleClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize z-20 hover:bg-black/40"
-                                style={{ background: 'rgba(0,0,0,0.25)' }}
+                                className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center hover:brightness-125"
+                                style={{ background: 'hsl(var(--foreground) / 0.35)' }}
                                 title="Drag to resize from right"
-                              />
+                              >
+                                <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
+                              </div>
                             )}
                           </div>
                         );

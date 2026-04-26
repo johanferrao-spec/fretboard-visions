@@ -30,6 +30,7 @@ interface SongTimelineProps {
   onAddChord: (root: NoteName, chordType: string, startBeat: number, duration?: number) => string;
   onMoveChord: (id: string, newStartBeat: number) => void;
   onResizeChord: (id: string, newDuration: number) => void;
+  onResizeChordRange: (id: string, newStartBeat: number, newDuration: number) => void;
   onRemoveChord: (id: string) => void;
   onClearTimeline: () => void;
   onTrimOverlaps: () => void;
@@ -55,7 +56,7 @@ export default function SongTimeline({
   chords, measures, setMeasures, bpm, setBpm,
   genre, setGenre, groove, setGroove, snap, setSnap,
   isPlaying, currentBeat, panelHeight, setPanelHeight,
-  onPlay, onStop, onAddChord, onMoveChord, onResizeChord, onRemoveChord, onClearTimeline, onTrimOverlaps,
+  onPlay, onStop, onAddChord, onMoveChord, onResizeChord, onResizeChordRange, onRemoveChord, onClearTimeline, onTrimOverlaps,
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
   onSeek, onSetChordBass,
   backingTrackActive, onOpenBackingTrack, onCloseBackingTrack,
@@ -663,8 +664,7 @@ export default function SongTimeline({
               onSeek={(beat) => { if (isPlaying) onStop(); onSeek?.(beat); }}
               onAddChord={onAddChord}
               onRemoveChord={onRemoveChord}
-              onMoveChord={onMoveChord}
-              onResizeChord={onResizeChord}
+              onResizeChordRange={onResizeChordRange}
               diatonicChords={diatonicChords}
             />
           ) : (
