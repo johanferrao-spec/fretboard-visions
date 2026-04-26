@@ -308,9 +308,8 @@ export default function TrackLane({
                     style={{
                       left: `${left}%`,
                       width: `${width}%`,
-                      backgroundColor: 'hsl(0, 85%, 55% / 0.55)',
-                      border: `1.5px solid hsl(0, 90%, ${isSel ? 70 : 55}%)`,
-                      boxShadow: isSel ? '0 0 0 2px hsl(0, 90%, 60% / 0.5)' : undefined,
+                      backgroundColor: 'hsl(0, 80%, 50%)',
+                      boxShadow: isSel ? '0 0 0 2px hsl(0, 90%, 75%)' : undefined,
                       zIndex: 5,
                     }}
                     onMouseDown={(e) => {
