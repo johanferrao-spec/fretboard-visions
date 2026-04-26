@@ -5,7 +5,7 @@ import type { BackingTrack, MidiClip, MidiNote, TrackId, TrackState } from '@/li
 import { TRACK_LABELS, flattenClips } from '@/lib/backingTrackTypes';
 import { generateAllTracks } from './engine/generators';
 import { createInstruments, disposeInstruments, type EngineInstruments } from './engine/instruments';
-import { clearSchedule, scheduleTrack, schedulePlayhead, setupLoop } from './engine/scheduler';
+import { scheduleTrack, schedulePlayhead, setupLoop } from './engine/scheduler';
 
 const STORAGE_KEY = 'mf-backing-tracks';
 
@@ -95,37 +95,46 @@ export function useBackingTrack() {
     }
   }, []);
 
+  const startToneAudio = useCallback(async () => {
+    await Tone.start();
+    const rawContext = Tone.getContext().rawContext as AudioContext;
+    if (rawContext.state !== 'running') {
+      await rawContext.resume();
+    }
+    if (rawContext.state !== 'running') {
+      throw new Error(`AudioContext did not start: ${rawContext.state}`);
+    }
+  }, []);
+
   const init = useCallback(async () => {
-    ensureInstruments();
-    if (isInitRef.current) return;
+    if (isInitRef.current && Tone.getContext().state === 'running') return;
     if (!initPromiseRef.current) {
       initPromiseRef.current = (async () => {
-        await Tone.start();
+        await startToneAudio();
+        ensureInstruments();
         // Only mark as initialized AFTER Tone.start() resolves successfully,
         // so a failed init can be retried on the next user gesture.
         isInitRef.current = true;
-      })().finally(() => {
+      })().catch((error) => {
+        isInitRef.current = false;
+        throw error;
+      }).finally(() => {
         initPromiseRef.current = null;
       });
     }
     await initPromiseRef.current;
-  }, [ensureInstruments]);
+  }, [ensureInstruments, startToneAudio]);
 
   /**
    * Pre-warm the audio engine so the FIRST press of play has no delay.
    * Safe to call from any user gesture; subsequent calls are no-ops.
    */
   const prewarm = useCallback(async () => {
-    ensureInstruments();
     if (isInitRef.current) return;
     try {
       await init();
     } catch {}
-  }, [ensureInstruments, init]);
-
-  useEffect(() => {
-    ensureInstruments();
-  }, [ensureInstruments]);
+  }, [init]);
 
   const regenerateTrack = useCallback((
     trackId: TrackId,
@@ -260,9 +269,12 @@ export function useBackingTrack() {
     measures: number,
   ): Promise<{ startAudioTime: number; startPerfTime: number }> => {
     await init();
+    await startToneAudio();
     const inst = instRef.current!;
+    const transport = Tone.getTransport();
+    transport.stop();
+    transport.cancel();
     Tone.getTransport().bpm.value = bpm;
-    clearSchedule();
 
     (Object.keys(tracks) as TrackId[]).forEach(id => {
       const flat = flattenClips(tracks[id].clips);
@@ -275,10 +287,10 @@ export function useBackingTrack() {
     const startAudioTime = Tone.now() + 0.05;
     // eslint-disable-next-line no-console
     console.log('[backing] AudioContext state:', Tone.getContext().state);
-    Tone.getTransport().start(startAudioTime);
+    transport.start(startAudioTime, 0);
     setIsPlaying(true);
     return { startAudioTime, startPerfTime: performance.now() + 50 };
-  }, [init, tracks]);
+  }, [init, startToneAudio, tracks]);
 
   const stop = useCallback(() => {
     Tone.getTransport().stop();

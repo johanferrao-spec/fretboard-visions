@@ -198,25 +198,8 @@ const Index = () => {
     return () => window.cancelAnimationFrame(frameId);
   }, [activeTab, timeline.isPlaying, timeline.bpm, timeline.measures, timeline.setCurrentBeat]);
 
-  // Note: prewarm is intentionally NOT called from a useEffect — browsers
-  // require a real user gesture to unlock audio. The pointerdown/keydown
-  // listener below handles warming on the user's first interaction.
-
-  useEffect(() => {
-    if (!backingApi) return;
-
-    const warm = () => {
-      backingApi.prewarm().catch(() => {});
-    };
-
-    window.addEventListener('pointerdown', warm, { passive: true, capture: true });
-    window.addEventListener('keydown', warm, { capture: true });
-
-    return () => {
-      window.removeEventListener('pointerdown', warm, true);
-      window.removeEventListener('keydown', warm, true);
-    };
-  }, [backingApi]);
+  // Backing-track audio is warmed from the actual play handler below so it
+  // remains tied to the user's click/keypress gesture.
 
   // Compute chord tones for scaleView degree filter (used to dim non-chord-tones)
   const scaleViewChordTones = useMemo(() => {
@@ -269,25 +252,31 @@ const Index = () => {
     fb.setSecondaryScale({ mode: 'arpeggio', root, scale: arpeggioName });
   };
 
-  const handlePlay = () => {
-    timeline.setIsPlaying(true);
+  const handlePlay = async () => {
     midi.setVolume(volume);
     // Synchronously kick Tone.js inside the user gesture so audio is allowed.
     try {
-      Tone.start();
+      await Tone.start();
       const ctx = Tone.getContext().rawContext as AudioContext;
-      if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
+      if (ctx && ctx.state !== 'running') await ctx.resume();
     } catch {}
     if (activeTab === 'backing' && backingApi) {
       // Reset anchor; the RAF will hold the playhead until the audio start
       // time is known, eliminating the visible "playhead-runs-then-sound" gap.
       playStartPerfRef.current = null;
-      backingApi.play().then(({ startPerfTime }) => {
+      try {
+        await backingApi.prewarm();
+        const { startPerfTime } = await backingApi.play();
+        timeline.setIsPlaying(true);
         playStartPerfRef.current = startPerfTime;
-      }).catch(() => {
+      } catch (error) {
         playStartPerfRef.current = performance.now();
-      });
+        timeline.setIsPlaying(false);
+        // eslint-disable-next-line no-console
+        console.error('[backing] Playback failed:', error);
+      }
     } else {
+      timeline.setIsPlaying(true);
       midi.play(
         timeline.chords,
         timeline.measures,
