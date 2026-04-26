@@ -118,6 +118,13 @@ export default function BackingTrackView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackKey('drums')]);
 
+  // Re-generate drums whenever fills change (fills are baked into note generation)
+  useEffect(() => {
+    if (chords.length === 0) return;
+    bt.regenerateTrack('drums', chords, measures, genre, groove);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bt.drumFills]);
+
   // Register save/load with parent (so they appear in the chord timeline toolbar)
   useEffect(() => {
     registerHandlers?.(registeredApi);
