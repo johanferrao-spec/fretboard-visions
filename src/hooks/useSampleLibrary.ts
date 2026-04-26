@@ -141,6 +141,7 @@ export function useSampleLibrary() {
         name: s.name,
         color: s.color,
         kind: 'user' as const,
+        kit: s.kit,
         userSample: s,
       }));
 
