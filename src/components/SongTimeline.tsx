@@ -895,6 +895,7 @@ export default function SongTimeline({
             </div>
           )}
         </div>
+        )}
         </div>
       </div>
     </div>
