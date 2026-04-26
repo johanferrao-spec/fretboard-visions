@@ -74,7 +74,6 @@ export default function CellGridView({
       const r = resizeRef.current;
       if (!r) return;
       const dxBeats = (e.clientX - r.startX) / r.pxPerBeat;
-      console.log('[resize] move', { dxBeats: dxBeats.toFixed(2), edge: r.edge });
       const totalBeats = measures * BEATS_PER_BAR;
 
       let newStart = r.origStart;
@@ -100,14 +99,12 @@ export default function CellGridView({
         const oEnd = other.startBeat + other.duration;
         if (oEnd <= newStart || oStart >= newEnd) continue;
 
-        // Other ends inside new range, starts before → trim its right edge
         if (oStart < newStart && oEnd > newStart && oEnd <= newEnd) {
           const newDur = newStart - oStart;
           if (newDur >= MIN_DURATION) onResizeChord(other.id, newDur);
           else onRemoveChord(other.id);
           continue;
         }
-        // Other starts inside new range, extends past → push its left edge
         if (oStart >= newStart && oStart < newEnd && oEnd > newEnd) {
           const newDur = oEnd - newEnd;
           if (newDur >= MIN_DURATION) {
@@ -118,20 +115,23 @@ export default function CellGridView({
           }
           continue;
         }
-        // Other fully inside new range → remove
         if (oStart >= newStart && oEnd <= newEnd) {
           onRemoveChord(other.id);
         }
       }
 
-      // Apply new bounds to the dragged chord
-      if (newStart !== dragged.startBeat) onMoveChord(r.chordId, newStart);
       const newDur = newEnd - newStart;
-      if (Math.abs(newDur - dragged.duration) > 0.001 || newStart !== dragged.startBeat) {
+      if (newStart !== dragged.startBeat) onMoveChord(r.chordId, newStart);
+      if (Math.abs(newDur - dragged.duration) > 0.001) {
         onResizeChord(r.chordId, newDur);
       }
     };
-    const onUp = () => { resizeRef.current = null; document.body.style.cursor = ''; };
+    const onUp = () => {
+      if (resizeRef.current) {
+        resizeRef.current = null;
+        document.body.style.cursor = '';
+      }
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => {
@@ -143,8 +143,12 @@ export default function CellGridView({
   const beginResize = (e: React.MouseEvent, chord: TimelineChord, edge: 'left' | 'right') => {
     e.preventDefault();
     e.stopPropagation();
-    const barEl = (e.currentTarget as HTMLElement).closest('[data-bar-div]') as HTMLElement | null;
-    if (!barEl) return;
+    // Find the bar div containing this handle so we can compute pixels-per-beat.
+    const barEl = (e.target as HTMLElement).closest('[data-bar-div]') as HTMLElement | null;
+    if (!barEl) {
+      console.warn('[resize] could not find data-bar-div ancestor');
+      return;
+    }
     const rect = barEl.getBoundingClientRect();
     const pxPerBeat = rect.width / BEATS_PER_BAR;
     resizeRef.current = {
@@ -156,7 +160,6 @@ export default function CellGridView({
       origDuration: chord.duration,
     };
     document.body.style.cursor = 'ew-resize';
-    console.log('[resize] begin', { chordId: chord.id, edge, pxPerBeat, origStart: chord.startBeat, origDuration: chord.duration });
   };
 
   const formatChordLabel = (chord: TimelineChord): string => {
