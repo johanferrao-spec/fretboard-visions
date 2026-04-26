@@ -45,13 +45,17 @@ export default function TrackLane({
   track, measures, currentBeat, isPlaying, bpm, genre, chords,
   onParamChange, onRegenerate, onAINotes,
   onUpdateClip, onDeleteClip, onDuplicateClip, onOpenClipEditor,
+  drumFills = [], onAddDrumFill, onUpdateDrumFill, onRemoveDrumFill,
 }: TrackLaneProps) {
   const [aiLoading, setAiLoading] = useState(false);
   const laneRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const fillDragRef = useRef<{ id: string; mode: 'move' | 'resize-l' | 'resize-r'; origStart: number; origLen: number; startX: number; pxPerBar: number; } | null>(null);
   const [, force] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedFillId, setSelectedFillId] = useState<string | null>(null);
   const totalBeats = measures * 4;
+  const isDrums = track.id === 'drums';
 
   // Mouse drag handling for clips
   useEffect(() => {
