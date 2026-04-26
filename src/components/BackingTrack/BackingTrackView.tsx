@@ -27,7 +27,7 @@ interface BackingTrackViewProps {
     remove: (id: string) => void;
     saved: { id: string; name: string }[];
     regenerateAll: () => void;
-    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre) => Promise<{ startAudioTime: number; startPerfTime: number }>;
+    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre, resolveUserSample?: (slot: string) => import('@/lib/sampleStorage').StoredSample | null) => Promise<{ startAudioTime: number; startPerfTime: number }>;
     stop: () => void;
     prewarm: () => Promise<void>;
   }) => void;
@@ -72,8 +72,8 @@ export default function BackingTrackView({
       const { chords, measures, genre, groove } = latestTimelineRef.current;
       latestBtRef.current.regenerateAll(chords, measures, genre, true, groove);
     },
-    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre) => {
-      return latestBtRef.current.play(bpm, measures, genre);
+    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre, resolveUserSample?: (slot: string) => import('@/lib/sampleStorage').StoredSample | null) => {
+      return latestBtRef.current.play(bpm, measures, genre, resolveUserSample);
     },
     stop: () => latestBtRef.current.stop(),
     prewarm: () => latestBtRef.current.prewarm(),
