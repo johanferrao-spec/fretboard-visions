@@ -42,6 +42,7 @@ interface SongTimelineProps {
   onSetChordBass?: (id: string, bassNote: NoteName | undefined) => void;
   /** When backing-track tab is open, show extra controls in the toolbar */
   backingTrackActive?: boolean;
+  onOpenBackingTrack?: () => void;
   onCloseBackingTrack?: () => void;
   onSaveBackingTrack?: (name: string) => void;
   onLoadBackingTrack?: (id: string) => void;
