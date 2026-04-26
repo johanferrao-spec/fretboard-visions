@@ -36,6 +36,12 @@ const DRUM_PATTERNS: Record<Genre, DrumPattern> = {
     snare: [4, 12],
     hihat: [0, 2, 4, 6, 8, 10, 12, 14],
   },
+  Latin: {
+    // Tumbao-flavoured kick + cross-stick snare on 3, busy 8th hats
+    kick:  [0, 6, 8, 14],
+    snare: [4, 12],
+    hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+  },
 };
 
 // Bass patterns (scale degree offsets from root, in 16th note steps)
@@ -75,6 +81,15 @@ const BASS_PATTERNS: Record<Genre, BassPattern> = {
       { step: 6, interval: 7, duration: '16n' },
       { step: 10, interval: 0, duration: '16n' },
       { step: 14, interval: 5, duration: '16n' },
+    ],
+  },
+  Latin: {
+    // Anticipated tumbao-style root → 5th
+    steps: [
+      { step: 0, interval: 0, duration: '8n' },
+      { step: 6, interval: 7, duration: '8n' },
+      { step: 8, interval: 0, duration: '8n' },
+      { step: 14, interval: 7, duration: '8n' },
     ],
   },
 };
