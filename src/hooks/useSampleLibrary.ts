@@ -87,7 +87,11 @@ export function useSampleLibrary() {
     let cancelled = false;
     getAllSamples().then(s => {
       if (!cancelled) {
-        setSamples(s);
+        // Migrate any legacy `drums:hihat` slot to `drums:hihat_closed`.
+        const migrated = s.map(item => item.slot === 'drums:hihat'
+          ? { ...item, slot: 'drums:hihat_closed' }
+          : item);
+        setSamples(migrated);
         setLoaded(true);
       }
     }).catch(() => setLoaded(true));
