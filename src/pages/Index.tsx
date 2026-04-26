@@ -25,12 +25,8 @@ const Index = () => {
   const midi = useMidiEngine();
   const sampleLib = useSampleLibrary();
   const resolveUserSample = useCallback(
-    (slot: string) => {
-      const id = sampleLib.active[slot];
-      if (!id) return null;
-      return sampleLib.samples.find(s => s.id === id) || null;
-    },
-    [sampleLib.active, sampleLib.samples],
+    (slot: string) => sampleLib.resolveSlot(slot),
+    [sampleLib.resolveSlot],
   );
   const [showCustomTuning, setShowCustomTuning] = useState(false);
   const [customTuningName, setCustomTuningName] = useState('');
