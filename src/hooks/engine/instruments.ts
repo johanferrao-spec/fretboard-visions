@@ -1,5 +1,13 @@
 import * as Tone from 'tone';
 
+export interface JazzKit {
+  kick: Tone.Player;
+  snare: Tone.Player;
+  hihat: Tone.Player;
+  ride: Tone.Player;
+  loaded: Promise<void>;
+}
+
 export interface EngineInstruments {
   piano: Tone.PolySynth;
   bass: Tone.MonoSynth;
@@ -7,6 +15,7 @@ export interface EngineInstruments {
   snare: Tone.NoiseSynth;
   hihat: Tone.MetalSynth;
   ride: Tone.MetalSynth;
+  jazzKit: JazzKit;
   master: Tone.Gain;
 }
 
