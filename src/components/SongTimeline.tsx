@@ -452,18 +452,6 @@ export default function SongTimeline({
           </select>
         </div>
 
-        {/* Open backing-track DAW (full screen) */}
-        {!backingTrackActive && onOpenBackingTrack && (
-          <button
-            onClick={onOpenBackingTrack}
-            className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-muted transition-colors"
-            title="Open Backing Track DAW"
-          >
-            <ChevronUp size={12} />
-            <span>Backing</span>
-          </button>
-        )}
-
         <div className="flex items-center gap-1">
           <span className="text-[10px] font-mono text-muted-foreground uppercase">Snap</span>
           {(['1/4', '1/8', '1/16'] as SnapValue[]).map(s => (
@@ -584,6 +572,15 @@ export default function SongTimeline({
           >
             <Trash2 size={13} />
           </button>
+          {!backingTrackActive && onOpenBackingTrack && (
+            <button
+              onClick={onOpenBackingTrack}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Open Backing Track DAW"
+            >
+              <ChevronUp size={14} />
+            </button>
+          )}
           {backingTrackActive && onCloseBackingTrack && (
             <button
               onClick={onCloseBackingTrack}
