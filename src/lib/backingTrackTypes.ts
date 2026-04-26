@@ -61,8 +61,13 @@ export const DRUM_PITCHES = {
   snare: 38,
   hihat: 42,
   ride: 51,
-  tom: 45,
+  tom1: 45,
+  tom2: 47,
+  crash: 49,
 } as const;
+
+export type DrumPart = 'kick' | 'snare' | 'hihat' | 'ride' | 'tom1' | 'tom2' | 'crash';
+export type SamplerInstrument = 'drums' | 'bass' | 'keys';
 
 export const TRACK_COLORS: Record<TrackId, string> = {
   piano: '210 80% 60%',
