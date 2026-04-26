@@ -194,7 +194,7 @@ export function useSampleLibrary() {
     }
     const u = samples.find(s => s.id === id);
     if (!u) return null;
-    return { id: u.id, name: u.name, color: u.color, kind: 'user', userSample: u };
+    return { id: u.id, name: u.name, color: u.color, kind: 'user', kit: u.kit, userSample: u };
   }, [active, samples]);
 
   /** Apply an entire genre kit to all drum parts. For each part, prefer a
