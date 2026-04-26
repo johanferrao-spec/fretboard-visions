@@ -401,7 +401,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
             </div>
             {/* Part rows */}
             <div className="px-2 py-2 space-y-1">
-              {KIT_PARTS.filter(p => p !== 'tom2').map(part => {
+              {KIT_PARTS.map(part => {
                 const slotKey = `drums:${part}` as SlotKey;
                 const userSampleForKit = lib.samples.find(s => s.slot === slotKey && s.kit === viewKit);
                 const builtInId = `kit:${viewKit.toLowerCase()}:${part}`;
@@ -427,9 +427,12 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                 const isDragOverThis = dragOver === slotKey;
                 const isSelected = selection.instrument === 'drums' && selection.part === part;
                 return (
-                  <div
-                    key={part}
-                    onClick={() => {
+                  <div key={part}>
+                    {part === 'tom1' && (
+                      <div className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground/70 px-1 pt-1 pb-0.5">Toms</div>
+                    )}
+                    <div
+                      onClick={() => {
                       setSelection({ instrument: 'drums', part });
                       const isHihat = part === 'hihat_closed' || part === 'hihat_pedal' || part === 'hihat_open';
                       if (isHihat) {
@@ -466,6 +469,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                     <span className={`text-[9px] font-mono ${isMissing ? 'text-muted-foreground/60 italic' : 'text-muted-foreground truncate max-w-[100px]'}`}>
                       {isMissing ? 'Drop sample' : userSampleForKit!.name}
                     </span>
+                    </div>
                   </div>
                 );
               })}
@@ -625,10 +629,10 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
             {(() => {
               const cx = 400, cy = 240, w = 110, h = 110;
               return (
-                <g {...partProps('tom1')}>
-                  <rect x={cx - w/2} y={cy} width={w} height={h} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
-                  <ellipse cx={cx} cy={cy} rx={w/2} ry={16} fill={SKIN_FILL} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
-                  <ellipse cx={cx} cy={cy + h} rx={w/2} ry={12} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
+                <g {...partProps('tom2')}>
+                  <rect x={cx - w/2} y={cy} width={w} height={h} fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
+                  <ellipse cx={cx} cy={cy} rx={w/2} ry={16} fill={SKIN_FILL} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
+                  <ellipse cx={cx} cy={cy + h} rx={w/2} ry={12} fill={partFill('tom2')} stroke={partStroke('tom2')} strokeWidth={partStrokeWidth('tom2')} />
                   {[0,1,2,3,4,5].map(i => (
                     <rect key={i} x={cx - w/2 + 8 + i*((w-16)/5) - 1.5} y={cy + 6} width="3" height={h - 12} fill={SKIN_FILL} opacity={0.85} />
                   ))}
