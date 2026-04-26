@@ -136,6 +136,22 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     }
   };
 
+  /** Drop handler for kit-overview rows: kit is implicit (the panel's viewKit),
+   *  so we bypass the picker dialog and store immediately. */
+  const handleOverviewDrop = async (e: React.DragEvent, dropSlot: SlotKey, kit: DrumKitGenre) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(null);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    if (!/^audio\//.test(file.type) && !/\.(wav|mp3|ogg|m4a|aiff?)$/i.test(file.name)) return;
+    await lib.addSample(dropSlot, file, kit);
+    if (dropSlot.startsWith('drums:')) {
+      const part = dropSlot.split(':')[1] as DrumPart;
+      setSelection({ instrument: 'drums', part });
+    }
+  };
+
   const handleUploadClick = () => fileInputRef.current?.click();
   const handleFiles = async (files: FileList | null) => {
     if (!files || !files[0]) return;
