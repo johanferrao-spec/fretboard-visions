@@ -317,22 +317,105 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
           })}
         </div>
 
-        {/* Quick "apply whole kit" buttons */}
+        {/* KIT OVERVIEW — every part for the selected kit, missing slots
+            droppable, click a row to play that kit-part's sample. */}
         {selection.instrument === 'drums' && (
-          <div className="px-2 py-2 border-t border-border">
-            <div className="text-[9px] font-mono uppercase text-muted-foreground mb-1">Apply kit</div>
-            <div className="grid grid-cols-4 gap-1">
-              {DRUM_KITS.map(kit => (
-                <button
-                  key={kit}
-                  onClick={() => lib.applyKitForAllParts(kit)}
-                  className="text-[9px] font-mono uppercase rounded py-1 border border-border hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: `hsl(${KIT_COLORS[kit]} / 0.3)`, color: 'hsl(var(--foreground))' }}
-                  title={`Set every drum to the ${kit} kit`}
-                >
-                  {kit}
-                </button>
-              ))}
+          <div className="border-t border-border flex flex-col">
+            <div className="px-3 py-2 flex items-center justify-between">
+              <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+                Kit overview
+              </span>
+              <button
+                onClick={() => lib.applyKitForAllParts(viewKit)}
+                className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-muted"
+                title={`Set every drum part to ${viewKit}`}
+              >
+                Apply
+              </button>
+            </div>
+            {/* Kit picker tabs */}
+            <div className="grid grid-cols-4 gap-1 px-2">
+              {DRUM_KITS.map(kit => {
+                const isOn = viewKit === kit;
+                return (
+                  <button
+                    key={kit}
+                    onClick={() => setViewKit(kit)}
+                    className={`text-[9px] font-mono uppercase rounded py-1 border transition-colors ${
+                      isOn ? 'border-primary text-foreground' : 'border-border text-muted-foreground hover:bg-muted/40'
+                    }`}
+                    style={isOn ? { backgroundColor: `hsl(${KIT_COLORS[kit]} / 0.35)` } : undefined}
+                  >
+                    {kit}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Part rows */}
+            <div className="px-2 py-2 space-y-1 max-h-[260px] overflow-y-auto">
+              {KIT_PARTS.map(part => {
+                const slotKey = `drums:${part}` as SlotKey;
+                const userSampleForKit = lib.samples.find(s => s.slot === slotKey && s.kit === viewKit);
+                const builtInId = `kit:${viewKit.toLowerCase()}:${part}`;
+                const builtInEntry: SampleListEntry = {
+                  id: builtInId,
+                  name: `${viewKit} ${part}`,
+                  color: colorForKitPart(viewKit, part),
+                  kind: 'builtin',
+                  kit: viewKit,
+                  part,
+                };
+                const entryToUse: SampleListEntry = userSampleForKit
+                  ? {
+                      id: userSampleForKit.id,
+                      name: userSampleForKit.name,
+                      color: userSampleForKit.color,
+                      kind: 'user',
+                      kit: viewKit,
+                      userSample: userSampleForKit,
+                    }
+                  : builtInEntry;
+                const isMissing = !userSampleForKit;
+                const isDragOverThis = dragOver === slotKey;
+                const isSelected = selection.instrument === 'drums' && selection.part === part;
+                return (
+                  <div
+                    key={part}
+                    onClick={() => {
+                      setSelection({ instrument: 'drums', part });
+                      lib.selectSample(slotKey, entryToUse.id);
+                      previewSample(entryToUse);
+                    }}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(slotKey); }}
+                    onDragLeave={() => setDragOver(null)}
+                    onDrop={(e) => handleDrop(e, slotKey)}
+                    className={`group flex items-center gap-2 px-2 py-1 rounded cursor-pointer border transition-colors ${
+                      isDragOverThis
+                        ? 'border-primary bg-primary/10'
+                        : isSelected
+                          ? 'border-primary/60 bg-muted/60'
+                          : isMissing
+                            ? 'border-dashed border-border/70 hover:bg-muted/30'
+                            : 'border-border hover:bg-muted/40'
+                    }`}
+                    title={isMissing ? `Drop a sample to add a ${PART_LABEL[part]} to the ${viewKit} kit` : `Click to play ${PART_LABEL[part]}`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-sm shrink-0"
+                      style={{
+                        backgroundColor: `hsl(${entryToUse.color}${isMissing ? ' / 0.35' : ''})`,
+                        border: isMissing ? '1px dashed hsl(var(--muted-foreground) / 0.5)' : undefined,
+                      }}
+                    />
+                    <span className="text-[10px] font-mono text-foreground flex-1 truncate">
+                      {PART_LABEL[part]}
+                    </span>
+                    <span className={`text-[9px] font-mono ${isMissing ? 'text-muted-foreground/60 italic' : 'text-muted-foreground truncate max-w-[100px]'}`}>
+                      {isMissing ? 'Drop sample' : userSampleForKit!.name}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
