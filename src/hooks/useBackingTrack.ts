@@ -295,7 +295,7 @@ export function useBackingTrack() {
     await startToneAudio();
     const inst = instRef.current!;
     // eslint-disable-next-line no-console
-    console.log('[backing] master gain at play=', inst.master.gain.value, 'destination=', Tone.getDestination().volume.value);
+    console.log('[backing] master gain at play=', inst.master.gain.value, 'destination volume(dB)=', Tone.getDestination().volume.value, 'destination mute=', Tone.getDestination().mute, 'context state=', Tone.getContext().state);
     const transport = Tone.getTransport();
     transport.stop();
     transport.cancel();
