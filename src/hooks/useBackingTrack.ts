@@ -96,6 +96,8 @@ export function useBackingTrack() {
   }, []);
 
   const startToneAudio = useCallback(async () => {
+    // eslint-disable-next-line no-console
+    console.log('[backing] startToneAudio before tone=', Tone.getContext().state);
     await Tone.start();
     const rawContext = Tone.getContext().rawContext as AudioContext;
     if (rawContext.state !== 'running') {
@@ -104,6 +106,8 @@ export function useBackingTrack() {
     if (rawContext.state !== 'running') {
       throw new Error(`AudioContext did not start: ${rawContext.state}`);
     }
+    // eslint-disable-next-line no-console
+    console.log('[backing] startToneAudio complete raw=', rawContext.state, 'tone=', Tone.getContext().state);
   }, []);
 
   const init = useCallback(async () => {
@@ -114,7 +118,7 @@ export function useBackingTrack() {
         ensureInstruments();
         // Apply any volume that was set before instruments existed.
         if (pendingMasterVolRef.current !== null && instRef.current) {
-          instRef.current.master.gain.rampTo(pendingMasterVolRef.current, 0.05);
+          instRef.current.master.gain.value = pendingMasterVolRef.current;
           // eslint-disable-next-line no-console
           console.log('[backing] applied deferred master volume', pendingMasterVolRef.current);
           pendingMasterVolRef.current = null;
