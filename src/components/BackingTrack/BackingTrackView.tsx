@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { TimelineChord, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { TrackId } from '@/lib/backingTrackTypes';
 import { useBackingTrack } from '@/hooks/useBackingTrack';
+import { useSharedSampleLibrary } from '@/hooks/SampleLibraryContext';
 import TrackLane from './TrackLane';
 import PianoRoll from './PianoRoll';
 
@@ -37,6 +38,7 @@ export default function BackingTrackView({
   chords, measures, bpm, genre, groove, volume, isPlaying, currentBeat, registerHandlers,
 }: BackingTrackViewProps) {
   const bt = useBackingTrack();
+  const { resolveSlot: resolveUserSample } = useSharedSampleLibrary();
   const [openClip, setOpenClip] = useState<{ trackId: TrackId; clipId: string } | null>(null);
   const [hasGenerated, setHasGenerated] = useState(false);
   const latestBtRef = useRef(bt);
@@ -72,13 +74,13 @@ export default function BackingTrackView({
       const { chords, measures, genre, groove } = latestTimelineRef.current;
       latestBtRef.current.regenerateAll(chords, measures, genre, true, groove);
     },
-    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre, resolveUserSample?: import('@/hooks/engine/scheduler').UserSampleResolver) => {
+    play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre, providedResolver?: import('@/hooks/engine/scheduler').UserSampleResolver) => {
       const { chords, groove } = latestTimelineRef.current;
-      return latestBtRef.current.play(bpm, measures, genre, resolveUserSample, { chords, groove });
+      return latestBtRef.current.play(bpm, measures, genre, providedResolver ?? resolveUserSample, { chords, groove });
     },
     stop: () => latestBtRef.current.stop(),
     prewarm: () => latestBtRef.current.prewarm(),
-  }), [savedItems]);
+  }), [savedItems, resolveUserSample]);
 
   // Sync master volume from parent
   useEffect(() => {
@@ -98,21 +100,29 @@ export default function BackingTrackView({
   // engine's own isPlaying flag so we don't double-trigger when the parent
   // also calls play() directly via the registered API.
   useEffect(() => {
+    let cancelled = false;
+
     if (isPlaying) {
       if (latestBtRef.current.isPlaying) return;
       const { chords, groove } = latestTimelineRef.current;
       if (chords.length === 0) return;
-      latestBtRef.current
-        .play(bpm, measures, genre, undefined, { chords, groove })
-        .catch((err) => {
+      (async () => {
+        try {
+          await latestBtRef.current.play(bpm, measures, genre, resolveUserSample, { chords, groove });
+          if (cancelled) latestBtRef.current.stop();
+        } catch (err) {
           // eslint-disable-next-line no-console
           console.error('[BackingTrackView] play failed', err);
-        });
+        }
+      })();
     } else {
       if (latestBtRef.current.isPlaying) {
         latestBtRef.current.stop();
       }
     }
+    return () => {
+      cancelled = true;
+    };
     // Only react to isPlaying transitions; bpm/measures/genre changes mid-play
     // are handled elsewhere via regenerate effects.
     // eslint-disable-next-line react-hooks/exhaustive-deps
