@@ -85,6 +85,39 @@ export default function BackingTrackView({
     bt.setMasterVolume(volume);
   }, [volume, bt.setMasterVolume]);
 
+  // Prewarm audio engine once on mount so the first play() has a ready context
+  useEffect(() => {
+    latestBtRef.current.prewarm().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.warn('[BackingTrackView] prewarm failed', err);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Drive engine play/stop from external isPlaying prop. Guarded by the
+  // engine's own isPlaying flag so we don't double-trigger when the parent
+  // also calls play() directly via the registered API.
+  useEffect(() => {
+    if (isPlaying) {
+      if (latestBtRef.current.isPlaying) return;
+      const { chords, groove } = latestTimelineRef.current;
+      if (chords.length === 0) return;
+      latestBtRef.current
+        .play(bpm, measures, genre, undefined, { chords, groove })
+        .catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error('[BackingTrackView] play failed', err);
+        });
+    } else {
+      if (latestBtRef.current.isPlaying) {
+        latestBtRef.current.stop();
+      }
+    }
+    // Only react to isPlaying transitions; bpm/measures/genre changes mid-play
+    // are handled elsewhere via regenerate effects.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying]);
+
   // Auto-generate first time we have chords
   useEffect(() => {
     if (chords.length > 0 && !hasGenerated) {
