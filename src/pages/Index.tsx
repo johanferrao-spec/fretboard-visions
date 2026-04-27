@@ -13,6 +13,7 @@ import SongTimeline from '@/components/SongTimeline';
 import BackingTrackView from '@/components/BackingTrack/BackingTrackView';
 import InstrumentSamplers from '@/components/BackingTrack/InstrumentSamplers';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
+import { ensureToneAudioContext } from '@/hooks/engine/audioContext';
 import { ChevronUp } from 'lucide-react';
 import type { NoteName } from '@/lib/music';
 import type { TabNote, TabData } from '@/components/TabVisualiser';
@@ -264,9 +265,7 @@ const Index = () => {
     midi.setVolume(volume);
     // Synchronously kick Tone.js inside the user gesture so audio is allowed.
     try {
-      await Tone.start();
-      const ctx = Tone.getContext().rawContext as AudioContext;
-      if (ctx && ctx.state !== 'running') await ctx.resume();
+      await ensureToneAudioContext('timeline-play');
     } catch {}
     // Both engines share Tone's global Transport — make sure the other one
     // isn't mid-playback before we schedule, otherwise they cancel each other.
