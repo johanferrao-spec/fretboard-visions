@@ -3,7 +3,7 @@ import fs from 'node:fs';
 
 const outDir = '/mnt/documents/audio-verification';
 fs.mkdirSync(outDir, { recursive: true });
-const browser = await chromium.launch({ headless: true, args: ['--autoplay-policy=no-user-gesture-required'] });
+const browser = await chromium.launch({ headless: true, executablePath: '/bin/chromium-browser', args: ['--autoplay-policy=no-user-gesture-required'] });
 const context = await browser.newContext({ viewport: { width: 1373, height: 881 }, recordVideo: { dir: outDir, size: { width: 1373, height: 881 } } });
 await context.addInitScript(() => {
   const originalConnect = AudioNode.prototype.connect;
