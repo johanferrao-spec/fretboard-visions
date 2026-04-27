@@ -319,7 +319,7 @@ export function useBackingTrack() {
     setCurrentBeat(0);
   }, []);
 
-  const pendingMasterVolRef = useRef<number | null>(null);
+  
   const setMasterVolume = useCallback((vol: number) => {
     // eslint-disable-next-line no-console
     console.log('[backing] setMasterVolume', vol, 'instReady=', !!instRef.current);
