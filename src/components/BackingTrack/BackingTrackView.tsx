@@ -73,7 +73,8 @@ export default function BackingTrackView({
       latestBtRef.current.regenerateAll(chords, measures, genre, true, groove);
     },
     play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre, resolveUserSample?: import('@/hooks/engine/scheduler').UserSampleResolver) => {
-      return latestBtRef.current.play(bpm, measures, genre, resolveUserSample);
+      const { chords, groove } = latestTimelineRef.current;
+      return latestBtRef.current.play(bpm, measures, genre, resolveUserSample, { chords, groove });
     },
     stop: () => latestBtRef.current.stop(),
     prewarm: () => latestBtRef.current.prewarm(),
