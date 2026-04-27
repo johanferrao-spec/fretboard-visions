@@ -56,6 +56,7 @@ export function useBackingTrack() {
   const instRef = useRef<EngineInstruments | null>(null);
   const isInitRef = useRef(false);
   const initPromiseRef = useRef<Promise<void> | null>(null);
+  const pendingMasterVolRef = useRef<number | null>(null);
   const muteRefs = useRef<Record<TrackId, { current: boolean }>>({
     piano: { current: false },
     bass: { current: false },
