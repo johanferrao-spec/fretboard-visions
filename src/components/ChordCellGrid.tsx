@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronsLeftRight, Plus } from 'lucide-react';
+import { ChevronsLeftRight, Plus, X } from 'lucide-react';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
-import type { NoteName } from '@/lib/music';
+import { NOTE_NAMES, type NoteName } from '@/lib/music';
 
 interface DiatonicChord {
   root: NoteName;
@@ -21,6 +21,7 @@ interface CellGridViewProps {
   onAddChord: (root: NoteName, chordType: string, startBeat: number, duration?: number) => string;
   onRemoveChord: (id: string) => void;
   onResizeChordRange: (id: string, newStartBeat: number, newDuration: number) => void;
+  onSetChordBass?: (id: string, bassNote: NoteName | undefined) => void;
   diatonicChords: DiatonicChord[];
 }
 
@@ -41,11 +42,13 @@ export default function CellGridView({
   measures, chords, currentBeat,
   getChordColor, onAddBars, onSeek,
   onAddChord, onRemoveChord, onResizeChordRange,
+  onSetChordBass,
   diatonicChords,
 }: CellGridViewProps) {
   const beatsPerCell = BARS_PER_CELL * BEATS_PER_BAR;
   const totalCells = Math.max(1, Math.ceil(measures / BARS_PER_CELL));
   const [hoverDivision, setHoverDivision] = useState<number | null>(null);
+  const [bassMenu, setBassMenu] = useState<{ chordId: string; x: number; y: number } | null>(null);
 
   const chordAtBeat = (beat: number): TimelineChord | null => {
     for (const c of chords) {
@@ -313,8 +316,14 @@ export default function CellGridView({
                               background: `hsl(${getChordColor(seg.chord)})`,
                               opacity: 0.9,
                             }}
+                            onContextMenu={(e) => {
+                              if (!onSetChordBass || !seg.chord) return;
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setBassMenu({ chordId: seg.chord.id, x: e.clientX, y: e.clientY });
+                            }}
                             className="flex items-center justify-center px-0.5 min-w-0 relative group/seg"
-                            title={`${formatChordLabel(seg.chord)} (${segLength} beat${segLength === 1 ? '' : 's'}) — drag edges to resize`}
+                            title={`${formatChordLabel(seg.chord)} (${segLength} beat${segLength === 1 ? '' : 's'}) — drag edges to resize, right-click for bass`}
                           >
                             {showName && (
                               <span
@@ -375,6 +384,41 @@ export default function CellGridView({
           </button>
         )}
       </div>
+
+      {/* Bass-note picker popup (right-click on a chord cell) */}
+      {bassMenu && onSetChordBass && (
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setBassMenu(null)} onContextMenu={(e) => { e.preventDefault(); setBassMenu(null); }} />
+          <div
+            className="fixed z-[9999] bg-card border border-border rounded-lg shadow-xl p-2 w-56"
+            style={{
+              left: Math.min(bassMenu.x, window.innerWidth - 240),
+              top: Math.min(bassMenu.y, window.innerHeight - 140),
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-mono font-bold text-foreground uppercase tracking-wider">Bass Note</span>
+              <button onClick={() => setBassMenu(null)} className="text-muted-foreground hover:text-foreground">
+                <X size={12} />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-0.5">
+              <button
+                onClick={() => { onSetChordBass(bassMenu.chordId, undefined); setBassMenu(null); }}
+                className="px-1.5 py-0.5 rounded text-[8px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+              >Root</button>
+              {NOTE_NAMES.map(n => (
+                <button
+                  key={n}
+                  onClick={() => { onSetChordBass(bassMenu.chordId, n); setBassMenu(null); }}
+                  className="px-1 py-0.5 rounded text-[8px] font-mono bg-muted/50 text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                >{n}</button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

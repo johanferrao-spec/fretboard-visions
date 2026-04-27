@@ -755,6 +755,7 @@ const Index = () => {
             onStop={handleStop}
             onAddChord={timeline.addChord}
             onMoveChord={timeline.moveChord}
+            onCommitMove={timeline.commitMove}
             onResizeChord={timeline.resizeChord}
             onResizeChordRange={timeline.resizeChordRange}
             onRemoveChord={timeline.removeChord}
