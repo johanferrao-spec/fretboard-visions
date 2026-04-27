@@ -316,8 +316,14 @@ export default function CellGridView({
                               background: `hsl(${getChordColor(seg.chord)})`,
                               opacity: 0.9,
                             }}
+                            onContextMenu={(e) => {
+                              if (!onSetChordBass || !seg.chord) return;
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setBassMenu({ chordId: seg.chord.id, x: e.clientX, y: e.clientY });
+                            }}
                             className="flex items-center justify-center px-0.5 min-w-0 relative group/seg"
-                            title={`${formatChordLabel(seg.chord)} (${segLength} beat${segLength === 1 ? '' : 's'}) — drag edges to resize`}
+                            title={`${formatChordLabel(seg.chord)} (${segLength} beat${segLength === 1 ? '' : 's'}) — drag edges to resize, right-click for bass`}
                           >
                             {showName && (
                               <span
