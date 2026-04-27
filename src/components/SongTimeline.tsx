@@ -212,15 +212,9 @@ export default function SongTimeline({
     if (degreeData) {
       const { degree } = JSON.parse(degreeData);
       const dc = diatonicChords[degree];
-      // If the drop position is INSIDE an existing chord region → set as bass note (slash chord)
-      const hostChord = chords.find(c => rawBeat >= c.startBeat && rawBeat < c.startBeat + c.duration);
-      if (hostChord) {
-        // Toggle: if already that bass, clear it
-        const newBass = hostChord.bassNote === dc.root ? undefined : dc.root;
-        onSetChordBass?.(hostChord.id, newBass);
-        return;
-      }
-      // Otherwise add a new chord region (replacing overlaps)
+      // Always add a new chord region; replace overlaps. Bass-note assignment
+      // is no longer triggered by dropping a degree on top of an existing chord
+      // — use right-click on a chord cell to change its bass note instead.
       const existingOverlaps = chords.filter(c => {
         const cEnd = c.startBeat + c.duration;
         return (beat < cEnd && beat + dur > c.startBeat);
