@@ -56,11 +56,16 @@ export function useBackingTrack() {
   const instRef = useRef<EngineInstruments | null>(null);
   const isInitRef = useRef(false);
   const initPromiseRef = useRef<Promise<void> | null>(null);
+  const pendingMasterVolRef = useRef<number | null>(null);
   const muteRefs = useRef<Record<TrackId, { current: boolean }>>({
     piano: { current: false },
     bass: { current: false },
     drums: { current: false },
   });
+  // Always-current snapshot of tracks so play() reads the latest clips even when
+  // it was scheduled before the most recent regenerateAll has flushed to state.
+  const tracksRef = useRef(tracks);
+  tracksRef.current = tracks;
 
   // Load saved
   useEffect(() => {
@@ -107,6 +112,13 @@ export function useBackingTrack() {
       initPromiseRef.current = (async () => {
         await startToneAudio();
         ensureInstruments();
+        // Apply any volume that was set before instruments existed.
+        if (pendingMasterVolRef.current !== null && instRef.current) {
+          instRef.current.master.gain.rampTo(pendingMasterVolRef.current, 0.05);
+          // eslint-disable-next-line no-console
+          console.log('[backing] applied deferred master volume', pendingMasterVolRef.current);
+          pendingMasterVolRef.current = null;
+        }
         // Wait for sample buffers (jazz kit) to finish loading before first play.
         try { await Tone.loaded(); } catch {}
         // Only mark as initialized AFTER Tone.start() resolves successfully,
@@ -127,10 +139,17 @@ export function useBackingTrack() {
    * Safe to call from any user gesture; subsequent calls are no-ops.
    */
   const prewarm = useCallback(async () => {
+    // eslint-disable-next-line no-console
+    console.log('[backing] prewarm called, isInit=', isInitRef.current);
     if (isInitRef.current) return;
     try {
       await init();
-    } catch {}
+      // eslint-disable-next-line no-console
+      console.log('[backing] prewarm complete, master gain=', instRef.current?.master.gain.value);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[backing] prewarm failed', e);
+    }
   }, [init]);
 
   const regenerateTrack = useCallback((
@@ -268,19 +287,51 @@ export function useBackingTrack() {
     measures: number,
     genre: Genre = 'Rock',
     resolveUserSample?: import('./engine/scheduler').UserSampleResolver,
+    fallbackContext?: { chords: TimelineChord[]; groove?: GrooveId },
   ): Promise<{ startAudioTime: number; startPerfTime: number }> => {
+    // eslint-disable-next-line no-console
+    console.log('[backing] play() called bpm=', bpm, 'measures=', measures, 'hasResolver=', !!resolveUserSample);
     await init();
     await startToneAudio();
     const inst = instRef.current!;
+    // eslint-disable-next-line no-console
+    console.log('[backing] master gain at play=', inst.master.gain.value, 'destination volume(dB)=', Tone.getDestination().volume.value, 'destination mute=', Tone.getDestination().mute, 'context state=', Tone.getContext().state);
     const transport = Tone.getTransport();
     transport.stop();
     transport.cancel();
     Tone.getTransport().bpm.value = bpm;
 
-    (Object.keys(tracks) as TrackId[]).forEach(id => {
-      const flat = flattenClips(tracks[id].clips);
+    let liveTracks = tracksRef.current;
+    // If state hasn't flushed yet (e.g. user clicked play immediately after adding chords),
+    // generate notes ad-hoc from the fallback context so the first press still produces sound.
+    const allEmpty = (Object.keys(liveTracks) as TrackId[]).every(
+      id => liveTracks[id].clips.length === 0 && !liveTracks[id].manuallyEdited,
+    );
+    if (allEmpty && fallbackContext && fallbackContext.chords.length > 0) {
       // eslint-disable-next-line no-console
-      console.log(`[backing] schedule ${id}: ${flat.length} notes from ${tracks[id].clips.length} clip(s)`);
+      console.log('[backing] play() found empty clips — generating ad-hoc from fallback context');
+      const intensities = { piano: liveTracks.piano.intensity, bass: liveTracks.bass.intensity, drums: liveTracks.drums.intensity };
+      const complexities = { piano: liveTracks.piano.complexity, bass: liveTracks.bass.complexity, drums: liveTracks.drums.complexity };
+      const generated = generateAllTracks(
+        fallbackContext.chords, measures, genre, intensities, complexities, fallbackContext.groove, drumFillsRef.current,
+      );
+      const next: Record<TrackId, TrackState> = { ...liveTracks };
+      (Object.keys(liveTracks) as TrackId[]).forEach(id => {
+        next[id] = {
+          ...liveTracks[id],
+          clips: buildGeneratedClipFromNotes(measures, generated[id], TRACK_LABELS[id]),
+          manuallyEdited: false,
+        };
+      });
+      liveTracks = next;
+      tracksRef.current = next;
+      setTracks(next);
+    }
+
+    (Object.keys(liveTracks) as TrackId[]).forEach(id => {
+      const flat = flattenClips(liveTracks[id].clips);
+      // eslint-disable-next-line no-console
+      console.log(`[backing] schedule ${id}: ${flat.length} notes from ${liveTracks[id].clips.length} clip(s) muted=${muteRefs.current[id].current}`);
       scheduleTrack(id, flat, inst, muteRefs.current[id], genre, resolveUserSample);
     });
 
@@ -289,11 +340,11 @@ export function useBackingTrack() {
     Tone.getTransport().position = 0;
     const startAudioTime = Tone.now() + 0.05;
     // eslint-disable-next-line no-console
-    console.log('[backing] AudioContext state:', Tone.getContext().state);
+    console.log('[backing] AudioContext state:', Tone.getContext().state, 'startAudioTime=', startAudioTime);
     transport.start(startAudioTime, 0);
     setIsPlaying(true);
     return { startAudioTime, startPerfTime: performance.now() + 50 };
-  }, [init, startToneAudio, tracks]);
+  }, [init, startToneAudio]);
 
   const stop = useCallback(() => {
     Tone.getTransport().stop();
@@ -304,8 +355,16 @@ export function useBackingTrack() {
     setCurrentBeat(0);
   }, []);
 
+  
   const setMasterVolume = useCallback((vol: number) => {
-    if (instRef.current) instRef.current.master.gain.rampTo(vol, 0.05);
+    // eslint-disable-next-line no-console
+    console.log('[backing] setMasterVolume', vol, 'instReady=', !!instRef.current);
+    if (instRef.current) {
+      instRef.current.master.gain.rampTo(vol, 0.05);
+    } else {
+      // Defer until instruments exist so the very first volume sync isn't dropped.
+      pendingMasterVolRef.current = vol;
+    }
   }, []);
 
   // Save / load
