@@ -55,42 +55,51 @@ export function useSongTimeline() {
   }, [snapToBeat, snap]);
 
   const moveChord = useCallback((id: string, newStartBeat: number) => {
-    const grid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
     const totalBeats = measures * 4;
     setChords(prev => {
       const moving = prev.find(c => c.id === id);
       if (!moving) return prev;
       const nextStart = Math.max(0, Math.min(totalBeats - moving.duration, snapToBeat(newStartBeat)));
-      const nextEnd = nextStart + moving.duration;
+      // Pure move — do NOT mutate neighbours during drag. Overlap resolution
+      // happens on drop via commitMove() so the user can drag freely without
+      // losing chords until they release the mouse.
+      return prev.map(chord => chord.id === id ? { ...chord, startBeat: nextStart } : chord);
+    });
+  }, [snapToBeat, measures]);
 
+  /**
+   * Commit a move: resolve any overlaps caused by the moved chord by
+   * trimming or removing neighbours it sits on top of. Call this on mouseup.
+   */
+  const commitMove = useCallback((id: string) => {
+    const grid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
+    setChords(prev => {
+      const moved = prev.find(c => c.id === id);
+      if (!moved) return prev;
+      const ms = moved.startBeat;
+      const me = moved.startBeat + moved.duration;
       return prev.flatMap(chord => {
-        if (chord.id === id) return [{ ...chord, startBeat: nextStart }];
-
+        if (chord.id === id) return [chord];
         const cs = chord.startBeat;
         const ce = chord.startBeat + chord.duration;
-        // No overlap
-        if (ce <= nextStart || cs >= nextEnd) return [chord];
-        // Fully covered → delete
-        if (cs >= nextStart && ce <= nextEnd) return [];
-        // Overlaps from the left → trim its tail
-        if (cs < nextStart && ce > nextStart && ce <= nextEnd) {
-          const duration = nextStart - cs;
+        if (ce <= ms || cs >= me) return [chord];
+        if (cs >= ms && ce <= me) return [];
+        if (cs < ms && ce > ms && ce <= me) {
+          const duration = ms - cs;
           return duration >= grid ? [{ ...chord, duration }] : [];
         }
-        // Overlaps from the right → push its start
-        if (cs >= nextStart && cs < nextEnd && ce > nextEnd) {
-          const duration = ce - nextEnd;
-          return duration >= grid ? [{ ...chord, startBeat: nextEnd, duration }] : [];
+        if (cs >= ms && cs < me && ce > me) {
+          const duration = ce - me;
+          return duration >= grid ? [{ ...chord, startBeat: me, duration }] : [];
         }
-        // Moving chord straddles entirely inside an existing one → split? simpler: trim left side
-        if (cs < nextStart && ce > nextEnd) {
-          const duration = nextStart - cs;
+        if (cs < ms && ce > me) {
+          const duration = ms - cs;
           return duration >= grid ? [{ ...chord, duration }] : [];
         }
         return [chord];
       });
     });
-  }, [snapToBeat, snap, measures]);
+  }, [snap]);
 
   const resizeChord = useCallback((id: string, newDuration: number) => {
     const grid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
