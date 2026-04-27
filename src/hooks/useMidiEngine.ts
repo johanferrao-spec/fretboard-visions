@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect } from 'react';
 import * as Tone from 'tone';
 import type { TimelineChord, Genre } from './useSongTimeline';
 import { NOTE_NAMES, CHORD_FORMULAS } from '@/lib/music';
+import { ensureToneAudioContext } from './engine/audioContext';
 
 // Drum pattern definitions per genre (16 steps = 1 measure of 16th notes)
 // K=kick, S=snare, H=hihat, R=ride
@@ -124,7 +125,7 @@ export function useMidiEngine() {
 
   const init = useCallback(async () => {
     if (isInitRef.current) return;
-    await Tone.start();
+    await ensureToneAudioContext('midi-init');
 
     synthRef.current = new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: 'triangle' },
@@ -182,11 +183,7 @@ export function useMidiEngine() {
   ) => {
     // Ensure the AudioContext is resumed in the same call stack as the user
     // gesture that triggered playback — must run BEFORE init().
-    await Tone.start();
-    const rawCtx = Tone.getContext().rawContext as AudioContext;
-    if (rawCtx && rawCtx.state !== 'running') {
-      try { await rawCtx.resume(); } catch {}
-    }
+    await ensureToneAudioContext('midi-play');
     await init();
     Tone.getTransport().stop();
     Tone.getTransport().cancel();
