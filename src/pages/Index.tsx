@@ -393,10 +393,10 @@ const Index = () => {
             {/* Metronome toggle + draggable BPM (far left) */}
             <div className="flex items-center gap-1">
               <button
-                onClick={() => {
+                onClick={async () => {
                   // Prime AudioContext synchronously inside the user gesture so
                   // browsers (especially Safari) actually allow sound to play.
-                  primeMetronomeAudio();
+                  await primeMetronomeAudio();
                   setMetronomeOn(v => !v);
                 }}
                 style={

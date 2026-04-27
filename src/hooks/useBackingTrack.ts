@@ -96,6 +96,8 @@ export function useBackingTrack() {
   }, []);
 
   const startToneAudio = useCallback(async () => {
+    // eslint-disable-next-line no-console
+    console.log('[backing] startToneAudio before tone=', Tone.getContext().state);
     await Tone.start();
     const rawContext = Tone.getContext().rawContext as AudioContext;
     if (rawContext.state !== 'running') {
@@ -104,6 +106,8 @@ export function useBackingTrack() {
     if (rawContext.state !== 'running') {
       throw new Error(`AudioContext did not start: ${rawContext.state}`);
     }
+    // eslint-disable-next-line no-console
+    console.log('[backing] startToneAudio complete raw=', rawContext.state, 'tone=', Tone.getContext().state);
   }, []);
 
   const init = useCallback(async () => {
@@ -114,7 +118,7 @@ export function useBackingTrack() {
         ensureInstruments();
         // Apply any volume that was set before instruments existed.
         if (pendingMasterVolRef.current !== null && instRef.current) {
-          instRef.current.master.gain.rampTo(pendingMasterVolRef.current, 0.05);
+          instRef.current.master.gain.value = pendingMasterVolRef.current;
           // eslint-disable-next-line no-console
           console.log('[backing] applied deferred master volume', pendingMasterVolRef.current);
           pendingMasterVolRef.current = null;
@@ -341,7 +345,7 @@ export function useBackingTrack() {
     const startAudioTime = Tone.now() + 0.05;
     // eslint-disable-next-line no-console
     console.log('[backing] AudioContext state:', Tone.getContext().state, 'startAudioTime=', startAudioTime);
-    transport.start(startAudioTime, 0);
+    transport.start('+0.05', 0);
     setIsPlaying(true);
     return { startAudioTime, startPerfTime: performance.now() + 50 };
   }, [init, startToneAudio]);
@@ -360,7 +364,7 @@ export function useBackingTrack() {
     // eslint-disable-next-line no-console
     console.log('[backing] setMasterVolume', vol, 'instReady=', !!instRef.current);
     if (instRef.current) {
-      instRef.current.master.gain.rampTo(vol, 0.05);
+      instRef.current.master.gain.value = vol;
     } else {
       // Defer until instruments exist so the very first volume sync isn't dropped.
       pendingMasterVolRef.current = vol;

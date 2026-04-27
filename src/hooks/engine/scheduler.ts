@@ -16,6 +16,14 @@ export type SampleResolution =
 /** Resolver: given a slot key (e.g. 'drums:snare', 'bass', 'keys'), return active resolution or null. */
 export type UserSampleResolver = (slot: string) => SampleResolution | null;
 
+let sampleResolverLogCount = 0;
+const logSampleResolver = (...args: unknown[]) => {
+  if (sampleResolverLogCount >= 24) return;
+  sampleResolverLogCount += 1;
+  // eslint-disable-next-line no-console
+  console.log('[backing] sample resolver', ...args);
+};
+
 /** Map MIDI drum pitch -> our DrumPart slot key. */
 function pitchToDrumPart(pitch: number): DrumPart | null {
   switch (pitch) {
@@ -71,19 +79,22 @@ function playSynthDrum(inst: EngineInstruments, pitch: number, dur: number, t: n
 /** Trigger a Jazz acoustic kit Tone.Player for a given pitch. */
 function playJazzKitSample(inst: EngineInstruments, pitch: number, t: number, gain: number) {
   const playSample = (pl: Tone.Player) => {
-    if (!pl.loaded) return;
+    if (!pl.loaded) return false;
     try {
       pl.volume.value = Tone.gainToDb(Math.max(0.001, gain));
       pl.start(t);
-    } catch {}
+      return true;
+    } catch {
+      return false;
+    }
   };
   switch (pitch) {
-    case DRUM_PITCHES.kick:         playSample(inst.jazzKit.kick);  return true;
-    case DRUM_PITCHES.snare:        playSample(inst.jazzKit.snare); return true;
-    case DRUM_PITCHES.hihat_closed: playSample(inst.jazzKit.hihat_closed); return true;
-    case DRUM_PITCHES.hihat_pedal:  playSample(inst.jazzKit.hihat_pedal);  return true;
-    case DRUM_PITCHES.hihat_open:   playSample(inst.jazzKit.hihat_open);   return true;
-    case DRUM_PITCHES.ride:         playSample(inst.jazzKit.ride);  return true;
+    case DRUM_PITCHES.kick:         return playSample(inst.jazzKit.kick);
+    case DRUM_PITCHES.snare:        return playSample(inst.jazzKit.snare);
+    case DRUM_PITCHES.hihat_closed: return playSample(inst.jazzKit.hihat_closed);
+    case DRUM_PITCHES.hihat_pedal:  return playSample(inst.jazzKit.hihat_pedal);
+    case DRUM_PITCHES.hihat_open:   return playSample(inst.jazzKit.hihat_open);
+    case DRUM_PITCHES.ride:         return playSample(inst.jazzKit.ride);
     default: return false;
   }
 }
@@ -119,6 +130,7 @@ export function scheduleTrack(
       if (trackId === 'drums') {
         const part = pitchToDrumPart(n.pitch);
         const resolution = part && resolveUserSample ? resolveUserSample(`drums:${part}`) : null;
+        if (part) logSampleResolver(`drums:${part}`, resolution?.kind ?? 'none', resolution?.kind === 'builtin' ? resolution.sample.id : resolution?.kind === 'user' ? resolution.sample.name : null);
 
         // 1) User-uploaded sample takes top priority.
         if (resolution?.kind === 'user') {
