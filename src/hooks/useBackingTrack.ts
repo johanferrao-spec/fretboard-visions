@@ -287,6 +287,7 @@ export function useBackingTrack() {
     measures: number,
     genre: Genre = 'Rock',
     resolveUserSample?: import('./engine/scheduler').UserSampleResolver,
+    fallbackContext?: { chords: TimelineChord[]; groove?: GrooveId },
   ): Promise<{ startAudioTime: number; startPerfTime: number }> => {
     // eslint-disable-next-line no-console
     console.log('[backing] play() called bpm=', bpm, 'measures=', measures, 'hasResolver=', !!resolveUserSample);
@@ -300,7 +301,33 @@ export function useBackingTrack() {
     transport.cancel();
     Tone.getTransport().bpm.value = bpm;
 
-    const liveTracks = tracksRef.current;
+    let liveTracks = tracksRef.current;
+    // If state hasn't flushed yet (e.g. user clicked play immediately after adding chords),
+    // generate notes ad-hoc from the fallback context so the first press still produces sound.
+    const allEmpty = (Object.keys(liveTracks) as TrackId[]).every(
+      id => liveTracks[id].clips.length === 0 && !liveTracks[id].manuallyEdited,
+    );
+    if (allEmpty && fallbackContext && fallbackContext.chords.length > 0) {
+      // eslint-disable-next-line no-console
+      console.log('[backing] play() found empty clips — generating ad-hoc from fallback context');
+      const intensities = { piano: liveTracks.piano.intensity, bass: liveTracks.bass.intensity, drums: liveTracks.drums.intensity };
+      const complexities = { piano: liveTracks.piano.complexity, bass: liveTracks.bass.complexity, drums: liveTracks.drums.complexity };
+      const generated = generateAllTracks(
+        fallbackContext.chords, measures, genre, intensities, complexities, fallbackContext.groove, drumFillsRef.current,
+      );
+      const next: Record<TrackId, TrackState> = { ...liveTracks };
+      (Object.keys(liveTracks) as TrackId[]).forEach(id => {
+        next[id] = {
+          ...liveTracks[id],
+          clips: buildGeneratedClipFromNotes(measures, generated[id], TRACK_LABELS[id]),
+          manuallyEdited: false,
+        };
+      });
+      liveTracks = next;
+      tracksRef.current = next;
+      setTracks(next);
+    }
+
     (Object.keys(liveTracks) as TrackId[]).forEach(id => {
       const flat = flattenClips(liveTracks[id].clips);
       // eslint-disable-next-line no-console
