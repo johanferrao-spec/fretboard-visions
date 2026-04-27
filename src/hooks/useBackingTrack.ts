@@ -284,9 +284,13 @@ export function useBackingTrack() {
     genre: Genre = 'Rock',
     resolveUserSample?: import('./engine/scheduler').UserSampleResolver,
   ): Promise<{ startAudioTime: number; startPerfTime: number }> => {
+    // eslint-disable-next-line no-console
+    console.log('[backing] play() called bpm=', bpm, 'measures=', measures, 'hasResolver=', !!resolveUserSample);
     await init();
     await startToneAudio();
     const inst = instRef.current!;
+    // eslint-disable-next-line no-console
+    console.log('[backing] master gain at play=', inst.master.gain.value, 'destination=', Tone.getDestination().volume.value);
     const transport = Tone.getTransport();
     transport.stop();
     transport.cancel();
@@ -295,7 +299,7 @@ export function useBackingTrack() {
     (Object.keys(tracks) as TrackId[]).forEach(id => {
       const flat = flattenClips(tracks[id].clips);
       // eslint-disable-next-line no-console
-      console.log(`[backing] schedule ${id}: ${flat.length} notes from ${tracks[id].clips.length} clip(s)`);
+      console.log(`[backing] schedule ${id}: ${flat.length} notes from ${tracks[id].clips.length} clip(s) muted=${muteRefs.current[id].current}`);
       scheduleTrack(id, flat, inst, muteRefs.current[id], genre, resolveUserSample);
     });
 
@@ -304,7 +308,7 @@ export function useBackingTrack() {
     Tone.getTransport().position = 0;
     const startAudioTime = Tone.now() + 0.05;
     // eslint-disable-next-line no-console
-    console.log('[backing] AudioContext state:', Tone.getContext().state);
+    console.log('[backing] AudioContext state:', Tone.getContext().state, 'startAudioTime=', startAudioTime);
     transport.start(startAudioTime, 0);
     setIsPlaying(true);
     return { startAudioTime, startPerfTime: performance.now() + 50 };
