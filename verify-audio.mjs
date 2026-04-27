@@ -53,7 +53,7 @@ await context.addInitScript(() => {
   };
 });
 const page = await context.newPage();
-page.on('console', msg => console.log(`[browser:${msg.type()}]`, msg.text()));
+page.on('console', msg => { const t = msg.text(); if (/\[(backing|metronome)\]|AudioContext|error|warn/i.test(t) && !/Function components cannot be given refs/.test(t)) console.log(`[browser:${msg.type()}]`, t); });
 await page.goto('http://127.0.0.1:8080/', { waitUntil: 'networkidle' });
 await page.waitForTimeout(800);
 
@@ -67,7 +67,7 @@ await page.waitForTimeout(250);
 
 await page.mouse.dblclick(520, 800);
 await page.waitForTimeout(350);
-await page.getByRole('button', { name: /backing track/i }).click();
+await page.getByRole('button', { name: '🎹 Backing Track' }).click();
 await page.waitForTimeout(700);
 await page.getByTitle('Play').click();
 await page.waitForTimeout(2200);
