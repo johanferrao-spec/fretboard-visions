@@ -62,6 +62,10 @@ export function useBackingTrack() {
     bass: { current: false },
     drums: { current: false },
   });
+  // Always-current snapshot of tracks so play() reads the latest clips even when
+  // it was scheduled before the most recent regenerateAll has flushed to state.
+  const tracksRef = useRef(tracks);
+  tracksRef.current = tracks;
 
   // Load saved
   useEffect(() => {
