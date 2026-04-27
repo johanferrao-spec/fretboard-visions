@@ -30,13 +30,18 @@ export function useMetronome(opts: {
    */
   const primeAudio = useCallback(async () => {
     try {
+      // eslint-disable-next-line no-console
+      console.log('[metronome] primeAudio called, tone=', Tone.getContext().state);
       await Tone.start();
       const ctx = Tone.getContext().rawContext as AudioContext;
       if (ctx && ctx.state !== 'running') {
         await ctx.resume();
       }
-    } catch {
-      // ignore
+      // eslint-disable-next-line no-console
+      console.log('[metronome] primeAudio complete, raw=', ctx?.state, 'tone=', Tone.getContext().state);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[metronome] primeAudio failed', error);
     }
   }, []);
 
@@ -61,6 +66,12 @@ export function useMetronome(opts: {
     // context that fights with Tone for the audio output device.
     const ctx = Tone.getContext().rawContext as AudioContext;
     if (!ctx) return;
+    if (ctx.state !== 'running') {
+      // eslint-disable-next-line no-console
+      console.warn('[metronome] scheduler started while AudioContext is', ctx.state);
+    }
+    // eslint-disable-next-line no-console
+    console.log('[metronome] scheduler enabled bpm=', bpm, 'raw=', ctx.state);
 
     const LOOKAHEAD_MS = 25;
     const SCHEDULE_AHEAD_S = 0.1;
@@ -108,6 +119,8 @@ export function useMetronome(opts: {
         window.clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      // eslint-disable-next-line no-console
+      console.log('[metronome] scheduler stopped');
     };
   }, [enabled, bpm, beatsPerBar]);
 
