@@ -127,10 +127,17 @@ export function useBackingTrack() {
    * Safe to call from any user gesture; subsequent calls are no-ops.
    */
   const prewarm = useCallback(async () => {
+    // eslint-disable-next-line no-console
+    console.log('[backing] prewarm called, isInit=', isInitRef.current);
     if (isInitRef.current) return;
     try {
       await init();
-    } catch {}
+      // eslint-disable-next-line no-console
+      console.log('[backing] prewarm complete, master gain=', instRef.current?.master.gain.value);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[backing] prewarm failed', e);
+    }
   }, [init]);
 
   const regenerateTrack = useCallback((
@@ -304,8 +311,16 @@ export function useBackingTrack() {
     setCurrentBeat(0);
   }, []);
 
+  const pendingMasterVolRef = useRef<number | null>(null);
   const setMasterVolume = useCallback((vol: number) => {
-    if (instRef.current) instRef.current.master.gain.rampTo(vol, 0.05);
+    // eslint-disable-next-line no-console
+    console.log('[backing] setMasterVolume', vol, 'instReady=', !!instRef.current);
+    if (instRef.current) {
+      instRef.current.master.gain.rampTo(vol, 0.05);
+    } else {
+      // Defer until instruments exist so the very first volume sync isn't dropped.
+      pendingMasterVolRef.current = vol;
+    }
   }, []);
 
   // Save / load
