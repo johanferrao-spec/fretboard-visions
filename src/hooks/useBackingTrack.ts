@@ -107,6 +107,13 @@ export function useBackingTrack() {
       initPromiseRef.current = (async () => {
         await startToneAudio();
         ensureInstruments();
+        // Apply any volume that was set before instruments existed.
+        if (pendingMasterVolRef.current !== null && instRef.current) {
+          instRef.current.master.gain.rampTo(pendingMasterVolRef.current, 0.05);
+          // eslint-disable-next-line no-console
+          console.log('[backing] applied deferred master volume', pendingMasterVolRef.current);
+          pendingMasterVolRef.current = null;
+        }
         // Wait for sample buffers (jazz kit) to finish loading before first play.
         try { await Tone.loaded(); } catch {}
         // Only mark as initialized AFTER Tone.start() resolves successfully,
