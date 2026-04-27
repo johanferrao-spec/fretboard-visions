@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronsLeftRight, Plus } from 'lucide-react';
+import { ChevronsLeftRight, Plus, X } from 'lucide-react';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
-import type { NoteName } from '@/lib/music';
+import { NOTE_NAMES, type NoteName } from '@/lib/music';
 
 interface DiatonicChord {
   root: NoteName;
@@ -21,6 +21,7 @@ interface CellGridViewProps {
   onAddChord: (root: NoteName, chordType: string, startBeat: number, duration?: number) => string;
   onRemoveChord: (id: string) => void;
   onResizeChordRange: (id: string, newStartBeat: number, newDuration: number) => void;
+  onSetChordBass?: (id: string, bassNote: NoteName | undefined) => void;
   diatonicChords: DiatonicChord[];
 }
 
@@ -41,11 +42,13 @@ export default function CellGridView({
   measures, chords, currentBeat,
   getChordColor, onAddBars, onSeek,
   onAddChord, onRemoveChord, onResizeChordRange,
+  onSetChordBass,
   diatonicChords,
 }: CellGridViewProps) {
   const beatsPerCell = BARS_PER_CELL * BEATS_PER_BAR;
   const totalCells = Math.max(1, Math.ceil(measures / BARS_PER_CELL));
   const [hoverDivision, setHoverDivision] = useState<number | null>(null);
+  const [bassMenu, setBassMenu] = useState<{ chordId: string; x: number; y: number } | null>(null);
 
   const chordAtBeat = (beat: number): TimelineChord | null => {
     for (const c of chords) {
