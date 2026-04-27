@@ -668,6 +668,7 @@ export default function SongTimeline({
               onAddChord={onAddChord}
               onRemoveChord={onRemoveChord}
               onResizeChordRange={onResizeChordRange}
+              onSetChordBass={onSetChordBass}
               diatonicChords={diatonicChords}
             />
           ) : (
