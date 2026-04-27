@@ -42,12 +42,6 @@ export function useMetronome(opts: {
     }
   }, []);
 
-  // Fallback: if context wasn't primed, try (may fail silently in Safari).
-  useEffect(() => {
-    if (!enabled) return;
-    primeAudio();
-  }, [enabled, primeAudio]);
-
   // Drive the tick loop with a Web Audio lookahead scheduler
   useEffect(() => {
     if (!enabled) {
@@ -59,59 +53,70 @@ export function useMetronome(opts: {
       return;
     }
 
-    // Use the shared Tone.js raw AudioContext so we don't create a second
-    // context that fights with Tone for the audio output device.
-    const ctx = Tone.getContext().rawContext as AudioContext;
-    if (!ctx) return;
-    if (ctx.state !== 'running') {
-      // eslint-disable-next-line no-console
-      console.warn('[metronome] scheduler started while AudioContext is', ctx.state);
-    }
-    // eslint-disable-next-line no-console
-    console.log('[metronome] scheduler enabled bpm=', bpm, 'raw=', ctx.state);
-
+    let cancelled = false;
     const LOOKAHEAD_MS = 25;
     const SCHEDULE_AHEAD_S = 0.1;
     const safeBpm = Math.max(20, Math.min(400, bpm));
     const secondsPerBeat = 60 / safeBpm;
 
-    // Schedule a single beat at an absolute AudioContext time.
-    const scheduleBeat = (time: number, beatIndex: number) => {
-      const isAccent = beatIndex % beatsPerBar === 0;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = isAccent ? 1600 : 1000;
-      osc.type = 'square';
-      gain.gain.setValueAtTime(0.0001, time);
-      gain.gain.exponentialRampToValueAtTime(isAccent ? 0.45 : 0.3, time + 0.002);
-      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.06);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(time);
-      osc.stop(time + 0.07);
+    (async () => {
+      await primeAudio();
+      if (cancelled) return;
 
-      // Fire visual tick callback at (approximately) the audible moment.
-      const delayMs = Math.max(0, (time - ctx.currentTime) * 1000);
-      window.setTimeout(() => onTickRef.current?.(beatIndex), delayMs);
-    };
-
-    // Start scheduling slightly in the future so the first beat is clean.
-    let nextBeatTime = ctx.currentTime + 0.05;
-
-    const tick = () => {
-      // Browsers may suspend the context; always try to resume so sound returns.
+      // Use the shared Tone.js raw AudioContext so we don't create a second
+      // context that fights with Tone for the audio output device.
+      const ctx = Tone.getContext().rawContext as AudioContext;
+      if (!ctx) return;
       if (ctx.state !== 'running') {
-        ctx.resume().catch(() => {});
+        try {
+          await ctx.resume();
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.warn('[metronome] scheduler could not resume AudioContext', error);
+          return;
+        }
       }
-      while (nextBeatTime < ctx.currentTime + SCHEDULE_AHEAD_S) {
-        scheduleBeat(nextBeatTime, beatCountRef.current);
-        nextBeatTime += secondsPerBeat;
-        beatCountRef.current += 1;
-      }
-    };
+      if (cancelled || ctx.state !== 'running') return;
+      // eslint-disable-next-line no-console
+      console.log('[metronome] scheduler enabled bpm=', bpm, 'raw=', ctx.state);
 
-    tick();
-    intervalRef.current = window.setInterval(tick, LOOKAHEAD_MS);
+      // Schedule a single beat at an absolute AudioContext time.
+      const scheduleBeat = (time: number, beatIndex: number) => {
+        const isAccent = beatIndex % beatsPerBar === 0;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = isAccent ? 1600 : 1000;
+        osc.type = 'square';
+        gain.gain.setValueAtTime(0.0001, time);
+        gain.gain.exponentialRampToValueAtTime(isAccent ? 0.45 : 0.3, time + 0.002);
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.06);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(time);
+        osc.stop(time + 0.07);
+
+        // Fire visual tick callback at (approximately) the audible moment.
+        const delayMs = Math.max(0, (time - ctx.currentTime) * 1000);
+        window.setTimeout(() => onTickRef.current?.(beatIndex), delayMs);
+      };
+
+      // Start scheduling slightly in the future so the first beat is clean.
+      let nextBeatTime = ctx.currentTime + 0.05;
+
+      const tick = () => {
+        if (ctx.state !== 'running') return;
+        while (nextBeatTime < ctx.currentTime + SCHEDULE_AHEAD_S) {
+          scheduleBeat(nextBeatTime, beatCountRef.current);
+          nextBeatTime += secondsPerBeat;
+          beatCountRef.current += 1;
+        }
+      };
+
+      tick();
+      if (!cancelled) intervalRef.current = window.setInterval(tick, LOOKAHEAD_MS);
+    })();
+
     return () => {
+      cancelled = true;
       if (intervalRef.current !== null) {
         window.clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -119,7 +124,7 @@ export function useMetronome(opts: {
       // eslint-disable-next-line no-console
       console.log('[metronome] scheduler stopped');
     };
-  }, [enabled, bpm, beatsPerBar]);
+  }, [enabled, bpm, beatsPerBar, primeAudio]);
 
   // Cleanup on unmount — don't close the shared Tone context, just stop scheduling.
   useEffect(() => () => {
