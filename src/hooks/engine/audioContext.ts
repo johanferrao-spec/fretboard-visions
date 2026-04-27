@@ -1,6 +1,14 @@
 import * as Tone from 'tone';
 
 declare global {
+  type AudioSessionType = 'auto' | 'ambient' | 'playback' | 'transient' | 'transient-solo' | 'play-and-record';
+
+  interface Navigator {
+    audioSession?: {
+      type: AudioSessionType;
+    };
+  }
+
   interface Window {
     webkitAudioContext?: typeof AudioContext;
   }
@@ -16,6 +24,17 @@ let gesturePrimedContext: AudioContext | null = null;
 export async function ensureToneAudioContext(label: string): Promise<AudioContext> {
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextCtor) throw new Error('Web Audio is not supported in this browser');
+
+  try {
+    if (navigator.audioSession) {
+      navigator.audioSession.type = 'playback';
+      // eslint-disable-next-line no-console
+      console.log(`[audio] ${label} audioSession=`, navigator.audioSession.type);
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(`[audio] ${label} audioSession playback failed`, error);
+  }
 
   let raw = Tone.getContext().rawContext as AudioContext;
 
