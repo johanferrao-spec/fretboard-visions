@@ -384,6 +384,41 @@ export default function CellGridView({
           </button>
         )}
       </div>
+
+      {/* Bass-note picker popup (right-click on a chord cell) */}
+      {bassMenu && onSetChordBass && (
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setBassMenu(null)} onContextMenu={(e) => { e.preventDefault(); setBassMenu(null); }} />
+          <div
+            className="fixed z-[9999] bg-card border border-border rounded-lg shadow-xl p-2 w-56"
+            style={{
+              left: Math.min(bassMenu.x, window.innerWidth - 240),
+              top: Math.min(bassMenu.y, window.innerHeight - 140),
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-mono font-bold text-foreground uppercase tracking-wider">Bass Note</span>
+              <button onClick={() => setBassMenu(null)} className="text-muted-foreground hover:text-foreground">
+                <X size={12} />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-0.5">
+              <button
+                onClick={() => { onSetChordBass(bassMenu.chordId, undefined); setBassMenu(null); }}
+                className="px-1.5 py-0.5 rounded text-[8px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+              >Root</button>
+              {NOTE_NAMES.map(n => (
+                <button
+                  key={n}
+                  onClick={() => { onSetChordBass(bassMenu.chordId, n); setBassMenu(null); }}
+                  className="px-1 py-0.5 rounded text-[8px] font-mono bg-muted/50 text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                >{n}</button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
