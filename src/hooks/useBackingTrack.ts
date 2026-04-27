@@ -345,7 +345,7 @@ export function useBackingTrack() {
     const startAudioTime = Tone.now() + 0.05;
     // eslint-disable-next-line no-console
     console.log('[backing] AudioContext state:', Tone.getContext().state, 'startAudioTime=', startAudioTime);
-    transport.start(startAudioTime, 0);
+    transport.start('+0.05', 0);
     setIsPlaying(true);
     return { startAudioTime, startPerfTime: performance.now() + 50 };
   }, [init, startToneAudio]);
