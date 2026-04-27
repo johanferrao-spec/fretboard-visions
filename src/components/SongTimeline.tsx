@@ -29,6 +29,7 @@ interface SongTimelineProps {
   onStop: () => void;
   onAddChord: (root: NoteName, chordType: string, startBeat: number, duration?: number) => string;
   onMoveChord: (id: string, newStartBeat: number) => void;
+  onCommitMove: (id: string) => void;
   onResizeChord: (id: string, newDuration: number) => void;
   onResizeChordRange: (id: string, newStartBeat: number, newDuration: number) => void;
   onRemoveChord: (id: string) => void;
@@ -56,7 +57,7 @@ export default function SongTimeline({
   chords, measures, setMeasures, bpm, setBpm,
   genre, setGenre, groove, setGroove, snap, setSnap,
   isPlaying, currentBeat, panelHeight, setPanelHeight,
-  onPlay, onStop, onAddChord, onMoveChord, onResizeChord, onResizeChordRange, onRemoveChord, onClearTimeline, onTrimOverlaps,
+  onPlay, onStop, onAddChord, onMoveChord, onCommitMove, onResizeChord, onResizeChordRange, onRemoveChord, onClearTimeline, onTrimOverlaps,
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
   onSeek, onSetChordBass,
   backingTrackActive, onOpenBackingTrack, onCloseBackingTrack,
@@ -118,15 +119,20 @@ export default function SongTimeline({
     return Math.max(0, Math.min(totalBeats, rawBeat));
   }, [totalBeats]);
 
-  // Drag move
+  // Drag move — purely visual reposition. Overlap resolution happens on
+  // mouseup via onCommitMove so neighbours aren't deleted while dragging over.
   useEffect(() => {
     if (!dragChord) return;
     const onMove = (e: MouseEvent) => onMoveChord(dragChord, getBeatFromX(e.clientX));
-    const onUp = () => { setDragChord(null); onTrimOverlaps(); };
+    const onUp = () => {
+      const id = dragChord;
+      setDragChord(null);
+      onCommitMove(id);
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [dragChord, getBeatFromX, onMoveChord, onTrimOverlaps]);
+  }, [dragChord, getBeatFromX, onMoveChord, onCommitMove]);
 
   // Resize chord from either edge; resize uses the range handler so dragged
   // edges consume/shrink neighbouring chord regions while the mouse moves.
