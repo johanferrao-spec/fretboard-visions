@@ -364,7 +364,7 @@ export function useBackingTrack() {
     // eslint-disable-next-line no-console
     console.log('[backing] setMasterVolume', vol, 'instReady=', !!instRef.current);
     if (instRef.current) {
-      instRef.current.master.gain.rampTo(vol, 0.05);
+      instRef.current.master.gain.value = vol;
     } else {
       // Defer until instruments exist so the very first volume sync isn't dropped.
       pendingMasterVolRef.current = vol;
