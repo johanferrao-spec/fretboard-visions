@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import * as Tone from 'tone';
+import { ensureToneAudioContext } from './engine/audioContext';
 
 /**
  * Standalone metronome built on top of Tone.js's shared AudioContext, so it
@@ -32,11 +33,7 @@ export function useMetronome(opts: {
     try {
       // eslint-disable-next-line no-console
       console.log('[metronome] primeAudio called, tone=', Tone.getContext().state);
-      await Tone.start();
-      const ctx = Tone.getContext().rawContext as AudioContext;
-      if (ctx && ctx.state !== 'running') {
-        await ctx.resume();
-      }
+      const ctx = await ensureToneAudioContext('metronome');
       // eslint-disable-next-line no-console
       console.log('[metronome] primeAudio complete, raw=', ctx?.state, 'tone=', Tone.getContext().state);
     } catch (error) {

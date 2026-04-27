@@ -7,6 +7,7 @@ import { generateAllTracks } from './engine/generators';
 import { createInstruments, disposeInstruments, type EngineInstruments } from './engine/instruments';
 import { scheduleTrack, schedulePlayhead, setupLoop } from './engine/scheduler';
 import { disposeUserPlayers } from './engine/userSamples';
+import { ensureToneAudioContext } from './engine/audioContext';
 
 const STORAGE_KEY = 'mf-backing-tracks';
 
@@ -98,11 +99,7 @@ export function useBackingTrack() {
   const startToneAudio = useCallback(async () => {
     // eslint-disable-next-line no-console
     console.log('[backing] startToneAudio before tone=', Tone.getContext().state);
-    await Tone.start();
-    const rawContext = Tone.getContext().rawContext as AudioContext;
-    if (rawContext.state !== 'running') {
-      await rawContext.resume();
-    }
+    const rawContext = await ensureToneAudioContext('backing');
     if (rawContext.state !== 'running') {
       throw new Error(`AudioContext did not start: ${rawContext.state}`);
     }
