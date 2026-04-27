@@ -300,10 +300,11 @@ export function useBackingTrack() {
     transport.cancel();
     Tone.getTransport().bpm.value = bpm;
 
-    (Object.keys(tracks) as TrackId[]).forEach(id => {
-      const flat = flattenClips(tracks[id].clips);
+    const liveTracks = tracksRef.current;
+    (Object.keys(liveTracks) as TrackId[]).forEach(id => {
+      const flat = flattenClips(liveTracks[id].clips);
       // eslint-disable-next-line no-console
-      console.log(`[backing] schedule ${id}: ${flat.length} notes from ${tracks[id].clips.length} clip(s) muted=${muteRefs.current[id].current}`);
+      console.log(`[backing] schedule ${id}: ${flat.length} notes from ${liveTracks[id].clips.length} clip(s) muted=${muteRefs.current[id].current}`);
       scheduleTrack(id, flat, inst, muteRefs.current[id], genre, resolveUserSample);
     });
 
@@ -316,7 +317,7 @@ export function useBackingTrack() {
     transport.start(startAudioTime, 0);
     setIsPlaying(true);
     return { startAudioTime, startPerfTime: performance.now() + 50 };
-  }, [init, startToneAudio, tracks]);
+  }, [init, startToneAudio]);
 
   const stop = useCallback(() => {
     Tone.getTransport().stop();
