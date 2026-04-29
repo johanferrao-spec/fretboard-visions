@@ -5,6 +5,7 @@ import type { Genre } from '@/hooks/useSongTimeline';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
 import type { SlotKey, SampleListEntry } from '@/hooks/useSampleLibrary';
 import {
+  BUILT_IN_KIT_SAMPLES,
   KIT_COLORS,
   KIT_CYMBAL_COLORS,
   KIT_PARTS,
