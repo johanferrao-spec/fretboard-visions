@@ -408,8 +408,14 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                 const builtInId = `kit:${viewKit.toLowerCase()}:${part}`;
                 const builtInDef = BUILT_IN_KIT_SAMPLES.find(s => s.id === builtInId);
                 const builtInHasAudio = builtInDef?.source === 'jazz-sample';
+                // For built-in audio samples, show the actual on-disk filename
+                // (e.g. "kick.wav", "hihat.wav") so users see the real asset.
+                const builtInFileMap: Record<string, string> = {
+                  kick: 'kick.wav', snare: 'snare.wav', ride: 'ride.wav',
+                  hihat_closed: 'hihat.wav', hihat_pedal: 'hihat.wav', hihat_open: 'hihat.wav',
+                };
                 const builtInDisplayName = builtInHasAudio
-                  ? `${viewKit} ${PART_LABEL[part]}`
+                  ? builtInFileMap[part] ?? `${viewKit} ${PART_LABEL[part]}`
                   : null;
                 const builtInEntry: SampleListEntry = {
                   id: builtInId,
