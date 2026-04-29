@@ -1090,8 +1090,26 @@ function generateJazzPianoComp(
 
     // Final clamp / window enforcement.
     voicing = voicing.filter(p => p >= 60 && p <= 83);
+
+    // Strip any pitch class forbidden by the chord's quality. This is the
+    // last line of defence against, e.g. a major-7 sneaking onto a minor
+    // voicing via voice-leading dedup or octave shifts.
+    voicing = voicing.filter(p => !forbiddenPcs.has(p % 12));
+
+    // After stripping, guarantee 3 and 7 are still present. Re-insert at the
+    // closest octave to centre if missing.
+    const havePc = (semi: number) => voicing.some(p => p % 12 === ((rIdx + semi) % 12 + 12) % 12);
+    const insertAt = (semi: number) => {
+      let p = 60 + rIdx + semi;
+      while (p < 60) p += 12;
+      while (p > 83) p -= 12;
+      voicing.push(p);
+    };
+    if (!havePc(third)) insertAt(third);
+    if (!havePc(seventh)) insertAt(seventh);
+    voicing = Array.from(new Set(voicing)).sort((a, b) => a - b);
+
     if (voicing.length < 2) {
-      // Fall back: just shell at C4 register.
       const r = 60 + ((rIdx) % 12);
       voicing = [r + third, r + seventh].map(p => {
         while (p < 60) p += 12;
@@ -1100,8 +1118,17 @@ function generateJazzPianoComp(
       }).sort((a, b) => a - b);
     }
 
-    // Trim to 4 max.
-    if (voicing.length > 4) voicing = voicing.slice(0, 4);
+    // Trim to 4 max — but never drop the 3rd or 7th.
+    if (voicing.length > 4) {
+      const thirdPc = ((rIdx + third) % 12 + 12) % 12;
+      const seventhPc = ((rIdx + seventh) % 12 + 12) % 12;
+      const shell = voicing.filter(p => p % 12 === thirdPc || p % 12 === seventhPc);
+      const colors = voicing.filter(p => p % 12 !== thirdPc && p % 12 !== seventhPc);
+      voicing = [...shell, ...colors.slice(0, Math.max(0, 4 - shell.length))].sort((a, b) => a - b);
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('[jazz comp]', root, chordType, '→', q, 'pitches=', voicing, 'pcs=', voicing.map(p => NOTE_NAMES[((p % 12) + 12) % 12]));
     return voicing;
   };
 
