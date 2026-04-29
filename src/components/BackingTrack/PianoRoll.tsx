@@ -11,6 +11,8 @@ interface PianoRollProps {
   isPlaying: boolean;
   onChange: (notes: MidiNote[]) => void;
   onClose: () => void;
+  /** Optional preview callback — when provided, clicking/adding a note plays it. */
+  onPreviewNote?: (trackId: TrackId, pitch: number, velocity: number) => void;
 }
 
 const NOTE_LETTERS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -32,7 +34,7 @@ const DRUM_LABELS: Record<number, string> = {
 let nextNoteId = 1;
 const newNoteId = () => `pr-${Date.now()}-${nextNoteId++}`;
 
-export default function PianoRoll({ trackId, notes, measures, currentBeat, isPlaying, onChange, onClose }: PianoRollProps) {
+export default function PianoRoll({ trackId, notes, measures, currentBeat, isPlaying, onChange, onClose, onPreviewNote }: PianoRollProps) {
   const [snap, setSnap] = useState<1 | 0.5 | 0.25>(0.25);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pos, setPos] = useState({ x: 80, y: 80 });
@@ -94,6 +96,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
   const handleNoteMouseDown = (e: React.MouseEvent, n: MidiNote, mode: 'move' | 'resize') => {
     e.stopPropagation();
     setSelectedId(n.id);
+    if (mode === 'move') onPreviewNote?.(trackId, n.pitch, n.velocity);
     dragRef.current = {
       kind: mode === 'move' ? 'note' : 'resize-note',
       offsetX: e.clientX,
@@ -154,6 +157,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
     };
     onChange([...notes, newNote]);
     setSelectedId(newNote.id);
+    onPreviewNote?.(trackId, newNote.pitch, newNote.velocity);
   };
 
   // Delete key
