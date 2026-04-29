@@ -164,8 +164,32 @@ export function scheduleTrack(
         if (genre === 'Jazz' && playJazzKitSample(inst, n.pitch, t, gain)) return;
         playSynthDrum(inst, n.pitch, dur, t, gain);
       } else if (trackId === 'bass') {
+        const res = resolveUserSample?.('bass');
+        if (res?.kind === 'user') {
+          const p = getUserPlayer(res.sample, inst.master);
+          if (p && p.loaded) {
+            try {
+              p.playbackRate = Math.pow(2, (n.pitch - 48) / 12); // base C3
+              p.volume.value = Tone.gainToDb(Math.max(0.001, gain));
+              p.start(t);
+              return;
+            } catch {}
+          }
+        }
         inst.bass.triggerAttackRelease(midiToNote(n.pitch), dur, t, gain);
       } else if (trackId === 'piano') {
+        const res = resolveUserSample?.('keys');
+        if (res?.kind === 'user') {
+          const p = getUserPlayer(res.sample, inst.master);
+          if (p && p.loaded) {
+            try {
+              p.playbackRate = Math.pow(2, (n.pitch - 60) / 12); // base C4
+              p.volume.value = Tone.gainToDb(Math.max(0.001, gain));
+              p.start(t);
+              return;
+            } catch {}
+          }
+        }
         inst.piano.triggerAttackRelease(midiToNote(n.pitch), dur, t, gain);
       }
     }, baseTime);
