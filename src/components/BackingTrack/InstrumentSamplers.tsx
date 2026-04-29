@@ -406,6 +406,11 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                 const slotKey = `drums:${part}` as SlotKey;
                 const userSampleForKit = lib.samples.find(s => s.slot === slotKey && s.kit === viewKit);
                 const builtInId = `kit:${viewKit.toLowerCase()}:${part}`;
+                const builtInDef = BUILT_IN_KIT_SAMPLES.find(s => s.id === builtInId);
+                const builtInHasAudio = builtInDef?.source === 'jazz-sample';
+                const builtInDisplayName = builtInHasAudio
+                  ? `${viewKit} ${PART_LABEL[part]}`
+                  : null;
                 const builtInEntry: SampleListEntry = {
                   id: builtInId,
                   name: `${viewKit} ${part}`,
@@ -424,13 +429,20 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                       userSample: userSampleForKit,
                     }
                   : builtInEntry;
-                const isMissing = !userSampleForKit;
+                // "Missing" only when neither a user upload nor a built-in audio sample exists.
+                const isMissing = !userSampleForKit && !builtInHasAudio;
+                const displayName = userSampleForKit
+                  ? userSampleForKit.name
+                  : builtInDisplayName ?? 'Drop sample';
                 const isDragOverThis = dragOver === slotKey;
                 const isSelected = selection.instrument === 'drums' && selection.part === part;
                 return (
                   <div key={part}>
                     {part === 'tom1' && (
                       <div className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground/70 px-1 pt-1 pb-0.5">Toms</div>
+                    )}
+                    {part === 'crash' && (
+                      <div className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground/70 px-1 pt-1 pb-0.5">Cymbals</div>
                     )}
                     <div
                       onClick={() => {
@@ -468,7 +480,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                       {PART_LABEL[part]}
                     </span>
                     <span className={`text-[9px] font-mono ${isMissing ? 'text-muted-foreground/60 italic' : 'text-muted-foreground truncate max-w-[100px]'}`}>
-                      {isMissing ? 'Drop sample' : userSampleForKit!.name}
+                      {displayName}
                     </span>
                     </div>
                   </div>
