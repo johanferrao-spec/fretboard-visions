@@ -11,6 +11,8 @@ interface PianoRollProps {
   isPlaying: boolean;
   onChange: (notes: MidiNote[]) => void;
   onClose: () => void;
+  /** Optional preview callback — when provided, clicking/adding a note plays it. */
+  onPreviewNote?: (trackId: TrackId, pitch: number, velocity: number) => void;
 }
 
 const NOTE_LETTERS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
