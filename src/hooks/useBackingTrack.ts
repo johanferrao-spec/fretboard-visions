@@ -313,6 +313,13 @@ export function useBackingTrack() {
     console.log('[backing] play() called bpm=', bpm, 'measures=', measures, 'hasResolver=', !!resolveUserSample);
     await init();
     await startToneAudio();
+    // Re-check that instruments are bound to the live (post-gesture) context.
+    ensureInstruments();
+    // Re-apply pending master volume in case instruments were just rebuilt.
+    if (pendingMasterVolRef.current !== null && instRef.current) {
+      instRef.current.master.gain.value = pendingMasterVolRef.current;
+      pendingMasterVolRef.current = null;
+    }
     const inst = instRef.current!;
     // eslint-disable-next-line no-console
     console.log('[backing] master gain at play=', inst.master.gain.value, 'destination volume(dB)=', Tone.getDestination().volume.value, 'destination mute=', Tone.getDestination().mute, 'context state=', Tone.getContext().state);
