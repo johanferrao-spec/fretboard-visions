@@ -368,7 +368,35 @@ export function useBackingTrack() {
     }
   }, []);
 
-  // Save / load
+  /** Play a single MIDI note immediately for preview (used by piano roll). */
+  const previewNote = useCallback(async (
+    trackId: TrackId,
+    pitch: number,
+    velocity: number = 90,
+    genre: Genre = 'Rock',
+    resolveUserSample?: import('./engine/scheduler').UserSampleResolver,
+  ) => {
+    try {
+      await init();
+      const inst = instRef.current;
+      if (!inst) return;
+      const notes: MidiNote[] = [{
+        id: `prev-${Date.now()}`,
+        startBeat: 0,
+        duration: 0.5,
+        pitch,
+        velocity,
+      }];
+      // Use a temporary unmuted ref and schedule into the immediate transport time.
+      // Easiest: directly call the same playback paths inline.
+      const { previewTrackNote } = await import('./engine/preview');
+      previewTrackNote(trackId, notes[0], inst, genre, resolveUserSample);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[backing] previewNote failed', e);
+    }
+  }, [init]);
+
   const save = useCallback((name: string, chords: TimelineChord[], measures: number, bpm: number, genre: Genre) => {
     const bt: BackingTrack = {
       id: `bt-${Date.now()}`,
