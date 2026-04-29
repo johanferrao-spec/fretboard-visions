@@ -272,8 +272,24 @@ export function useSampleLibrary() {
     return userEntries;
   }, [samples]);
 
-  /** Resolve the active sample for a slot (used by the audio scheduler). */
-  const resolveSlot = useCallback((slot: string): SampleResolution | null => {
+  /** Resolve the active sample for a slot (used by the audio scheduler).
+   *  When `targetPitch` is provided AND the slot is `bass`, pick the bass
+   *  sample whose detected natural pitch is closest to the target — this
+   *  multi-sample lookup gives much better fidelity than pitching one
+   *  sample across the whole bass register. */
+  const resolveSlot = useCallback((slot: string, targetPitch?: number): SampleResolution | null => {
+    if (slot === 'bass' && typeof targetPitch === 'number') {
+      const bassSamples = samples.filter(s => s.slot === 'bass' && typeof s.pitch === 'number');
+      if (bassSamples.length > 0) {
+        let best = bassSamples[0];
+        let bestDist = Math.abs((best.pitch as number) - targetPitch);
+        for (let i = 1; i < bassSamples.length; i++) {
+          const d = Math.abs((bassSamples[i].pitch as number) - targetPitch);
+          if (d < bestDist) { best = bassSamples[i]; bestDist = d; }
+        }
+        return { kind: 'user', sample: best };
+      }
+    }
     const id = active[slot];
     if (!id) return null;
     if (id.startsWith('kit:')) {
