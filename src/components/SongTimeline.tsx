@@ -810,7 +810,7 @@ export default function SongTimeline({
             return (
               <div
                 key={chord.id}
-                className="absolute top-2 rounded-md cursor-grab active:cursor-grabbing select-none flex items-center group"
+                className={`absolute top-2 rounded-md select-none flex items-center group ${cmdHeld ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'}`}
                 style={{
                   left: `${leftPct}%`,
                   width: `${widthPct}%`,
