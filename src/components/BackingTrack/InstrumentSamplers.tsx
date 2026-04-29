@@ -400,9 +400,9 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                 );
               })}
             </div>
-            {/* Part rows */}
+            {/* Part rows — ordered: kick, snare, toms, then cymbals */}
             <div className="px-2 py-2 space-y-1">
-              {KIT_PARTS.map(part => {
+              {(['kick','snare','tom1','tom2','hihat_closed','hihat_pedal','hihat_open','ride','crash'] as DrumPart[]).map(part => {
                 const slotKey = `drums:${part}` as SlotKey;
                 const userSampleForKit = lib.samples.find(s => s.slot === slotKey && s.kit === viewKit);
                 const builtInId = `kit:${viewKit.toLowerCase()}:${part}`;
@@ -447,7 +447,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                     {part === 'tom1' && (
                       <div className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground/70 px-1 pt-1 pb-0.5">Toms</div>
                     )}
-                    {part === 'crash' && (
+                    {part === 'hihat_closed' && (
                       <div className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground/70 px-1 pt-1 pb-0.5">Cymbals</div>
                     )}
                     <div
