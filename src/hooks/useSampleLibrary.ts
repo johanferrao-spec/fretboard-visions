@@ -343,6 +343,8 @@ export function useSampleLibrary() {
     loaded,
     active,
     addSample,
+    updateSample,
+    setSlotIndexedSample,
     removeSample,
     selectSample,
     selectHihatGroup,
