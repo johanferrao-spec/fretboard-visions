@@ -98,13 +98,17 @@ export function useSampleLibrary() {
     return () => { cancelled = true; };
   }, []);
 
-  const addSample = useCallback(async (slot: SlotKey, file: File, kit?: DrumKitGenre) => {
+  const addSample = useCallback(async (
+    slot: SlotKey,
+    file: File,
+    kit?: DrumKitGenre,
+    extras?: { slotIndex?: number; pitch?: number; imageBlob?: Blob; imageMime?: string },
+  ) => {
     const id = `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const isDrum = slot.startsWith('drums:');
     const part = isDrum ? (slot.split(':')[1] as DrumPart) : null;
     let color: string;
     if (isDrum && kit && part) {
-      // Drum samples tagged to a kit inherit the kit's color (bronze for cymbals).
       color = colorForKitPart(kit, part);
     } else {
       const existingForSlot = samples.filter(s => s.slot === slot);
@@ -120,10 +124,66 @@ export function useSampleLibrary() {
       mime: file.type || 'audio/wav',
       blob: file,
       createdAt: Date.now(),
+      ...(extras || {}),
     };
     await putSample(stored);
     setSamples(prev => [...prev, stored]);
     setActive(prev => {
+      const next = { ...prev, [slot]: id };
+      writeActive(next);
+      return next;
+    });
+    return id;
+  }, [samples]);
+
+  /** Update mutable fields on a stored sample. */
+  const updateSample = useCallback(async (
+    id: string,
+    patch: Partial<Pick<StoredSample, 'pitch' | 'slotIndex' | 'imageBlob' | 'imageMime' | 'name' | 'color'>>,
+  ) => {
+    const current = samples.find(s => s.id === id);
+    if (!current) return;
+    const next: StoredSample = { ...current, ...patch };
+    await putSample(next);
+    setSamples(prev => prev.map(s => s.id === id ? next : s));
+  }, [samples]);
+
+  /** Replace (or add new) a sample at a specific (slot, slotIndex) pair.
+   *  If a sample already lives at that slot index, it's removed first so each
+   *  slot index holds at most one sample. */
+  const setSlotIndexedSample = useCallback(async (
+    slot: SlotKey,
+    slotIndex: number,
+    file: File,
+    extras?: { pitch?: number; imageBlob?: Blob; imageMime?: string },
+  ) => {
+    const existing = samples.find(s => s.slot === slot && s.slotIndex === slotIndex);
+    if (existing) {
+      await deleteSample(existing.id);
+    }
+    const id = `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const usedColors = new Set(samples.filter(s => s.slot === slot && s.id !== existing?.id).map(s => s.color));
+    const color = SAMPLE_TINTS.find(c => !usedColors.has(c)) || SAMPLE_TINTS[slotIndex % SAMPLE_TINTS.length];
+    const stored: StoredSample = {
+      id,
+      name: file.name,
+      slot,
+      color,
+      mime: file.type || 'audio/wav',
+      blob: file,
+      createdAt: Date.now(),
+      slotIndex,
+      ...(extras || {}),
+    };
+    await putSample(stored);
+    setSamples(prev => {
+      const filtered = existing ? prev.filter(s => s.id !== existing.id) : prev;
+      return [...filtered, stored];
+    });
+    // Also make this the "active" entry for the slot if none was active yet,
+    // so the scheduler resolver returns *something* for legacy single-pick paths.
+    setActive(prev => {
+      if (prev[slot]) return prev;
       const next = { ...prev, [slot]: id };
       writeActive(next);
       return next;
@@ -212,8 +272,24 @@ export function useSampleLibrary() {
     return userEntries;
   }, [samples]);
 
-  /** Resolve the active sample for a slot (used by the audio scheduler). */
-  const resolveSlot = useCallback((slot: string): SampleResolution | null => {
+  /** Resolve the active sample for a slot (used by the audio scheduler).
+   *  When `targetPitch` is provided AND the slot is `bass`, pick the bass
+   *  sample whose detected natural pitch is closest to the target — this
+   *  multi-sample lookup gives much better fidelity than pitching one
+   *  sample across the whole bass register. */
+  const resolveSlot = useCallback((slot: string, targetPitch?: number): SampleResolution | null => {
+    if (slot === 'bass' && typeof targetPitch === 'number') {
+      const bassSamples = samples.filter(s => s.slot === 'bass' && typeof s.pitch === 'number');
+      if (bassSamples.length > 0) {
+        let best = bassSamples[0];
+        let bestDist = Math.abs((best.pitch as number) - targetPitch);
+        for (let i = 1; i < bassSamples.length; i++) {
+          const d = Math.abs((bassSamples[i].pitch as number) - targetPitch);
+          if (d < bestDist) { best = bassSamples[i]; bestDist = d; }
+        }
+        return { kind: 'user', sample: best };
+      }
+    }
     const id = active[slot];
     if (!id) return null;
     if (id.startsWith('kit:')) {
@@ -267,6 +343,8 @@ export function useSampleLibrary() {
     loaded,
     active,
     addSample,
+    updateSample,
+    setSlotIndexedSample,
     removeSample,
     selectSample,
     selectHihatGroup,

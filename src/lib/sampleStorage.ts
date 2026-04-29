@@ -25,6 +25,13 @@ export interface StoredSample {
   /** Stored blob */
   blob: Blob;
   createdAt: number;
+  /** Detected fundamental pitch as MIDI note (bass/keys multi-sampling). */
+  pitch?: number;
+  /** Slot index inside a multi-sample group (e.g. bass slots 0..3). */
+  slotIndex?: number;
+  /** Optional artwork (PNG/JPG) shown next to the sample in the UI. */
+  imageBlob?: Blob;
+  imageMime?: string;
 }
 
 function openDb(): Promise<IDBDatabase> {

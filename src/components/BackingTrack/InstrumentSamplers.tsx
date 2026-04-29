@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trash2, Music, Upload } from 'lucide-react';
+import BassSlotGrid from './BassSlotGrid';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import type { Genre } from '@/hooks/useSongTimeline';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
@@ -297,7 +298,14 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
           </div>
         )}
 
-        {/* Sample list for the active slot */}
+        {/* Bass: dedicated 4-slot multi-sampler with image + auto-pitch detection */}
+        {selection.instrument === 'bass' && (
+          <BassSlotGrid lib={lib} volume={volume} />
+        )}
+
+        {/* Sample list for the active slot (drums + keys only — bass uses the
+            slot grid above which encapsulates upload & preview controls). */}
+        {selection.instrument !== 'bass' && (
         <div className="shrink-0">
           <div className="px-3 py-2 flex items-center justify-between">
             <span className="text-[9px] font-mono uppercase text-muted-foreground">
@@ -373,6 +381,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
             );
           })}
         </div>
+        )}
 
         {/* KIT OVERVIEW — every part for the selected kit, missing slots
             droppable, click a row to play that kit-part's sample. */}
