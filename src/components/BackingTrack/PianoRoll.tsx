@@ -96,6 +96,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
   const handleNoteMouseDown = (e: React.MouseEvent, n: MidiNote, mode: 'move' | 'resize') => {
     e.stopPropagation();
     setSelectedId(n.id);
+    if (mode === 'move') onPreviewNote?.(trackId, n.pitch, n.velocity);
     dragRef.current = {
       kind: mode === 'move' ? 'note' : 'resize-note',
       offsetX: e.clientX,
