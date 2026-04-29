@@ -184,16 +184,16 @@ const Index = () => {
   }, [selectedSinkId]);
 
   useEffect(() => {
-    if (activeTab !== 'backing' || !timeline.isPlaying) return;
+    // Drive the playhead from the audio anchor whenever the backing-track
+    // engine is the active player (which is now true in both expanded and
+    // minimised modes, as long as backingApi is registered).
+    if (!backingApi || !timeline.isPlaying) return;
 
     const totalBeats = Math.max(1, timeline.measures * 4);
     const startBeat = backingPlayheadBeatRef.current;
     let frameId = 0;
 
     const tick = () => {
-      // Wait for audio anchor to be set, then advance from THAT moment.
-      // Until the anchor exists (a few ms while Tone schedules), hold the
-      // playhead at startBeat so it doesn't race ahead of the sound.
       const anchor = playStartPerfRef.current;
       if (anchor !== null) {
         const elapsedSeconds = Math.max(0, (performance.now() - anchor) / 1000);
@@ -205,7 +205,7 @@ const Index = () => {
 
     frameId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frameId);
-  }, [activeTab, timeline.isPlaying, timeline.bpm, timeline.measures, timeline.setCurrentBeat]);
+  }, [backingApi, timeline.isPlaying, timeline.bpm, timeline.measures, timeline.setCurrentBeat]);
 
   // Backing-track audio is warmed from the actual play handler below so it
   // remains tied to the user's click/keypress gesture.
