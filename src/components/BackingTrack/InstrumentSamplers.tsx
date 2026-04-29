@@ -602,7 +602,15 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
             {(() => {
               const cx = 280, cy = 200, w = 90, h = 75;
               return (
-                <g {...partProps('tom1')} opacity={0.95}>
+                <g
+                  {...partProps('tom1')}
+                  onClick={() => {
+                    setSelection({ instrument: 'drums', part: 'tom1' });
+                    // Right rack tom previews 3 semitones lower than the left.
+                    previewSample(lib.activeEntryFor('drums:tom1' as SlotKey), -3);
+                  }}
+                  opacity={0.95}
+                >
                   <rect x={cx - w/2} y={cy} width={w} height={h} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
                   <ellipse cx={cx} cy={cy} rx={w/2} ry={14} fill={SKIN_FILL} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
                   <ellipse cx={cx} cy={cy + h} rx={w/2} ry={10} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
