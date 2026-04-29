@@ -55,6 +55,13 @@ export function useBackingTrack() {
   drumFillsRef.current = drumFills;
 
   const instRef = useRef<EngineInstruments | null>(null);
+  // Track which raw AudioContext the current instruments are bound to. If
+  // Tone's context is swapped (e.g. our gesture-primed AudioContext replaces
+  // the implicitly-created one), instruments built on the OLD context will
+  // play to a destination that's no longer being routed by Tone — silent
+  // playback even though Transport callbacks fire normally. Detect that and
+  // rebuild instruments on the live context.
+  const instContextRef = useRef<AudioContext | null>(null);
   const isInitRef = useRef(false);
   const initPromiseRef = useRef<Promise<void> | null>(null);
   const pendingMasterVolRef = useRef<number | null>(null);
@@ -91,8 +98,18 @@ export function useBackingTrack() {
   }, [tracks]);
 
   const ensureInstruments = useCallback(() => {
+    const liveCtx = Tone.getContext().rawContext as AudioContext;
+    // Rebuild if missing OR if the underlying AudioContext was swapped after
+    // the instruments were originally created.
+    if (instRef.current && instContextRef.current && instContextRef.current !== liveCtx) {
+      // eslint-disable-next-line no-console
+      console.log('[backing] AudioContext changed since instruments were built — rebuilding');
+      try { disposeInstruments(instRef.current); } catch {}
+      instRef.current = null;
+    }
     if (!instRef.current) {
       instRef.current = createInstruments();
+      instContextRef.current = liveCtx;
     }
   }, []);
 
@@ -108,7 +125,9 @@ export function useBackingTrack() {
   }, []);
 
   const init = useCallback(async () => {
-    if (isInitRef.current && Tone.getContext().state === 'running') return;
+    const liveCtx = Tone.getContext().rawContext as AudioContext;
+    const ctxMatches = instContextRef.current === liveCtx;
+    if (isInitRef.current && Tone.getContext().state === 'running' && ctxMatches) return;
     if (!initPromiseRef.current) {
       initPromiseRef.current = (async () => {
         await startToneAudio();
@@ -294,6 +313,13 @@ export function useBackingTrack() {
     console.log('[backing] play() called bpm=', bpm, 'measures=', measures, 'hasResolver=', !!resolveUserSample);
     await init();
     await startToneAudio();
+    // Re-check that instruments are bound to the live (post-gesture) context.
+    ensureInstruments();
+    // Re-apply pending master volume in case instruments were just rebuilt.
+    if (pendingMasterVolRef.current !== null && instRef.current) {
+      instRef.current.master.gain.value = pendingMasterVolRef.current;
+      pendingMasterVolRef.current = null;
+    }
     const inst = instRef.current!;
     // eslint-disable-next-line no-console
     console.log('[backing] master gain at play=', inst.master.gain.value, 'destination volume(dB)=', Tone.getDestination().volume.value, 'destination mute=', Tone.getDestination().mute, 'context state=', Tone.getContext().state);
@@ -345,7 +371,7 @@ export function useBackingTrack() {
     transport.start('+0.05', 0);
     setIsPlaying(true);
     return { startAudioTime, startPerfTime: performance.now() + 50 };
-  }, [init, startToneAudio]);
+  }, [init, startToneAudio, ensureInstruments]);
 
   const stop = useCallback(() => {
     Tone.getTransport().stop();
