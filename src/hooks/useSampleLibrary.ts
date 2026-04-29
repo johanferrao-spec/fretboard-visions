@@ -124,7 +124,8 @@ export function useSampleLibrary() {
     if (isDrum && kit && part) {
       color = colorForKitPart(kit, part);
     } else {
-      const existingForSlot = samples.filter(s => s.slot === slot);
+      // Use the live ref so two rapid uploads can never both pick "tint #0".
+      const existingForSlot = samplesRef.current.filter(s => s.slot === slot);
       const usedColors = new Set(existingForSlot.map(s => s.color));
       color = SAMPLE_TINTS.find(c => !usedColors.has(c)) || SAMPLE_TINTS[existingForSlot.length % SAMPLE_TINTS.length];
     }
@@ -147,19 +148,23 @@ export function useSampleLibrary() {
       return next;
     });
     return id;
-  }, [samples]);
+  }, []);
 
   /** Update mutable fields on a stored sample. */
   const updateSample = useCallback(async (
     id: string,
-    patch: Partial<Pick<StoredSample, 'pitch' | 'slotIndex' | 'imageBlob' | 'imageMime' | 'name' | 'color'>>,
+    patch: Partial<Pick<StoredSample, 'pitch' | 'slotIndex' | 'imageBlob' | 'imageMime' | 'name' | 'color' | 'kit'>>,
   ) => {
-    const current = samples.find(s => s.id === id);
+    // Read from the live ref so concurrent updates can't race-overwrite each
+    // other in IndexedDB. Without this, calling updateSample(A) and
+    // updateSample(B) back-to-back can lose B's patch when A's stale closure
+    // writes back the pre-B record.
+    const current = samplesRef.current.find(s => s.id === id);
     if (!current) return;
     const next: StoredSample = { ...current, ...patch };
     await putSample(next);
     setSamples(prev => prev.map(s => s.id === id ? next : s));
-  }, [samples]);
+  }, []);
 
   /** Replace (or add new) a sample at a specific (slot, slotIndex) pair.
    *  If a sample already lives at that slot index, it's removed first so each
@@ -168,25 +173,29 @@ export function useSampleLibrary() {
     slot: SlotKey,
     slotIndex: number,
     file: File,
-    extras?: { pitch?: number; imageBlob?: Blob; imageMime?: string },
+    extras?: { pitch?: number; imageBlob?: Blob; imageMime?: string; kit?: DrumKitGenre },
   ) => {
-    const existing = samples.find(s => s.slot === slot && s.slotIndex === slotIndex);
+    const live = samplesRef.current;
+    const existing = live.find(s => s.slot === slot && s.slotIndex === slotIndex);
     if (existing) {
       await deleteSample(existing.id);
     }
     const id = `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const usedColors = new Set(samples.filter(s => s.slot === slot && s.id !== existing?.id).map(s => s.color));
+    const usedColors = new Set(live.filter(s => s.slot === slot && s.id !== existing?.id).map(s => s.color));
     const color = SAMPLE_TINTS.find(c => !usedColors.has(c)) || SAMPLE_TINTS[slotIndex % SAMPLE_TINTS.length];
     const stored: StoredSample = {
       id,
       name: file.name,
       slot,
       color,
+      kit: extras?.kit,
       mime: file.type || 'audio/wav',
       blob: file,
       createdAt: Date.now(),
       slotIndex,
-      ...(extras || {}),
+      pitch: extras?.pitch,
+      imageBlob: extras?.imageBlob,
+      imageMime: extras?.imageMime,
     };
     await putSample(stored);
     setSamples(prev => {
@@ -202,7 +211,7 @@ export function useSampleLibrary() {
       return next;
     });
     return id;
-  }, [samples]);
+  }, []);
 
   const removeSample = useCallback(async (id: string) => {
     await deleteSample(id);
