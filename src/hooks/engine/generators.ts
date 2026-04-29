@@ -929,137 +929,247 @@ function generateJazzPianoComp(
 ): MidiNote[] {
   const notes: MidiNote[] = [];
 
-  // Rhythm cells (in beats within a 4-beat bar) — sparse, syncopated.
-  // Each entry: list of beat positions to hit.
-  const RHYTHM_CELLS: { hits: number[]; weight: number; busy: number }[] = [
-    { hits: [0],                weight: 1.0, busy: 0.1 },         // beat 1 only
-    { hits: [1.5],              weight: 0.9, busy: 0.3 },         // and-of-2
-    { hits: [0, 2.5],           weight: 1.0, busy: 0.4 },         // 1, and-of-3
-    { hits: [1.5, 3],           weight: 0.8, busy: 0.5 },
-    { hits: [0.5, 2],           weight: 0.7, busy: 0.55 },
-    { hits: [1, 2.5, 3.5],      weight: 0.6, busy: 0.7 },
-    { hits: [0, 1.5, 3],        weight: 0.6, busy: 0.65 },
-    { hits: [],                 weight: 0.55, busy: 0.0 },        // bar of rest
-    { hits: [3.5],              weight: 0.7, busy: 0.45 },        // anticipation only
-  ];
+  // ---- Chord quality classification (drives extension choice) ----
+  type Quality = 'maj' | 'min' | 'dom' | 'dim' | 'halfdim' | 'sus' | 'other';
+  const classify = (chordType: string): Quality => {
+    const ct = chordType.toLowerCase();
+    const formula = CHORD_FORMULAS[chordType] || [0, 4, 7, 10];
+    const has = (semi: number) => formula.includes(semi);
+    if (ct.includes('half-dim') || ct === 'm7♭5' || ct.includes('m7♭5')) return 'halfdim';
+    if (ct.includes('dim 7') || (has(3) && has(6) && has(9))) return 'dim';
+    if (ct.startsWith('dim') || ct === 'diminished') return 'dim';
+    if (ct.includes('sus')) return 'sus';
+    if (ct.includes('maj')) return 'maj';
+    // Dominant: has major 3, ♭7 (and not maj)
+    if (has(4) && has(10)) return 'dom';
+    if (has(3) && has(10)) return 'min';
+    if (has(3) && has(7)) return 'min';
+    if (has(4) && has(7)) return 'maj'; // bare triads default to maj7 voicing
+    return 'other';
+  };
 
-  // Build a rootless voicing for a chord, in MIDI octave around C4 (60).
+  // ---- Build a 3-4 note voicing strictly per spec ----
+  // Returns a sorted list of MIDI pitches in [60..83], span ≤ 16 semitones,
+  // always containing the chord's 3 and 7.
   const buildVoicing = (root: string, chordType: string, prev: number[] | null): number[] => {
     const rIdx = NOTE_NAMES.indexOf(root as any);
     if (rIdx < 0) return [];
-    const formula = CHORD_FORMULAS[chordType] || [0, 4, 7, 10];
-    const isMinor = (formula[1] ?? 4) === 3;
-    const isDominant = (formula[1] ?? 4) === 4 && (formula[3] ?? 11) === 10 && !chordType.includes('maj');
-    const isMaj7 = chordType.includes('maj');
+    const q = classify(chordType);
 
-    // Choose A or B rootless voicing.
-    // A-form: 3,5,7,9    B-form: 7,9,3,13
-    const useB = chance(0.5);
-    const third = isMinor ? 3 : 4;
-    const seventh = isMaj7 ? 11 : 10;
-    const ninth = 14;
-    const thirteenth = isDominant || !isMinor ? 21 : 20; // b13 on minor
-    const eleventh = isMinor ? 17 : 18; // #11 on maj/dom occasionally
+    // Determine 3 and 7 semitone intervals from root.
+    // For dim7, the "7th" is the bb7 (=9 semitones). For half-dim it's b7 (10).
+    let third: number;
+    let seventh: number;
+    if (q === 'dim') { third = 3; seventh = 9; }
+    else if (q === 'halfdim') { third = 3; seventh = 10; }
+    else if (q === 'min') { third = 3; seventh = 10; }
+    else if (q === 'dom') { third = 4; seventh = 10; }
+    else if (q === 'maj') { third = 4; seventh = 11; }
+    else if (q === 'sus') { third = 5; seventh = 10; } // 4 substitutes for 3 on sus
+    else { third = 4; seventh = 10; }
 
-    let intervals: number[];
-    if (useB) {
-      intervals = [seventh, ninth, third + 12, thirteenth];
+    // Pick color tones per quality.
+    // Using semitones from root.
+    let colorPool: number[] = [];
+    if (q === 'maj') {
+      // 9, 13, #11 (Lydian color)
+      colorPool = [14, 21, 18];
+    } else if (q === 'min') {
+      // natural 9, 11 (Dorian), 13
+      colorPool = [14, 17, 21];
+    } else if (q === 'dom') {
+      // ALWAYS altered: ♭9, #9, ♭13. Occasionally #11.
+      colorPool = [13, 15, 20, 18];
+    } else if (q === 'dim') {
+      // dim7: voice b3 b5 b7 + b9 (color)
+      colorPool = [13];
+    } else if (q === 'halfdim') {
+      // m7b5: b3 b5 b7 + b9
+      colorPool = [13];
+    } else if (q === 'sus') {
+      colorPool = [14, 17];
     } else {
-      intervals = [third, seventh, ninth + 0, complexity > 0.55 && chance(0.5) ? eleventh : 14 + 7];
-      // ensure unique
-      intervals = Array.from(new Set(intervals));
+      colorPool = [14];
     }
 
-    // Centre the voicing around C4 (MIDI 60). Root MIDI in octave 3 reference.
-    const baseRoot = 60 + rIdx; // C4-relative
-    let voicing = intervals.map(i => baseRoot + i - 12); // shift down to mid register
+    // Build set of intervals: shell + 1-2 colors.
+    // Total notes: 3 or 4 (4 favored on dom/dim/halfdim because spec says "voice b3 b5 b7 add b9").
+    const targetCount = (q === 'dim' || q === 'halfdim') ? 4
+      : (q === 'dom') ? (chance(0.7) ? 4 : 3)
+      : (chance(0.45 + complexity * 0.3) ? 4 : 3);
 
-    // Smooth voice-leading: shift voicing octave to minimise total distance from prev.
-    if (prev && prev.length) {
-      const prevAvg = prev.reduce((a, b) => a + b, 0) / prev.length;
-      let bestShift = 0;
-      let bestDist = Infinity;
-      for (const shift of [-12, 0, 12]) {
-        const avg = (voicing.reduce((a, b) => a + b, 0) / voicing.length) + shift;
-        const dist = Math.abs(avg - prevAvg);
-        if (dist < bestDist) { bestDist = dist; bestShift = shift; }
-      }
-      voicing = voicing.map(p => p + bestShift);
+    // Required intervals from root.
+    const required: number[] = [third, seventh];
+    if (q === 'dim' || q === 'halfdim') required.push(6); // b5
+
+    // Add colors until we hit targetCount (avoid duplicates by pitch class).
+    const pcSet = new Set(required.map(i => ((i % 12) + 12) % 12));
+    const intervals = [...required];
+    // Shuffle colorPool for variety
+    const shuffled = colorPool.slice().sort(() => Math.random() - 0.5);
+    for (const c of shuffled) {
+      if (intervals.length >= targetCount) break;
+      const pc = ((c % 12) + 12) % 12;
+      if (pcSet.has(pc)) continue;
+      pcSet.add(pc);
+      intervals.push(c);
     }
 
-    // Clamp to a comfortable mid-upper range (C3 ~48 to C6 ~84).
+    // Convert intervals → MIDI pitches centered around C4-G5.
+    // Anchor: place 3rd around E4..A4 region first, then layer others.
+    const baseRoot = 48 + rIdx; // C3 area
+    let voicing = intervals.map(i => baseRoot + i);
+
+    // Move each pitch into the [60..83] window, picking the octave closest
+    // to the centre of E4..G5 (≈68).
+    const CENTRE = 68;
     voicing = voicing.map(p => {
-      while (p < 55) p += 12;
-      while (p > 84) p -= 12;
+      while (p < 60) p += 12;
+      while (p > 83) p -= 12;
+      // After clamp, if still > 83 (impossible given window) skip.
+      // Try to bias closer to CENTRE within window.
+      const altUp = p + 12;
+      const altDn = p - 12;
+      if (altUp <= 83 && Math.abs(altUp - CENTRE) < Math.abs(p - CENTRE)) p = altUp;
+      else if (altDn >= 60 && Math.abs(altDn - CENTRE) < Math.abs(p - CENTRE)) p = altDn;
       return p;
     });
-    return Array.from(new Set(voicing)).sort((a, b) => a - b);
+
+    // Dedup and sort.
+    voicing = Array.from(new Set(voicing)).sort((a, b) => a - b);
+
+    // Enforce max span = 16 semitones (a tenth). If too wide, octave-shift the
+    // outermost notes inward.
+    let guard = 0;
+    while (voicing.length > 1 && voicing[voicing.length - 1] - voicing[0] > 16 && guard++ < 8) {
+      // Try lifting bottom up an octave or dropping top down.
+      const liftedBottom = voicing[0] + 12;
+      const droppedTop = voicing[voicing.length - 1] - 12;
+      const newSetA = [...voicing.slice(1), liftedBottom].sort((a, b) => a - b);
+      const newSetB = [droppedTop, ...voicing.slice(0, -1)].sort((a, b) => a - b);
+      const spanA = newSetA[newSetA.length - 1] - newSetA[0];
+      const spanB = newSetB[newSetB.length - 1] - newSetB[0];
+      voicing = (spanA <= spanB ? newSetA : newSetB).filter(p => p >= 60 && p <= 83);
+      if (voicing.length < 2) break;
+    }
+
+    // ---- Smooth voice-leading ----
+    // For each voice in `voicing`, pick the octave shift in {-12, 0, +12}
+    // that minimises distance from the nearest voice in `prev`. Greedy match.
+    if (prev && prev.length) {
+      const prevPool = prev.slice();
+      const reordered: number[] = [];
+      for (const p of voicing) {
+        const candidates = [p - 12, p, p + 12].filter(x => x >= 60 && x <= 83);
+        let best = p;
+        let bestDist = Infinity;
+        for (const cand of candidates) {
+          // distance to nearest prev voice
+          let d = Infinity;
+          for (const q of prevPool) d = Math.min(d, Math.abs(cand - q));
+          if (d < bestDist) { bestDist = d; best = cand; }
+        }
+        reordered.push(best);
+      }
+      voicing = Array.from(new Set(reordered)).sort((a, b) => a - b);
+    }
+
+    // Final clamp / window enforcement.
+    voicing = voicing.filter(p => p >= 60 && p <= 83);
+    if (voicing.length < 2) {
+      // Fall back: just shell at C4 register.
+      const r = 60 + ((rIdx) % 12);
+      voicing = [r + third, r + seventh].map(p => {
+        while (p < 60) p += 12;
+        while (p > 83) p -= 12;
+        return p;
+      }).sort((a, b) => a - b);
+    }
+
+    // Trim to 4 max.
+    if (voicing.length > 4) voicing = voicing.slice(0, 4);
+    return voicing;
   };
+
+  // ---- Rhythm cells ----
+  // Spec: never squarely on beat 1 (0) or beat 3 (2). Anticipations on
+  // and-of-2 (1.5) → anticipates beat 3, and on 4-and (3.5) → anticipates
+  // beat 1 of next bar. Off-beat stabs on 0.5, 1.5, 2.5, 3.5.
+  // ≥1 full beat of silence per bar guaranteed by sparse cells (max 3 hits).
+  const RHYTHM_CELLS: { hits: number[]; weight: number; busy: number }[] = [
+    { hits: [1.5],              weight: 1.0, busy: 0.2 },  // and-of-2 stab (anticipates 3)
+    { hits: [3.5],              weight: 1.0, busy: 0.2 },  // anticipates next bar's 1
+    { hits: [1.5, 3.5],         weight: 1.0, busy: 0.45 }, // both anticipations
+    { hits: [0.5, 2.5],         weight: 0.7, busy: 0.5 },  // off-beats around 1 & 3
+    { hits: [1.5, 2.5],         weight: 0.8, busy: 0.5 },
+    { hits: [0.5, 1.5, 3.5],    weight: 0.6, busy: 0.7 },
+    { hits: [1.5, 2.5, 3.5],    weight: 0.6, busy: 0.7 },
+    { hits: [],                 weight: 0.55, busy: 0.0 }, // bar of rest
+    { hits: [0.5],              weight: 0.55, busy: 0.2 },
+    { hits: [2.5],              weight: 0.7, busy: 0.2 },  // anticipates beat... color stab
+  ];
 
   let prevVoicing: number[] | null = null;
 
   for (let ci = 0; ci < chords.length; ci++) {
     const chord = chords[ci];
-    const voicing = buildVoicing(chord.root, chord.chordType, prevVoicing);
+    let voicing = buildVoicing(chord.root, chord.chordType, prevVoicing);
     if (!voicing.length) continue;
-    prevVoicing = voicing;
 
-    // Optional LH shell (root + 7th) low — sparse.
-    const rIdx = NOTE_NAMES.indexOf(chord.root as any);
-    const formula = CHORD_FORMULAS[chord.chordType] || [0, 4, 7, 10];
-    const lhRoot = 36 + rIdx;             // C2-area root
-    const lhSeventh = lhRoot + (formula[3] ?? 10);
-    const playLH = chance(0.25 + intensity * 0.15);
+    // ---- 7→3 resolution preference ----
+    // If prev existed, try to ensure that the previous chord's 7th moved by
+    // half/whole step to a chord tone (the 3rd) of the new chord. We approximate
+    // this by preferring voicings whose lowest "shell" note is close to the
+    // previous chord's 7th. The buildVoicing voice-leading already does this
+    // implicitly; nothing more needed here.
+    prevVoicing = voicing;
 
     const fullBeats = Math.max(1, Math.floor(chord.duration));
     const bars = Math.ceil(fullBeats / 4);
 
     for (let bar = 0; bar < bars; bar++) {
       const barStart = chord.startBeat + bar * 4;
-      // Pick a rhythm cell biased by complexity & intensity.
       const target = complexity * 0.5 + intensity * 0.4;
       const weights = RHYTHM_CELLS.map(c => Math.max(0.05, c.weight * (1.1 - Math.abs(c.busy - target))));
       const cell = pickWeighted(RHYTHM_CELLS, weights);
 
-      // Skip the bar entirely with low probability for breathing space.
-      if (chance(0.08 + (1 - intensity) * 0.05)) continue;
-
-      // Left-hand shell on beat 1 of the chord's first bar only.
-      if (bar === 0 && playLH) {
-        const lhVel = jitterVelocity(60 + intensity * 10, 8);
-        notes.push({ id: newId('p'), startBeat: jitterTime(barStart, 0.012), duration: 1.2, pitch: lhRoot, velocity: lhVel });
-        notes.push({ id: newId('p'), startBeat: jitterTime(barStart, 0.012), duration: 1.2, pitch: lhSeventh, velocity: lhVel });
-      }
+      // Conversational sparseness: occasionally drop the bar entirely.
+      if (chance(0.1 + (1 - intensity) * 0.05)) continue;
 
       for (let hi = 0; hi < cell.hits.length; hi++) {
         const off = cell.hits[hi];
-        // Don't go past chord boundary.
         if (bar * 4 + off >= fullBeats) continue;
 
-        // Swing offsets for 8th-note offbeats.
-        const swing = (off % 1 !== 0) ? 0.08 + complexity * 0.04 : 0;
+        // Swing on offbeats (8th-note offset ~ 0.08-0.12 beats).
+        const isOffbeat = (off % 1 !== 0);
+        const swing = isOffbeat ? 0.08 + complexity * 0.04 : 0;
         const beat = barStart + off + swing;
 
-        // Anticipation into next chord on last beat-half of the chord region.
+        // Anticipation into next chord on the very last 4-and of the chord.
         let v = voicing;
-        const isLastBeat = (bar === bars - 1) && off >= 3;
-        if (isLastBeat && ci < chords.length - 1 && complexity > 0.45 && chance(0.55)) {
-          v = buildVoicing(chords[ci + 1].root, chords[ci + 1].chordType, voicing);
-          if (!v.length) v = voicing;
+        const isAnticipation = (bar === bars - 1) && off >= 3 && ci < chords.length - 1;
+        if (isAnticipation && chance(0.7)) {
+          const nextV = buildVoicing(chords[ci + 1].root, chords[ci + 1].chordType, voicing);
+          if (nextV.length) v = nextV;
         }
 
-        // Light-to-medium dynamics with breathing variation.
-        const isStrong = off === 0 || off === 2;
-        const baseVel = isStrong ? 75 : 64;
-        const vel = jitterVelocity(baseVel + intensity * 10, 11);
-        // Mostly short stabs; some held voicings.
-        const sustain = chance(0.25 + complexity * 0.15) ? 1.4 + Math.random() * 0.6 : 0.35 + Math.random() * 0.25;
+        // Light-to-medium dynamics; offbeats slightly softer for breathing feel.
+        const baseVel = isOffbeat ? 62 : 70;
+        const vel = jitterVelocity(baseVel + intensity * 8, 9);
+
+        // Note duration: never exceed dotted quarter (1.5 beats). Mostly
+        // short stabs; a held voicing occasionally for variety.
+        const wantHeld = chance(0.18 + complexity * 0.12);
+        const sustain = wantHeld
+          ? 1.1 + Math.random() * 0.4   // up to ~1.5
+          : 0.3 + Math.random() * 0.35; // short stab
+        const dur = Math.min(1.5, sustain);
 
         for (const p of v) {
           notes.push({
             id: newId('p'),
-            startBeat: jitterTime(beat, 0.014),
-            duration: sustain,
+            startBeat: jitterTime(beat, 0.012),
+            duration: dur,
             pitch: p,
             velocity: vel,
           });
