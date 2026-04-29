@@ -968,28 +968,42 @@ function generateJazzPianoComp(
     else if (q === 'sus') { third = 5; seventh = 10; } // 4 substitutes for 3 on sus
     else { third = 4; seventh = 10; }
 
-    // Pick color tones per quality.
-    // Using semitones from root.
+    // Pick color tones per quality — strictly per spec.
+    //   • Major / Minor: 9 and 13 only (Maj also allows #11 — Lydian color).
+    //   • Dominant: always altered (♭9, #9, ♭13, occasional #11).
+    //   • Dim / Half-dim: ♭9 only (we already include b3, b5, b7).
+    //   • Sus: 9 and 11.
     let colorPool: number[] = [];
     if (q === 'maj') {
-      // 9, 13, #11 (Lydian color)
-      colorPool = [14, 21, 18];
+      colorPool = [14, 21, 18]; // 9, 13, #11
     } else if (q === 'min') {
-      // natural 9, 11 (Dorian), 13
-      colorPool = [14, 17, 21];
+      colorPool = [14, 21]; // 9, 13 ONLY (no 11 — spec)
     } else if (q === 'dom') {
-      // ALWAYS altered: ♭9, #9, ♭13. Occasionally #11.
-      colorPool = [13, 15, 20, 18];
-    } else if (q === 'dim') {
-      // dim7: voice b3 b5 b7 + b9 (color)
-      colorPool = [13];
-    } else if (q === 'halfdim') {
-      // m7b5: b3 b5 b7 + b9
-      colorPool = [13];
+      colorPool = [13, 15, 20, 18]; // b9, #9, b13, #11
+    } else if (q === 'dim' || q === 'halfdim') {
+      colorPool = [13]; // b9 only
     } else if (q === 'sus') {
       colorPool = [14, 17];
     } else {
       colorPool = [14];
+    }
+
+    // ---- Forbidden pitch classes per quality ----
+    // Hard guard so quality-specific colour tones never accidentally bleed
+    // into the wrong quality (e.g. a major-7 (pc 11) appearing on a minor
+    // voicing, or a minor-3 (pc 3) on a major voicing).
+    const ROOT_PC = rIdx;
+    const forbiddenPcs = new Set<number>();
+    if (q === 'min' || q === 'dom' || q === 'halfdim' || q === 'dim') {
+      forbiddenPcs.add((ROOT_PC + 11) % 12); // no major 7
+      forbiddenPcs.add((ROOT_PC + 4) % 12);  // no major 3 on minor-family
+    }
+    if (q === 'maj') {
+      forbiddenPcs.add((ROOT_PC + 10) % 12); // no minor 7
+      forbiddenPcs.add((ROOT_PC + 3) % 12);  // no minor 3
+    }
+    if (q === 'min') {
+      forbiddenPcs.add((ROOT_PC + 6) % 12); // no b5 (would imply m7b5)
     }
 
     // Build set of intervals: shell + 1-2 colors.
@@ -1076,8 +1090,26 @@ function generateJazzPianoComp(
 
     // Final clamp / window enforcement.
     voicing = voicing.filter(p => p >= 60 && p <= 83);
+
+    // Strip any pitch class forbidden by the chord's quality. This is the
+    // last line of defence against, e.g. a major-7 sneaking onto a minor
+    // voicing via voice-leading dedup or octave shifts.
+    voicing = voicing.filter(p => !forbiddenPcs.has(p % 12));
+
+    // After stripping, guarantee 3 and 7 are still present. Re-insert at the
+    // closest octave to centre if missing.
+    const havePc = (semi: number) => voicing.some(p => p % 12 === ((rIdx + semi) % 12 + 12) % 12);
+    const insertAt = (semi: number) => {
+      let p = 60 + rIdx + semi;
+      while (p < 60) p += 12;
+      while (p > 83) p -= 12;
+      voicing.push(p);
+    };
+    if (!havePc(third)) insertAt(third);
+    if (!havePc(seventh)) insertAt(seventh);
+    voicing = Array.from(new Set(voicing)).sort((a, b) => a - b);
+
     if (voicing.length < 2) {
-      // Fall back: just shell at C4 register.
       const r = 60 + ((rIdx) % 12);
       voicing = [r + third, r + seventh].map(p => {
         while (p < 60) p += 12;
@@ -1086,8 +1118,17 @@ function generateJazzPianoComp(
       }).sort((a, b) => a - b);
     }
 
-    // Trim to 4 max.
-    if (voicing.length > 4) voicing = voicing.slice(0, 4);
+    // Trim to 4 max — but never drop the 3rd or 7th.
+    if (voicing.length > 4) {
+      const thirdPc = ((rIdx + third) % 12 + 12) % 12;
+      const seventhPc = ((rIdx + seventh) % 12 + 12) % 12;
+      const shell = voicing.filter(p => p % 12 === thirdPc || p % 12 === seventhPc);
+      const colors = voicing.filter(p => p % 12 !== thirdPc && p % 12 !== seventhPc);
+      voicing = [...shell, ...colors.slice(0, Math.max(0, 4 - shell.length))].sort((a, b) => a - b);
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('[jazz comp]', root, chordType, '→', q, 'pitches=', voicing, 'pcs=', voicing.map(p => NOTE_NAMES[((p % 12) + 12) % 12]));
     return voicing;
   };
 
