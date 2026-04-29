@@ -1190,10 +1190,14 @@ export function generateAllTracks(
   groove?: GrooveId,
   drumFills: DrumFill[] = [],
 ): Record<TrackId, MidiNote[]> {
+  // eslint-disable-next-line no-console
+  console.log('[generators] generateAllTracks genre=', genre, 'groove=', groove, 'chords=', chords.length);
   if (genre === 'Funk' && groove === 1) {
     return generateAllFromGroove(GROOVE_FUNK_1, chords, measures, intensities, complexities);
   }
   if (genre === 'Jazz' && groove === 1) {
+    // eslint-disable-next-line no-console
+    console.log('[generators] → Jazz groove 1 path (walking bass + rootless comping)');
     // Dedicated jazz behaviour: walking bass + rootless comping + jazz drums.
     return {
       piano: generateJazzPianoComp(chords, intensities.piano, complexities.piano),
@@ -1201,6 +1205,8 @@ export function generateAllTracks(
       drums: generateDrums(chords, measures, intensities.drums, complexities.drums, genre, drumFills),
     };
   }
+  // eslint-disable-next-line no-console
+  console.log('[generators] → DEFAULT path (no groove match)');
   return {
     piano: generatePiano(chords, measures, intensities.piano, complexities.piano, genre),
     bass:  generateBass(chords, measures, intensities.bass, complexities.bass, genre),
