@@ -98,8 +98,18 @@ export function useBackingTrack() {
   }, [tracks]);
 
   const ensureInstruments = useCallback(() => {
+    const liveCtx = Tone.getContext().rawContext as AudioContext;
+    // Rebuild if missing OR if the underlying AudioContext was swapped after
+    // the instruments were originally created.
+    if (instRef.current && instContextRef.current && instContextRef.current !== liveCtx) {
+      // eslint-disable-next-line no-console
+      console.log('[backing] AudioContext changed since instruments were built — rebuilding');
+      try { disposeInstruments(instRef.current); } catch {}
+      instRef.current = null;
+    }
     if (!instRef.current) {
       instRef.current = createInstruments();
+      instContextRef.current = liveCtx;
     }
   }, []);
 
