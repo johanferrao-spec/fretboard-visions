@@ -64,7 +64,9 @@ export default function SongTimeline({
   onSaveBackingTrack, onLoadBackingTrack, onDeleteBackingTrack, savedBackingTracks = [],
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
-  const [dragChord, setDragChord] = useState<string | null>(null);
+  const [dragChord, setDragChord] = useState<{ id: string; offsetBeats: number } | null>(null);
+  const [zHeld, setZHeld] = useState(false);
+  const [cmdHeld, setCmdHeld] = useState(false);
   const [resizeChord, setResizeChord] = useState<{
     id: string;
     edge: 'left' | 'right';
