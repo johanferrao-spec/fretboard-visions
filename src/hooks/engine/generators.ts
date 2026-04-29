@@ -968,28 +968,42 @@ function generateJazzPianoComp(
     else if (q === 'sus') { third = 5; seventh = 10; } // 4 substitutes for 3 on sus
     else { third = 4; seventh = 10; }
 
-    // Pick color tones per quality.
-    // Using semitones from root.
+    // Pick color tones per quality — strictly per spec.
+    //   • Major / Minor: 9 and 13 only (Maj also allows #11 — Lydian color).
+    //   • Dominant: always altered (♭9, #9, ♭13, occasional #11).
+    //   • Dim / Half-dim: ♭9 only (we already include b3, b5, b7).
+    //   • Sus: 9 and 11.
     let colorPool: number[] = [];
     if (q === 'maj') {
-      // 9, 13, #11 (Lydian color)
-      colorPool = [14, 21, 18];
+      colorPool = [14, 21, 18]; // 9, 13, #11
     } else if (q === 'min') {
-      // natural 9, 11 (Dorian), 13
-      colorPool = [14, 17, 21];
+      colorPool = [14, 21]; // 9, 13 ONLY (no 11 — spec)
     } else if (q === 'dom') {
-      // ALWAYS altered: ♭9, #9, ♭13. Occasionally #11.
-      colorPool = [13, 15, 20, 18];
-    } else if (q === 'dim') {
-      // dim7: voice b3 b5 b7 + b9 (color)
-      colorPool = [13];
-    } else if (q === 'halfdim') {
-      // m7b5: b3 b5 b7 + b9
-      colorPool = [13];
+      colorPool = [13, 15, 20, 18]; // b9, #9, b13, #11
+    } else if (q === 'dim' || q === 'halfdim') {
+      colorPool = [13]; // b9 only
     } else if (q === 'sus') {
       colorPool = [14, 17];
     } else {
       colorPool = [14];
+    }
+
+    // ---- Forbidden pitch classes per quality ----
+    // Hard guard so quality-specific colour tones never accidentally bleed
+    // into the wrong quality (e.g. a major-7 (pc 11) appearing on a minor
+    // voicing, or a minor-3 (pc 3) on a major voicing).
+    const ROOT_PC = rIdx;
+    const forbiddenPcs = new Set<number>();
+    if (q === 'min' || q === 'dom' || q === 'halfdim' || q === 'dim') {
+      forbiddenPcs.add((ROOT_PC + 11) % 12); // no major 7
+      forbiddenPcs.add((ROOT_PC + 4) % 12);  // no major 3 on minor-family
+    }
+    if (q === 'maj') {
+      forbiddenPcs.add((ROOT_PC + 10) % 12); // no minor 7
+      forbiddenPcs.add((ROOT_PC + 3) % 12);  // no minor 3
+    }
+    if (q === 'min') {
+      forbiddenPcs.add((ROOT_PC + 6) % 12); // no b5 (would imply m7b5)
     }
 
     // Build set of intervals: shell + 1-2 colors.
