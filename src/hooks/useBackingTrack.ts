@@ -477,7 +477,7 @@ export function useBackingTrack() {
     updateClip, deleteClip, duplicateClip,
     regenerateTrack, regenerateAll,
     isPlaying, currentBeat,
-    play, stop, prewarm, setMasterVolume,
+    play, stop, prewarm, setMasterVolume, previewNote,
     savedTracks, save, load, remove, reset,
     drumFills, addDrumFill, updateDrumFill, removeDrumFill,
   };
