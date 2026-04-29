@@ -34,7 +34,7 @@ export function useSongTimeline() {
   const [chords, setChords] = useState<TimelineChord[]>([]);
   const [measures, setMeasures] = useState(2);
   const [bpm, setBpm] = useState(120);
-  const [genre, setGenre] = useState<Genre>('Rock');
+  const [genre, setGenre] = useState<Genre>('Jazz');
   const [groove, setGroove] = useState<GrooveId>(1);
   const [snap, setSnap] = useState<SnapValue>('1/4');
   const [isPlaying, setIsPlaying] = useState(false);
