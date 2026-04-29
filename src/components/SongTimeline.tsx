@@ -64,7 +64,9 @@ export default function SongTimeline({
   onSaveBackingTrack, onLoadBackingTrack, onDeleteBackingTrack, savedBackingTracks = [],
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
-  const [dragChord, setDragChord] = useState<string | null>(null);
+  const [dragChord, setDragChord] = useState<{ id: string; offsetBeats: number } | null>(null);
+  const [zHeld, setZHeld] = useState(false);
+  const [cmdHeld, setCmdHeld] = useState(false);
   const [resizeChord, setResizeChord] = useState<{
     id: string;
     edge: 'left' | 'right';
@@ -119,20 +121,51 @@ export default function SongTimeline({
     return Math.max(0, Math.min(totalBeats, rawBeat));
   }, [totalBeats]);
 
-  // Drag move — purely visual reposition. Overlap resolution happens on
-  // mouseup via onCommitMove so neighbours aren't deleted while dragging over.
+  // Drag move — preserves the cursor's grab-offset within the region so the
+  // region doesn't snap its start to the cursor. Hold Z to force the moved
+  // region to a full bar (4 beats) duration.
   useEffect(() => {
     if (!dragChord) return;
-    const onMove = (e: MouseEvent) => onMoveChord(dragChord, getBeatFromX(e.clientX));
+    const onMove = (e: MouseEvent) => {
+      const rawBeat = getRawBeatFromX(e.clientX);
+      const desiredStart = rawBeat - dragChord.offsetBeats;
+      const snapped = Math.max(0, Math.min(totalBeats - snapGrid, Math.round(desiredStart / snapGrid) * snapGrid));
+      onMoveChord(dragChord.id, snapped);
+      if (zHeld) onResizeChord(dragChord.id, 4);
+    };
     const onUp = () => {
-      const id = dragChord;
+      const id = dragChord.id;
       setDragChord(null);
       onCommitMove(id);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [dragChord, getBeatFromX, onMoveChord, onCommitMove]);
+  }, [dragChord, getRawBeatFromX, onMoveChord, onCommitMove, onResizeChord, zHeld, snapGrid, totalBeats]);
+
+  // Track Z (whole-bar drag) and Cmd/Ctrl (delete cursor) modifiers globally
+  useEffect(() => {
+    const isTextTarget = (t: EventTarget | null) =>
+      t instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName);
+    const onDown = (e: KeyboardEvent) => {
+      if (isTextTarget(e.target)) return;
+      if (e.key === 'z' || e.key === 'Z') setZHeld(true);
+      if (e.metaKey || e.ctrlKey) setCmdHeld(true);
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.key === 'z' || e.key === 'Z') setZHeld(false);
+      if (!e.metaKey && !e.ctrlKey) setCmdHeld(false);
+    };
+    const onBlur = () => { setZHeld(false); setCmdHeld(false); };
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onDown);
+      window.removeEventListener('keyup', onUp);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
 
   // Resize chord from either edge; resize uses the range handler so dragged
   // edges consume/shrink neighbouring chord regions while the mouse moves.
@@ -220,7 +253,9 @@ export default function SongTimeline({
         return (beat < cEnd && beat + dur > c.startBeat);
       });
       existingOverlaps.forEach(c => onRemoveChord(c.id));
-      onAddChord(dc.root, dc.type, beat, dur);
+      // V chord defaults to dominant 7
+      const chordType = degree === 4 ? 'Dominant 7' : dc.type;
+      onAddChord(dc.root, chordType, beat, dur);
       return;
     }
 
@@ -775,7 +810,7 @@ export default function SongTimeline({
             return (
               <div
                 key={chord.id}
-                className="absolute top-2 rounded-md cursor-grab active:cursor-grabbing select-none flex items-center group"
+                className={`absolute top-2 rounded-md select-none flex items-center group ${cmdHeld ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'}`}
                 style={{
                   left: `${leftPct}%`,
                   width: `${widthPct}%`,
@@ -794,22 +829,34 @@ export default function SongTimeline({
                 onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  // Cmd/Ctrl-click acts as a delete tool for the region
+                  if (e.metaKey || e.ctrlKey) {
+                    onRemoveChord(chord.id);
+                    return;
+                  }
                   const rect = e.currentTarget.getBoundingClientRect();
                   if (e.clientX < rect.left + 12) {
                     setResizeChord({ id: chord.id, edge: 'left', origStart: chord.startBeat, origDuration: chord.duration });
                   } else if (e.clientX > rect.right - 12) {
                     setResizeChord({ id: chord.id, edge: 'right', origStart: chord.startBeat, origDuration: chord.duration });
                   } else {
-                    setDragChord(chord.id);
+                    // Preserve the cursor's grab-offset within the region so
+                    // the region doesn't snap its start to the cursor.
+                    const offsetPx = e.clientX - rect.left;
+                    const gridRect = gridRef.current?.getBoundingClientRect();
+                    const beatsPerPx = gridRect ? totalBeats / gridRect.width : 0;
+                    const offsetBeats = offsetPx * beatsPerPx;
+                    setDragChord({ id: chord.id, offsetBeats });
                   }
                 }}
                 onClick={(e) => handleChordClick(chord, e)}
                 onContextMenu={(e) => handleChordContextMenu(chord, e)}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
-                  onRemoveChord(chord.id);
+                  // Open the variations/bass popup (was: delete)
+                  handleChordContextMenu(chord, e);
                 }}
-                title={`${chordLabel}${bassLabel}${isDiatonic ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed' : ''} — click: seek, right-click: variations/bass, dbl-click: remove`}
+                title={`${chordLabel}${bassLabel}${isDiatonic ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed' : ''} — click: seek, dbl-click: voicings, ⌘-click: delete`}
               >
                 <span
                   className="text-[10px] font-mono font-bold px-1.5 truncate"
