@@ -827,22 +827,34 @@ export default function SongTimeline({
                 onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  // Cmd/Ctrl-click acts as a delete tool for the region
+                  if (e.metaKey || e.ctrlKey) {
+                    onRemoveChord(chord.id);
+                    return;
+                  }
                   const rect = e.currentTarget.getBoundingClientRect();
                   if (e.clientX < rect.left + 12) {
                     setResizeChord({ id: chord.id, edge: 'left', origStart: chord.startBeat, origDuration: chord.duration });
                   } else if (e.clientX > rect.right - 12) {
                     setResizeChord({ id: chord.id, edge: 'right', origStart: chord.startBeat, origDuration: chord.duration });
                   } else {
-                    setDragChord(chord.id);
+                    // Preserve the cursor's grab-offset within the region so
+                    // the region doesn't snap its start to the cursor.
+                    const offsetPx = e.clientX - rect.left;
+                    const gridRect = gridRef.current?.getBoundingClientRect();
+                    const beatsPerPx = gridRect ? totalBeats / gridRect.width : 0;
+                    const offsetBeats = offsetPx * beatsPerPx;
+                    setDragChord({ id: chord.id, offsetBeats });
                   }
                 }}
                 onClick={(e) => handleChordClick(chord, e)}
                 onContextMenu={(e) => handleChordContextMenu(chord, e)}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
-                  onRemoveChord(chord.id);
+                  // Open the variations/bass popup (was: delete)
+                  handleChordContextMenu(chord, e);
                 }}
-                title={`${chordLabel}${bassLabel}${isDiatonic ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed' : ''} — click: seek, right-click: variations/bass, dbl-click: remove`}
+                title={`${chordLabel}${bassLabel}${isDiatonic ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed' : ''} — click: seek, dbl-click: voicings, ⌘-click: delete`}
               >
                 <span
                   className="text-[10px] font-mono font-bold px-1.5 truncate"
