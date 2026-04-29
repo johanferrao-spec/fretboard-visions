@@ -87,14 +87,10 @@ export default function BackingTrackView({
     bt.setMasterVolume(volume);
   }, [volume, bt.setMasterVolume]);
 
-  // Prewarm audio engine once on mount so the first play() has a ready context
-  useEffect(() => {
-    latestBtRef.current.prewarm().catch((err) => {
-      // eslint-disable-next-line no-console
-      console.warn('[BackingTrackView] prewarm failed', err);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // NOTE: do NOT prewarm on mount — Tone.start() will hang indefinitely if
+  // called outside a user gesture, which then deadlocks all subsequent
+  // play() attempts. Prewarm only happens inside the play handler, which
+  // is invoked from a real user click/keypress.
 
   // Drive engine play/stop from external isPlaying prop. Guarded by the
   // engine's own isPlaying flag so we don't double-trigger when the parent
