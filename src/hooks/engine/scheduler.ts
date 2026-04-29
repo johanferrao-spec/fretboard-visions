@@ -13,8 +13,13 @@ export type SampleResolution =
   | { kind: 'user'; sample: StoredSample }
   | { kind: 'builtin'; sample: BuiltInKitSample };
 
-/** Resolver: given a slot key (e.g. 'drums:snare', 'bass', 'keys'), return active resolution or null. */
-export type UserSampleResolver = (slot: string) => SampleResolution | null;
+/**
+ * Resolver: given a slot key (e.g. 'drums:snare', 'bass', 'keys') and the
+ * target MIDI pitch (when known) return the active resolution or null. The
+ * pitch hint lets multi-sample slots (such as the 4 bass slots) pick the
+ * sample with the closest natural pitch for best fidelity.
+ */
+export type UserSampleResolver = (slot: string, targetPitch?: number) => SampleResolution | null;
 
 let sampleResolverLogCount = 0;
 const logSampleResolver = (...args: unknown[]) => {
