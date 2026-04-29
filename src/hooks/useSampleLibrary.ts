@@ -86,14 +86,22 @@ export function useSampleLibrary() {
   useEffect(() => {
     let cancelled = false;
     getAllSamples().then(s => {
-      if (!cancelled) {
-        // Migrate any legacy `drums:hihat` slot to `drums:hihat_closed`.
-        const migrated = s.map(item => item.slot === 'drums:hihat'
-          ? { ...item, slot: 'drums:hihat_closed' }
-          : item);
-        setSamples(migrated);
-        setLoaded(true);
-      }
+      if (cancelled) return;
+      // Migrate any legacy `drums:hihat` slot to `drums:hihat_closed`.
+      const migrated = s.map(item => item.slot === 'drums:hihat'
+        ? { ...item, slot: 'drums:hihat_closed' }
+        : item);
+      // CRITICAL: merge with anything the user may have added between mount
+      // and the IndexedDB load resolving — otherwise their fresh uploads get
+      // silently overwritten and "disappear". Functional setState lets us
+      // see the post-mount state.
+      setSamples(prev => {
+        const seen = new Set(prev.map(p => p.id));
+        const merged: StoredSample[] = [...prev];
+        for (const m of migrated) if (!seen.has(m.id)) merged.push(m);
+        return merged;
+      });
+      setLoaded(true);
     }).catch(() => setLoaded(true));
     return () => { cancelled = true; };
   }, []);
