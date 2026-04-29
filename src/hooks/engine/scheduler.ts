@@ -169,12 +169,15 @@ export function scheduleTrack(
         if (genre === 'Jazz' && playJazzKitSample(inst, n.pitch, t, gain)) return;
         playSynthDrum(inst, n.pitch, dur, t, gain);
       } else if (trackId === 'bass') {
-        const res = resolveUserSample?.('bass');
+        const res = resolveUserSample?.('bass', n.pitch);
         if (res?.kind === 'user') {
           const p = getUserPlayer(res.sample, inst.master);
           if (p && p.loaded) {
             try {
-              p.playbackRate = Math.pow(2, (n.pitch - 48) / 12); // base C3
+              // Use the sample's detected natural pitch as the base when
+              // available; fall back to C3 (48) for legacy samples.
+              const basePitch = typeof res.sample.pitch === 'number' ? res.sample.pitch : 48;
+              p.playbackRate = Math.pow(2, (n.pitch - basePitch) / 12);
               p.volume.value = Tone.gainToDb(Math.max(0.001, gain));
               p.start(t);
               return;
