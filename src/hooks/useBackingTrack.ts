@@ -55,6 +55,13 @@ export function useBackingTrack() {
   drumFillsRef.current = drumFills;
 
   const instRef = useRef<EngineInstruments | null>(null);
+  // Track which raw AudioContext the current instruments are bound to. If
+  // Tone's context is swapped (e.g. our gesture-primed AudioContext replaces
+  // the implicitly-created one), instruments built on the OLD context will
+  // play to a destination that's no longer being routed by Tone — silent
+  // playback even though Transport callbacks fire normally. Detect that and
+  // rebuild instruments on the live context.
+  const instContextRef = useRef<AudioContext | null>(null);
   const isInitRef = useRef(false);
   const initPromiseRef = useRef<Promise<void> | null>(null);
   const pendingMasterVolRef = useRef<number | null>(null);
