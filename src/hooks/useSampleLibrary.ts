@@ -74,6 +74,11 @@ export interface SampleListEntry {
 
 export function useSampleLibrary() {
   const [samples, setSamples] = useState<StoredSample[]>([]);
+  // Always-current ref so callbacks never operate on a stale samples snapshot.
+  // Without this, two rapid uploads can each see "[]" in their closure and the
+  // second write can clobber the first when state finally flushes.
+  const samplesRef = useRef<StoredSample[]>([]);
+  samplesRef.current = samples;
   // Default: pre-assign every drum part to the Rock kit so audio still plays
   // before the user touches anything. Loaded value (if any) overrides this.
   const [active, setActive] = useState<Record<string, string>>(() => {
