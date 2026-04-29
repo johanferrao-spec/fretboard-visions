@@ -295,14 +295,26 @@ export function useSampleLibrary() {
   }, [samples]);
 
   /** Resolve the active sample for a slot (used by the audio scheduler).
-   *  When `targetPitch` is provided AND the slot is `bass`, pick the bass
-   *  sample whose detected natural pitch is closest to the target — this
-   *  multi-sample lookup gives much better fidelity than pitching one
-   *  sample across the whole bass register. */
+   *  Special-case for the multi-sample bass:
+   *    - `slot === 'bass'`           → pick from ALL bass samples
+   *    - `slot === 'bass:<Kit>'`     → pick only from samples assigned to that bass kit
+   *  In both cases, when `targetPitch` is provided, the sample with the
+   *  closest detected natural pitch is chosen.
+   */
   const resolveSlot = useCallback((slot: string, targetPitch?: number): SampleResolution | null => {
-    if (slot === 'bass' && typeof targetPitch === 'number') {
-      const bassSamples = samples.filter(s => s.slot === 'bass' && typeof s.pitch === 'number');
-      if (bassSamples.length > 0) {
+    // Bass (with optional kit filter): "bass" or "bass:Rock" / "bass:Jazz" / etc.
+    if (slot === 'bass' || slot.startsWith('bass:')) {
+      const requestedKit = slot.startsWith('bass:') ? slot.slice('bass:'.length) : null;
+      let bassSamples = samples.filter(s => s.slot === 'bass' && typeof s.pitch === 'number');
+      if (requestedKit) {
+        const kitMatch = bassSamples.filter(s => s.kit === requestedKit);
+        // If the user has filled the requested kit, use it. Otherwise fall
+        // back to ANY bass sample (better than synth) — but only when there
+        // is at least one bass sample assigned anywhere.
+        if (kitMatch.length > 0) bassSamples = kitMatch;
+      }
+      if (bassSamples.length === 0) return null;
+      if (typeof targetPitch === 'number') {
         let best = bassSamples[0];
         let bestDist = Math.abs((best.pitch as number) - targetPitch);
         for (let i = 1; i < bassSamples.length; i++) {
@@ -311,6 +323,7 @@ export function useSampleLibrary() {
         }
         return { kind: 'user', sample: best };
       }
+      return { kind: 'user', sample: bassSamples[0] };
     }
     const id = active[slot];
     if (!id) return null;
