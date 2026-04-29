@@ -371,7 +371,7 @@ export function useBackingTrack() {
     transport.start('+0.05', 0);
     setIsPlaying(true);
     return { startAudioTime, startPerfTime: performance.now() + 50 };
-  }, [init, startToneAudio]);
+  }, [init, startToneAudio, ensureInstruments]);
 
   const stop = useCallback(() => {
     Tone.getTransport().stop();
