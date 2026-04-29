@@ -169,7 +169,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   /** Play a short preview of any sample entry (user upload OR jazz built-in).
    *  Synth-based built-ins (Funk/Rock/Latin) have no preview wav — they will
    *  silently no-op. */
-  const previewSample = (entry: SampleListEntry | null) => {
+  const previewSample = (entry: SampleListEntry | null, semitoneShift = 0) => {
     if (!entry) return;
     if (previewRef.current) {
       try { previewRef.current.pause(); } catch {}
@@ -192,6 +192,14 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     if (!url) return;
     const a = new Audio(url);
     a.volume = Math.max(0, Math.min(1, volume));
+    if (semitoneShift !== 0) {
+      a.preservesPitch = false;
+      // @ts-expect-error vendor prefix
+      a.mozPreservesPitch = false;
+      // @ts-expect-error vendor prefix
+      a.webkitPreservesPitch = false;
+      a.playbackRate = Math.pow(2, semitoneShift / 12);
+    }
     a.play().catch(() => {});
     if (revoke) a.onended = () => URL.revokeObjectURL(url!);
     previewRef.current = a;
