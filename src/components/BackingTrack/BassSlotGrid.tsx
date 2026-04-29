@@ -4,8 +4,6 @@ import type { useSampleLibrary } from '@/hooks/useSampleLibrary';
 import type { StoredSample } from '@/lib/sampleStorage';
 import { detectPitchFromBlob, midiToName } from '@/lib/pitchDetect';
 
-const BASS_SLOT_COUNT = 4;
-
 type LibValue = ReturnType<typeof useSampleLibrary>;
 
 interface Props {
@@ -14,8 +12,19 @@ interface Props {
   volume: number;
 }
 
+/** The four bass slots are pinned to one bass type each, keyed by `kit`. */
+type BassKit = 'Rock' | 'Jazz' | 'Funk' | 'Latin';
+const BASS_KITS: { kit: BassKit; index: number; label: string }[] = [
+  { kit: 'Rock',  index: 0, label: 'Rock'  },
+  { kit: 'Jazz',  index: 1, label: 'Jazz'  },
+  { kit: 'Funk',  index: 2, label: 'Funk'  },
+  { kit: 'Latin', index: 3, label: 'Latin' },
+];
+
 interface SlotEntry {
   index: number;
+  kit: BassKit;
+  label: string;
   sample: StoredSample | null;
 }
 
@@ -25,20 +34,22 @@ const isImageFile = (f: File) =>
   /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name);
 
 /**
- * Four-slot bass sampler. Each slot is a drop target for:
- *   - a .wav (audio) → stored as the slot's sample, with auto-detected pitch
- *   - a .png/.jpg    → stored as artwork on the slot's sample
- * Both can be dropped together (multi-file drop) or sequentially.
+ * Four-slot bass sampler — one slot per bass kit (Rock / Jazz / Funk / Latin).
+ * Each slot is a drop target for both a `.wav` (audio, auto pitch-detected)
+ * and a `.png/.jpg` (artwork). The sample assigned to a slot inherits that
+ * slot's kit so it can be looked up by kit at playback time.
  */
 export default function BassSlotGrid({ lib, volume }: Props) {
-  // Build the 4 visible slots from whatever samples currently live at slotIndex 0..3.
+  // Build the 4 visible slots from samples whose kit field matches.
   const slots: SlotEntry[] = useMemo(() => {
-    const out: SlotEntry[] = [];
-    for (let i = 0; i < BASS_SLOT_COUNT; i++) {
-      const s = lib.samples.find(s => s.slot === 'bass' && s.slotIndex === i) || null;
-      out.push({ index: i, sample: s });
-    }
-    return out;
+    return BASS_KITS.map(({ kit, index, label }) => {
+      const s =
+        lib.samples.find(s => s.slot === 'bass' && s.kit === kit) ||
+        // Backwards-compat: legacy samples stored only by slotIndex.
+        lib.samples.find(s => s.slot === 'bass' && s.kit === undefined && s.slotIndex === index) ||
+        null;
+      return { index, kit, label, sample: s };
+    });
   }, [lib.samples]);
 
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -84,17 +95,21 @@ export default function BassSlotGrid({ lib, volume }: Props) {
     previewRef.current = a;
   };
 
+  const slotByIndex = (index: number) => slots[index];
+
   const assignAudio = async (index: number, file: File) => {
     setBusyIndex(index);
     try {
       const detected = await detectPitchFromBlob(file);
-      // Preserve any existing artwork on this slot — copy onto the new sample.
-      const existing = slots[index].sample;
+      const slot = slotByIndex(index);
+      // Carry over any existing artwork on this slot to the new sample.
+      const existing = slot.sample;
       const carryImage = existing?.imageBlob
         ? { imageBlob: existing.imageBlob, imageMime: existing.imageMime }
         : {};
       await lib.setSlotIndexedSample('bass', index, file, {
         pitch: detected?.midi,
+        kit: slot.kit,
         ...carryImage,
       });
     } finally {
@@ -103,13 +118,11 @@ export default function BassSlotGrid({ lib, volume }: Props) {
   };
 
   const assignImage = async (index: number, file: File) => {
-    const existing = slots[index].sample;
+    const slot = slotByIndex(index);
+    const existing = slot.sample;
     if (existing) {
       await lib.updateSample(existing.id, { imageBlob: file, imageMime: file.type || 'image/png' });
     } else {
-      // No audio yet — stash the image on a placeholder by creating an empty
-      // slot? Simpler: keep the image dangling client-side until audio drops.
-      // We just briefly tell the user by ignoring (rare in normal flow).
       // eslint-disable-next-line no-console
       console.warn('[bass slot] image dropped on empty slot — drop a .wav first');
     }
@@ -121,8 +134,6 @@ export default function BassSlotGrid({ lib, volume }: Props) {
     const image = arr.find(isImageFile);
     if (audio) await assignAudio(index, audio);
     if (image) {
-      // If there was no existing audio AND no audio in this drop, we can't
-      // attach the image to anything yet.
       if (audio || slots[index].sample) await assignImage(index, image);
     }
   };
@@ -139,7 +150,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
     <div className="px-3 py-2 border-b border-border">
       <div className="flex items-center justify-between mb-2">
         <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
-          Bass slots · multi-sample
+          Bass slots · per-kit
         </span>
         <span className="text-[9px] font-mono text-muted-foreground">
           drop .wav + .png
@@ -147,7 +158,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        {slots.map(({ index, sample }) => {
+        {slots.map(({ index, kit, label, sample }) => {
           const isOver = dragOverIndex === index;
           const isBusy = busyIndex === index;
           const imageUrl = sample ? imageUrls[sample.id] : undefined;
@@ -155,7 +166,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
             typeof sample?.pitch === 'number' ? midiToName(sample.pitch) : null;
           return (
             <div
-              key={index}
+              key={kit}
               onDragOver={(e) => { e.preventDefault(); setDragOverIndex(index); }}
               onDragLeave={() => setDragOverIndex(o => (o === index ? null : o))}
               onDrop={(e) => handleDrop(e, index)}
@@ -168,17 +179,22 @@ export default function BassSlotGrid({ lib, volume }: Props) {
               }`}
               style={sample ? { boxShadow: `inset 0 0 0 1px hsl(${sample.color} / 0.4)` } : undefined}
             >
+              {/* Kit label header */}
+              <div className="px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border bg-background/50 text-center">
+                {label} bass
+              </div>
+
               {/* Artwork area — drop zone for both audio + image. Click previews. */}
               <button
                 type="button"
                 onClick={() => previewSlot(sample)}
                 className="relative w-full aspect-square bg-background/60 flex items-center justify-center"
-                title={sample ? 'Preview sample' : 'Drop a .wav here'}
+                title={sample ? 'Preview sample' : `Drop a ${label} bass .wav here`}
               >
                 {imageUrl ? (
                   <img
                     src={imageUrl}
-                    alt={sample?.name ?? `Bass slot ${index + 1}`}
+                    alt={sample?.name ?? `${label} bass`}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : sample ? (
@@ -189,8 +205,8 @@ export default function BassSlotGrid({ lib, volume }: Props) {
                     <Music size={20} className="text-muted-foreground" />
                   </div>
                 ) : (
-                  <div className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">
-                    Slot {index + 1}
+                  <div className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider px-1 text-center">
+                    Drop {label}<br/>.wav + .png
                   </div>
                 )}
                 {isBusy && (
@@ -270,8 +286,9 @@ export default function BassSlotGrid({ lib, volume }: Props) {
       </div>
 
       <div className="text-[9px] font-mono text-muted-foreground italic mt-2 leading-snug">
-        Pitches are detected automatically. The closest-pitched slot is chosen
-        for each played bass note.
+        Each slot is locked to a bass kit. Pitches are detected automatically;
+        the active kit's slot is used at playback (closest pitch is shifted to
+        each note).
       </div>
     </div>
   );
