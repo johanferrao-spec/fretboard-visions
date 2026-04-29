@@ -169,7 +169,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   /** Play a short preview of any sample entry (user upload OR jazz built-in).
    *  Synth-based built-ins (Funk/Rock/Latin) have no preview wav — they will
    *  silently no-op. */
-  const previewSample = (entry: SampleListEntry | null) => {
+  const previewSample = (entry: SampleListEntry | null, semitoneShift = 0) => {
     if (!entry) return;
     if (previewRef.current) {
       try { previewRef.current.pause(); } catch {}
@@ -192,6 +192,14 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     if (!url) return;
     const a = new Audio(url);
     a.volume = Math.max(0, Math.min(1, volume));
+    if (semitoneShift !== 0) {
+      a.preservesPitch = false;
+      // @ts-expect-error vendor prefix
+      a.mozPreservesPitch = false;
+      // @ts-expect-error vendor prefix
+      a.webkitPreservesPitch = false;
+      a.playbackRate = Math.pow(2, semitoneShift / 12);
+    }
     a.play().catch(() => {});
     if (revoke) a.onended = () => URL.revokeObjectURL(url!);
     previewRef.current = a;
@@ -594,7 +602,15 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
             {(() => {
               const cx = 280, cy = 200, w = 90, h = 75;
               return (
-                <g {...partProps('tom1')} opacity={0.95}>
+                <g
+                  {...partProps('tom1')}
+                  onClick={() => {
+                    setSelection({ instrument: 'drums', part: 'tom1' });
+                    // Right rack tom previews 3 semitones lower than the left.
+                    previewSample(lib.activeEntryFor('drums:tom1' as SlotKey), -3);
+                  }}
+                  opacity={0.95}
+                >
                   <rect x={cx - w/2} y={cy} width={w} height={h} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
                   <ellipse cx={cx} cy={cy} rx={w/2} ry={14} fill={SKIN_FILL} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
                   <ellipse cx={cx} cy={cy + h} rx={w/2} ry={10} fill={partFill('tom1')} stroke={partStroke('tom1')} strokeWidth={partStrokeWidth('tom1')} />
