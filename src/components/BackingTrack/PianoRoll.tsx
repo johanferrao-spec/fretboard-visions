@@ -157,6 +157,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
     };
     onChange([...notes, newNote]);
     setSelectedId(newNote.id);
+    onPreviewNote?.(trackId, newNote.pitch, newNote.velocity);
   };
 
   // Delete key
