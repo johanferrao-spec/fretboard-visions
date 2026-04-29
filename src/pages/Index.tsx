@@ -271,9 +271,11 @@ const Index = () => {
     // isn't mid-playback before we schedule, otherwise they cancel each other.
     midi.stop();
     backingApi?.stop();
-    if (activeTab === 'backing' && backingApi) {
-      // Reset anchor; the RAF will hold the playhead until the audio start
-      // time is known, eliminating the visible "playhead-runs-then-sound" gap.
+    if (backingApi) {
+      // Always prefer the backing-track engine when available — it knows
+      // about the current groove (e.g. Jazz groove 1) AND any user-uploaded
+      // bass/drum/keys samples, regardless of whether the DAW panel is
+      // currently expanded or minimised.
       playStartPerfRef.current = null;
       try {
         await backingApi.prewarm();
