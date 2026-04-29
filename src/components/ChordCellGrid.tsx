@@ -152,7 +152,11 @@ export default function CellGridView({
       try {
         const { degree } = JSON.parse(degreeData);
         const dc = diatonicChords[degree];
-        if (dc) onAddChord(dc.root, dc.type, barStartBeat, dur);
+        if (dc) {
+          // V chord defaults to dominant 7
+          const chordType = degree === 4 ? 'Dominant 7' : dc.type;
+          onAddChord(dc.root, chordType, barStartBeat, dur);
+        }
         return;
       } catch {/* ignore */}
     }
