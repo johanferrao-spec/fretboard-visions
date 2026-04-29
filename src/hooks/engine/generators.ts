@@ -801,6 +801,276 @@ export function generateBass(
   return notes;
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+ * JAZZ WALKING BASS — one note per beat (4/4), targets chord tones on
+ *   strong beats (R/3/5/7), uses chromatic & diatonic approach into the
+ *   next chord, occasional octave leaps, lands on root or fifth on beat 1
+ *   of every new chord. Articulation modeled on upright pluck (short dur).
+ * ════════════════════════════════════════════════════════════════════════ */
+function generateJazzWalkingBass(
+  chords: TimelineChord[],
+  intensity: number,
+  complexity: number,
+): MidiNote[] {
+  const notes: MidiNote[] = [];
+  // Track previous pitch to enforce smooth voice leading.
+  let prev: number | null = null;
+
+  for (let ci = 0; ci < chords.length; ci++) {
+    const chord = chords[ci];
+    const rootIdx = NOTE_NAMES.indexOf(chord.root as any);
+    if (rootIdx < 0) continue;
+    const formula = CHORD_FORMULAS[chord.chordType] || [0, 4, 7, 10];
+    // Centre upright bass around E1–G3 (MIDI 28–55). Use root in 2nd octave.
+    const root = 36 + rootIdx; // ~C2 area
+    const third = root + (formula[1] ?? 4);
+    const fifth = root + (formula[2] ?? 7);
+    const seventh = root + (formula[3] ?? 10);
+    const chordTones = [root, third, fifth, seventh];
+
+    // Diatonic scale intervals based on chord quality (major/minor heuristic).
+    const isMinorish = (formula[1] ?? 4) === 3;
+    const scale = isMinorish ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
+
+    let nextRoot: number | null = null;
+    if (ci < chords.length - 1) {
+      const nIdx = NOTE_NAMES.indexOf(chords[ci + 1].root as any);
+      if (nIdx >= 0) nextRoot = 36 + nIdx;
+    }
+
+    let beat1Pitch = root;
+    if (chord.bassNote) {
+      const bIdx = NOTE_NAMES.indexOf(chord.bassNote as any);
+      if (bIdx >= 0) beat1Pitch = 36 + bIdx;
+    } else if (chance(0.18) && prev !== null) {
+      // Occasionally land on the 5th instead of root for variety.
+      beat1Pitch = fifth;
+    }
+
+    const beats = Math.max(1, Math.floor(chord.duration));
+
+    // Build a stepwise contour for this chord region.
+    for (let b = 0; b < beats; b++) {
+      const beat = chord.startBeat + b;
+      let pitch: number;
+
+      if (b === 0) {
+        pitch = beat1Pitch;
+      } else if (b === beats - 1 && nextRoot !== null) {
+        // Approach the next chord: chromatic above/below most of the time,
+        // diatonic step at lower complexity for a smoother sound.
+        const useChromatic = chance(0.7 + complexity * 0.2);
+        const dir = chance(0.5) ? -1 : 1;
+        pitch = useChromatic
+          ? nextRoot + dir
+          : nextRoot + dir * 2;
+      } else if (b === beats - 2 && nextRoot !== null && complexity > 0.45 && chance(0.4)) {
+        // Two-beat setup: a chord tone that sets up the chromatic approach.
+        const offsets = [0, 4, 7, 10];
+        pitch = root + offsets[Math.floor(Math.random() * offsets.length)];
+      } else {
+        // Strong beat (b===2 in 4/4): target a chord tone (3 or 5 most often).
+        const isStrong = b % 2 === 0;
+        if (isStrong) {
+          pitch = pickWeighted(chordTones, [1.0, 1.4, 1.4, 1.0]);
+        } else if (prev !== null && chance(0.45 + complexity * 0.2)) {
+          // Stepwise motion from prev — pick nearest scale/chromatic tone.
+          const dir = chance(0.55) ? 1 : -1;
+          const stepSize = chance(0.65) ? 1 : 2; // chromatic vs whole step
+          pitch = prev + dir * stepSize;
+        } else {
+          // Diatonic passing tone.
+          const deg = scale[Math.floor(Math.random() * scale.length)];
+          pitch = root + deg;
+        }
+      }
+
+      // Octave leap occasionally (intensity-driven, never on beat 1).
+      if (b > 0 && chance(0.04 + intensity * 0.06)) {
+        pitch += 12;
+      }
+
+      // Keep within E1 (28) – G3 (55) range.
+      while (pitch > 55) pitch -= 12;
+      while (pitch < 28) pitch += 12;
+
+      // Avoid immediate repetition where possible.
+      if (prev !== null && pitch === prev && b > 0) {
+        pitch += chance(0.5) ? 1 : -1;
+      }
+
+      const isStrong = b === 0 || b === 2;
+      const baseVel = isStrong ? 92 : 78;
+      const vel = jitterVelocity(baseVel + intensity * 6, 7);
+      notes.push({
+        id: newId('b'),
+        startBeat: jitterTime(beat, 0.018),
+        // Short duration — pluck + decay of an upright (~70% of a beat).
+        duration: 0.7,
+        pitch,
+        velocity: vel,
+      });
+      prev = pitch;
+    }
+  }
+
+  return notes;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ * JAZZ PIANO COMPING — rootless mid/upper-register voicings (3-7-9, 7-3-13)
+ *   with optional left-hand shell reinforcement, syncopated rhythm with
+ *   space, anticipations, smooth voice leading between chords.
+ * ════════════════════════════════════════════════════════════════════════ */
+function generateJazzPianoComp(
+  chords: TimelineChord[],
+  intensity: number,
+  complexity: number,
+): MidiNote[] {
+  const notes: MidiNote[] = [];
+
+  // Rhythm cells (in beats within a 4-beat bar) — sparse, syncopated.
+  // Each entry: list of beat positions to hit.
+  const RHYTHM_CELLS: { hits: number[]; weight: number; busy: number }[] = [
+    { hits: [0],                weight: 1.0, busy: 0.1 },         // beat 1 only
+    { hits: [1.5],              weight: 0.9, busy: 0.3 },         // and-of-2
+    { hits: [0, 2.5],           weight: 1.0, busy: 0.4 },         // 1, and-of-3
+    { hits: [1.5, 3],           weight: 0.8, busy: 0.5 },
+    { hits: [0.5, 2],           weight: 0.7, busy: 0.55 },
+    { hits: [1, 2.5, 3.5],      weight: 0.6, busy: 0.7 },
+    { hits: [0, 1.5, 3],        weight: 0.6, busy: 0.65 },
+    { hits: [],                 weight: 0.55, busy: 0.0 },        // bar of rest
+    { hits: [3.5],              weight: 0.7, busy: 0.45 },        // anticipation only
+  ];
+
+  // Build a rootless voicing for a chord, in MIDI octave around C4 (60).
+  const buildVoicing = (root: string, chordType: string, prev: number[] | null): number[] => {
+    const rIdx = NOTE_NAMES.indexOf(root as any);
+    if (rIdx < 0) return [];
+    const formula = CHORD_FORMULAS[chordType] || [0, 4, 7, 10];
+    const isMinor = (formula[1] ?? 4) === 3;
+    const isDominant = (formula[1] ?? 4) === 4 && (formula[3] ?? 11) === 10 && !chordType.includes('maj');
+    const isMaj7 = chordType.includes('maj');
+
+    // Choose A or B rootless voicing.
+    // A-form: 3,5,7,9    B-form: 7,9,3,13
+    const useB = chance(0.5);
+    const third = isMinor ? 3 : 4;
+    const seventh = isMaj7 ? 11 : 10;
+    const ninth = 14;
+    const thirteenth = isDominant || !isMinor ? 21 : 20; // b13 on minor
+    const eleventh = isMinor ? 17 : 18; // #11 on maj/dom occasionally
+
+    let intervals: number[];
+    if (useB) {
+      intervals = [seventh, ninth, third + 12, thirteenth];
+    } else {
+      intervals = [third, seventh, ninth + 0, complexity > 0.55 && chance(0.5) ? eleventh : 14 + 7];
+      // ensure unique
+      intervals = Array.from(new Set(intervals));
+    }
+
+    // Centre the voicing around C4 (MIDI 60). Root MIDI in octave 3 reference.
+    const baseRoot = 60 + rIdx; // C4-relative
+    let voicing = intervals.map(i => baseRoot + i - 12); // shift down to mid register
+
+    // Smooth voice-leading: shift voicing octave to minimise total distance from prev.
+    if (prev && prev.length) {
+      const prevAvg = prev.reduce((a, b) => a + b, 0) / prev.length;
+      let bestShift = 0;
+      let bestDist = Infinity;
+      for (const shift of [-12, 0, 12]) {
+        const avg = (voicing.reduce((a, b) => a + b, 0) / voicing.length) + shift;
+        const dist = Math.abs(avg - prevAvg);
+        if (dist < bestDist) { bestDist = dist; bestShift = shift; }
+      }
+      voicing = voicing.map(p => p + bestShift);
+    }
+
+    // Clamp to a comfortable mid-upper range (C3 ~48 to C6 ~84).
+    voicing = voicing.map(p => {
+      while (p < 55) p += 12;
+      while (p > 84) p -= 12;
+      return p;
+    });
+    return Array.from(new Set(voicing)).sort((a, b) => a - b);
+  };
+
+  let prevVoicing: number[] | null = null;
+
+  for (let ci = 0; ci < chords.length; ci++) {
+    const chord = chords[ci];
+    const voicing = buildVoicing(chord.root, chord.chordType, prevVoicing);
+    if (!voicing.length) continue;
+    prevVoicing = voicing;
+
+    // Optional LH shell (root + 7th) low — sparse.
+    const rIdx = NOTE_NAMES.indexOf(chord.root as any);
+    const formula = CHORD_FORMULAS[chord.chordType] || [0, 4, 7, 10];
+    const lhRoot = 36 + rIdx;             // C2-area root
+    const lhSeventh = lhRoot + (formula[3] ?? 10);
+    const playLH = chance(0.25 + intensity * 0.15);
+
+    const fullBeats = Math.max(1, Math.floor(chord.duration));
+    const bars = Math.ceil(fullBeats / 4);
+
+    for (let bar = 0; bar < bars; bar++) {
+      const barStart = chord.startBeat + bar * 4;
+      // Pick a rhythm cell biased by complexity & intensity.
+      const target = complexity * 0.5 + intensity * 0.4;
+      const weights = RHYTHM_CELLS.map(c => Math.max(0.05, c.weight * (1.1 - Math.abs(c.busy - target))));
+      const cell = pickWeighted(RHYTHM_CELLS, weights);
+
+      // Skip the bar entirely with low probability for breathing space.
+      if (chance(0.08 + (1 - intensity) * 0.05)) continue;
+
+      // Left-hand shell on beat 1 of the chord's first bar only.
+      if (bar === 0 && playLH) {
+        const lhVel = jitterVelocity(60 + intensity * 10, 8);
+        notes.push({ id: newId('p'), startBeat: jitterTime(barStart, 0.012), duration: 1.2, pitch: lhRoot, velocity: lhVel });
+        notes.push({ id: newId('p'), startBeat: jitterTime(barStart, 0.012), duration: 1.2, pitch: lhSeventh, velocity: lhVel });
+      }
+
+      for (let hi = 0; hi < cell.hits.length; hi++) {
+        const off = cell.hits[hi];
+        // Don't go past chord boundary.
+        if (bar * 4 + off >= fullBeats) continue;
+
+        // Swing offsets for 8th-note offbeats.
+        const swing = (off % 1 !== 0) ? 0.08 + complexity * 0.04 : 0;
+        const beat = barStart + off + swing;
+
+        // Anticipation into next chord on last beat-half of the chord region.
+        let v = voicing;
+        const isLastBeat = (bar === bars - 1) && off >= 3;
+        if (isLastBeat && ci < chords.length - 1 && complexity > 0.45 && chance(0.55)) {
+          v = buildVoicing(chords[ci + 1].root, chords[ci + 1].chordType, voicing);
+          if (!v.length) v = voicing;
+        }
+
+        // Light-to-medium dynamics with breathing variation.
+        const isStrong = off === 0 || off === 2;
+        const baseVel = isStrong ? 75 : 64;
+        const vel = jitterVelocity(baseVel + intensity * 10, 11);
+        // Mostly short stabs; some held voicings.
+        const sustain = chance(0.25 + complexity * 0.15) ? 1.4 + Math.random() * 0.6 : 0.35 + Math.random() * 0.25;
+
+        for (const p of v) {
+          notes.push({
+            id: newId('p'),
+            startBeat: jitterTime(beat, 0.014),
+            duration: sustain,
+            pitch: p,
+            velocity: vel,
+          });
+        }
+      }
+    }
+  }
+
+  return notes;
+}
+
 export function generateAllTracks(
   chords: TimelineChord[],
   measures: number,
@@ -812,6 +1082,14 @@ export function generateAllTracks(
 ): Record<TrackId, MidiNote[]> {
   if (genre === 'Funk' && groove === 1) {
     return generateAllFromGroove(GROOVE_FUNK_1, chords, measures, intensities, complexities);
+  }
+  if (genre === 'Jazz' && groove === 1) {
+    // Dedicated jazz behaviour: walking bass + rootless comping + jazz drums.
+    return {
+      piano: generateJazzPianoComp(chords, intensities.piano, complexities.piano),
+      bass:  generateJazzWalkingBass(chords, intensities.bass, complexities.bass),
+      drums: generateDrums(chords, measures, intensities.drums, complexities.drums, genre, drumFills),
+    };
   }
   return {
     piano: generatePiano(chords, measures, intensities.piano, complexities.piano, genre),
