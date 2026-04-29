@@ -151,6 +151,10 @@ export function scheduleTrack(
             const ok = playJazzKitSample(inst, n.pitch, t, gain);
             if (ok) return;
           }
+          // synth selection (e.g. Rock ride): when the song is Jazz, prefer
+          // the real jazz wav for parts that have one (kick/snare/hats/ride)
+          // so the ride doesn't fall back to a MetalSynth in a jazz groove.
+          if (genre === 'Jazz' && playJazzKitSample(inst, n.pitch, t, gain)) return;
           // synth (or jazz-sample miss) → synthesised voice
           playSynthDrum(inst, n.pitch, dur, t, gain);
           return;
