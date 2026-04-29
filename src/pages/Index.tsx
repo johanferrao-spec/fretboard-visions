@@ -778,28 +778,35 @@ const Index = () => {
           />
         </div>
 
-        {/* Backing Track DAW — fills remaining space; instrument samplers pinned at bottom */}
-        {activeTab === 'backing' && (
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <BackingTrackView
-                chords={timeline.chords}
-                measures={timeline.measures}
-                bpm={timeline.bpm}
-                genre={timeline.genre}
-                groove={timeline.groove}
-                volume={volume}
-                isPlaying={timeline.isPlaying}
-                currentBeat={timeline.currentBeat}
-                registerHandlers={handleRegisterBackingApi}
-              />
-            </div>
-            {/* Instrument samplers — pinned bottom strip */}
-            <div className="h-[220px] shrink-0">
-              <InstrumentSamplers volume={volume} genre={timeline.genre} />
-            </div>
+        {/* Backing Track DAW — always mounted so the engine, sample resolver,
+            and current groove drive playback even when the panel is minimised.
+            When inactive we keep it in the tree but visually hidden. */}
+        <div
+          className={
+            activeTab === 'backing'
+              ? 'flex-1 flex flex-col min-h-0 overflow-hidden'
+              : 'hidden'
+          }
+          aria-hidden={activeTab !== 'backing'}
+        >
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <BackingTrackView
+              chords={timeline.chords}
+              measures={timeline.measures}
+              bpm={timeline.bpm}
+              genre={timeline.genre}
+              groove={timeline.groove}
+              volume={volume}
+              isPlaying={timeline.isPlaying}
+              currentBeat={timeline.currentBeat}
+              registerHandlers={handleRegisterBackingApi}
+            />
           </div>
-        )}
+          {/* Instrument samplers — pinned bottom strip */}
+          <div className="h-[220px] shrink-0">
+            <InstrumentSamplers volume={volume} genre={timeline.genre} />
+          </div>
+        </div>
       </div>
 
       <NoteInfoPanel
