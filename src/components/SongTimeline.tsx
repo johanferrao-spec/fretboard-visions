@@ -121,20 +121,51 @@ export default function SongTimeline({
     return Math.max(0, Math.min(totalBeats, rawBeat));
   }, [totalBeats]);
 
-  // Drag move — purely visual reposition. Overlap resolution happens on
-  // mouseup via onCommitMove so neighbours aren't deleted while dragging over.
+  // Drag move — preserves the cursor's grab-offset within the region so the
+  // region doesn't snap its start to the cursor. Hold Z to force the moved
+  // region to a full bar (4 beats) duration.
   useEffect(() => {
     if (!dragChord) return;
-    const onMove = (e: MouseEvent) => onMoveChord(dragChord, getBeatFromX(e.clientX));
+    const onMove = (e: MouseEvent) => {
+      const rawBeat = getRawBeatFromX(e.clientX);
+      const desiredStart = rawBeat - dragChord.offsetBeats;
+      const snapped = Math.max(0, Math.min(totalBeats - snapGrid, Math.round(desiredStart / snapGrid) * snapGrid));
+      onMoveChord(dragChord.id, snapped);
+      if (zHeld) onResizeChord(dragChord.id, 4);
+    };
     const onUp = () => {
-      const id = dragChord;
+      const id = dragChord.id;
       setDragChord(null);
       onCommitMove(id);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [dragChord, getBeatFromX, onMoveChord, onCommitMove]);
+  }, [dragChord, getRawBeatFromX, onMoveChord, onCommitMove, onResizeChord, zHeld, snapGrid, totalBeats]);
+
+  // Track Z (whole-bar drag) and Cmd/Ctrl (delete cursor) modifiers globally
+  useEffect(() => {
+    const isTextTarget = (t: EventTarget | null) =>
+      t instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName);
+    const onDown = (e: KeyboardEvent) => {
+      if (isTextTarget(e.target)) return;
+      if (e.key === 'z' || e.key === 'Z') setZHeld(true);
+      if (e.metaKey || e.ctrlKey) setCmdHeld(true);
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.key === 'z' || e.key === 'Z') setZHeld(false);
+      if (!e.metaKey && !e.ctrlKey) setCmdHeld(false);
+    };
+    const onBlur = () => { setZHeld(false); setCmdHeld(false); };
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onDown);
+      window.removeEventListener('keyup', onUp);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
 
   // Resize chord from either edge; resize uses the range handler so dragged
   // edges consume/shrink neighbouring chord regions while the mouse moves.
