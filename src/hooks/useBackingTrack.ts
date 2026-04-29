@@ -125,7 +125,9 @@ export function useBackingTrack() {
   }, []);
 
   const init = useCallback(async () => {
-    if (isInitRef.current && Tone.getContext().state === 'running') return;
+    const liveCtx = Tone.getContext().rawContext as AudioContext;
+    const ctxMatches = instContextRef.current === liveCtx;
+    if (isInitRef.current && Tone.getContext().state === 'running' && ctxMatches) return;
     if (!initPromiseRef.current) {
       initPromiseRef.current = (async () => {
         await startToneAudio();
