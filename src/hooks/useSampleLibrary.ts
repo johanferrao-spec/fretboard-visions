@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { deleteSample, getAllSamples, putSample, type StoredSample } from '@/lib/sampleStorage';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import {
@@ -74,6 +74,11 @@ export interface SampleListEntry {
 
 export function useSampleLibrary() {
   const [samples, setSamples] = useState<StoredSample[]>([]);
+  // Always-current ref so callbacks never operate on a stale samples snapshot.
+  // Without this, two rapid uploads can each see "[]" in their closure and the
+  // second write can clobber the first when state finally flushes.
+  const samplesRef = useRef<StoredSample[]>([]);
+  samplesRef.current = samples;
   // Default: pre-assign every drum part to the Rock kit so audio still plays
   // before the user touches anything. Loaded value (if any) overrides this.
   const [active, setActive] = useState<Record<string, string>>(() => {
@@ -86,14 +91,22 @@ export function useSampleLibrary() {
   useEffect(() => {
     let cancelled = false;
     getAllSamples().then(s => {
-      if (!cancelled) {
-        // Migrate any legacy `drums:hihat` slot to `drums:hihat_closed`.
-        const migrated = s.map(item => item.slot === 'drums:hihat'
-          ? { ...item, slot: 'drums:hihat_closed' }
-          : item);
-        setSamples(migrated);
-        setLoaded(true);
-      }
+      if (cancelled) return;
+      // Migrate any legacy `drums:hihat` slot to `drums:hihat_closed`.
+      const migrated = s.map(item => item.slot === 'drums:hihat'
+        ? { ...item, slot: 'drums:hihat_closed' }
+        : item);
+      // CRITICAL: merge with anything the user may have added between mount
+      // and the IndexedDB load resolving — otherwise their fresh uploads get
+      // silently overwritten and "disappear". Functional setState lets us
+      // see the post-mount state.
+      setSamples(prev => {
+        const seen = new Set(prev.map(p => p.id));
+        const merged: StoredSample[] = [...prev];
+        for (const m of migrated) if (!seen.has(m.id)) merged.push(m);
+        return merged;
+      });
+      setLoaded(true);
     }).catch(() => setLoaded(true));
     return () => { cancelled = true; };
   }, []);
@@ -111,7 +124,8 @@ export function useSampleLibrary() {
     if (isDrum && kit && part) {
       color = colorForKitPart(kit, part);
     } else {
-      const existingForSlot = samples.filter(s => s.slot === slot);
+      // Use the live ref so two rapid uploads can never both pick "tint #0".
+      const existingForSlot = samplesRef.current.filter(s => s.slot === slot);
       const usedColors = new Set(existingForSlot.map(s => s.color));
       color = SAMPLE_TINTS.find(c => !usedColors.has(c)) || SAMPLE_TINTS[existingForSlot.length % SAMPLE_TINTS.length];
     }
@@ -134,19 +148,23 @@ export function useSampleLibrary() {
       return next;
     });
     return id;
-  }, [samples]);
+  }, []);
 
   /** Update mutable fields on a stored sample. */
   const updateSample = useCallback(async (
     id: string,
-    patch: Partial<Pick<StoredSample, 'pitch' | 'slotIndex' | 'imageBlob' | 'imageMime' | 'name' | 'color'>>,
+    patch: Partial<Pick<StoredSample, 'pitch' | 'slotIndex' | 'imageBlob' | 'imageMime' | 'name' | 'color' | 'kit'>>,
   ) => {
-    const current = samples.find(s => s.id === id);
+    // Read from the live ref so concurrent updates can't race-overwrite each
+    // other in IndexedDB. Without this, calling updateSample(A) and
+    // updateSample(B) back-to-back can lose B's patch when A's stale closure
+    // writes back the pre-B record.
+    const current = samplesRef.current.find(s => s.id === id);
     if (!current) return;
     const next: StoredSample = { ...current, ...patch };
     await putSample(next);
     setSamples(prev => prev.map(s => s.id === id ? next : s));
-  }, [samples]);
+  }, []);
 
   /** Replace (or add new) a sample at a specific (slot, slotIndex) pair.
    *  If a sample already lives at that slot index, it's removed first so each
@@ -155,25 +173,29 @@ export function useSampleLibrary() {
     slot: SlotKey,
     slotIndex: number,
     file: File,
-    extras?: { pitch?: number; imageBlob?: Blob; imageMime?: string },
+    extras?: { pitch?: number; imageBlob?: Blob; imageMime?: string; kit?: DrumKitGenre },
   ) => {
-    const existing = samples.find(s => s.slot === slot && s.slotIndex === slotIndex);
+    const live = samplesRef.current;
+    const existing = live.find(s => s.slot === slot && s.slotIndex === slotIndex);
     if (existing) {
       await deleteSample(existing.id);
     }
     const id = `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const usedColors = new Set(samples.filter(s => s.slot === slot && s.id !== existing?.id).map(s => s.color));
+    const usedColors = new Set(live.filter(s => s.slot === slot && s.id !== existing?.id).map(s => s.color));
     const color = SAMPLE_TINTS.find(c => !usedColors.has(c)) || SAMPLE_TINTS[slotIndex % SAMPLE_TINTS.length];
     const stored: StoredSample = {
       id,
       name: file.name,
       slot,
       color,
+      kit: extras?.kit,
       mime: file.type || 'audio/wav',
       blob: file,
       createdAt: Date.now(),
       slotIndex,
-      ...(extras || {}),
+      pitch: extras?.pitch,
+      imageBlob: extras?.imageBlob,
+      imageMime: extras?.imageMime,
     };
     await putSample(stored);
     setSamples(prev => {
@@ -189,7 +211,7 @@ export function useSampleLibrary() {
       return next;
     });
     return id;
-  }, [samples]);
+  }, []);
 
   const removeSample = useCallback(async (id: string) => {
     await deleteSample(id);
@@ -273,14 +295,26 @@ export function useSampleLibrary() {
   }, [samples]);
 
   /** Resolve the active sample for a slot (used by the audio scheduler).
-   *  When `targetPitch` is provided AND the slot is `bass`, pick the bass
-   *  sample whose detected natural pitch is closest to the target — this
-   *  multi-sample lookup gives much better fidelity than pitching one
-   *  sample across the whole bass register. */
+   *  Special-case for the multi-sample bass:
+   *    - `slot === 'bass'`           → pick from ALL bass samples
+   *    - `slot === 'bass:<Kit>'`     → pick only from samples assigned to that bass kit
+   *  In both cases, when `targetPitch` is provided, the sample with the
+   *  closest detected natural pitch is chosen.
+   */
   const resolveSlot = useCallback((slot: string, targetPitch?: number): SampleResolution | null => {
-    if (slot === 'bass' && typeof targetPitch === 'number') {
-      const bassSamples = samples.filter(s => s.slot === 'bass' && typeof s.pitch === 'number');
-      if (bassSamples.length > 0) {
+    // Bass (with optional kit filter): "bass" or "bass:Rock" / "bass:Jazz" / etc.
+    if (slot === 'bass' || slot.startsWith('bass:')) {
+      const requestedKit = slot.startsWith('bass:') ? slot.slice('bass:'.length) : null;
+      let bassSamples = samples.filter(s => s.slot === 'bass' && typeof s.pitch === 'number');
+      if (requestedKit) {
+        const kitMatch = bassSamples.filter(s => s.kit === requestedKit);
+        // If the user has filled the requested kit, use it. Otherwise fall
+        // back to ANY bass sample (better than synth) — but only when there
+        // is at least one bass sample assigned anywhere.
+        if (kitMatch.length > 0) bassSamples = kitMatch;
+      }
+      if (bassSamples.length === 0) return null;
+      if (typeof targetPitch === 'number') {
         let best = bassSamples[0];
         let bestDist = Math.abs((best.pitch as number) - targetPitch);
         for (let i = 1; i < bassSamples.length; i++) {
@@ -289,6 +323,7 @@ export function useSampleLibrary() {
         }
         return { kind: 'user', sample: best };
       }
+      return { kind: 'user', sample: bassSamples[0] };
     }
     const id = active[slot];
     if (!id) return null;

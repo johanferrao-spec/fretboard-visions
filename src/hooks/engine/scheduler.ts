@@ -169,7 +169,11 @@ export function scheduleTrack(
         if (genre === 'Jazz' && playJazzKitSample(inst, n.pitch, t, gain)) return;
         playSynthDrum(inst, n.pitch, dur, t, gain);
       } else if (trackId === 'bass') {
-        const res = resolveUserSample?.('bass', n.pitch);
+        // Bass slots are pinned to a specific kit (Rock/Jazz/Funk/Latin).
+        // Pop falls back to Rock — same mapping used in the UI.
+        const bassKit = genre === 'Pop' ? 'Rock' : genre;
+        const res = resolveUserSample?.(`bass:${bassKit}`, n.pitch)
+          ?? resolveUserSample?.('bass', n.pitch);
         if (res?.kind === 'user') {
           const p = getUserPlayer(res.sample, inst.master);
           if (p && p.loaded) {
