@@ -34,7 +34,7 @@ const DRUM_LABELS: Record<number, string> = {
 let nextNoteId = 1;
 const newNoteId = () => `pr-${Date.now()}-${nextNoteId++}`;
 
-export default function PianoRoll({ trackId, notes, measures, currentBeat, isPlaying, onChange, onClose }: PianoRollProps) {
+export default function PianoRoll({ trackId, notes, measures, currentBeat, isPlaying, onChange, onClose, onPreviewNote }: PianoRollProps) {
   const [snap, setSnap] = useState<1 | 0.5 | 0.25>(0.25);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pos, setPos] = useState({ x: 80, y: 80 });
