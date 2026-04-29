@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { deleteSample, getAllSamples, putSample, type StoredSample } from '@/lib/sampleStorage';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import {
