@@ -52,25 +52,23 @@ const PART_LABEL: Record<DrumPart, string> = {
   crash: 'Crash',
 };
 
-const DRUM_KITS: DrumKitGenre[] = ['Funk', 'Jazz', 'Rock', 'Latin'];
+const DRUM_KITS: DrumKitGenre[] = ['Funk', 'Jazz', 'Rock', 'Latin', 'Pop'];
 
-/** Mirror of the slot indices used by BassSlotGrid (Rock,Jazz,Funk,Latin). */
+/** Mirror of the slot indices used by BassSlotGrid (Rock,Jazz,Funk,Latin,Pop). */
 const BASS_KIT_INDEX: Record<DrumKitGenre, number> = {
-  Rock: 0, Jazz: 1, Funk: 2, Latin: 3,
+  Rock: 0, Jazz: 1, Funk: 2, Latin: 3, Pop: 4,
 };
 
-/** Map a song genre to its closest drum-kit genre (Pop falls back to Rock). */
+/** Map a song genre to its closest drum-kit genre (1:1 now that Pop exists). */
 function songGenreToKit(g: Genre): DrumKitGenre {
-  return (g === 'Pop' ? 'Rock' : g) as DrumKitGenre;
+  return g as DrumKitGenre;
 }
 
-type KeysVariant = 'upright' | 'electric' | 'synth' | 'organ' | 'sampler';
+type KeysVariant = 'upright' | 'electric' | 'synth';
 const KEYS_OPTIONS: { id: KeysVariant; label: string }[] = [
   { id: 'upright', label: 'Upright Piano' },
   { id: 'electric', label: 'Electric Piano' },
   { id: 'synth', label: 'Synthesiser' },
-  { id: 'organ', label: 'Organ' },
-  { id: 'sampler', label: 'Sampler' },
 ];
 const KEYS_VARIANT_KEY = 'mf-keys-variant';
 const BASS_KIT_CHOICE_KEY = 'mf-bass-kit-choice';
@@ -98,7 +96,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
   const [bassKitChoice, setBassKitChoice] = useState<DrumKitGenre>(() => {
     try {
       const v = localStorage.getItem(BASS_KIT_CHOICE_KEY) as DrumKitGenre | null;
-      return v && (['Funk', 'Jazz', 'Rock', 'Latin'] as DrumKitGenre[]).includes(v) ? v : 'Rock';
+      return v && (['Funk', 'Jazz', 'Rock', 'Latin', 'Pop'] as DrumKitGenre[]).includes(v) ? v : 'Rock';
     } catch { return 'Rock'; }
   });
   useEffect(() => {
@@ -317,6 +315,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
     Funk:  'hsl(28 85% 50%)',    // burnt orange
     Jazz:  'hsl(35 55% 32%)',    // vintage walnut
     Latin: 'hsl(48 80% 50%)',    // amber yellow
+    Pop:   'hsl(200 70% 75%)',   // pale blue
   };
   const SHELL_FILL = KIT_SHELL[viewKit];
   const DEFAULT_FILL = SHELL_FILL;
@@ -791,7 +790,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
 // uploaded bass samples don't "disappear" behind the SVG. Falls back to
 // the genre-specific vector illustration.
 // ─────────────────────────────────────────────────────────────────────
-const BASS_KITS_ALL: DrumKitGenre[] = ['Rock', 'Jazz', 'Funk', 'Latin'];
+const BASS_KITS_ALL: DrumKitGenre[] = ['Rock', 'Jazz', 'Funk', 'Latin', 'Pop'];
 
 function getBassKitAtPoint(x: number, y: number): BassIconKit | null {
   const el = document.elementFromPoint(x, y) as HTMLElement | null;
