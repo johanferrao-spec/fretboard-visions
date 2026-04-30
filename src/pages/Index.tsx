@@ -26,7 +26,7 @@ const Index = () => {
   const midi = useMidiEngine();
   const sampleLib = useSampleLibrary();
   const resolveUserSample = useCallback(
-    (slot: string) => sampleLib.resolveSlot(slot),
+    (slot: string, targetPitch?: number) => sampleLib.resolveSlot(slot, targetPitch),
     [sampleLib.resolveSlot],
   );
   const [showCustomTuning, setShowCustomTuning] = useState(false);
