@@ -5,7 +5,7 @@ import { detectPitchFromBlob } from '@/lib/pitchDetect';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import type { Genre } from '@/hooks/useSongTimeline';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
-import type { SlotKey, SampleListEntry } from '@/hooks/useSampleLibrary';
+import type { BassIconKit, SlotKey, SampleListEntry } from '@/hooks/useSampleLibrary';
 import {
   BUILT_IN_KIT_SAMPLES,
   KIT_COLORS,
@@ -135,6 +135,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
       // song's bass kit, with auto-pitch detection. Mirrors BassSlotGrid.
       const bassKitForDrop = songGenreToKit(genre);
       const slotIndex = BASS_KIT_INDEX[bassKitForDrop];
+      if (image) await lib.setBassIcon(bassKitForDrop, image, image.type || 'image/png');
       if (audio) {
         const detected = await detectPitchFromBlob(audio);
         let snapped: number | undefined = detected?.midi;
