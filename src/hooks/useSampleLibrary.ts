@@ -123,6 +123,16 @@ export function useSampleLibrary() {
           });
         }
       } catch { /* ignore missing icon store during migration */ }
+      try {
+        const icons = await getAllInstrumentIcons();
+        if (!cancelled) {
+          setInstrumentIcons(prev => {
+            const next = { ...prev };
+            for (const icon of icons) next[icon.key] = icon;
+            return next;
+          });
+        }
+      } catch { /* ignore missing icon store during migration */ }
       setLoaded(true);
     }).catch(() => setLoaded(true));
     return () => { cancelled = true; };
@@ -137,6 +147,29 @@ export function useSampleLibrary() {
     };
     await putBassIcon(icon);
     setBassIcons(prev => ({ ...prev, [kit]: icon }));
+  }, []);
+
+  /** Set a generic per-instrument icon. Key format: `${slot}|${variant}`.
+   *  Replaces ONLY this specific (slot, variant) entry — other variants are
+   *  untouched. Persisted in IndexedDB so it survives reloads. */
+  const setInstrumentIcon = useCallback(async (key: string, file: File | Blob, mime?: string) => {
+    const icon: StoredInstrumentIcon = {
+      key,
+      blob: file,
+      mime: mime || (file instanceof File ? file.type : '') || 'image/png',
+      updatedAt: Date.now(),
+    };
+    await putInstrumentIcon(icon);
+    setInstrumentIcons(prev => ({ ...prev, [key]: icon }));
+  }, []);
+
+  const removeInstrumentIcon = useCallback(async (key: string) => {
+    await deleteInstrumentIcon(key);
+    setInstrumentIcons(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   }, []);
 
   const addSample = useCallback(async (
