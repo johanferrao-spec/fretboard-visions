@@ -880,9 +880,12 @@ function BassMainIcon({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                // Promote a sample for this kit as the active 'bass' selection.
+                // Always remember the user's chosen kit (independent of song genre).
+                onPickKit(k as DrumKitGenre);
+                // If a sample exists for that kit, also promote it as the active bass.
                 const sample = lib.samples.find(s => s.slot === 'bass' && s.kit === k);
                 if (sample) lib.selectSample('bass', sample.id);
+                else lib.selectSample('bass', null);
               }}
               className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border transition-colors ${
                 isOn
