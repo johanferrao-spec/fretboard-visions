@@ -711,6 +711,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
             onDragOver={(e) => { e.preventDefault(); setDragOver('bass'); }}
             onDragLeave={() => setDragOver(null)}
             onDrop={(e) => handleDrop(e, 'bass')}
+            onPickKit={setBassKitChoice}
           />
         </div>
 
