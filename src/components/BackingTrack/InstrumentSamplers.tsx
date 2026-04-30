@@ -93,6 +93,18 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     try { localStorage.setItem(KEYS_VARIANT_KEY, keysVariant); } catch { /* ignore unavailable localStorage */ }
   }, [keysVariant]);
 
+  /** Bass kit choice — user picks any kit (Funk in Jazz groove, etc).
+   *  Independent of song genre. Persisted per-browser. */
+  const [bassKitChoice, setBassKitChoice] = useState<DrumKitGenre>(() => {
+    try {
+      const v = localStorage.getItem(BASS_KIT_CHOICE_KEY) as DrumKitGenre | null;
+      return v && (['Funk', 'Jazz', 'Rock', 'Latin'] as DrumKitGenre[]).includes(v) ? v : 'Rock';
+    } catch { return 'Rock'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(BASS_KIT_CHOICE_KEY, bassKitChoice); } catch { /* ignore */ }
+  }, [bassKitChoice]);
+
   /** Which kit the overview panel is currently viewing. Defaults to the kit
    *  of the active drum-part selection (or Rock). */
   const [viewKit, setViewKit] = useState<DrumKitGenre>('Rock');
