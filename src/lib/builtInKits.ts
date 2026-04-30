@@ -14,7 +14,7 @@
 import type { DrumPart } from './backingTrackTypes';
 import type { Genre } from '@/hooks/useSongTimeline';
 
-export type DrumKitGenre = Extract<Genre, 'Funk' | 'Jazz' | 'Rock' | 'Latin'>;
+export type DrumKitGenre = Extract<Genre, 'Funk' | 'Jazz' | 'Rock' | 'Latin' | 'Pop'>;
 
 export interface BuiltInKitSample {
   /** Stable, prefixed id (e.g. "kit:jazz:snare") used in active-sample maps. */
@@ -37,6 +37,7 @@ export const KIT_COLORS: Record<DrumKitGenre, string> = {
   Jazz:  '145 60% 45%', // green
   Rock:  '0 75% 55%',   // red
   Latin: '25 90% 55%',  // orange
+  Pop:   '200 75% 78%', // pale blue
 };
 
 /** Per-genre cymbal color — bronze/brass variations (NOT the shell color). */
@@ -45,6 +46,7 @@ export const KIT_CYMBAL_COLORS: Record<DrumKitGenre, string> = {
   Jazz:  '32 55% 48%',  // dark bronze
   Rock:  '20 70% 50%',  // hot bronze (reddish)
   Latin: '45 80% 58%',  // bright brass
+  Pop:   '200 50% 70%', // soft brass with cool tint
 };
 
 /** Drum parts that are cymbals (use bronze coloring instead of kit shell color). */
