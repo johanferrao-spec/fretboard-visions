@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, putInstrumentIcon, getAllInstrumentIcons, deleteInstrumentIcon, type StoredBassIcon, type StoredInstrumentIcon, type StoredSample } from '@/lib/sampleStorage';
+import {
+  uploadBassIcon as cloudUploadBassIcon,
+  uploadBassSample as cloudUploadBassSample,
+  uploadInstrumentIcon as cloudUploadInstrumentIcon,
+  uploadInstrumentSample as cloudUploadInstrumentSample,
+} from '@/lib/cloudAssets';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import {
   BUILT_IN_KIT_SAMPLES,
