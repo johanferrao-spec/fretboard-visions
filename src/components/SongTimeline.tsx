@@ -68,7 +68,10 @@ export default function SongTimeline({
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragChord, setDragChord] = useState<{ id: string; offsetBeats: number } | null>(null);
   const [zHeld, setZHeld] = useState(false);
+  const [xHeld, setXHeld] = useState(false);
   const [cmdHeld, setCmdHeld] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const [resizeChord, setResizeChord] = useState<{
     id: string;
     edge: 'left' | 'right';
