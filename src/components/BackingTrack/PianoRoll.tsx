@@ -322,11 +322,12 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
         </div>
 
         {/* Grid */}
-        <div className="flex-1 overflow-auto relative" onClick={() => setSelectedId(null)}>
+        <div className="flex-1 overflow-auto relative" onClick={() => { setSelectedId(null); setSelectedIds(new Set()); }}>
           <div
             className="relative"
             style={{ width: gridWidth, height: visiblePitches.length * rowHeight, minWidth: '100%' }}
             onDoubleClick={handleGridDoubleClick}
+            onMouseDown={handleGridMouseDown}
           >
             {/* Row backgrounds */}
             {visiblePitches.map((p, i) => (
