@@ -444,3 +444,113 @@ export default function TrackLane({
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// ClipWaveform — draws an audio-style waveform derived from MIDI notes.
+// Each note contributes an attack-sustain-decay envelope to a per-column
+// amplitude buffer, then we render mirrored vertical bars (Logic-style).
+// This guarantees the visual matches the actual generated audio in time.
+// ─────────────────────────────────────────────────────────────────────
+function ClipWaveform({
+  notes,
+  duration,
+  color,
+  isDrums,
+}: {
+  notes: { id: string; startBeat: number; duration: number; pitch: number; velocity: number }[];
+  duration: number;
+  color: string;
+  isDrums: boolean;
+}) {
+  const ref = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = parent.getBoundingClientRect();
+    const W = Math.max(1, Math.floor(rect.width));
+    const H = Math.max(1, Math.floor(rect.height));
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = `${W}px`;
+    canvas.style.height = `${H}px`;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+
+    if (notes.length === 0 || duration <= 0) return;
+
+    // Build amplitude buffer — one sample per pixel column.
+    const cols = W;
+    const amp = new Float32Array(cols);
+
+    for (const n of notes) {
+      if (n.startBeat >= duration) continue;
+      const noteDur = Math.min(n.duration, duration - n.startBeat);
+      if (noteDur <= 0) continue;
+
+      const startCol = (n.startBeat / duration) * cols;
+      // Drums get a sharp percussive transient regardless of MIDI duration.
+      const visualDurBeats = isDrums ? Math.min(0.25, noteDur) : noteDur;
+      const endCol = ((n.startBeat + visualDurBeats) / duration) * cols;
+      const len = Math.max(1, endCol - startCol);
+
+      const v = Math.max(0.15, n.velocity / 127);
+      // Attack: fast for drums/transients, ~10% for sustained notes.
+      const attackLen = isDrums ? Math.max(1, len * 0.05) : Math.max(1, len * 0.08);
+      // Decay tail proportion of remainder.
+      const decayLen = isDrums ? len - attackLen : Math.max(1, len * 0.6);
+      const sustainLevel = isDrums ? 0 : 0.55;
+
+      const i0 = Math.max(0, Math.floor(startCol));
+      const i1 = Math.min(cols, Math.ceil(startCol + len));
+      for (let i = i0; i < i1; i++) {
+        const x = i - startCol;
+        let env: number;
+        if (x < attackLen) {
+          env = x / attackLen; // ramp up
+        } else if (isDrums) {
+          // exponential decay
+          const t = (x - attackLen) / Math.max(1, decayLen);
+          env = Math.exp(-3.5 * t);
+        } else {
+          const dx = x - attackLen;
+          if (dx < decayLen) {
+            env = 1 - (1 - sustainLevel) * (dx / decayLen);
+          } else {
+            const tailLen = Math.max(1, len - attackLen - decayLen);
+            const tt = (dx - decayLen) / tailLen;
+            env = sustainLevel * (1 - tt);
+          }
+        }
+        // Add small per-column jitter so it reads as a waveform not a curve.
+        const jitter = 0.85 + Math.sin(i * 0.7 + n.pitch) * 0.15;
+        amp[i] = Math.min(1, amp[i] + v * env * jitter);
+      }
+    }
+
+    // Render mirrored bars
+    const mid = H / 2;
+    const maxBarH = (H - 4) / 2;
+    ctx.fillStyle = `hsl(${color} / 0.85)`;
+    for (let i = 0; i < cols; i++) {
+      const a = amp[i];
+      if (a <= 0.01) continue;
+      const h = a * maxBarH;
+      ctx.fillRect(i, mid - h, 1, h * 2);
+    }
+    // Centerline
+    ctx.fillStyle = `hsl(${color} / 0.35)`;
+    ctx.fillRect(0, mid, cols, 1);
+  }, [notes, duration, color, isDrums]);
+
+  return (
+    <div className="absolute inset-0 mt-3 pointer-events-none">
+      <canvas ref={ref} className="block w-full h-[calc(100%-4px)]" />
+    </div>
+  );
+}
