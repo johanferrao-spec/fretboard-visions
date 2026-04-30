@@ -33,6 +33,7 @@ const Index = () => {
   const [customTuningName, setCustomTuningName] = useState('');
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
   const [volume, setVolume] = useState(0.7);
+  const [samplerHeight, setSamplerHeight] = useState(220);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomePulse, setMetronomePulse] = useState(0);
@@ -805,9 +806,34 @@ const Index = () => {
               registerHandlers={handleRegisterBackingApi}
             />
           </div>
-          {/* Instrument samplers — pinned bottom strip */}
-          <div className="h-[220px] shrink-0">
-            <InstrumentSamplers volume={volume} genre={timeline.genre} />
+          {/* Instrument samplers — resizable bottom strip */}
+          <div className="shrink-0 flex flex-col" style={{ height: samplerHeight }}>
+            <div
+              role="separator"
+              aria-orientation="horizontal"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const startY = e.clientY;
+                const startH = samplerHeight;
+                const onMove = (ev: MouseEvent) => {
+                  const next = Math.min(600, Math.max(80, startH + (startY - ev.clientY)));
+                  setSamplerHeight(next);
+                };
+                const onUp = () => {
+                  window.removeEventListener('mousemove', onMove);
+                  window.removeEventListener('mouseup', onUp);
+                  document.body.style.cursor = '';
+                };
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+                document.body.style.cursor = 'row-resize';
+              }}
+              className="h-1.5 shrink-0 cursor-row-resize bg-border hover:bg-primary/60 transition-colors"
+              title="Drag to resize"
+            />
+            <div className="flex-1 min-h-0">
+              <InstrumentSamplers volume={volume} genre={timeline.genre} />
+            </div>
           </div>
         </div>
       </div>
