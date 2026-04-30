@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trash2, Music, Upload } from 'lucide-react';
 import BassSlotGrid from './BassSlotGrid';
 import { detectPitchFromBlob } from '@/lib/pitchDetect';
+import { autoTrimImageBlob } from '@/lib/imageTrim';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import type { Genre } from '@/hooks/useSongTimeline';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
@@ -171,7 +172,10 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
       // song's bass kit, with auto-pitch detection. Mirrors BassSlotGrid.
       const bassKitForDrop = bassKitChoice;
       const slotIndex = BASS_KIT_INDEX[bassKitForDrop];
-      if (image) await lib.setBassIcon(bassKitForDrop, image, image.type || 'image/png');
+      // Auto-trim transparent / uniform-background borders so the artwork
+      // hugs the frame regardless of the source image's aspect ratio.
+      const trimmed = image ? await autoTrimImageBlob(image) : null;
+      if (trimmed) await lib.setBassIcon(bassKitForDrop, trimmed.blob, trimmed.mime);
       if (audio) {
         const detected = await detectPitchFromBlob(audio);
         let snapped: number | undefined = detected?.midi;
@@ -182,15 +186,15 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
         await lib.setSlotIndexedSample('bass', slotIndex, audio, {
           pitch: snapped,
           kit: bassKitForDrop,
-          ...(image ? { imageBlob: image, imageMime: image.type || 'image/png' } : {}),
+          ...(trimmed ? { imageBlob: trimmed.blob, imageMime: trimmed.mime } : {}),
         });
-      } else if (image) {
+      } else if (trimmed) {
         // No audio — attach artwork to the existing sample for this kit.
         const existing = lib.samples.find(s => s.slot === 'bass' && s.kit === bassKitForDrop);
         if (existing) {
           await lib.updateSample(existing.id, {
-            imageBlob: image,
-            imageMime: image.type || 'image/png',
+            imageBlob: trimmed.blob,
+            imageMime: trimmed.mime,
           });
         }
       }
@@ -874,12 +878,19 @@ function BassMainIcon({
         e.preventDefault();
         e.stopPropagation();
         const files = Array.from(e.dataTransfer.files ?? []);
-        const image = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
+        const rawImage = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
         const audio = files.find(f => /^audio\//.test(f.type) || /\.(wav|mp3|ogg|m4a|aiff?|flac)$/i.test(f.name));
+        // Auto-trim transparent / uniform-background borders so the artwork
+        // hugs the frame regardless of the source aspect ratio.
+        let image: { blob: Blob; mime: string } | null = null;
+        if (rawImage) {
+          const trimmed = await autoTrimImageBlob(rawImage);
+          image = trimmed;
+        }
         // Persist the icon to its own store first (survives reload even
         // when no audio sample exists for this kit yet).
         if (image) {
-          await lib.setBassIcon(kitTarget, image, image.type || 'image/png');
+          await lib.setBassIcon(kitTarget, image.blob, image.mime);
         }
         if (audio) {
           // Reuse the parent's slot-index map by promoting this kit, then
@@ -889,7 +900,7 @@ function BassMainIcon({
           if (idx >= 0) {
             await lib.setSlotIndexedSample('bass', idx, audio, {
               kit: kitTarget as DrumKitGenre,
-              ...(image ? { imageBlob: image, imageMime: image.type || 'image/png' } : {}),
+              ...(image ? { imageBlob: image.blob, imageMime: image.mime } : {}),
             });
           }
         } else if (image) {
@@ -897,7 +908,7 @@ function BassMainIcon({
           // sample for this kit so the per-sample artwork stays in sync.
           const existing = lib.samples.find(s => s.slot === 'bass' && s.kit === kitTarget);
           if (existing) {
-            await lib.updateSample(existing.id, { imageBlob: image, imageMime: image.type || 'image/png' });
+            await lib.updateSample(existing.id, { imageBlob: image.blob, imageMime: image.mime });
           }
         }
         // Promote the chip's kit so future bass playback uses this sample.
@@ -913,7 +924,7 @@ function BassMainIcon({
           <img
             src={artUrl}
             alt={`${bassKit} bass artwork`}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-contain"
             draggable={false}
           />
         ) : (
