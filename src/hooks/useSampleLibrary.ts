@@ -409,8 +409,10 @@ export function useSampleLibrary() {
 
   return {
     samples,
+    bassIcons,
     loaded,
     active,
+    setBassIcon,
     addSample,
     updateSample,
     setSlotIndexedSample,
