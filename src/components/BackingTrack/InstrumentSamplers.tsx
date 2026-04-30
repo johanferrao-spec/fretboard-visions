@@ -617,7 +617,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
           <div className="flex flex-col gap-3 w-full max-h-[260px]">
             {/* CYMBALS ROW (top) — uniform square frames */}
             <div className="flex items-end justify-around gap-2">
-             {(['hihat_closed', 'hihat_open', 'crash', 'ride'] as DrumPart[]).map(part => {
+             {(['hihat_closed', 'hihat_pedal', 'hihat_open', 'crash', 'ride'] as DrumPart[]).map(part => {
                 // Approx real-world cymbal sizes (inches): hi-hat 14", crash 16-18", ride 20-22"
                 const CYMBAL_DIM: Record<string, number> = {
                   hihat_closed: 60,
