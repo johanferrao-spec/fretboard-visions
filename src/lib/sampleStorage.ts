@@ -137,6 +137,17 @@ export async function getAllBassIcons(): Promise<StoredBassIcon[]> {
   return out;
 }
 
+export async function deleteBassIcon(kit: string): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(BASS_ICON_STORE, 'readwrite');
+    tx.objectStore(BASS_ICON_STORE).delete(kit);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
 export async function putInstrumentIcon(icon: StoredInstrumentIcon): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
