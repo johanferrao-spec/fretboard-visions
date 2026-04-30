@@ -783,6 +783,105 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
+// Bass main icon — shows dropped artwork (per kit) when available so that
+// uploaded bass samples don't "disappear" behind the SVG. Falls back to
+// the genre-specific vector illustration.
+// ─────────────────────────────────────────────────────────────────────
+const BASS_KITS_ALL: DrumKitGenre[] = ['Rock', 'Jazz', 'Funk', 'Latin'];
+
+function BassMainIcon({
+  lib, bassKit, bassActive, dragOver, selected,
+  onSelect, onDragOver, onDragLeave, onDrop,
+}: {
+  lib: ReturnType<typeof useSampleLibrary>;
+  bassKit: DrumKitGenre;
+  bassActive: SampleListEntry | null;
+  dragOver: boolean;
+  selected: boolean;
+  onSelect: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent) => void;
+}) {
+  // Find the bass sample assigned to the current kit (preferred) and the
+  // one currently active; either may carry artwork we want to render.
+  const sampleForKit = useMemo(
+    () => lib.samples.find(s => s.slot === 'bass' && s.kit === bassKit) ?? null,
+    [lib.samples, bassKit],
+  );
+  const artworkSample = sampleForKit?.imageBlob
+    ? sampleForKit
+    : (bassActive?.userSample?.imageBlob ? bassActive.userSample : null);
+
+  // Manage object URL for the dropped artwork.
+  const [artUrl, setArtUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!artworkSample?.imageBlob) { setArtUrl(null); return; }
+    const url = URL.createObjectURL(artworkSample.imageBlob);
+    setArtUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [artworkSample?.id, artworkSample?.imageBlob]);
+
+  return (
+    <div
+      className={`flex flex-col items-center min-w-[140px] rounded-md transition-colors ${dragOver ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
+      onClick={onSelect}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      style={{ cursor: 'pointer' }}
+    >
+      {artUrl ? (
+        <img
+          src={artUrl}
+          alt={`${bassKit} bass artwork`}
+          className={`h-[200px] w-[140px] object-contain rounded ${selected ? 'ring-2 ring-primary' : ''}`}
+        />
+      ) : (
+        <BassIcon
+          kit={bassKit}
+          active={!!bassActive}
+          color={bassActive?.color}
+          selected={selected}
+        />
+      )}
+      <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
+        Bass · {bassKit}
+      </div>
+      {/* Kit selector chips so user can pick which bass plays */}
+      <div className="flex gap-1 mt-1">
+        {BASS_KITS_ALL.map(k => {
+          const has = lib.samples.some(s => s.slot === 'bass' && s.kit === k);
+          const isOn = k === bassKit;
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Promote a sample for this kit as the active 'bass' selection.
+                const sample = lib.samples.find(s => s.slot === 'bass' && s.kit === k);
+                if (sample) lib.selectSample('bass', sample.id);
+              }}
+              className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border transition-colors ${
+                isOn
+                  ? 'border-primary bg-primary/15 text-foreground'
+                  : has
+                    ? 'border-border text-foreground hover:bg-muted/40'
+                    : 'border-dashed border-border/60 text-muted-foreground/60'
+              }`}
+              title={has ? `Use ${k} bass sample` : `No ${k} bass sample yet`}
+            >
+              {k}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // Bass icon — genre-specific body shape
 // ─────────────────────────────────────────────────────────────────────
 const BASS_STROKE = 'hsl(220 10% 50%)';
