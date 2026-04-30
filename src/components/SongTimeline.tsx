@@ -189,7 +189,7 @@ export default function SongTimeline({
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [dragChord, getRawBeatFromX, onMoveChord, onCommitMove, onResizeChord, zHeld, xHeld, snapGrid, totalBeats, mutateChordType, toDominant7]);
+  }, [dragChord, getRawBeatFromX, onMoveChord, onCommitMove, onResizeChord, zHeld, xHeld, snapGrid, totalBeats, mutateChordType, toDominant7, chords]);
 
   // Extend a chord's duration so its end reaches the start of the next chord
   // (or the end of the timeline if it's the last one). Used by the `z` key.
