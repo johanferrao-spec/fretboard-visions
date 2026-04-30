@@ -184,7 +184,10 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
       setSelection({ instrument: 'bass' });
       return;
     }
-    // Keys: no kit needed.
+    // Keys: image drops set the icon for the currently-selected keys variant.
+    if (dropSlot === 'keys' && image) {
+      await lib.setInstrumentIcon(`keys|${keysVariant}`, image, image.type || 'image/png');
+    }
     if (audio) {
       await lib.addSample(dropSlot, audio);
       setSelection({ instrument: dropSlot as 'bass' | 'keys' });
