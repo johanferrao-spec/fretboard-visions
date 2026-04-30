@@ -340,8 +340,12 @@ export function useSampleLibrary() {
         return q;
       };
       let bassSamples = samples
-        .filter(s => s.slot === 'bass' && typeof s.pitch === 'number')
-        .map(s => ({ ...s, pitch: snap(s.pitch as number) }));
+        .filter(s => s.slot === 'bass')
+        .map(s => (typeof s.pitch === 'number' ? { ...s, pitch: snap(s.pitch) } : s));
+      if (!requestedKit && active.bass) {
+        const selected = bassSamples.find(s => s.id === active.bass);
+        if (selected) return { kind: 'user', sample: selected };
+      }
       if (requestedKit) {
         const kitMatch = bassSamples.filter(s => s.kit === requestedKit);
         if (kitMatch.length > 0) bassSamples = kitMatch;
@@ -349,9 +353,9 @@ export function useSampleLibrary() {
       if (bassSamples.length === 0) return null;
       if (typeof targetPitch === 'number') {
         let best = bassSamples[0];
-        let bestDist = Math.abs((best.pitch as number) - targetPitch);
+        let bestDist = Math.abs(((best.pitch as number | undefined) ?? 40) - targetPitch);
         for (let i = 1; i < bassSamples.length; i++) {
-          const d = Math.abs((bassSamples[i].pitch as number) - targetPitch);
+          const d = Math.abs(((bassSamples[i].pitch as number | undefined) ?? 40) - targetPitch);
           if (d < bestDist) { best = bassSamples[i]; bestDist = d; }
         }
         return { kind: 'user', sample: best };
