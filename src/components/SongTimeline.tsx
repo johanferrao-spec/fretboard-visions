@@ -47,6 +47,7 @@ interface SongTimelineProps {
   backingTrackActive?: boolean;
   onOpenBackingTrack?: () => void;
   onCloseBackingTrack?: () => void;
+  onRegenerateBackingMidi?: () => void;
   onSaveBackingTrack?: (name: string) => void;
   onLoadBackingTrack?: (id: string) => void;
   onDeleteBackingTrack?: (id: string) => void;
