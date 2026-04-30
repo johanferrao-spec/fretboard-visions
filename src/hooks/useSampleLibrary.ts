@@ -78,9 +78,10 @@ export function useSampleLibrary() {
   const [bassIcons, setBassIcons] = useState<Record<BassIconKit, StoredBassIcon | undefined>>({
     Funk: undefined, Jazz: undefined, Rock: undefined, Latin: undefined,
   });
+  /** Generic per-instrument icons keyed by `${slot}|${variant}`
+   *  e.g. `drums:kick|Rock`, `keys|upright`. */
+  const [instrumentIcons, setInstrumentIcons] = useState<Record<string, StoredInstrumentIcon>>({});
   // Always-current ref so callbacks never operate on a stale samples snapshot.
-  // Without this, two rapid uploads can each see "[]" in their closure and the
-  // second write can clobber the first when state finally flushes.
   const samplesRef = useRef<StoredSample[]>([]);
   samplesRef.current = samples;
   const bassIconsRef = useRef(bassIcons);
