@@ -48,29 +48,28 @@ async function upload(path: string, blob: Blob, contentType: string): Promise<st
   }
 }
 
-/** Fire-and-forget — caller does not need to await. */
-export function uploadBassIcon(kit: string, blob: Blob, mime: string): void {
+export function uploadBassIcon(kit: string, blob: Blob, mime: string): Promise<string | null> {
   const ext = extFromMime(mime, 'png');
-  void upload(`bass/${safe(kit)}.${ext}`, blob, mime || 'image/png');
+  return upload(`bass/${safe(kit)}.${ext}`, blob, mime || 'image/png');
 }
 
-export function uploadBassSample(kit: string, blob: Blob, mime: string): void {
+export function uploadBassSample(kit: string, blob: Blob, mime: string): Promise<string | null> {
   const ext = extFromMime(mime, 'wav');
-  void upload(`bass/${safe(kit)}.${ext}`, blob, mime || 'audio/wav');
+  return upload(`bass/${safe(kit)}.${ext}`, blob, mime || 'audio/wav');
 }
 
 /** Generic per-instrument icon, e.g. slot=`drums:kick` variant=`Rock`. */
-export function uploadInstrumentIcon(slot: string, variant: string, blob: Blob, mime: string): void {
+export function uploadInstrumentIcon(slot: string, variant: string, blob: Blob, mime: string): Promise<string | null> {
   const ext = extFromMime(mime, 'png');
   const path = `instruments/${safe(slot)}__${safe(variant)}.${ext}`;
-  void upload(path, blob, mime || 'image/png');
+  return upload(path, blob, mime || 'image/png');
 }
 
 /** Generic per-instrument sample (e.g. drum part audio). */
-export function uploadInstrumentSample(slot: string, variant: string, blob: Blob, mime: string): void {
+export function uploadInstrumentSample(slot: string, variant: string, blob: Blob, mime: string): Promise<string | null> {
   const ext = extFromMime(mime, 'wav');
   const path = `instruments/${safe(slot)}__${safe(variant)}.${ext}`;
-  void upload(path, blob, mime || 'audio/wav');
+  return upload(path, blob, mime || 'audio/wav');
 }
 
 // ---------------------------------------------------------------------------
