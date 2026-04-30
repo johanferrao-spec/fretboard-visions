@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, putInstrumentIcon, getAllInstrumentIcons, deleteInstrumentIcon, type StoredBassIcon, type StoredInstrumentIcon, type StoredSample } from '@/lib/sampleStorage';
+import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, deleteBassIcon, putSample, putInstrumentIcon, getAllInstrumentIcons, deleteInstrumentIcon, type StoredBassIcon, type StoredInstrumentIcon, type StoredSample } from '@/lib/sampleStorage';
 import {
   uploadBassIcon as cloudUploadBassIcon,
   uploadBassSample as cloudUploadBassSample,
@@ -260,6 +260,9 @@ export function useSampleLibrary() {
     if (!uploaded && previous) {
       await putBassIcon(previous);
       setBassIcons(prev => ({ ...prev, [kit]: previous }));
+    } else if (!uploaded) {
+      await deleteBassIcon(kit);
+      setBassIcons(prev => ({ ...prev, [kit]: undefined }));
     }
     return Boolean(uploaded);
   }, []);
@@ -284,6 +287,13 @@ export function useSampleLibrary() {
     if (!uploaded && previous) {
       await putInstrumentIcon(previous);
       setInstrumentIcons(prev => ({ ...prev, [key]: previous }));
+    } else if (!uploaded) {
+      await deleteInstrumentIcon(key);
+      setInstrumentIcons(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
     }
     return Boolean(uploaded);
   }, []);
