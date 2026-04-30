@@ -393,29 +393,13 @@ export default function TrackLane({
                     {clip.label}
                   </div>
                 )}
-                {/* Mini notes inside clip */}
-                <div className="absolute inset-0 mt-3">
-                  {clip.notes.map(n => {
-                    if (n.startBeat >= clip.duration) return null;
-                    const nLeft = (n.startBeat / clip.duration) * 100;
-                    const nWidth = Math.max(0.6, (Math.min(n.duration, clip.duration - n.startBeat) / clip.duration) * 100);
-                    const nTop = (1 - (n.pitch - minP) / pRange) * 100;
-                    const nH = track.id === 'drums' ? 12 : Math.max(4, 100 / pRange);
-                    return (
-                      <div
-                        key={n.id}
-                        className="absolute rounded-[1px] pointer-events-none"
-                        style={{
-                          left: `${nLeft}%`,
-                          top: `${Math.max(0, Math.min(95, nTop))}%`,
-                          width: `${nWidth}%`,
-                          height: `${nH}%`,
-                          backgroundColor: `hsl(${color} / ${0.5 + (n.velocity / 127) * 0.5})`,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
+                {/* Waveform visualization derived from MIDI notes */}
+                <ClipWaveform
+                  notes={clip.notes}
+                  duration={clip.duration}
+                  color={color}
+                  isDrums={track.id === 'drums'}
+                />
                 {/* Empty hint */}
                 {clip.notes.length === 0 && (
                   <div className="absolute inset-0 flex items-center justify-center text-[8px] font-mono text-muted-foreground/70 pointer-events-none">
