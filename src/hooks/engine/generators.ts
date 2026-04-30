@@ -948,124 +948,66 @@ function generateJazzPianoComp(
     return 'other';
   };
 
-  // ---- Build a 3-4 note voicing strictly per spec ----
-  // Returns a sorted list of MIDI pitches in [60..83], span ≤ 16 semitones,
-  // always containing the chord's 3 and 7.
+  // ---- Build a 3-4 note voicing from the chord symbol itself ----
+  // Bare triads stay bare and rootful (Em = E-G-B, not Em13/rootless).
+  // Extensions/alterations are only used when the chord type explicitly
+  // contains them in CHORD_FORMULAS.
   const buildVoicing = (root: string, chordType: string, prev: number[] | null): number[] => {
     const rIdx = NOTE_NAMES.indexOf(root as any);
     if (rIdx < 0) return [];
     const q = classify(chordType);
+    const mod12 = (value: number) => ((value % 12) + 12) % 12;
+    const formula = CHORD_FORMULAS[chordType] || (q === 'min' ? [0, 3, 7] : [0, 4, 7]);
 
-    // Determine 3 and 7 semitone intervals from root.
-    // For dim7, the "7th" is the bb7 (=9 semitones). For half-dim it's b7 (10).
-    let third: number;
-    let seventh: number;
-    if (q === 'dim') { third = 3; seventh = 9; }
-    else if (q === 'halfdim') { third = 3; seventh = 10; }
-    else if (q === 'min') { third = 3; seventh = 10; }
-    else if (q === 'dom') { third = 4; seventh = 10; }
-    else if (q === 'maj') { third = 4; seventh = 11; }
-    else if (q === 'sus') { third = 5; seventh = 10; } // 4 substitutes for 3 on sus
-    else { third = 4; seventh = 10; }
+    const byPc = (pcs: number[]) => formula.find(i => pcs.includes(mod12(i)));
+    const thirdOrSus = byPc([3, 4, 5, 2]);
+    const fifth = byPc([7, 6, 8]);
+    const seventh = byPc([10, 11]) ?? (q === 'dim' ? byPc([9]) : undefined);
 
-    // Pick color tones per quality — strictly per spec.
-    //   • Major / Minor: 9 and 13 only (Maj also allows #11 — Lydian color).
-    //   • Dominant: always altered (♭9, #9, ♭13, occasional #11).
-    //   • Dim / Half-dim: ♭9 only (we already include b3, b5, b7).
-    //   • Sus: 9 and 11.
-    let colorPool: number[] = [];
-    if (q === 'maj') {
-      colorPool = [14, 21, 18]; // 9, 13, #11
-    } else if (q === 'min') {
-      colorPool = [14, 21]; // 9, 13 ONLY (no 11 — spec)
-    } else if (q === 'dom') {
-      colorPool = [13, 15, 20, 18]; // b9, #9, b13, #11
-    } else if (q === 'dim' || q === 'halfdim') {
-      colorPool = [13]; // b9 only
-    } else if (q === 'sus') {
-      colorPool = [14, 17];
+    const intervals: number[] = [];
+    const addInterval = (interval: number | undefined) => {
+      if (interval === undefined) return;
+      const pc = mod12(interval);
+      if (!intervals.some(i => mod12(i) === pc)) intervals.push(interval);
+    };
+
+    if (formula.length <= 4) {
+      formula.forEach(addInterval);
     } else {
-      colorPool = [14];
+      addInterval(0);
+      addInterval(thirdOrSus);
+      addInterval(seventh);
+      formula
+        .filter(i => i >= 12 || (!seventh && mod12(i) === 9))
+        .forEach(addInterval);
+      addInterval(fifth);
     }
 
-    // ---- Forbidden pitch classes per quality ----
-    // Hard guard so quality-specific colour tones never accidentally bleed
-    // into the wrong quality (e.g. a major-7 (pc 11) appearing on a minor
-    // voicing, or a minor-3 (pc 3) on a major voicing).
-    const ROOT_PC = rIdx;
-    const forbiddenPcs = new Set<number>();
-    if (q === 'min' || q === 'dom' || q === 'halfdim' || q === 'dim') {
-      forbiddenPcs.add((ROOT_PC + 11) % 12); // no major 7
-      forbiddenPcs.add((ROOT_PC + 4) % 12);  // no major 3 on minor-family
-    }
-    if (q === 'maj') {
-      forbiddenPcs.add((ROOT_PC + 10) % 12); // no minor 7
-      forbiddenPcs.add((ROOT_PC + 3) % 12);  // no minor 3
-    }
-    if (q === 'min') {
-      forbiddenPcs.add((ROOT_PC + 6) % 12); // no b5 (would imply m7b5)
+    while (intervals.length > 4) {
+      const fifthIndex = intervals.findIndex(i => fifth !== undefined && mod12(i) === mod12(fifth));
+      intervals.splice(fifthIndex >= 0 ? fifthIndex : intervals.length - 1, 1);
     }
 
-    // Build set of intervals: shell + 1-2 colors.
-    // Total notes: 3 or 4 (4 favored on dom/dim/halfdim because spec says "voice b3 b5 b7 add b9").
-    const targetCount = (q === 'dim' || q === 'halfdim') ? 4
-      : (q === 'dom') ? (chance(0.7) ? 4 : 3)
-      : (chance(0.45 + complexity * 0.3) ? 4 : 3);
+    const allowedPcs = new Set(intervals.map(i => mod12(rIdx + i)));
 
-    // Required intervals from root.
-    const required: number[] = [third, seventh];
-    if (q === 'dim' || q === 'halfdim') required.push(6); // b5
-
-    // Add colors until we hit targetCount (avoid duplicates by pitch class).
-    const pcSet = new Set(required.map(i => ((i % 12) + 12) % 12));
-    const intervals = [...required];
-    // Shuffle colorPool for variety
-    const shuffled = colorPool.slice().sort(() => Math.random() - 0.5);
-    for (const c of shuffled) {
-      if (intervals.length >= targetCount) break;
-      const pc = ((c % 12) + 12) % 12;
-      if (pcSet.has(pc)) continue;
-      pcSet.add(pc);
-      intervals.push(c);
+    // Convert intervals → MIDI pitches, preserving the root/chord identity and
+    // only octave-shifting the whole voicing into a comfortable piano register.
+    let baseRoot = 48 + rIdx; // C3 area
+    let voicing = intervals.map(i => baseRoot + i).sort((a, b) => a - b);
+    while (voicing.length && voicing[0] < 52) {
+      baseRoot += 12;
+      voicing = intervals.map(i => baseRoot + i).sort((a, b) => a - b);
+    }
+    while (voicing.length && voicing[voicing.length - 1] < 64) {
+      baseRoot += 12;
+      voicing = intervals.map(i => baseRoot + i).sort((a, b) => a - b);
+    }
+    while (voicing.length && voicing[voicing.length - 1] > 80) {
+      baseRoot -= 12;
+      voicing = intervals.map(i => baseRoot + i).sort((a, b) => a - b);
     }
 
-    // Convert intervals → MIDI pitches centered around C4-G5.
-    // Anchor: place 3rd around E4..A4 region first, then layer others.
-    const baseRoot = 48 + rIdx; // C3 area
-    let voicing = intervals.map(i => baseRoot + i);
-
-    // Move each pitch into the [60..83] window, picking the octave closest
-    // to the centre of E4..G5 (≈68).
-    const CENTRE = 68;
-    voicing = voicing.map(p => {
-      while (p < 60) p += 12;
-      while (p > 83) p -= 12;
-      // After clamp, if still > 83 (impossible given window) skip.
-      // Try to bias closer to CENTRE within window.
-      const altUp = p + 12;
-      const altDn = p - 12;
-      if (altUp <= 83 && Math.abs(altUp - CENTRE) < Math.abs(p - CENTRE)) p = altUp;
-      else if (altDn >= 60 && Math.abs(altDn - CENTRE) < Math.abs(p - CENTRE)) p = altDn;
-      return p;
-    });
-
-    // Dedup and sort.
     voicing = Array.from(new Set(voicing)).sort((a, b) => a - b);
-
-    // Enforce max span = 16 semitones (a tenth). If too wide, octave-shift the
-    // outermost notes inward.
-    let guard = 0;
-    while (voicing.length > 1 && voicing[voicing.length - 1] - voicing[0] > 16 && guard++ < 8) {
-      // Try lifting bottom up an octave or dropping top down.
-      const liftedBottom = voicing[0] + 12;
-      const droppedTop = voicing[voicing.length - 1] - 12;
-      const newSetA = [...voicing.slice(1), liftedBottom].sort((a, b) => a - b);
-      const newSetB = [droppedTop, ...voicing.slice(0, -1)].sort((a, b) => a - b);
-      const spanA = newSetA[newSetA.length - 1] - newSetA[0];
-      const spanB = newSetB[newSetB.length - 1] - newSetB[0];
-      voicing = (spanA <= spanB ? newSetA : newSetB).filter(p => p >= 60 && p <= 83);
-      if (voicing.length < 2) break;
-    }
 
     // ---- Smooth voice-leading ----
     // For each voice in `voicing`, pick the octave shift in {-12, 0, +12}
@@ -1074,7 +1016,7 @@ function generateJazzPianoComp(
       const prevPool = prev.slice();
       const reordered: number[] = [];
       for (const p of voicing) {
-        const candidates = [p - 12, p, p + 12].filter(x => x >= 60 && x <= 83);
+          const candidates = [p - 12, p, p + 12].filter(x => x >= 52 && x <= 80);
         let best = p;
         let bestDist = Infinity;
         for (const cand of candidates) {
@@ -1088,44 +1030,32 @@ function generateJazzPianoComp(
       voicing = Array.from(new Set(reordered)).sort((a, b) => a - b);
     }
 
-    // Final clamp / window enforcement.
-    voicing = voicing.filter(p => p >= 60 && p <= 83);
+    // Final guard: no pitch class may be introduced unless it appears in the
+    // displayed chord formula. This prevents accidental maj7/altered bleed.
+    voicing = voicing.filter(p => p >= 52 && p <= 80 && allowedPcs.has(mod12(p)));
 
-    // Strip any pitch class forbidden by the chord's quality. This is the
-    // last line of defence against, e.g. a major-7 sneaking onto a minor
-    // voicing via voice-leading dedup or octave shifts.
-    voicing = voicing.filter(p => !forbiddenPcs.has(p % 12));
-
-    // After stripping, guarantee 3 and 7 are still present. Re-insert at the
-    // closest octave to centre if missing.
-    const havePc = (semi: number) => voicing.some(p => p % 12 === ((rIdx + semi) % 12 + 12) % 12);
+    const havePc = (semi: number) => voicing.some(p => mod12(p) === mod12(rIdx + semi));
     const insertAt = (semi: number) => {
-      let p = 60 + rIdx + semi;
-      while (p < 60) p += 12;
-      while (p > 83) p -= 12;
+      let p = 48 + rIdx + semi;
+      while (p < 52) p += 12;
+      while (p > 80) p -= 12;
       voicing.push(p);
     };
-    if (!havePc(third)) insertAt(third);
-    if (!havePc(seventh)) insertAt(seventh);
-    voicing = Array.from(new Set(voicing)).sort((a, b) => a - b);
+    intervals.forEach(interval => {
+      if (!havePc(interval)) insertAt(interval);
+    });
+    voicing = Array.from(new Set(voicing)).filter(p => allowedPcs.has(mod12(p))).sort((a, b) => a - b);
 
-    if (voicing.length < 2) {
-      const r = 60 + ((rIdx) % 12);
-      voicing = [r + third, r + seventh].map(p => {
-        while (p < 60) p += 12;
-        while (p > 83) p -= 12;
+    if (voicing.length < Math.min(2, intervals.length)) {
+      voicing = intervals.map(i => {
+        let p = 48 + rIdx + i;
+        while (p < 52) p += 12;
+        while (p > 80) p -= 12;
         return p;
       }).sort((a, b) => a - b);
     }
 
-    // Trim to 4 max — but never drop the 3rd or 7th.
-    if (voicing.length > 4) {
-      const thirdPc = ((rIdx + third) % 12 + 12) % 12;
-      const seventhPc = ((rIdx + seventh) % 12 + 12) % 12;
-      const shell = voicing.filter(p => p % 12 === thirdPc || p % 12 === seventhPc);
-      const colors = voicing.filter(p => p % 12 !== thirdPc && p % 12 !== seventhPc);
-      voicing = [...shell, ...colors.slice(0, Math.max(0, 4 - shell.length))].sort((a, b) => a - b);
-    }
+    voicing = voicing.slice(0, 4);
 
     // eslint-disable-next-line no-console
     console.log('[jazz comp]', root, chordType, '→', q, 'pitches=', voicing, 'pcs=', voicing.map(p => NOTE_NAMES[((p % 12) + 12) % 12]));
