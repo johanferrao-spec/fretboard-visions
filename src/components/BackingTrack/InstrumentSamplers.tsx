@@ -864,14 +864,16 @@ function BassMainIcon({
       onDragOverCapture={(e) => setChipDragOver(getBassKitAtPoint(e.clientX, e.clientY))}
       onDragLeave={onDragLeave}
       onDrop={async (e) => {
+        // Always go through the parent handleDrop so audio + image are
+        // BOTH persisted (sample row + bass_icons store + sample.imageBlob).
+        // If the drop landed on one of the kit chips, temporarily route the
+        // drop to that chip's kit by setting the kit choice first.
         const kitTarget = getBassKitAtPoint(e.clientX, e.clientY);
-        if (!kitTarget) { onDrop(e); return; }
-        e.preventDefault();
-        e.stopPropagation();
         setChipDragOver(null);
-        const files = Array.from(e.dataTransfer.files ?? []);
-        const image = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
-        if (image) await lib.setBassIcon(kitTarget, image, image.type || 'image/png');
+        if (kitTarget && kitTarget !== bassKit) {
+          onPickKit(kitTarget as DrumKitGenre);
+        }
+        onDrop(e);
       }}
       style={{ cursor: 'pointer' }}
     >
