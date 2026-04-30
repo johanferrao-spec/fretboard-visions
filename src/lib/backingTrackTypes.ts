@@ -69,6 +69,8 @@ export const DRUM_PITCHES = {
   tom: 45,
   tom1: 45,
   tom2: 47,
+  /** Rack Tom 2 (GM 48 — high-mid tom) */
+  tom3: 48,
   crash: 49,
 } as const;
 
@@ -81,6 +83,7 @@ export type DrumPart =
   | 'ride'
   | 'tom1'
   | 'tom2'
+  | 'tom3'
   | 'crash';
 export type SamplerInstrument = 'drums' | 'bass' | 'keys';
 

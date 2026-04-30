@@ -17,6 +17,7 @@ function pitchToDrumPart(pitch: number): DrumPart | null {
     case DRUM_PITCHES.ride:         return 'ride';
     case DRUM_PITCHES.tom1:         return 'tom1';
     case DRUM_PITCHES.tom2:         return 'tom2';
+    case DRUM_PITCHES.tom3:         return 'tom3';
     case DRUM_PITCHES.crash:        return 'crash';
     default: return null;
   }
@@ -32,6 +33,7 @@ function playSynthDrum(inst: EngineInstruments, pitch: number, dur: number, t: n
     case DRUM_PITCHES.ride:         inst.ride.triggerAttackRelease('C5', dur, t, gain); break;
     case DRUM_PITCHES.tom1:         inst.kick.triggerAttackRelease('G2', dur, t, gain * 0.9); break;
     case DRUM_PITCHES.tom2:         inst.kick.triggerAttackRelease('D2', dur, t, gain * 0.9); break;
+    case DRUM_PITCHES.tom3:         inst.kick.triggerAttackRelease('A2', dur, t, gain * 0.9); break;
     case DRUM_PITCHES.crash:        inst.ride.triggerAttackRelease('G5', dur * 1.2, t, gain); break;
     default:                        inst.snare.triggerAttackRelease(0.35, t, gain);
   }
