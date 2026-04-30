@@ -376,14 +376,14 @@ export default function SongTimeline({
     e.stopPropagation();
     const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
     if (degree < 0) return;
-    const gridRect = gridRef.current?.getBoundingClientRect();
-    if (!gridRect) return;
     const blockRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setVariationPopup({
       chordId: chord.id,
       degree,
-      x: blockRect.left + blockRect.width / 2,
-      y: blockRect.top,
+      // Anchor at the chord's right edge, vertically centred — the panel
+      // will flip/clamp to stay on screen.
+      x: blockRect.right,
+      y: blockRect.top - 8,
     });
   }, [timelineKey, keyMode]);
 
