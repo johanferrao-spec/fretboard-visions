@@ -99,6 +99,22 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   /** Pending file dropped on a drum slot — awaiting kit choice from the dialog. */
   const [pendingDrop, setPendingDrop] = useState<{ slot: SlotKey; file: File } | null>(null);
 
+  /** Track object-URLs for every loaded instrument icon. Recreated whenever
+   *  the underlying blob (or its `updatedAt` stamp) changes. */
+  const iconUrls = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const [key, icon] of Object.entries(lib.instrumentIcons)) {
+      out[key] = URL.createObjectURL(icon.blob);
+    }
+    return out;
+    // We deliberately key on the updatedAt timestamps so we recreate URLs
+    // ONLY when an icon actually changes (avoids leaking blobs on every render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Object.entries(lib.instrumentIcons).map(([k, v]) => `${k}:${v.updatedAt}`).join('|')]);
+  useEffect(() => () => {
+    Object.values(iconUrls).forEach(u => URL.revokeObjectURL(u));
+  }, [iconUrls]);
+
   const slot = selectionToSlot(selection);
   const slotSamples = lib.samplesForSlot(slot);
   const activeEntry = lib.activeEntryFor(slot);
@@ -126,7 +142,14 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     const image = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
 
     if (dropSlot.startsWith('drums:')) {
-      // Drum drop → ask which kit to save under before storing.
+      // Image dropped on a drum part → store as the icon for THIS part + the
+      // currently-viewed kit. Replaces only this specific (part, kit) image
+      // and does not affect any other kit/part combo.
+      if (image) {
+        const iconKey = `${dropSlot}|${viewKit}`;
+        await lib.setInstrumentIcon(iconKey, image, image.type || 'image/png');
+      }
+      // Audio drop → ask which kit to save under before storing.
       if (audio) setPendingDrop({ slot: dropSlot, file: audio });
       return;
     }
@@ -161,7 +184,10 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
       setSelection({ instrument: 'bass' });
       return;
     }
-    // Keys: no kit needed.
+    // Keys: image drops set the icon for the currently-selected keys variant.
+    if (dropSlot === 'keys' && image) {
+      await lib.setInstrumentIcon(`keys|${keysVariant}`, image, image.type || 'image/png');
+    }
     if (audio) {
       await lib.addSample(dropSlot, audio);
       setSelection({ instrument: dropSlot as 'bass' | 'keys' });
@@ -180,18 +206,25 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   };
 
   /** Drop handler for kit-overview rows: kit is implicit (the panel's viewKit),
-   *  so we bypass the picker dialog and store immediately. */
+   *  so we bypass the picker dialog and store immediately. Accepts both audio
+   *  (replaces the kit's sample) and image (replaces only the icon for this
+   *  specific part + kit combo). */
   const handleOverviewDrop = async (e: React.DragEvent, dropSlot: SlotKey, kit: DrumKitGenre) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(null);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    if (!/^audio\//.test(file.type) && !/\.(wav|mp3|ogg|m4a|aiff?)$/i.test(file.name)) return;
-    await lib.addSample(dropSlot, file, kit);
-    if (dropSlot.startsWith('drums:')) {
-      const part = dropSlot.split(':')[1] as DrumPart;
-      setSelection({ instrument: 'drums', part });
+    const files = Array.from(e.dataTransfer.files ?? []);
+    const audio = files.find(f => /^audio\//.test(f.type) || /\.(wav|mp3|ogg|m4a|aiff?|flac)$/i.test(f.name));
+    const image = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
+    if (image) {
+      await lib.setInstrumentIcon(`${dropSlot}|${kit}`, image, image.type || 'image/png');
+    }
+    if (audio) {
+      await lib.addSample(dropSlot, audio, kit);
+      if (dropSlot.startsWith('drums:')) {
+        const part = dropSlot.split(':')[1] as DrumPart;
+        setSelection({ instrument: 'drums', part });
+      }
     }
   };
 
@@ -567,21 +600,33 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                 const w = 78, h = 52;
                 return (
                   <div key={part} className="flex flex-col items-center gap-1" {...partProps(part)}>
-                    <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h}>
-                      {/* Stand */}
-                      <line x1={w/2} y1={h*0.55} x2={w/2} y2={h-2} stroke={HARDWARE} strokeWidth="2" />
-                      {/* Cymbal */}
-                      {part === 'hihat_pedal' ? (
-                        <>
-                          {/* Pedal hat — small foot pedal art */}
-                          <ellipse cx={w/2} cy={h*0.4} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                          <ellipse cx={w/2} cy={h*0.5} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} opacity="0.85" />
-                          <rect x={w*0.2} y={h-8} width={w*0.6} height={6} rx={1} fill={HARDWARE_DARK} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.6} />
-                        </>
-                      ) : (
-                        <ellipse cx={w/2} cy={h*0.45} rx={w*0.45} ry={part === 'crash' || part === 'ride' ? 12 : 8} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                      )}
-                    </svg>
+                    {iconUrls[`drums:${part}|${viewKit}`] ? (
+                      <img
+                        src={iconUrls[`drums:${part}|${viewKit}`]}
+                        alt={`${viewKit} ${PART_LABEL[part]}`}
+                        width={w}
+                        height={h}
+                        className={`object-contain rounded ${isPartSelected(part) ? 'ring-2 ring-primary' : ''} ${isPartDragOver(part) ? 'ring-2 ring-[hsl(var(--beginner-yellow))]' : ''}`}
+                        style={{ width: w, height: h }}
+                        draggable={false}
+                      />
+                    ) : (
+                      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h}>
+                        {/* Stand */}
+                        <line x1={w/2} y1={h*0.55} x2={w/2} y2={h-2} stroke={HARDWARE} strokeWidth="2" />
+                        {/* Cymbal */}
+                        {part === 'hihat_pedal' ? (
+                          <>
+                            {/* Pedal hat — small foot pedal art */}
+                            <ellipse cx={w/2} cy={h*0.4} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                            <ellipse cx={w/2} cy={h*0.5} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} opacity="0.85" />
+                            <rect x={w*0.2} y={h-8} width={w*0.6} height={6} rx={1} fill={HARDWARE_DARK} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.6} />
+                          </>
+                        ) : (
+                          <ellipse cx={w/2} cy={h*0.45} rx={w*0.45} ry={part === 'crash' || part === 'ride' ? 12 : 8} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                        )}
+                      </svg>
+                    )}
                     <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">
                       {PART_LABEL[part]}
                     </div>
@@ -597,24 +642,36 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                 const h = part === 'kick' ? 80 : part === 'tom2' ? 80 : 60;
                 return (
                   <div key={part} className="flex flex-col items-center gap-1" {...partProps(part)}>
-                    <svg viewBox={`0 0 ${w} ${h+12}`} width={w} height={h+12}>
-                      {part === 'kick' ? (
-                        <>
-                          <circle cx={w/2} cy={h/2 + 4} r={h/2} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                          <circle cx={w/2} cy={h/2 + 4} r={h/2 - 8} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.5} />
-                        </>
-                      ) : (
-                        <>
-                          {/* Cylindrical drum (front view) */}
-                          <rect x={4} y={10} width={w-8} height={h-10} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                          <ellipse cx={w/2} cy={10} rx={(w-8)/2} ry={8} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                          <ellipse cx={w/2} cy={h} rx={(w-8)/2} ry={6} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                          {[0,1,2,3,4].map(i => (
-                            <rect key={i} x={10 + i*((w-20)/4) - 1.5} y={14} width="3" height={h - 18} fill={SKIN_FILL} opacity={0.85} />
-                          ))}
-                        </>
-                      )}
-                    </svg>
+                    {iconUrls[`drums:${part}|${viewKit}`] ? (
+                      <img
+                        src={iconUrls[`drums:${part}|${viewKit}`]}
+                        alt={`${viewKit} ${PART_LABEL[part]}`}
+                        width={w}
+                        height={h+12}
+                        className={`object-contain rounded ${isPartSelected(part) ? 'ring-2 ring-primary' : ''} ${isPartDragOver(part) ? 'ring-2 ring-[hsl(var(--beginner-yellow))]' : ''}`}
+                        style={{ width: w, height: h+12 }}
+                        draggable={false}
+                      />
+                    ) : (
+                      <svg viewBox={`0 0 ${w} ${h+12}`} width={w} height={h+12}>
+                        {part === 'kick' ? (
+                          <>
+                            <circle cx={w/2} cy={h/2 + 4} r={h/2} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                            <circle cx={w/2} cy={h/2 + 4} r={h/2 - 8} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.5} />
+                          </>
+                        ) : (
+                          <>
+                            {/* Cylindrical drum (front view) */}
+                            <rect x={4} y={10} width={w-8} height={h-10} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                            <ellipse cx={w/2} cy={10} rx={(w-8)/2} ry={8} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                            <ellipse cx={w/2} cy={h} rx={(w-8)/2} ry={6} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                            {[0,1,2,3,4].map(i => (
+                              <rect key={i} x={10 + i*((w-20)/4) - 1.5} y={14} width="3" height={h - 18} fill={SKIN_FILL} opacity={0.85} />
+                            ))}
+                          </>
+                        )}
+                      </svg>
+                    )}
                     <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">
                       {PART_LABEL[part]}
                     </div>
@@ -650,12 +707,21 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
           onDrop={(e) => handleDrop(e, 'keys')}
           style={{ cursor: 'pointer' }}
         >
-          <KeysIcon
-            variant={keysVariant}
-            active={!!keysActive}
-            color={keysActive?.color}
-            selected={selection.instrument === 'keys'}
-          />
+          {iconUrls[`keys|${keysVariant}`] ? (
+            <img
+              src={iconUrls[`keys|${keysVariant}`]}
+              alt={`${keysVariant} keys`}
+              className={`h-[180px] w-auto object-contain rounded ${selection.instrument === 'keys' ? 'ring-2 ring-primary' : ''}`}
+              draggable={false}
+            />
+          ) : (
+            <KeysIcon
+              variant={keysVariant}
+              active={!!keysActive}
+              color={keysActive?.color}
+              selected={selection.instrument === 'keys'}
+            />
+          )}
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
             {KEYS_OPTIONS.find(o => o.id === keysVariant)?.label}
           </div>

@@ -5,9 +5,10 @@
  */
 
 const DB_NAME = 'mf-sample-library';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE = 'samples';
 const BASS_ICON_STORE = 'bass_icons';
+const INSTRUMENT_ICON_STORE = 'instrument_icons';
 
 export interface StoredSample {
   /** Unique id, also used as IndexedDB primary key */
@@ -42,6 +43,22 @@ export interface StoredBassIcon {
   updatedAt: number;
 }
 
+/**
+ * Generic per-instrument icon, keyed by a composite string `slot|variant`.
+ * Examples:
+ *   drums:kick|Rock       — Rock kick drum image
+ *   drums:snare|Jazz      — Jazz snare image
+ *   keys|upright          — Upright piano image
+ * Persists across reloads via IndexedDB.
+ */
+export interface StoredInstrumentIcon {
+  /** Composite primary key: `${slot}|${variant}` */
+  key: string;
+  blob: Blob;
+  mime: string;
+  updatedAt: number;
+}
+
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -53,6 +70,9 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(BASS_ICON_STORE)) {
         db.createObjectStore(BASS_ICON_STORE, { keyPath: 'kit' });
+      }
+      if (!db.objectStoreNames.contains(INSTRUMENT_ICON_STORE)) {
+        db.createObjectStore(INSTRUMENT_ICON_STORE, { keyPath: 'key' });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -115,4 +135,38 @@ export async function getAllBassIcons(): Promise<StoredBassIcon[]> {
   });
   db.close();
   return out;
+}
+
+export async function putInstrumentIcon(icon: StoredInstrumentIcon): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(INSTRUMENT_ICON_STORE, 'readwrite');
+    tx.objectStore(INSTRUMENT_ICON_STORE).put(icon);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+export async function getAllInstrumentIcons(): Promise<StoredInstrumentIcon[]> {
+  const db = await openDb();
+  const out = await new Promise<StoredInstrumentIcon[]>((resolve, reject) => {
+    const tx = db.transaction(INSTRUMENT_ICON_STORE, 'readonly');
+    const req = tx.objectStore(INSTRUMENT_ICON_STORE).getAll();
+    req.onsuccess = () => resolve(req.result as StoredInstrumentIcon[]);
+    req.onerror = () => reject(req.error);
+  });
+  db.close();
+  return out;
+}
+
+export async function deleteInstrumentIcon(key: string): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(INSTRUMENT_ICON_STORE, 'readwrite');
+    tx.objectStore(INSTRUMENT_ICON_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
 }

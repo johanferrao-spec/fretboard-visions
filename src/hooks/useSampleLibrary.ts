@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, type StoredBassIcon, type StoredSample } from '@/lib/sampleStorage';
+import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, putInstrumentIcon, getAllInstrumentIcons, deleteInstrumentIcon, type StoredBassIcon, type StoredInstrumentIcon, type StoredSample } from '@/lib/sampleStorage';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import {
   BUILT_IN_KIT_SAMPLES,
@@ -78,9 +78,10 @@ export function useSampleLibrary() {
   const [bassIcons, setBassIcons] = useState<Record<BassIconKit, StoredBassIcon | undefined>>({
     Funk: undefined, Jazz: undefined, Rock: undefined, Latin: undefined,
   });
+  /** Generic per-instrument icons keyed by `${slot}|${variant}`
+   *  e.g. `drums:kick|Rock`, `keys|upright`. */
+  const [instrumentIcons, setInstrumentIcons] = useState<Record<string, StoredInstrumentIcon>>({});
   // Always-current ref so callbacks never operate on a stale samples snapshot.
-  // Without this, two rapid uploads can each see "[]" in their closure and the
-  // second write can clobber the first when state finally flushes.
   const samplesRef = useRef<StoredSample[]>([]);
   samplesRef.current = samples;
   const bassIconsRef = useRef(bassIcons);
@@ -122,6 +123,16 @@ export function useSampleLibrary() {
           });
         }
       } catch { /* ignore missing icon store during migration */ }
+      try {
+        const icons = await getAllInstrumentIcons();
+        if (!cancelled) {
+          setInstrumentIcons(prev => {
+            const next = { ...prev };
+            for (const icon of icons) next[icon.key] = icon;
+            return next;
+          });
+        }
+      } catch { /* ignore missing icon store during migration */ }
       setLoaded(true);
     }).catch(() => setLoaded(true));
     return () => { cancelled = true; };
@@ -136,6 +147,29 @@ export function useSampleLibrary() {
     };
     await putBassIcon(icon);
     setBassIcons(prev => ({ ...prev, [kit]: icon }));
+  }, []);
+
+  /** Set a generic per-instrument icon. Key format: `${slot}|${variant}`.
+   *  Replaces ONLY this specific (slot, variant) entry — other variants are
+   *  untouched. Persisted in IndexedDB so it survives reloads. */
+  const setInstrumentIcon = useCallback(async (key: string, file: File | Blob, mime?: string) => {
+    const icon: StoredInstrumentIcon = {
+      key,
+      blob: file,
+      mime: mime || (file instanceof File ? file.type : '') || 'image/png',
+      updatedAt: Date.now(),
+    };
+    await putInstrumentIcon(icon);
+    setInstrumentIcons(prev => ({ ...prev, [key]: icon }));
+  }, []);
+
+  const removeInstrumentIcon = useCallback(async (key: string) => {
+    await deleteInstrumentIcon(key);
+    setInstrumentIcons(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   }, []);
 
   const addSample = useCallback(async (
@@ -413,9 +447,12 @@ export function useSampleLibrary() {
   return {
     samples,
     bassIcons,
+    instrumentIcons,
     loaded,
     active,
     setBassIcon,
+    setInstrumentIcon,
+    removeInstrumentIcon,
     addSample,
     updateSample,
     setSlotIndexedSample,
