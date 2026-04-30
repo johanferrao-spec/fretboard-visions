@@ -162,8 +162,12 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
         const iconKey = `${dropSlot}|${viewKit}`;
         await lib.setInstrumentIcon(iconKey, image, image.type || 'image/png');
       }
-      // Audio drop → ask which kit to save under before storing.
-      if (audio) setPendingDrop({ slot: dropSlot, file: audio });
+      // Audio drop → save directly under the currently-viewed kit (no prompt).
+      if (audio) {
+        await lib.addSample(dropSlot, audio, viewKit);
+        const part = dropSlot.split(':')[1] as DrumPart;
+        setSelection({ instrument: 'drums', part });
+      }
       return;
     }
     if (dropSlot === 'bass') {
