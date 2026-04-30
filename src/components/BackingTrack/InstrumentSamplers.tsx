@@ -169,7 +169,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     if (dropSlot === 'bass') {
       // Drop onto the main bass icon → assign to the slot for the current
       // song's bass kit, with auto-pitch detection. Mirrors BassSlotGrid.
-      const bassKitForDrop = songGenreToKit(genre);
+      const bassKitForDrop = bassKitChoice;
       const slotIndex = BASS_KIT_INDEX[bassKitForDrop];
       if (image) await lib.setBassIcon(bassKitForDrop, image, image.type || 'image/png');
       if (audio) {
