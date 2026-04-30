@@ -1006,6 +1006,21 @@ export default function SongTimeline({
             );
           })}
 
+          {/* Marquee selection rectangle */}
+          {marquee && (
+            <div
+              className="absolute pointer-events-none z-40 rounded-sm"
+              style={{
+                left: Math.min(marquee.x0, marquee.x1),
+                top: Math.min(marquee.y0, marquee.y1),
+                width: Math.abs(marquee.x1 - marquee.x0),
+                height: Math.abs(marquee.y1 - marquee.y0),
+                backgroundColor: 'hsl(var(--primary) / 0.15)',
+                border: '1px dashed hsl(var(--primary))',
+              }}
+            />
+          )}
+
           {/* Variations panel — docked to the right edge of the viewport so
               long lists are always fully visible. Click outside to dismiss. */}
           {variationPopup && (
