@@ -613,39 +613,42 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
         {/* DRUM KIT — parallel layout */}
         <div className="flex flex-col items-center min-w-[360px] flex-1 px-3">
           <div className="flex flex-col gap-3 w-full max-h-[260px]">
-            {/* CYMBALS ROW (top) */}
+            {/* CYMBALS ROW (top) — uniform square frames */}
             <div className="flex items-end justify-around gap-2">
               {(['hihat_closed', 'hihat_pedal', 'hihat_open', 'crash', 'ride'] as DrumPart[]).map(part => {
-                const w = 78, h = 52;
+                const w = 78, h = 78;
                 return (
                   <div key={part} className="flex flex-col items-center gap-1" {...partProps(part)}>
-                    {iconUrls[`drums:${part}|${viewKit}`] ? (
-                      <img
-                        src={iconUrls[`drums:${part}|${viewKit}`]}
-                        alt={`${viewKit} ${PART_LABEL[part]}`}
-                        width={w}
-                        height={h}
-                        className={`object-contain rounded ${isPartSelected(part) ? 'ring-2 ring-primary' : ''} ${isPartDragOver(part) ? 'ring-2 ring-[hsl(var(--beginner-yellow))]' : ''}`}
-                        style={{ width: w, height: h }}
-                        draggable={false}
-                      />
-                    ) : (
-                      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h}>
-                        {/* Stand */}
-                        <line x1={w/2} y1={h*0.55} x2={w/2} y2={h-2} stroke={HARDWARE} strokeWidth="2" />
-                        {/* Cymbal */}
-                        {part === 'hihat_pedal' ? (
-                          <>
-                            {/* Pedal hat — small foot pedal art */}
-                            <ellipse cx={w/2} cy={h*0.4} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                            <ellipse cx={w/2} cy={h*0.5} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} opacity="0.85" />
-                            <rect x={w*0.2} y={h-8} width={w*0.6} height={6} rx={1} fill={HARDWARE_DARK} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.6} />
-                          </>
-                        ) : (
-                          <ellipse cx={w/2} cy={h*0.45} rx={w*0.45} ry={part === 'crash' || part === 'ride' ? 12 : 8} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                        )}
-                      </svg>
-                    )}
+                    <div
+                      className={`relative overflow-hidden rounded-md border bg-background/40 ${
+                        isPartSelected(part) ? 'ring-2 ring-primary border-primary' :
+                        isPartDragOver(part) ? 'ring-2 ring-[hsl(var(--beginner-yellow))] border-[hsl(var(--beginner-yellow))]' :
+                        'border-border'
+                      }`}
+                      style={{ width: w, height: h }}
+                    >
+                      {iconUrls[`drums:${part}|${viewKit}`] ? (
+                        <img
+                          src={iconUrls[`drums:${part}|${viewKit}`]}
+                          alt={`${viewKit} ${PART_LABEL[part]}`}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          draggable={false}
+                        />
+                      ) : (
+                        <svg viewBox={`0 0 ${w} ${h}`} className="absolute inset-0 w-full h-full">
+                          <line x1={w/2} y1={h*0.55} x2={w/2} y2={h-2} stroke={HARDWARE} strokeWidth="2" />
+                          {part === 'hihat_pedal' ? (
+                            <>
+                              <ellipse cx={w/2} cy={h*0.4} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                              <ellipse cx={w/2} cy={h*0.5} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} opacity="0.85" />
+                              <rect x={w*0.2} y={h-12} width={w*0.6} height={6} rx={1} fill={HARDWARE_DARK} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.6} />
+                            </>
+                          ) : (
+                            <ellipse cx={w/2} cy={h*0.45} rx={w*0.45} ry={part === 'crash' || part === 'ride' ? 12 : 8} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                          )}
+                        </svg>
+                      )}
+                    </div>
                     <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">
                       {PART_LABEL[part]}
                     </div>
@@ -654,43 +657,48 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
               })}
             </div>
 
-            {/* DRUMS ROW (bottom) */}
+            {/* DRUMS ROW (bottom) — uniform rectangular frames */}
             <div className="flex items-end justify-around gap-3 mt-2">
               {(['kick', 'snare', 'tom1', 'tom2'] as DrumPart[]).map(part => {
-                const w = 80;
-                const h = part === 'kick' ? 80 : part === 'tom2' ? 80 : 60;
+                const w = 88;
+                const h = 88;
                 return (
                   <div key={part} className="flex flex-col items-center gap-1" {...partProps(part)}>
-                    {iconUrls[`drums:${part}|${viewKit}`] ? (
-                      <img
-                        src={iconUrls[`drums:${part}|${viewKit}`]}
-                        alt={`${viewKit} ${PART_LABEL[part]}`}
-                        width={w}
-                        height={h+12}
-                        className={`object-contain rounded ${isPartSelected(part) ? 'ring-2 ring-primary' : ''} ${isPartDragOver(part) ? 'ring-2 ring-[hsl(var(--beginner-yellow))]' : ''}`}
-                        style={{ width: w, height: h+12 }}
-                        draggable={false}
-                      />
-                    ) : (
-                      <svg viewBox={`0 0 ${w} ${h+12}`} width={w} height={h+12}>
-                        {part === 'kick' ? (
-                          <>
-                            <circle cx={w/2} cy={h/2 + 4} r={h/2} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                            <circle cx={w/2} cy={h/2 + 4} r={h/2 - 8} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.5} />
-                          </>
-                        ) : (
-                          <>
-                            {/* Cylindrical drum (front view) */}
-                            <rect x={4} y={10} width={w-8} height={h-10} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                            <ellipse cx={w/2} cy={10} rx={(w-8)/2} ry={8} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                            <ellipse cx={w/2} cy={h} rx={(w-8)/2} ry={6} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                            {[0,1,2,3,4].map(i => (
-                              <rect key={i} x={10 + i*((w-20)/4) - 1.5} y={14} width="3" height={h - 18} fill={SKIN_FILL} opacity={0.85} />
-                            ))}
-                          </>
-                        )}
-                      </svg>
-                    )}
+                    <div
+                      className={`relative overflow-hidden rounded-md border bg-background/40 ${
+                        isPartSelected(part) ? 'ring-2 ring-primary border-primary' :
+                        isPartDragOver(part) ? 'ring-2 ring-[hsl(var(--beginner-yellow))] border-[hsl(var(--beginner-yellow))]' :
+                        'border-border'
+                      }`}
+                      style={{ width: w, height: h }}
+                    >
+                      {iconUrls[`drums:${part}|${viewKit}`] ? (
+                        <img
+                          src={iconUrls[`drums:${part}|${viewKit}`]}
+                          alt={`${viewKit} ${PART_LABEL[part]}`}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          draggable={false}
+                        />
+                      ) : (
+                        <svg viewBox={`0 0 ${w} ${h}`} className="absolute inset-0 w-full h-full">
+                          {part === 'kick' ? (
+                            <>
+                              <circle cx={w/2} cy={h/2} r={h/2 - 6} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                              <circle cx={w/2} cy={h/2} r={h/2 - 14} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.5} />
+                            </>
+                          ) : (
+                            <>
+                              <rect x={6} y={14} width={w-12} height={h-24} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                              <ellipse cx={w/2} cy={14} rx={(w-12)/2} ry={8} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                              <ellipse cx={w/2} cy={h-10} rx={(w-12)/2} ry={6} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                              {[0,1,2,3,4].map(i => (
+                                <rect key={i} x={12 + i*((w-24)/4) - 1.5} y={18} width="3" height={h - 32} fill={SKIN_FILL} opacity={0.85} />
+                              ))}
+                            </>
+                          )}
+                        </svg>
+                      )}
+                    </div>
                     <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">
                       {PART_LABEL[part]}
                     </div>
