@@ -199,12 +199,28 @@ export default function BackingTrackView({
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
-      {/* Mini info bar */}
-      <div className="flex items-center gap-2 px-3 py-1 border-b border-border bg-card shrink-0">
-        <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Backing Track</span>
-        <span className="text-[9px] font-mono text-muted-foreground ml-auto">
-          Drag clips to move • Edges to resize • Del to remove • ⌘D to duplicate
-        </span>
+      {/* Mini info bar with inline keyboard shortcuts */}
+      <div className="flex items-center gap-3 px-3 py-1 border-b border-border bg-card shrink-0 overflow-x-auto">
+        <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider shrink-0">Backing Track</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[7px] font-mono uppercase tracking-wider text-muted-foreground/70">Shortcuts</span>
+          {[
+            ['Z', 'Extend chord'],
+            ['X', 'Dom 7'],
+            ['A', 'Triad'],
+            ['Del', 'Remove'],
+            ['⌘D', 'Duplicate'],
+            ['⌘+click', 'Delete'],
+            ['Shift+click', 'Multi-select'],
+            ['Esc', 'Close'],
+            ['Enter', 'Confirm'],
+          ].map(([k, desc]) => (
+            <span key={k} className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground">
+              <kbd className="rounded border border-border bg-muted/60 px-1 py-0 text-[7px] text-foreground">{k}</kbd>
+              {desc}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Tracks */}
