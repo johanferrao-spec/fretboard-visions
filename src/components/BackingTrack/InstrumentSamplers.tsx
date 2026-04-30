@@ -142,7 +142,14 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     const image = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
 
     if (dropSlot.startsWith('drums:')) {
-      // Drum drop → ask which kit to save under before storing.
+      // Image dropped on a drum part → store as the icon for THIS part + the
+      // currently-viewed kit. Replaces only this specific (part, kit) image
+      // and does not affect any other kit/part combo.
+      if (image) {
+        const iconKey = `${dropSlot}|${viewKit}`;
+        await lib.setInstrumentIcon(iconKey, image, image.type || 'image/png');
+      }
+      // Audio drop → ask which kit to save under before storing.
       if (audio) setPendingDrop({ slot: dropSlot, file: audio });
       return;
     }
