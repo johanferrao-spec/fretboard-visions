@@ -1015,19 +1015,13 @@ export default function SongTimeline({
                 >
                   {chordLabel}{bassLabel && <span className="opacity-70">{bassLabel}</span>}
                 </span>
-                {/* Resize handles */}
+                {/* Resize handles — invisible but draggable */}
                 <div
-                  className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center rounded-l-md"
-                  style={{ backgroundColor: 'hsl(var(--foreground) / 0.22)' }}
-                >
-                  <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
-                </div>
+                  className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20"
+                />
                 <div
-                  className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center rounded-r-md"
-                  style={{ backgroundColor: 'hsl(var(--foreground) / 0.22)' }}
-                >
-                  <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
-                </div>
+                  className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20"
+                />
               </div>
             );
           })}
