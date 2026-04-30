@@ -941,7 +941,7 @@ function kitDefaultBassFill(kit: DrumKitGenre): string {
 /** Fender Precision — slab body, single split-coil pickup, large headstock. */
 function PrecisionBass({ body, accent, stroke, sw }: { body: string; accent: string; stroke: string; sw: number }) {
   return (
-    <svg viewBox="0 0 100 200" className="h-full max-h-[280px] h-[280px]">
+    <svg viewBox="0 0 100 200" className="h-[280px] w-[140px]">
       {/* Headstock */}
       <path d="M 36 6 L 64 6 L 62 28 L 38 28 Z" fill={body} stroke={stroke} strokeWidth={sw} />
       {[0,1,2,3].map(i => (
@@ -971,7 +971,7 @@ function PrecisionBass({ body, accent, stroke, sw }: { body: string; accent: str
 /** Fender Jazz — offset waist, two single-coils, slimmer neck. */
 function FenderJazzBass({ body, accent, stroke, sw }: { body: string; accent: string; stroke: string; sw: number }) {
   return (
-    <svg viewBox="0 0 100 200" className="h-full max-h-[280px] h-[280px]">
+    <svg viewBox="0 0 100 200" className="h-[280px] w-[140px]">
       <path d="M 36 6 L 66 6 L 64 28 L 38 28 Z" fill={body} stroke={stroke} strokeWidth={sw} />
       {[0,1,2,3].map(i => (
         <circle key={i} cx={i % 2 === 0 ? 38 : 64} cy={10 + Math.floor(i/2)*8} r={1.8} fill={stroke} />
@@ -1000,7 +1000,7 @@ function FenderJazzBass({ body, accent, stroke, sw }: { body: string; accent: st
 /** Upright (double) bass — tall scrolled body, F-holes, no frets. */
 function UprightBass({ body, stroke, sw }: { body: string; stroke: string; sw: number }) {
   return (
-    <svg viewBox="0 0 100 200" className="h-full max-h-[280px] h-[280px]">
+    <svg viewBox="0 0 100 200" className="h-[280px] w-[140px]">
       {/* Scroll */}
       <circle cx="50" cy="10" r="6" fill={body} stroke={stroke} strokeWidth={sw} />
       <circle cx="50" cy="10" r="3" fill="none" stroke={stroke} strokeWidth={0.6} />
@@ -1034,7 +1034,7 @@ function UprightBass({ body, stroke, sw }: { body: string; stroke: string; sw: n
 /** Acoustic bass guitar — guitar-shaped hollow body with a sound hole. */
 function AcousticBass({ body, accent, stroke, sw }: { body: string; accent: string; stroke: string; sw: number }) {
   return (
-    <svg viewBox="0 0 100 200" className="h-full max-h-[280px] h-[280px]">
+    <svg viewBox="0 0 100 200" className="h-[280px] w-[140px]">
       <path d="M 38 6 L 62 6 L 60 28 L 40 28 Z" fill={body} stroke={stroke} strokeWidth={sw} />
       {[0,1,2,3].map(i => (
         <circle key={i} cx={i % 2 === 0 ? 38 : 62} cy={10 + Math.floor(i/2)*8} r={1.8} fill={stroke} />
