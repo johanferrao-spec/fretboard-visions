@@ -960,6 +960,8 @@ export default function SongTimeline({
             <VariationsPanel
               degreeLabel={currentNumerals[variationPopup.degree]}
               variations={variations}
+              anchorX={variationPopup.x}
+              anchorY={variationPopup.y}
               onSelect={handleSelectVariation}
               onSetBass={(n) => { onSetChordBass?.(variationPopup.chordId, n); setVariationPopup(null); }}
               onClearBass={() => { onSetChordBass?.(variationPopup.chordId, undefined); setVariationPopup(null); }}
