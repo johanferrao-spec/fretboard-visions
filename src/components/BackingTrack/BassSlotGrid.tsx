@@ -13,12 +13,13 @@ interface Props {
 }
 
 /** The four bass slots are pinned to one bass type each, keyed by `kit`. */
-type BassKit = 'Rock' | 'Jazz' | 'Funk' | 'Latin';
+type BassKit = 'Rock' | 'Jazz' | 'Funk' | 'Latin' | 'Pop';
 const BASS_KITS: { kit: BassKit; index: number; label: string }[] = [
   { kit: 'Rock',  index: 0, label: 'Rock'  },
   { kit: 'Jazz',  index: 1, label: 'Jazz'  },
   { kit: 'Funk',  index: 2, label: 'Funk'  },
   { kit: 'Latin', index: 3, label: 'Latin' },
+  { kit: 'Pop',   index: 4, label: 'Pop'   },
 ];
 
 interface SlotEntry {

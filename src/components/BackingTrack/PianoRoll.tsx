@@ -178,6 +178,12 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
     setSelectedIds(new Set());
   };
 
+  // Use a ref so the latest visiblePitches/notes are always read inside the
+  // window-level mouseup handler (avoids stale-closure selection bugs).
+  const marqueeStateRef = useRef({ notes, visiblePitches, rowHeight, gridWidth, totalBeats });
+  marqueeStateRef.current = { notes, visiblePitches, rowHeight, gridWidth, totalBeats };
+  const justFinishedMarqueeRef = useRef(false);
+
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       const d = dragRef.current;
@@ -196,26 +202,33 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
         const maxX = Math.max(curr.x1, curr.x2);
         const minY = Math.min(curr.y1, curr.y2);
         const maxY = Math.max(curr.y1, curr.y2);
+        const { notes: ns, visiblePitches: vps, rowHeight: rh, gridWidth: gw, totalBeats: tb } = marqueeStateRef.current;
+        const beatToXLocal = (beat: number) => (beat / tb) * gw;
         const ids = new Set<string>();
-        for (const n of notes) {
-          const rowIdx = visiblePitches.indexOf(n.pitch);
+        for (const n of ns) {
+          const rowIdx = vps.indexOf(n.pitch);
           if (rowIdx < 0) continue;
-          const nx1 = beatToX(n.startBeat);
-          const nx2 = beatToX(n.startBeat + n.duration);
-          const ny1 = rowIdx * rowHeight;
-          const ny2 = ny1 + rowHeight;
-          if (nx1 < maxX && nx2 > minX && ny1 < maxY && ny2 > minY) {
+          const nx1 = beatToXLocal(n.startBeat);
+          const nx2 = beatToXLocal(n.startBeat + n.duration);
+          const ny1 = rowIdx * rh;
+          const ny2 = ny1 + rh;
+          // Any intersection (touch counts) selects the note.
+          if (nx1 <= maxX && nx2 >= minX && ny1 <= maxY && ny2 >= minY) {
             ids.add(n.id);
           }
         }
         setSelectedIds(ids);
+        // Suppress the click that always follows mouseup so we don't immediately
+        // clear the selection we just made.
+        justFinishedMarqueeRef.current = true;
+        setTimeout(() => { justFinishedMarqueeRef.current = false; }, 0);
         return null;
       });
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [notes, visiblePitches, rowHeight, gridWidth, totalBeats]);
+  }, []);
 
   // Delete key
   useEffect(() => {
@@ -322,7 +335,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
         </div>
 
         {/* Grid */}
-        <div className="flex-1 overflow-auto relative" onClick={() => { setSelectedId(null); setSelectedIds(new Set()); }}>
+        <div className="flex-1 overflow-auto relative" onClick={() => { if (justFinishedMarqueeRef.current) return; setSelectedId(null); setSelectedIds(new Set()); }}>
           <div
             className="relative"
             style={{ width: gridWidth, height: visiblePitches.length * rowHeight, minWidth: '100%' }}

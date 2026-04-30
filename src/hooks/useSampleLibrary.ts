@@ -19,7 +19,7 @@ import type { SampleResolution } from './engine/scheduler';
  *   keys           — single keys slot
  */
 export type SlotKey = `drums:${DrumPart}` | 'bass' | 'keys';
-export type BassIconKit = 'Funk' | 'Jazz' | 'Rock' | 'Latin';
+export type BassIconKit = 'Funk' | 'Jazz' | 'Rock' | 'Latin' | 'Pop';
 
 /** Per-sample tint within a slot — used for non-drum (bass/keys) user uploads. */
 const SAMPLE_TINTS = [
@@ -76,7 +76,7 @@ export interface SampleListEntry {
 export function useSampleLibrary() {
   const [samples, setSamples] = useState<StoredSample[]>([]);
   const [bassIcons, setBassIcons] = useState<Record<BassIconKit, StoredBassIcon | undefined>>({
-    Funk: undefined, Jazz: undefined, Rock: undefined, Latin: undefined,
+    Funk: undefined, Jazz: undefined, Rock: undefined, Latin: undefined, Pop: undefined,
   });
   /** Generic per-instrument icons keyed by `${slot}|${variant}`
    *  e.g. `drums:kick|Rock`, `keys|upright`. */

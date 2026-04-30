@@ -21,7 +21,7 @@ export interface StoredSample {
   color: string;
   /** Optional kit tag (Funk | Jazz | Rock | Latin) for drum-slot samples.
    *  Used so that "Apply kit" prefers user samples tagged for that kit. */
-  kit?: 'Funk' | 'Jazz' | 'Rock' | 'Latin';
+  kit?: 'Funk' | 'Jazz' | 'Rock' | 'Latin' | 'Pop';
   /** Audio MIME type */
   mime: string;
   /** Stored blob */
@@ -37,7 +37,7 @@ export interface StoredSample {
 }
 
 export interface StoredBassIcon {
-  kit: 'Funk' | 'Jazz' | 'Rock' | 'Latin';
+  kit: 'Funk' | 'Jazz' | 'Rock' | 'Latin' | 'Pop';
   blob: Blob;
   mime: string;
   updatedAt: number;
