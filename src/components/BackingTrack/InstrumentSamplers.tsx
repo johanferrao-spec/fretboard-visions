@@ -123,7 +123,25 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
       setPendingDrop({ slot: dropSlot, file });
       return;
     }
-    // Bass / Keys: no kit needed.
+    if (dropSlot === 'bass') {
+      // Drop onto the main bass icon → assign to the slot for the current
+      // song's bass kit, with auto-pitch detection. Mirrors BassSlotGrid.
+      const bassKitForDrop = songGenreToKit(genre);
+      const slotIndex = BASS_KIT_INDEX[bassKitForDrop];
+      const detected = await detectPitchFromBlob(file);
+      let snapped: number | undefined = detected?.midi;
+      if (typeof snapped === 'number') {
+        while (snapped < 28) snapped += 12;
+        while (snapped > 52) snapped -= 12;
+      }
+      await lib.setSlotIndexedSample('bass', slotIndex, file, {
+        pitch: snapped,
+        kit: bassKitForDrop,
+      });
+      setSelection({ instrument: 'bass' });
+      return;
+    }
+    // Keys: no kit needed.
     await lib.addSample(dropSlot, file);
     setSelection({ instrument: dropSlot as 'bass' | 'keys' });
   };
