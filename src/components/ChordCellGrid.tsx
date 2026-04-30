@@ -340,31 +340,25 @@ export default function CellGridView({
                                 )}
                               </span>
                             )}
-                            {/* Left resize handle — wider for easier grabbing, always visible */}
+                            {/* Left resize handle — invisible but draggable */}
                             {isChordTrueStart && (
                               <div
                                 onMouseDown={(e) => beginResize(e, seg.chord!, 'left')}
                                 onClick={(e) => e.stopPropagation()}
                                 onDoubleClick={(e) => e.stopPropagation()}
-                                className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center hover:brightness-125"
-                                style={{ background: 'hsl(var(--foreground) / 0.35)' }}
+                                className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20"
                                 title="Drag to resize from left"
-                              >
-                                <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
-                              </div>
+                              />
                             )}
-                            {/* Right resize handle */}
+                            {/* Right resize handle — invisible but draggable */}
                             {isChordTrueEnd && (
                               <div
                                 onMouseDown={(e) => beginResize(e, seg.chord!, 'right')}
                                 onClick={(e) => e.stopPropagation()}
                                 onDoubleClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center hover:brightness-125"
-                                style={{ background: 'hsl(var(--foreground) / 0.35)' }}
+                                className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20"
                                 title="Drag to resize from right"
-                              >
-                                <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
-                              </div>
+                              />
                             )}
                           </div>
                         );
