@@ -120,13 +120,14 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(null);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    if (!/^audio\//.test(file.type) && !/\.(wav|mp3|ogg|m4a|aiff?)$/i.test(file.name)) return;
+    const files = Array.from(e.dataTransfer.files ?? []);
+    if (files.length === 0) return;
+    const audio = files.find(f => /^audio\//.test(f.type) || /\.(wav|mp3|ogg|m4a|aiff?|flac)$/i.test(f.name));
+    const image = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
 
     if (dropSlot.startsWith('drums:')) {
       // Drum drop → ask which kit to save under before storing.
-      setPendingDrop({ slot: dropSlot, file });
+      if (audio) setPendingDrop({ slot: dropSlot, file: audio });
       return;
     }
     if (dropSlot === 'bass') {
@@ -134,22 +135,36 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
       // song's bass kit, with auto-pitch detection. Mirrors BassSlotGrid.
       const bassKitForDrop = songGenreToKit(genre);
       const slotIndex = BASS_KIT_INDEX[bassKitForDrop];
-      const detected = await detectPitchFromBlob(file);
-      let snapped: number | undefined = detected?.midi;
-      if (typeof snapped === 'number') {
-        while (snapped < 28) snapped += 12;
-        while (snapped > 52) snapped -= 12;
+      if (audio) {
+        const detected = await detectPitchFromBlob(audio);
+        let snapped: number | undefined = detected?.midi;
+        if (typeof snapped === 'number') {
+          while (snapped < 28) snapped += 12;
+          while (snapped > 52) snapped -= 12;
+        }
+        await lib.setSlotIndexedSample('bass', slotIndex, audio, {
+          pitch: snapped,
+          kit: bassKitForDrop,
+          ...(image ? { imageBlob: image, imageMime: image.type || 'image/png' } : {}),
+        });
+      } else if (image) {
+        // No audio — attach artwork to the existing sample for this kit.
+        const existing = lib.samples.find(s => s.slot === 'bass' && s.kit === bassKitForDrop);
+        if (existing) {
+          await lib.updateSample(existing.id, {
+            imageBlob: image,
+            imageMime: image.type || 'image/png',
+          });
+        }
       }
-      await lib.setSlotIndexedSample('bass', slotIndex, file, {
-        pitch: snapped,
-        kit: bassKitForDrop,
-      });
       setSelection({ instrument: 'bass' });
       return;
     }
     // Keys: no kit needed.
-    await lib.addSample(dropSlot, file);
-    setSelection({ instrument: dropSlot as 'bass' | 'keys' });
+    if (audio) {
+      await lib.addSample(dropSlot, audio);
+      setSelection({ instrument: dropSlot as 'bass' | 'keys' });
+    }
   };
 
   const confirmKitForPending = async (kit: DrumKitGenre) => {
