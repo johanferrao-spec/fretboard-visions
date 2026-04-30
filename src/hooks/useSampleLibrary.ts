@@ -121,26 +121,93 @@ export function useSampleLibrary() {
         for (const m of migrated) if (!seen.has(m.id)) merged.push(m);
         return merged;
       });
+
+      let idbBassIcons: StoredBassIcon[] = [];
+      let idbInstrumentIcons: StoredInstrumentIcon[] = [];
       try {
-        const icons = await getAllBassIcons();
+        idbBassIcons = await getAllBassIcons();
         if (!cancelled) {
           setBassIcons(prev => {
             const next = { ...prev };
-            for (const icon of icons) next[icon.kit] = icon;
+            for (const icon of idbBassIcons) next[icon.kit] = icon;
             return next;
           });
         }
       } catch { /* ignore missing icon store during migration */ }
       try {
-        const icons = await getAllInstrumentIcons();
+        idbInstrumentIcons = await getAllInstrumentIcons();
         if (!cancelled) {
           setInstrumentIcons(prev => {
             const next = { ...prev };
-            for (const icon of icons) next[icon.key] = icon;
+            for (const icon of idbInstrumentIcons) next[icon.key] = icon;
             return next;
           });
         }
       } catch { /* ignore missing icon store during migration */ }
+
+      // --- Cloud restore: if IndexedDB had no icons, pull from Cloud Storage ---
+      if (!cancelled && idbBassIcons.length === 0 && idbInstrumentIcons.length === 0 && migrated.length === 0) {
+        try {
+          const cloudFiles = await listCloudAssets();
+          if (cancelled || cloudFiles.length === 0) { setLoaded(true); return; }
+          console.log('[cloudRestore] restoring', cloudFiles.length, 'assets from cloud');
+
+          for (const cf of cloudFiles) {
+            if (cancelled) break;
+            const dl = await downloadCloudAsset(cf.folder, cf.name);
+            if (!dl) continue;
+
+            if (cf.folder === 'bass' && cf.isImage) {
+              // bass icon: name is e.g. "Rock.png" → kit = "Rock"
+              const kit = cf.name.replace(/\.[^.]+$/, '') as StoredBassIcon['kit'];
+              const icon: StoredBassIcon = { kit, blob: dl.blob, mime: dl.mime, updatedAt: Date.now() };
+              await putBassIcon(icon);
+              if (!cancelled) setBassIcons(prev => ({ ...prev, [kit]: icon }));
+            } else if (cf.folder === 'instruments' && cf.isImage) {
+              // instrument icon: name is e.g. "drums_kick__Rock.png"
+              // Parse back to key format: slot|variant
+              const base = cf.name.replace(/\.[^.]+$/, '');
+              const sepIdx = base.indexOf('__');
+              if (sepIdx < 0) continue;
+              const slot = base.slice(0, sepIdx).replace(/_/g, ':');
+              const variant = base.slice(sepIdx + 2);
+              const key = `${slot}|${variant}`;
+              const icon: StoredInstrumentIcon = { key, blob: dl.blob, mime: dl.mime, updatedAt: Date.now() };
+              await putInstrumentIcon(icon);
+              if (!cancelled) setInstrumentIcons(prev => ({ ...prev, [key]: icon }));
+            } else if (cf.isAudio) {
+              // audio sample restore
+              const base = cf.name.replace(/\.[^.]+$/, '');
+              let slot: string;
+              let kit: string | undefined;
+              if (cf.folder === 'bass') {
+                slot = 'bass';
+                kit = base; // e.g. "Rock"
+              } else {
+                const sepIdx = base.indexOf('__');
+                if (sepIdx < 0) continue;
+                slot = base.slice(0, sepIdx).replace(/_/g, ':');
+                kit = base.slice(sepIdx + 2);
+              }
+              const sample: StoredSample = {
+                id: `cloud_${cf.folder}_${base}`,
+                name: cf.name,
+                slot,
+                color: '#888',
+                mime: dl.mime,
+                blob: dl.blob,
+                createdAt: Date.now(),
+                kit: kit as StoredSample['kit'],
+              };
+              await putSample(sample);
+              if (!cancelled) setSamples(prev => [...prev, sample]);
+            }
+          }
+        } catch (err) {
+          console.warn('[cloudRestore] failed', err);
+        }
+      }
+
       setLoaded(true);
     }).catch(() => setLoaded(true));
     return () => { cancelled = true; };
