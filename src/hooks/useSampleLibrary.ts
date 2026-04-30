@@ -5,6 +5,8 @@ import {
   uploadBassSample as cloudUploadBassSample,
   uploadInstrumentIcon as cloudUploadInstrumentIcon,
   uploadInstrumentSample as cloudUploadInstrumentSample,
+  listCloudAssets,
+  downloadCloudAsset,
 } from '@/lib/cloudAssets';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import {
