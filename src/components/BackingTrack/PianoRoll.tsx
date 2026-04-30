@@ -370,10 +370,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
             {notes.map(n => {
               const rowIdx = visiblePitches.indexOf(n.pitch);
               if (rowIdx < 0) return null;
-              const isSel = selectedId === n.id;
-              // Velocity controls vertical size — low-velocity notes shrink
-              // so they never reach the row borders, mirroring DAW conventions.
-              // Map velocity 1..127 → height 28%..100% of available row space.
+              const isSel = selectedId === n.id || selectedIds.has(n.id);
               const velFrac = Math.max(0.28, Math.min(1, n.velocity / 127));
               const maxNoteH = rowHeight - 2;
               const noteH = Math.max(4, maxNoteH * velFrac);
@@ -381,6 +378,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
               return (
                 <div
                   key={n.id}
+                  data-note-id={n.id}
                   className="absolute rounded-sm cursor-grab active:cursor-grabbing group"
                   style={{
                     left: beatToX(n.startBeat),
@@ -393,9 +391,8 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
                     zIndex: isSel ? 5 : 2,
                   }}
                   onMouseDown={(e) => handleNoteMouseDown(e, n, 'move')}
-                  onClick={(e) => { e.stopPropagation(); setSelectedId(n.id); }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedId(n.id); setSelectedIds(new Set()); }}
                 >
-                  {/* Resize handle */}
                   <div
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100"
                     style={{ backgroundColor: 'rgba(255,255,255,0.3)' }}
@@ -404,6 +401,20 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
                 </div>
               );
             })}
+            {/* Marquee selection rectangle */}
+            {marquee && (
+              <div
+                className="absolute pointer-events-none border-2 border-primary"
+                style={{
+                  left: Math.min(marquee.x1, marquee.x2),
+                  top: Math.min(marquee.y1, marquee.y2),
+                  width: Math.abs(marquee.x2 - marquee.x1),
+                  height: Math.abs(marquee.y2 - marquee.y1),
+                  backgroundColor: 'hsl(var(--primary) / 0.15)',
+                  zIndex: 6,
+                }}
+              />
+            )}
             {/* Playhead */}
             {(isPlaying || currentBeat > 0) && (
               <div
