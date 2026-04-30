@@ -59,10 +59,8 @@ const BASS_KIT_INDEX: Record<DrumKitGenre, number> = {
   Rock: 0, Jazz: 1, Funk: 2, Latin: 3, Pop: 4,
 };
 
-/** Map a song genre to its closest drum-kit genre (1:1 now that Pop exists). */
-function songGenreToKit(g: Genre): DrumKitGenre {
-  return g as DrumKitGenre;
-}
+// (Removed songGenreToKit — Pop is now its own kit and bass/drum kit
+// selection is fully decoupled from song genre.)
 
 type KeysVariant = 'upright' | 'electric' | 'synth';
 const KEYS_OPTIONS: { id: KeysVariant; label: string }[] = [
