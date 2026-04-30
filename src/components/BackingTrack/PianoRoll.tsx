@@ -37,10 +37,13 @@ const newNoteId = () => `pr-${Date.now()}-${nextNoteId++}`;
 export default function PianoRoll({ trackId, notes, measures, currentBeat, isPlaying, onChange, onClose, onPreviewNote }: PianoRollProps) {
   const [snap, setSnap] = useState<1 | 0.5 | 0.25>(0.25);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pos, setPos] = useState({ x: 80, y: 80 });
   const [size, setSize] = useState({ width: 800, height: 420 });
   const [minimized, setMinimized] = useState(false);
-  const dragRef = useRef<{ kind: 'window' | 'note' | 'resize-note' | 'resize-window' | null; offsetX: number; offsetY: number; noteId?: string; origStart?: number; origPitch?: number; origDuration?: number } | null>(null);
+  const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const dragRef = useRef<{ kind: 'window' | 'note' | 'resize-note' | 'resize-window' | 'marquee' | null; offsetX: number; offsetY: number; noteId?: string; origStart?: number; origPitch?: number; origDuration?: number; gridX?: number; gridY?: number } | null>(null);
+
 
   const totalBeats = measures * 4;
   const color = TRACK_COLORS[trackId];
@@ -160,11 +163,71 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
     onPreviewNote?.(trackId, newNote.pitch, newNote.velocity);
   };
 
+  // Marquee drag-select on the grid
+  const handleGridMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    // Skip if started on a note (notes stop propagation in their own handlers)
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-note-id]')) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    dragRef.current = { kind: 'marquee', offsetX: e.clientX, offsetY: e.clientY, gridX: rect.left, gridY: rect.top };
+    setMarquee({ x1: x, y1: y, x2: x, y2: y });
+    setSelectedId(null);
+    setSelectedIds(new Set());
+  };
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const d = dragRef.current;
+      if (!d || d.kind !== 'marquee') return;
+      const x = e.clientX - (d.gridX ?? 0);
+      const y = e.clientY - (d.gridY ?? 0);
+      setMarquee(m => m ? { ...m, x2: x, y2: y } : null);
+    };
+    const onUp = () => {
+      const d = dragRef.current;
+      if (!d || d.kind !== 'marquee') return;
+      dragRef.current = null;
+      setMarquee(curr => {
+        if (!curr) return null;
+        const minX = Math.min(curr.x1, curr.x2);
+        const maxX = Math.max(curr.x1, curr.x2);
+        const minY = Math.min(curr.y1, curr.y2);
+        const maxY = Math.max(curr.y1, curr.y2);
+        const ids = new Set<string>();
+        for (const n of notes) {
+          const rowIdx = visiblePitches.indexOf(n.pitch);
+          if (rowIdx < 0) continue;
+          const nx1 = beatToX(n.startBeat);
+          const nx2 = beatToX(n.startBeat + n.duration);
+          const ny1 = rowIdx * rowHeight;
+          const ny2 = ny1 + rowHeight;
+          if (nx1 < maxX && nx2 > minX && ny1 < maxY && ny2 > minY) {
+            ids.add(n.id);
+          }
+        }
+        setSelectedIds(ids);
+        return null;
+      });
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [notes, visiblePitches, rowHeight, gridWidth, totalBeats]);
+
   // Delete key
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedId && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+        const inField = ['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName);
+        if (inField) return;
+        if (selectedIds.size > 0) {
+          onChange(notes.filter(n => !selectedIds.has(n.id)));
+          setSelectedIds(new Set());
+          setSelectedId(null);
+        } else if (selectedId) {
           onChange(notes.filter(n => n.id !== selectedId));
           setSelectedId(null);
         }
@@ -172,7 +235,8 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, notes, onChange]);
+  }, [selectedId, selectedIds, notes, onChange]);
+
 
   if (minimized) {
     return (
@@ -258,11 +322,12 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
         </div>
 
         {/* Grid */}
-        <div className="flex-1 overflow-auto relative" onClick={() => setSelectedId(null)}>
+        <div className="flex-1 overflow-auto relative" onClick={() => { setSelectedId(null); setSelectedIds(new Set()); }}>
           <div
             className="relative"
             style={{ width: gridWidth, height: visiblePitches.length * rowHeight, minWidth: '100%' }}
             onDoubleClick={handleGridDoubleClick}
+            onMouseDown={handleGridMouseDown}
           >
             {/* Row backgrounds */}
             {visiblePitches.map((p, i) => (
@@ -305,10 +370,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
             {notes.map(n => {
               const rowIdx = visiblePitches.indexOf(n.pitch);
               if (rowIdx < 0) return null;
-              const isSel = selectedId === n.id;
-              // Velocity controls vertical size — low-velocity notes shrink
-              // so they never reach the row borders, mirroring DAW conventions.
-              // Map velocity 1..127 → height 28%..100% of available row space.
+              const isSel = selectedId === n.id || selectedIds.has(n.id);
               const velFrac = Math.max(0.28, Math.min(1, n.velocity / 127));
               const maxNoteH = rowHeight - 2;
               const noteH = Math.max(4, maxNoteH * velFrac);
@@ -316,6 +378,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
               return (
                 <div
                   key={n.id}
+                  data-note-id={n.id}
                   className="absolute rounded-sm cursor-grab active:cursor-grabbing group"
                   style={{
                     left: beatToX(n.startBeat),
@@ -328,9 +391,8 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
                     zIndex: isSel ? 5 : 2,
                   }}
                   onMouseDown={(e) => handleNoteMouseDown(e, n, 'move')}
-                  onClick={(e) => { e.stopPropagation(); setSelectedId(n.id); }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedId(n.id); setSelectedIds(new Set()); }}
                 >
-                  {/* Resize handle */}
                   <div
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100"
                     style={{ backgroundColor: 'rgba(255,255,255,0.3)' }}
@@ -339,6 +401,20 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
                 </div>
               );
             })}
+            {/* Marquee selection rectangle */}
+            {marquee && (
+              <div
+                className="absolute pointer-events-none border-2 border-primary"
+                style={{
+                  left: Math.min(marquee.x1, marquee.x2),
+                  top: Math.min(marquee.y1, marquee.y2),
+                  width: Math.abs(marquee.x2 - marquee.x1),
+                  height: Math.abs(marquee.y2 - marquee.y1),
+                  backgroundColor: 'hsl(var(--primary) / 0.15)',
+                  zIndex: 6,
+                }}
+              />
+            )}
             {/* Playhead */}
             {(isPlaying || currentBeat > 0) && (
               <div

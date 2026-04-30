@@ -198,14 +198,15 @@ export default function BassSlotGrid({ lib, volume }: Props) {
               <button
                 type="button"
                 onClick={() => previewSlot(sample)}
-                className="relative w-full aspect-square bg-background/60 flex items-center justify-center"
+                className="relative w-full bg-background/60 flex items-center justify-center"
+                style={{ height: 220 }}
                 title={sample ? 'Preview sample' : `Drop a ${label} bass .wav here`}
               >
                 {imageUrl ? (
                   <img
                     src={imageUrl}
                     alt={sample?.name ?? `${label} bass`}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-1 w-[calc(100%-0.5rem)] h-[calc(100%-0.5rem)] object-contain"
                   />
                 ) : sample ? (
                   <div

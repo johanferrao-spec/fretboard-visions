@@ -162,8 +162,12 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
         const iconKey = `${dropSlot}|${viewKit}`;
         await lib.setInstrumentIcon(iconKey, image, image.type || 'image/png');
       }
-      // Audio drop → ask which kit to save under before storing.
-      if (audio) setPendingDrop({ slot: dropSlot, file: audio });
+      // Audio drop → save directly under the currently-viewed kit (no prompt).
+      if (audio) {
+        await lib.addSample(dropSlot, audio, viewKit);
+        const part = dropSlot.split(':')[1] as DrumPart;
+        setSelection({ instrument: 'drums', part });
+      }
       return;
     }
     if (dropSlot === 'bass') {
@@ -353,9 +357,9 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
   const bassKit = (bassActive?.userSample?.kit as DrumKitGenre | undefined) ?? bassKitChoice;
 
   return (
-    <div className="flex h-full bg-card border-t border-border overflow-hidden">
+    <div className="flex h-full min-h-0 bg-card border-t border-border overflow-hidden">
       {/* LEFT COLUMN: per-piece header + sample list (no part-icon grid) */}
-      <div className="w-72 shrink-0 border-r border-border flex flex-col overflow-y-auto">
+      <div className="w-72 shrink-0 border-r border-border flex flex-col h-full min-h-0 overflow-y-auto">
         <div className="px-3 py-2 border-b border-border">
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
             {selection.instrument === 'drums' ? `Drums · ${PART_LABEL[selection.part]}` : selection.instrument === 'bass' ? 'Bass sampler' : 'Keys sampler'}
@@ -833,7 +837,7 @@ function BassMainIcon({
 
   return (
     <div
-      className={`flex flex-col items-center min-w-[140px] rounded-md transition-colors ${dragOver ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
+      className={`flex flex-col items-center min-w-[180px] rounded-md transition-colors ${dragOver ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
       onClick={onSelect}
       onDragOver={onDragOver}
       onDragEnter={(e) => setChipDragOver(getBassKitAtPoint(e.clientX, e.clientY))}
@@ -855,7 +859,7 @@ function BassMainIcon({
         <img
           src={artUrl}
           alt={`${bassKit} bass artwork`}
-          className={`h-[200px] w-[140px] object-contain rounded ${selected ? 'ring-2 ring-primary' : ''}`}
+          className={`h-[280px] w-[180px] object-contain rounded p-1 ${selected ? 'ring-2 ring-primary' : ''}`}
         />
       ) : (
         <BassIcon
@@ -937,7 +941,7 @@ function kitDefaultBassFill(kit: DrumKitGenre): string {
 /** Fender Precision — slab body, single split-coil pickup, large headstock. */
 function PrecisionBass({ body, accent, stroke, sw }: { body: string; accent: string; stroke: string; sw: number }) {
   return (
-    <svg viewBox="0 0 100 200" className="h-full max-h-[200px]">
+    <svg viewBox="0 0 100 200" className="h-[280px] w-[140px]">
       {/* Headstock */}
       <path d="M 36 6 L 64 6 L 62 28 L 38 28 Z" fill={body} stroke={stroke} strokeWidth={sw} />
       {[0,1,2,3].map(i => (
@@ -967,7 +971,7 @@ function PrecisionBass({ body, accent, stroke, sw }: { body: string; accent: str
 /** Fender Jazz — offset waist, two single-coils, slimmer neck. */
 function FenderJazzBass({ body, accent, stroke, sw }: { body: string; accent: string; stroke: string; sw: number }) {
   return (
-    <svg viewBox="0 0 100 200" className="h-full max-h-[200px]">
+    <svg viewBox="0 0 100 200" className="h-[280px] w-[140px]">
       <path d="M 36 6 L 66 6 L 64 28 L 38 28 Z" fill={body} stroke={stroke} strokeWidth={sw} />
       {[0,1,2,3].map(i => (
         <circle key={i} cx={i % 2 === 0 ? 38 : 64} cy={10 + Math.floor(i/2)*8} r={1.8} fill={stroke} />
@@ -996,7 +1000,7 @@ function FenderJazzBass({ body, accent, stroke, sw }: { body: string; accent: st
 /** Upright (double) bass — tall scrolled body, F-holes, no frets. */
 function UprightBass({ body, stroke, sw }: { body: string; stroke: string; sw: number }) {
   return (
-    <svg viewBox="0 0 100 200" className="h-full max-h-[200px]">
+    <svg viewBox="0 0 100 200" className="h-[280px] w-[140px]">
       {/* Scroll */}
       <circle cx="50" cy="10" r="6" fill={body} stroke={stroke} strokeWidth={sw} />
       <circle cx="50" cy="10" r="3" fill="none" stroke={stroke} strokeWidth={0.6} />
@@ -1030,7 +1034,7 @@ function UprightBass({ body, stroke, sw }: { body: string; stroke: string; sw: n
 /** Acoustic bass guitar — guitar-shaped hollow body with a sound hole. */
 function AcousticBass({ body, accent, stroke, sw }: { body: string; accent: string; stroke: string; sw: number }) {
   return (
-    <svg viewBox="0 0 100 200" className="h-full max-h-[200px]">
+    <svg viewBox="0 0 100 200" className="h-[280px] w-[140px]">
       <path d="M 38 6 L 62 6 L 60 28 L 40 28 Z" fill={body} stroke={stroke} strokeWidth={sw} />
       {[0,1,2,3].map(i => (
         <circle key={i} cx={i % 2 === 0 ? 38 : 62} cy={10 + Math.floor(i/2)*8} r={1.8} fill={stroke} />
