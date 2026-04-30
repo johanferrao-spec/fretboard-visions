@@ -359,7 +359,7 @@ export default function SongTimeline({
       return (beat < cEnd && beat + dur > c.startBeat);
     });
     existingOverlaps.forEach(c => onRemoveChord(c.id));
-    onAddChord('C', 'Major', beat, dur);
+    onAddChord('C', 'Major 7', beat, dur);
   }, [getBeatFromX, onAddChord, chords, onRemoveChord]);
 
   // Click a chord block to seek playhead there and pause
