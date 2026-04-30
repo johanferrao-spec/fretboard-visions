@@ -96,7 +96,7 @@ export function useSampleLibrary() {
 
   useEffect(() => {
     let cancelled = false;
-    getAllSamples().then(s => {
+    getAllSamples().then(async s => {
       if (cancelled) return;
       // Migrate any legacy `drums:hihat` slot to `drums:hihat_closed`.
       const migrated = s.map(item => item.slot === 'drums:hihat'
@@ -112,9 +112,30 @@ export function useSampleLibrary() {
         for (const m of migrated) if (!seen.has(m.id)) merged.push(m);
         return merged;
       });
+      try {
+        const icons = await getAllBassIcons();
+        if (!cancelled) {
+          setBassIcons(prev => {
+            const next = { ...prev };
+            for (const icon of icons) next[icon.kit] = icon;
+            return next;
+          });
+        }
+      } catch {}
       setLoaded(true);
     }).catch(() => setLoaded(true));
     return () => { cancelled = true; };
+  }, []);
+
+  const setBassIcon = useCallback(async (kit: BassIconKit, file: File | Blob, mime?: string) => {
+    const icon: StoredBassIcon = {
+      kit,
+      blob: file,
+      mime: mime || (file instanceof File ? file.type : '') || 'image/png',
+      updatedAt: Date.now(),
+    };
+    await putBassIcon(icon);
+    setBassIcons(prev => ({ ...prev, [kit]: icon }));
   }, []);
 
   const addSample = useCallback(async (
