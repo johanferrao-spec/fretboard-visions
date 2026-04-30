@@ -711,25 +711,18 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">Drum kit · {viewKit}</div>
         </div>
 
-        {/* BASS — genre-specific icon */}
-        <div
-          className={`flex flex-col items-center min-w-[110px] rounded-md transition-colors ${dragOver === 'bass' ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
-          onClick={() => { setSelection({ instrument: 'bass' }); previewSample(lib.activeEntryFor('bass')); }}
+        {/* BASS — genre-specific icon (or dropped artwork if available) */}
+        <BassMainIcon
+          lib={lib}
+          bassKit={bassKit}
+          bassActive={bassActive}
+          dragOver={dragOver === 'bass'}
+          selected={selection.instrument === 'bass'}
+          onSelect={() => { setSelection({ instrument: 'bass' }); previewSample(lib.activeEntryFor('bass')); }}
           onDragOver={(e) => { e.preventDefault(); setDragOver('bass'); }}
           onDragLeave={() => setDragOver(null)}
           onDrop={(e) => handleDrop(e, 'bass')}
-          style={{ cursor: 'pointer' }}
-        >
-          <BassIcon
-            kit={bassKit}
-            active={!!bassActive}
-            color={bassActive?.color}
-            selected={selection.instrument === 'bass'}
-          />
-          <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
-            Bass · {bassKit}
-          </div>
-        </div>
+        />
 
         {/* KEYS — user-chosen icon variant */}
         <div
