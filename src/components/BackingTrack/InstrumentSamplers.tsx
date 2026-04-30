@@ -206,18 +206,25 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   };
 
   /** Drop handler for kit-overview rows: kit is implicit (the panel's viewKit),
-   *  so we bypass the picker dialog and store immediately. */
+   *  so we bypass the picker dialog and store immediately. Accepts both audio
+   *  (replaces the kit's sample) and image (replaces only the icon for this
+   *  specific part + kit combo). */
   const handleOverviewDrop = async (e: React.DragEvent, dropSlot: SlotKey, kit: DrumKitGenre) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(null);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    if (!/^audio\//.test(file.type) && !/\.(wav|mp3|ogg|m4a|aiff?)$/i.test(file.name)) return;
-    await lib.addSample(dropSlot, file, kit);
-    if (dropSlot.startsWith('drums:')) {
-      const part = dropSlot.split(':')[1] as DrumPart;
-      setSelection({ instrument: 'drums', part });
+    const files = Array.from(e.dataTransfer.files ?? []);
+    const audio = files.find(f => /^audio\//.test(f.type) || /\.(wav|mp3|ogg|m4a|aiff?|flac)$/i.test(f.name));
+    const image = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
+    if (image) {
+      await lib.setInstrumentIcon(`${dropSlot}|${kit}`, image, image.type || 'image/png');
+    }
+    if (audio) {
+      await lib.addSample(dropSlot, audio, kit);
+      if (dropSlot.startsWith('drums:')) {
+        const part = dropSlot.split(':')[1] as DrumPart;
+        setSelection({ instrument: 'drums', part });
+      }
     }
   };
 
