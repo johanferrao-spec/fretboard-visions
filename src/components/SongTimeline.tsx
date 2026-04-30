@@ -787,7 +787,15 @@ export default function SongTimeline({
             onDragOver={handleGridDragOver}
             onDragLeave={handleGridDragLeave}
             onDoubleClick={handleGridDoubleClick}
-            onClick={() => setVariationPopup(null)}
+            onClick={() => { setVariationPopup(null); setSelectedIds(new Set()); }}
+            onMouseDown={(e) => {
+              // Start marquee only when clicking the empty background (not a chord)
+              if (e.button !== 0) return;
+              if ((e.target as HTMLElement) !== e.currentTarget) return;
+              const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+              setMarquee({ x0: e.clientX - rect.left, y0: e.clientY - rect.top, x1: e.clientX - rect.left, y1: e.clientY - rect.top });
+              setSelectedIds(new Set());
+            }}
           >
           {/* Grid lines — beat and measure lines */}
           {Array.from({ length: totalBeats }, (_, i) => {
