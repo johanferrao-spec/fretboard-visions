@@ -613,8 +613,17 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
           <div className="flex flex-col gap-3 w-full max-h-[260px]">
             {/* CYMBALS ROW (top) — uniform square frames */}
             <div className="flex items-end justify-around gap-2">
-              {(['hihat_closed', 'hihat_pedal', 'hihat_open', 'crash', 'ride'] as DrumPart[]).map(part => {
-                const w = 78, h = 78;
+             {(['hihat_closed', 'hihat_pedal', 'hihat_open', 'crash', 'ride'] as DrumPart[]).map(part => {
+                // Approx real-world cymbal sizes (inches): hi-hat 14", crash 16-18", ride 20-22"
+                const CYMBAL_DIM: Record<string, number> = {
+                  hihat_closed: 60,
+                  hihat_pedal: 60,
+                  hihat_open: 60,
+                  crash: 78,
+                  ride: 96,
+                };
+                const w = CYMBAL_DIM[part] ?? 78;
+                const h = w;
                 return (
                   <div key={part} className="flex flex-col items-center gap-1" {...partProps(part)}>
                     <div
@@ -657,9 +666,15 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
 
             {/* DRUMS ROW (bottom) — uniform rectangular frames */}
             <div className="flex items-end justify-around gap-3 mt-2">
-              {(['kick', 'snare', 'tom1', 'tom2'] as DrumPart[]).map(part => {
-                const w = 88;
-                const h = 88;
+             {(['kick', 'snare', 'tom1', 'tom2'] as DrumPart[]).map(part => {
+                // Approx real-world drum sizes: kick 22", floor tom 16", rack tom 12", snare 14"x6"
+                const DRUM_DIM: Record<string, { w: number; h: number }> = {
+                  kick: { w: 120, h: 120 },
+                  tom2: { w: 92, h: 92 },   // floor tom
+                  snare: { w: 80, h: 64 },  // shallow shell
+                  tom1: { w: 70, h: 70 },   // rack tom
+                };
+                const { w, h } = DRUM_DIM[part] ?? { w: 88, h: 88 };
                 return (
                   <div key={part} className="flex flex-col items-center gap-1" {...partProps(part)}>
                     <div
