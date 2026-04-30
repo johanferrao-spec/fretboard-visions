@@ -1,9 +1,12 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, type Context, type ReactNode } from 'react';
 import { useSampleLibrary } from './useSampleLibrary';
 
 type LibValue = ReturnType<typeof useSampleLibrary>;
 
-const Ctx = createContext<LibValue | null>(null);
+type LibContext = Context<LibValue | null>;
+const globalWithSampleLibrary = globalThis as typeof globalThis & { __mfSampleLibraryContext?: LibContext };
+const Ctx = globalWithSampleLibrary.__mfSampleLibraryContext
+  ?? (globalWithSampleLibrary.__mfSampleLibraryContext = createContext<LibValue | null>(null));
 
 /** Provides a single shared sample-library instance to the whole app, so
  *  the audio engine and the sampler UI both see the same list of samples
