@@ -837,7 +837,7 @@ function BassMainIcon({
 
   return (
     <div
-      className={`flex flex-col items-center min-w-[140px] rounded-md transition-colors ${dragOver ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
+      className={`flex flex-col items-center min-w-[180px] rounded-md transition-colors ${dragOver ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
       onClick={onSelect}
       onDragOver={onDragOver}
       onDragEnter={(e) => setChipDragOver(getBassKitAtPoint(e.clientX, e.clientY))}
