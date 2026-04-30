@@ -166,34 +166,29 @@ export default function BackingTrackView({
   }, [bt.drumFills]);
 
   /* ── Continuous regeneration: every time the playhead wraps back to the
-        top of the loop, regenerate fresh midi for piano/bass/drums so each
-        cycle is uniquely improvised. The new notes won't take effect until
-        the *next* wrap (since the schedule for the current cycle is already
-        committed) — so we regenerate slightly *before* the wrap to give the
-        engine room to re-schedule. */
+        top of the loop, regenerate fresh midi for piano/bass/drums and
+        reschedule it onto the running Transport so each cycle is uniquely
+        improvised. We detect the wrap (currentBeat dropping near 0) and
+        rebuild the schedule for the cycle that's just begun. */
   const lastBeatRef = useRef(0);
   useEffect(() => {
     if (!isPlaying || chords.length === 0) return;
     const total = Math.max(4, measures * 4);
-    // Detect wrap-around: previous beat near the end, current beat near zero.
     const prev = lastBeatRef.current;
     const wrapped = prev > total - 0.5 && currentBeat < 0.5;
     lastBeatRef.current = currentBeat;
-    if (wrapped) {
-      // Regenerate quickly off the render path; force=true to overwrite even
-      // manually-edited tracks would be too aggressive — only refresh the
-      // non-edited ones (default regenerateAll behaviour).
+    if (!wrapped) return;
+    // Off the render path so we don't block the playhead callback.
+    requestAnimationFrame(() => {
+      const ctx = latestTimelineRef.current;
+      latestBtRef.current.regenerateAll(ctx.chords, ctx.measures, ctx.genre, false, ctx.groove);
+      // Defer the reschedule a tick so the freshly-generated clips are in
+      // tracksRef before scheduleTrack reads from it.
       requestAnimationFrame(() => {
-        latestBtRef.current.regenerateAll(
-          latestTimelineRef.current.chords,
-          latestTimelineRef.current.measures,
-          latestTimelineRef.current.genre,
-          false,
-          latestTimelineRef.current.groove,
-        );
+        latestBtRef.current.rescheduleAll(ctx.measures, ctx.genre, resolveUserSample);
       });
-    }
-  }, [currentBeat, isPlaying, chords.length, measures]);
+    });
+  }, [currentBeat, isPlaying, chords.length, measures, resolveUserSample]);
 
   // Register save/load with parent (so they appear in the chord timeline toolbar)
   useEffect(() => {
