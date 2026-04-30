@@ -5,9 +5,10 @@
  */
 
 const DB_NAME = 'mf-sample-library';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE = 'samples';
 const BASS_ICON_STORE = 'bass_icons';
+const INSTRUMENT_ICON_STORE = 'instrument_icons';
 
 export interface StoredSample {
   /** Unique id, also used as IndexedDB primary key */
