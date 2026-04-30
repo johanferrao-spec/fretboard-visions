@@ -83,7 +83,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
 
   useEffect(() => () => {
     if (previewRef.current) {
-      try { previewRef.current.pause(); } catch {}
+      try { previewRef.current.pause(); } catch { /* ignore preview cleanup */ }
       previewRef.current = null;
     }
   }, []);
@@ -91,7 +91,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
   const previewSlot = (sample: StoredSample | null) => {
     if (!sample) return;
     if (previewRef.current) {
-      try { previewRef.current.pause(); } catch {}
+      try { previewRef.current.pause(); } catch { /* ignore preview cleanup */ }
     }
     const url = URL.createObjectURL(sample.blob);
     const a = new Audio(url);
