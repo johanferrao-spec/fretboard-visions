@@ -335,7 +335,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
         </div>
 
         {/* Grid */}
-        <div className="flex-1 overflow-auto relative" onClick={() => { setSelectedId(null); setSelectedIds(new Set()); }}>
+        <div className="flex-1 overflow-auto relative" onClick={() => { if (justFinishedMarqueeRef.current) return; setSelectedId(null); setSelectedIds(new Set()); }}>
           <div
             className="relative"
             style={{ width: gridWidth, height: visiblePitches.length * rowHeight, minWidth: '100%' }}
