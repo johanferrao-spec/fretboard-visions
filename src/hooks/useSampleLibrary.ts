@@ -221,6 +221,9 @@ export function useSampleLibrary() {
       writeActive(next);
       return next;
     });
+    // Mirror to Cloud Storage (durable, cross-device).
+    const variant = (isDrum ? kit : undefined) ?? 'default';
+    cloudUploadInstrumentSample(slot, variant, file, file.type || 'audio/wav');
     return id;
   }, []);
 
