@@ -224,7 +224,7 @@ export default function BackingTrackView({
       </div>
 
       {/* Tracks */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="overflow-y-auto">
         {(['piano', 'bass', 'drums'] as TrackId[]).map(id => (
           <TrackLane
             key={id}
@@ -248,11 +248,6 @@ export default function BackingTrackView({
             onRemoveDrumFill={id === 'drums' ? bt.removeDrumFill : undefined}
           />
         ))}
-        {chords.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-[11px] font-mono text-muted-foreground">
-            Add chords to the progression at the top to generate a backing track
-          </div>
-        )}
       </div>
 
       {openClip && openClipNotes && (
