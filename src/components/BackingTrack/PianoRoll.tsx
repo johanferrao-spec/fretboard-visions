@@ -366,11 +366,9 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
       </div>
 
       {/* Resize corner */}
+      {/* Resize corner — invisible but still draggable */}
       <div
         className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
-        style={{
-          background: 'linear-gradient(135deg, transparent 50%, hsl(var(--border)) 50%)',
-        }}
         onMouseDown={(e) => {
           dragRef.current = { kind: 'resize-window', offsetX: 0, offsetY: 0 };
           e.stopPropagation();
