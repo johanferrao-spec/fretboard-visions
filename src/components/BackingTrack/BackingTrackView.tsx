@@ -224,7 +224,7 @@ export default function BackingTrackView({
       </div>
 
       {/* Tracks */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="overflow-y-auto">
         {(['piano', 'bass', 'drums'] as TrackId[]).map(id => (
           <TrackLane
             key={id}
