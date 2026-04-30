@@ -447,9 +447,12 @@ export function useSampleLibrary() {
   return {
     samples,
     bassIcons,
+    instrumentIcons,
     loaded,
     active,
     setBassIcon,
+    setInstrumentIcon,
+    removeInstrumentIcon,
     addSample,
     updateSample,
     setSlotIndexedSample,
