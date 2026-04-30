@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { deleteSample, getAllSamples, putSample, type StoredSample } from '@/lib/sampleStorage';
+import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, type StoredBassIcon, type StoredSample } from '@/lib/sampleStorage';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import {
   BUILT_IN_KIT_SAMPLES,
@@ -19,6 +19,7 @@ import type { SampleResolution } from './engine/scheduler';
  *   keys           — single keys slot
  */
 export type SlotKey = `drums:${DrumPart}` | 'bass' | 'keys';
+export type BassIconKit = 'Funk' | 'Jazz' | 'Rock' | 'Latin';
 
 /** Per-sample tint within a slot — used for non-drum (bass/keys) user uploads. */
 const SAMPLE_TINTS = [
@@ -74,11 +75,16 @@ export interface SampleListEntry {
 
 export function useSampleLibrary() {
   const [samples, setSamples] = useState<StoredSample[]>([]);
+  const [bassIcons, setBassIcons] = useState<Record<BassIconKit, StoredBassIcon | undefined>>({
+    Funk: undefined, Jazz: undefined, Rock: undefined, Latin: undefined,
+  });
   // Always-current ref so callbacks never operate on a stale samples snapshot.
   // Without this, two rapid uploads can each see "[]" in their closure and the
   // second write can clobber the first when state finally flushes.
   const samplesRef = useRef<StoredSample[]>([]);
   samplesRef.current = samples;
+  const bassIconsRef = useRef(bassIcons);
+  bassIconsRef.current = bassIcons;
   // Default: pre-assign every drum part to the Rock kit so audio still plays
   // before the user touches anything. Loaded value (if any) overrides this.
   const [active, setActive] = useState<Record<string, string>>(() => {
