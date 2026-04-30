@@ -93,3 +93,26 @@ export async function deleteSample(id: string): Promise<void> {
   });
   db.close();
 }
+
+export async function putBassIcon(icon: StoredBassIcon): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(BASS_ICON_STORE, 'readwrite');
+    tx.objectStore(BASS_ICON_STORE).put(icon);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+export async function getAllBassIcons(): Promise<StoredBassIcon[]> {
+  const db = await openDb();
+  const out = await new Promise<StoredBassIcon[]>((resolve, reject) => {
+    const tx = db.transaction(BASS_ICON_STORE, 'readonly');
+    const req = tx.objectStore(BASS_ICON_STORE).getAll();
+    req.onsuccess = () => resolve(req.result as StoredBassIcon[]);
+    req.onerror = () => reject(req.error);
+  });
+  db.close();
+  return out;
+}
