@@ -68,7 +68,10 @@ export default function SongTimeline({
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragChord, setDragChord] = useState<{ id: string; offsetBeats: number } | null>(null);
   const [zHeld, setZHeld] = useState(false);
+  const [xHeld, setXHeld] = useState(false);
   const [cmdHeld, setCmdHeld] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const [resizeChord, setResizeChord] = useState<{
     id: string;
     edge: 'left' | 'right';
@@ -123,9 +126,41 @@ export default function SongTimeline({
     return Math.max(0, Math.min(totalBeats, rawBeat));
   }, [totalBeats]);
 
+  // Helpers to convert chord types between triad/seventh/dominant variants.
+  const toSeventh = useCallback((type: string): string => {
+    if (type === 'Major') return 'Major 7';
+    if (type === 'Minor') return 'Minor 7';
+    if (type === 'Diminished') return 'Half-Dim 7';
+    if (type === 'Augmented') return 'Aug 7';
+    return type; // already extended
+  }, []);
+  const toDominant7 = useCallback((_type: string): string => 'Dominant 7', []);
+  const toTriad = useCallback((type: string): string => {
+    if (type === 'Major 7' || type === 'Dominant 7' || type === 'Major 9' || type === 'Dominant 9' || type === 'Major 6' || type === 'Add9' || type === '13' || type === '11' || type === 'Maj11' || type === 'Maj13') return 'Major';
+    if (type === 'Minor 7' || type === 'Minor 9' || type === 'Minor 6' || type === 'Madd9' || type === 'Minor 11' || type === 'Minor 13' || type === 'Min/Maj 7') return 'Minor';
+    if (type === 'Half-Dim 7' || type === 'Dim 7') return 'Diminished';
+    if (type === 'Aug 7') return 'Augmented';
+    return type;
+  }, []);
+
+  // Mutate one chord by id via remove+add (preserves position/duration)
+  const mutateChordType = useCallback((id: string, mapper: (t: string) => string) => {
+    const c = chords.find(ch => ch.id === id);
+    if (!c) return;
+    const newType = mapper(c.chordType);
+    if (newType === c.chordType) return;
+    onRemoveChord(id);
+    const newId = onAddChord(c.root, newType, c.startBeat, c.duration);
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.delete(id)) next.add(newId);
+      return next;
+    });
+  }, [chords, onAddChord, onRemoveChord]);
+
   // Drag move — preserves the cursor's grab-offset within the region so the
   // region doesn't snap its start to the cursor. Hold Z to force the moved
-  // region to a full bar (4 beats) duration.
+  // region to a full bar (4 beats) duration. Hold X to convert it to dom7.
   useEffect(() => {
     if (!dragChord) return;
     const onMove = (e: MouseEvent) => {
@@ -137,28 +172,51 @@ export default function SongTimeline({
     };
     const onUp = () => {
       const id = dragChord.id;
+      if (xHeld) mutateChordType(id, toDominant7);
       setDragChord(null);
       onCommitMove(id);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [dragChord, getRawBeatFromX, onMoveChord, onCommitMove, onResizeChord, zHeld, snapGrid, totalBeats]);
+  }, [dragChord, getRawBeatFromX, onMoveChord, onCommitMove, onResizeChord, zHeld, xHeld, snapGrid, totalBeats, mutateChordType, toDominant7]);
 
-  // Track Z (whole-bar drag) and Cmd/Ctrl (delete cursor) modifiers globally
+  // Track Z (whole-bar drag), X (dom7), and Cmd/Ctrl (delete cursor) modifiers
+  // plus shortcut keys: Z extends selected chord(s) to a full bar; X converts
+  // selected chord(s) to dominant 7; A converts selected chord(s) to triads.
   useEffect(() => {
     const isTextTarget = (t: EventTarget | null) =>
       t instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName);
     const onDown = (e: KeyboardEvent) => {
       if (isTextTarget(e.target)) return;
-      if (e.key === 'z' || e.key === 'Z') setZHeld(true);
+      const k = e.key.toLowerCase();
+      if (k === 'z') {
+        setZHeld(true);
+        // Apply Z to selected when not actively dragging a chord
+        if (!dragChord && selectedIds.size > 0) {
+          selectedIds.forEach(id => onResizeChord(id, 4));
+        }
+      }
+      if (k === 'x') {
+        setXHeld(true);
+        if (!dragChord && selectedIds.size > 0) {
+          Array.from(selectedIds).forEach(id => mutateChordType(id, toDominant7));
+        }
+      }
+      if (k === 'a') {
+        if (selectedIds.size > 0) {
+          Array.from(selectedIds).forEach(id => mutateChordType(id, toTriad));
+        }
+      }
       if (e.metaKey || e.ctrlKey) setCmdHeld(true);
     };
     const onUp = (e: KeyboardEvent) => {
-      if (e.key === 'z' || e.key === 'Z') setZHeld(false);
+      const k = e.key.toLowerCase();
+      if (k === 'z') setZHeld(false);
+      if (k === 'x') setXHeld(false);
       if (!e.metaKey && !e.ctrlKey) setCmdHeld(false);
     };
-    const onBlur = () => { setZHeld(false); setCmdHeld(false); };
+    const onBlur = () => { setZHeld(false); setXHeld(false); setCmdHeld(false); };
     window.addEventListener('keydown', onDown);
     window.addEventListener('keyup', onUp);
     window.addEventListener('blur', onBlur);
@@ -167,7 +225,7 @@ export default function SongTimeline({
       window.removeEventListener('keyup', onUp);
       window.removeEventListener('blur', onBlur);
     };
-  }, []);
+  }, [dragChord, selectedIds, onResizeChord, mutateChordType, toDominant7, toTriad]);
 
   // Resize chord from either edge; resize uses the range handler so dragged
   // edges consume/shrink neighbouring chord regions while the mouse moves.
@@ -194,6 +252,36 @@ export default function SongTimeline({
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [resizeChord, onResizeChordRange, snapGrid, totalBeats, onTrimOverlaps]);
+
+  // Marquee selection — touch-select any chord whose box intersects the
+  // marquee rect. Active only while the user is rubber-banding on the empty
+  // grid background.
+  useEffect(() => {
+    if (!marquee) return;
+    const onMove = (ev: MouseEvent) => {
+      const rect = gridRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const x1 = ev.clientX - rect.left;
+      const y1 = ev.clientY - rect.top;
+      setMarquee(m => m ? { ...m, x1, y1 } : m);
+      const minX = Math.min(marquee.x0, x1);
+      const maxX = Math.max(marquee.x0, x1);
+      const beatsPerPx = totalBeats / rect.width;
+      const beatMin = minX * beatsPerPx;
+      const beatMax = maxX * beatsPerPx;
+      const hits = new Set<string>();
+      chords.forEach(c => {
+        const cs = c.startBeat;
+        const ce = c.startBeat + c.duration;
+        if (ce > beatMin && cs < beatMax) hits.add(c.id);
+      });
+      setSelectedIds(hits);
+    };
+    const onUp = () => setMarquee(null);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [marquee, chords, totalBeats]);
 
   // Playhead drag
   useEffect(() => {
@@ -255,9 +343,9 @@ export default function SongTimeline({
         return (beat < cEnd && beat + dur > c.startBeat);
       });
       existingOverlaps.forEach(c => onRemoveChord(c.id));
-      // V chord defaults to dominant 7
-      const chordType = degree === 4 ? 'Dominant 7' : dc.type;
-      onAddChord(dc.root, chordType, beat, dur);
+      // Default to 7th-quality chord; X drag overrides to dominant 7
+      const baseType = xHeld ? 'Dominant 7' : toSeventh(dc.type);
+      onAddChord(dc.root, baseType, beat, dur);
       return;
     }
 
@@ -271,9 +359,10 @@ export default function SongTimeline({
         return (beat < cEnd && beat + dur > c.startBeat);
       });
       existingOverlaps.forEach(c => onRemoveChord(c.id));
-      onAddChord(root, chordType, beat, dur);
+      const finalType = xHeld ? 'Dominant 7' : toSeventh(chordType);
+      onAddChord(root, finalType, beat, dur);
     } catch {}
-  }, [getBeatFromX, getRawBeatFromX, onAddChord, chords, diatonicChords, onRemoveChord, onSetChordBass]);
+  }, [getBeatFromX, getRawBeatFromX, onAddChord, chords, diatonicChords, onRemoveChord, onSetChordBass, xHeld, toSeventh]);
 
   const handleGridDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -300,7 +389,7 @@ export default function SongTimeline({
       return (beat < cEnd && beat + dur > c.startBeat);
     });
     existingOverlaps.forEach(c => onRemoveChord(c.id));
-    onAddChord('C', 'Major', beat, dur);
+    onAddChord('C', 'Major 7', beat, dur);
   }, [getBeatFromX, onAddChord, chords, onRemoveChord]);
 
   // Click a chord block to seek playhead there and pause
@@ -317,14 +406,14 @@ export default function SongTimeline({
     e.stopPropagation();
     const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
     if (degree < 0) return;
-    const gridRect = gridRef.current?.getBoundingClientRect();
-    if (!gridRect) return;
     const blockRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setVariationPopup({
       chordId: chord.id,
       degree,
-      x: blockRect.left + blockRect.width / 2,
-      y: blockRect.top,
+      // Anchor at the chord's right edge, vertically centred — the panel
+      // will flip/clamp to stay on screen.
+      x: blockRect.right,
+      y: blockRect.top - 8,
     });
   }, [timelineKey, keyMode]);
 
@@ -728,7 +817,15 @@ export default function SongTimeline({
             onDragOver={handleGridDragOver}
             onDragLeave={handleGridDragLeave}
             onDoubleClick={handleGridDoubleClick}
-            onClick={() => setVariationPopup(null)}
+            onClick={() => { setVariationPopup(null); setSelectedIds(new Set()); }}
+            onMouseDown={(e) => {
+              // Start marquee only when clicking the empty background (not a chord)
+              if (e.button !== 0) return;
+              if ((e.target as HTMLElement) !== e.currentTarget) return;
+              const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+              setMarquee({ x0: e.clientX - rect.left, y0: e.clientY - rect.top, x1: e.clientX - rect.left, y1: e.clientY - rect.top });
+              setSelectedIds(new Set());
+            }}
           >
           {/* Grid lines — beat and measure lines */}
           {Array.from({ length: totalBeats }, (_, i) => {
@@ -821,6 +918,7 @@ export default function SongTimeline({
             const chordLabel = `${chord.root}${chord.chordType === 'Major' ? '' : chord.chordType === 'Minor' ? 'm' : ` ${chord.chordType}`}`;
             const bassLabel = chord.bassNote ? `/${chord.bassNote}` : '';
 
+            const isSelected = selectedIds.has(chord.id);
             return (
               <div
                 key={chord.id}
@@ -832,11 +930,15 @@ export default function SongTimeline({
                   backgroundColor: borrowed
                     ? 'hsl(50, 90%, 55%)'
                     : isDiatonic ? `hsl(${color})` : `hsl(${color} / 0.3)`,
-                  border: borrowed
+                  border: isSelected
+                    ? '2px solid hsl(var(--primary))'
+                    : borrowed
                     ? '1px solid hsl(50, 90%, 65%)'
                     : isDiatonic ? 'none' : '1px dashed hsl(var(--border))',
                   minWidth: 20,
-                  ...(borrowed ? {
+                  ...(isSelected ? {
+                    boxShadow: '0 0 0 2px hsl(var(--primary) / 0.4), 0 0 12px hsl(var(--primary) / 0.5)',
+                  } : borrowed ? {
                     boxShadow: '0 0 8px hsl(50, 90%, 55%, 0.6), 0 0 16px hsl(50, 90%, 55%, 0.3)',
                   } : {}),
                 }}
@@ -848,6 +950,15 @@ export default function SongTimeline({
                     onRemoveChord(chord.id);
                     return;
                   }
+                  // Update selection: shift = additive, plain = single-select
+                  setSelectedIds(prev => {
+                    if (e.shiftKey) {
+                      const next = new Set(prev);
+                      next.has(chord.id) ? next.delete(chord.id) : next.add(chord.id);
+                      return next;
+                    }
+                    return new Set([chord.id]);
+                  });
                   const rect = e.currentTarget.getBoundingClientRect();
                   if (e.clientX < rect.left + 12) {
                     setResizeChord({ id: chord.id, edge: 'left', origStart: chord.startBeat, origDuration: chord.duration });
@@ -895,12 +1006,29 @@ export default function SongTimeline({
             );
           })}
 
+          {/* Marquee selection rectangle */}
+          {marquee && (
+            <div
+              className="absolute pointer-events-none z-40 rounded-sm"
+              style={{
+                left: Math.min(marquee.x0, marquee.x1),
+                top: Math.min(marquee.y0, marquee.y1),
+                width: Math.abs(marquee.x1 - marquee.x0),
+                height: Math.abs(marquee.y1 - marquee.y0),
+                backgroundColor: 'hsl(var(--primary) / 0.15)',
+                border: '1px dashed hsl(var(--primary))',
+              }}
+            />
+          )}
+
           {/* Variations panel — docked to the right edge of the viewport so
               long lists are always fully visible. Click outside to dismiss. */}
           {variationPopup && (
             <VariationsPanel
               degreeLabel={currentNumerals[variationPopup.degree]}
               variations={variations}
+              anchorX={variationPopup.x}
+              anchorY={variationPopup.y}
               onSelect={handleSelectVariation}
               onSetBass={(n) => { onSetChordBass?.(variationPopup.chordId, n); setVariationPopup(null); }}
               onClearBass={() => { onSetChordBass?.(variationPopup.chordId, undefined); setVariationPopup(null); }}
@@ -931,16 +1059,26 @@ export default function SongTimeline({
  * panel (or press Escape) to dismiss.
  */
 function VariationsPanel({
-  degreeLabel, variations, onSelect, onSetBass, onClearBass, onClose,
+  degreeLabel, variations, anchorX, anchorY, onSelect, onSetBass, onClearBass, onClose,
 }: {
   degreeLabel: string;
   variations: ChordVariation[];
+  anchorX: number;
+  anchorY: number;
   onSelect: (v: ChordVariation) => void;
   onSetBass: (n: NoteName) => void;
   onClearBass: () => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const PANEL_W = 256;
+  const PANEL_H_MAX = Math.round(window.innerHeight * 0.6);
+  // Clamp into viewport so it stays visible. Prefer anchor to the RIGHT of the
+  // chord cell; if it would overflow, flip to the left side.
+  let left = anchorX + 8;
+  if (left + PANEL_W > window.innerWidth - 8) left = Math.max(8, anchorX - PANEL_W - 8);
+  let top = anchorY;
+  if (top + PANEL_H_MAX > window.innerHeight - 8) top = Math.max(8, window.innerHeight - PANEL_H_MAX - 8);
   useEffect(() => {
     const onDocMouseDown = (ev: MouseEvent) => {
       if (!ref.current) return;
@@ -963,7 +1101,8 @@ function VariationsPanel({
   return (
     <div
       ref={ref}
-      className="fixed z-[9999] right-3 top-20 w-64 max-h-[70vh] flex flex-col bg-card border border-border rounded-lg shadow-2xl"
+      className="fixed z-[9999] w-64 max-h-[60vh] flex flex-col bg-card border border-border rounded-lg shadow-2xl animate-fade-in"
+      style={{ left, top }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
