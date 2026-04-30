@@ -918,6 +918,7 @@ export default function SongTimeline({
             const chordLabel = `${chord.root}${chord.chordType === 'Major' ? '' : chord.chordType === 'Minor' ? 'm' : ` ${chord.chordType}`}`;
             const bassLabel = chord.bassNote ? `/${chord.bassNote}` : '';
 
+            const isSelected = selectedIds.has(chord.id);
             return (
               <div
                 key={chord.id}
@@ -929,11 +930,15 @@ export default function SongTimeline({
                   backgroundColor: borrowed
                     ? 'hsl(50, 90%, 55%)'
                     : isDiatonic ? `hsl(${color})` : `hsl(${color} / 0.3)`,
-                  border: borrowed
+                  border: isSelected
+                    ? '2px solid hsl(var(--primary))'
+                    : borrowed
                     ? '1px solid hsl(50, 90%, 65%)'
                     : isDiatonic ? 'none' : '1px dashed hsl(var(--border))',
                   minWidth: 20,
-                  ...(borrowed ? {
+                  ...(isSelected ? {
+                    boxShadow: '0 0 0 2px hsl(var(--primary) / 0.4), 0 0 12px hsl(var(--primary) / 0.5)',
+                  } : borrowed ? {
                     boxShadow: '0 0 8px hsl(50, 90%, 55%, 0.6), 0 0 16px hsl(50, 90%, 55%, 0.3)',
                   } : {}),
                 }}
@@ -945,6 +950,15 @@ export default function SongTimeline({
                     onRemoveChord(chord.id);
                     return;
                   }
+                  // Update selection: shift = additive, plain = single-select
+                  setSelectedIds(prev => {
+                    if (e.shiftKey) {
+                      const next = new Set(prev);
+                      next.has(chord.id) ? next.delete(chord.id) : next.add(chord.id);
+                      return next;
+                    }
+                    return new Set([chord.id]);
+                  });
                   const rect = e.currentTarget.getBoundingClientRect();
                   if (e.clientX < rect.left + 12) {
                     setResizeChord({ id: chord.id, edge: 'left', origStart: chord.startBeat, origDuration: chord.duration });
