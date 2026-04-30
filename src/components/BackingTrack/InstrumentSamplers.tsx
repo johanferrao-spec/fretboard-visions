@@ -53,6 +53,11 @@ const PART_LABEL: Record<DrumPart, string> = {
 
 const DRUM_KITS: DrumKitGenre[] = ['Funk', 'Jazz', 'Rock', 'Latin'];
 
+/** Mirror of the slot indices used by BassSlotGrid (Rock,Jazz,Funk,Latin). */
+const BASS_KIT_INDEX: Record<DrumKitGenre, number> = {
+  Rock: 0, Jazz: 1, Funk: 2, Latin: 3,
+};
+
 /** Map a song genre to its closest drum-kit genre (Pop falls back to Rock). */
 function songGenreToKit(g: Genre): DrumKitGenre {
   return (g === 'Pop' ? 'Rock' : g) as DrumKitGenre;
