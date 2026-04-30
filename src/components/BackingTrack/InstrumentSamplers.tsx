@@ -73,8 +73,9 @@ const KEYS_OPTIONS: { id: KeysVariant; label: string }[] = [
   { id: 'sampler', label: 'Sampler' },
 ];
 const KEYS_VARIANT_KEY = 'mf-keys-variant';
+const BASS_KIT_CHOICE_KEY = 'mf-bass-kit-choice';
 
-export default function InstrumentSamplers({ volume, genre }: Props) {
+export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
   const lib = useSampleLibrary();
   const [selection, setSelection] = useState<Selection>({ instrument: 'drums', part: 'snare' });
   const [dragOver, setDragOver] = useState<SlotKey | null>(null);
@@ -91,6 +92,18 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   useEffect(() => {
     try { localStorage.setItem(KEYS_VARIANT_KEY, keysVariant); } catch { /* ignore unavailable localStorage */ }
   }, [keysVariant]);
+
+  /** Bass kit choice — user picks any kit (Funk in Jazz groove, etc).
+   *  Independent of song genre. Persisted per-browser. */
+  const [bassKitChoice, setBassKitChoice] = useState<DrumKitGenre>(() => {
+    try {
+      const v = localStorage.getItem(BASS_KIT_CHOICE_KEY) as DrumKitGenre | null;
+      return v && (['Funk', 'Jazz', 'Rock', 'Latin'] as DrumKitGenre[]).includes(v) ? v : 'Rock';
+    } catch { return 'Rock'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(BASS_KIT_CHOICE_KEY, bassKitChoice); } catch { /* ignore */ }
+  }, [bassKitChoice]);
 
   /** Which kit the overview panel is currently viewing. Defaults to the kit
    *  of the active drum-part selection (or Rock). */
@@ -156,7 +169,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     if (dropSlot === 'bass') {
       // Drop onto the main bass icon → assign to the slot for the current
       // song's bass kit, with auto-pitch detection. Mirrors BassSlotGrid.
-      const bassKitForDrop = songGenreToKit(genre);
+      const bassKitForDrop = bassKitChoice;
       const slotIndex = BASS_KIT_INDEX[bassKitForDrop];
       if (image) await lib.setBassIcon(bassKitForDrop, image, image.type || 'image/png');
       if (audio) {
@@ -334,7 +347,10 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     style: { cursor: 'pointer' as const },
   });
 
-  const bassKit = (bassActive?.userSample?.kit as DrumKitGenre | undefined) ?? songGenreToKit(genre);
+  // Bass display kit: prefer the active sample's kit, then the user's
+  // explicit choice, then fall back to the song genre. This lets the user
+  // pick e.g. Funk bass while playing a Jazz groove.
+  const bassKit = (bassActive?.userSample?.kit as DrumKitGenre | undefined) ?? bassKitChoice;
 
   return (
     <div className="flex h-full bg-card border-t border-border overflow-hidden">
@@ -695,6 +711,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
             onDragOver={(e) => { e.preventDefault(); setDragOver('bass'); }}
             onDragLeave={() => setDragOver(null)}
             onDrop={(e) => handleDrop(e, 'bass')}
+            onPickKit={setBassKitChoice}
           />
         </div>
 
@@ -781,7 +798,7 @@ function getBassKitAtPoint(x: number, y: number): BassIconKit | null {
 
 function BassMainIcon({
   lib, bassKit, bassActive, dragOver, selected,
-  onSelect, onDragOver, onDragLeave, onDrop,
+  onSelect, onDragOver, onDragLeave, onDrop, onPickKit,
 }: {
   lib: ReturnType<typeof useSampleLibrary>;
   bassKit: DrumKitGenre;
@@ -792,6 +809,7 @@ function BassMainIcon({
   onDragOver: (e: React.DragEvent) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent) => void;
+  onPickKit: (kit: DrumKitGenre) => void;
 }) {
   const [chipDragOver, setChipDragOver] = useState<BassIconKit | null>(null);
   // Find the bass sample assigned to the current kit (preferred) and the
@@ -862,9 +880,12 @@ function BassMainIcon({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                // Promote a sample for this kit as the active 'bass' selection.
+                // Always remember the user's chosen kit (independent of song genre).
+                onPickKit(k as DrumKitGenre);
+                // If a sample exists for that kit, also promote it as the active bass.
                 const sample = lib.samples.find(s => s.slot === 'bass' && s.kit === k);
                 if (sample) lib.selectSample('bass', sample.id);
+                else lib.selectSample('bass', null);
               }}
               className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border transition-colors ${
                 isOn
