@@ -248,11 +248,6 @@ export default function BackingTrackView({
             onRemoveDrumFill={id === 'drums' ? bt.removeDrumFill : undefined}
           />
         ))}
-        {chords.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-[11px] font-mono text-muted-foreground">
-            Add chords to the progression at the top to generate a backing track
-          </div>
-        )}
       </div>
 
       {openClip && openClipNotes && (
