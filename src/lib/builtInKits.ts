@@ -59,7 +59,7 @@ export function colorForKitPart(kit: DrumKitGenre, part: DrumPart): string {
 }
 
 /** Drum parts available on every kit. */
-export const KIT_PARTS: DrumPart[] = ['kick', 'snare', 'hihat_closed', 'hihat_pedal', 'hihat_open', 'ride', 'tom1', 'tom2', 'crash'];
+export const KIT_PARTS: DrumPart[] = ['kick', 'snare', 'hihat_closed', 'hihat_open', 'ride', 'tom1', 'tom2', 'crash'];
 
 /** Build the full set of built-in samples for all kits. */
 export const BUILT_IN_KIT_SAMPLES: BuiltInKitSample[] = (Object.keys(KIT_COLORS) as DrumKitGenre[])

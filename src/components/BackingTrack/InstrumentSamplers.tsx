@@ -513,7 +513,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
             </div>
             {/* Part rows — ordered: kick, snare, toms, then cymbals */}
             <div className="px-2 py-2 space-y-1">
-              {(['kick','snare','tom1','tom2','hihat_closed','hihat_pedal','hihat_open','ride','crash'] as DrumPart[]).map(part => {
+              {(['kick','snare','tom1','tom2','hihat_closed','hihat_open','ride','crash'] as DrumPart[]).map(part => {
                 const slotKey = `drums:${part}` as SlotKey;
                 const userSampleForKit = lib.samples.find(s => s.slot === slotKey && s.kit === viewKit);
                 const builtInId = `kit:${viewKit.toLowerCase()}:${part}`;
@@ -617,7 +617,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
           <div className="flex flex-col gap-3 w-full max-h-[260px]">
             {/* CYMBALS ROW (top) — uniform square frames */}
             <div className="flex items-end justify-around gap-2">
-             {(['hihat_closed', 'hihat_pedal', 'hihat_open', 'crash', 'ride'] as DrumPart[]).map(part => {
+             {(['hihat_closed', 'hihat_open', 'crash', 'ride'] as DrumPart[]).map(part => {
                 // Approx real-world cymbal sizes (inches): hi-hat 14", crash 16-18", ride 20-22"
                 const CYMBAL_DIM: Record<string, number> = {
                   hihat_closed: 60,
