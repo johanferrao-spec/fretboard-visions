@@ -33,7 +33,7 @@ const Index = () => {
   const [customTuningName, setCustomTuningName] = useState('');
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
   const [volume, setVolume] = useState(0.7);
-  const [samplerHeight, setSamplerHeight] = useState(220);
+  const [samplerHeight, setSamplerHeight] = useState(600);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomePulse, setMetronomePulse] = useState(0);
