@@ -642,24 +642,36 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                 const h = part === 'kick' ? 80 : part === 'tom2' ? 80 : 60;
                 return (
                   <div key={part} className="flex flex-col items-center gap-1" {...partProps(part)}>
-                    <svg viewBox={`0 0 ${w} ${h+12}`} width={w} height={h+12}>
-                      {part === 'kick' ? (
-                        <>
-                          <circle cx={w/2} cy={h/2 + 4} r={h/2} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                          <circle cx={w/2} cy={h/2 + 4} r={h/2 - 8} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.5} />
-                        </>
-                      ) : (
-                        <>
-                          {/* Cylindrical drum (front view) */}
-                          <rect x={4} y={10} width={w-8} height={h-10} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                          <ellipse cx={w/2} cy={10} rx={(w-8)/2} ry={8} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                          <ellipse cx={w/2} cy={h} rx={(w-8)/2} ry={6} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                          {[0,1,2,3,4].map(i => (
-                            <rect key={i} x={10 + i*((w-20)/4) - 1.5} y={14} width="3" height={h - 18} fill={SKIN_FILL} opacity={0.85} />
-                          ))}
-                        </>
-                      )}
-                    </svg>
+                    {iconUrls[`drums:${part}|${viewKit}`] ? (
+                      <img
+                        src={iconUrls[`drums:${part}|${viewKit}`]}
+                        alt={`${viewKit} ${PART_LABEL[part]}`}
+                        width={w}
+                        height={h+12}
+                        className={`object-contain rounded ${isPartSelected(part) ? 'ring-2 ring-primary' : ''} ${isPartDragOver(part) ? 'ring-2 ring-[hsl(var(--beginner-yellow))]' : ''}`}
+                        style={{ width: w, height: h+12 }}
+                        draggable={false}
+                      />
+                    ) : (
+                      <svg viewBox={`0 0 ${w} ${h+12}`} width={w} height={h+12}>
+                        {part === 'kick' ? (
+                          <>
+                            <circle cx={w/2} cy={h/2 + 4} r={h/2} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                            <circle cx={w/2} cy={h/2 + 4} r={h/2 - 8} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.5} />
+                          </>
+                        ) : (
+                          <>
+                            {/* Cylindrical drum (front view) */}
+                            <rect x={4} y={10} width={w-8} height={h-10} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                            <ellipse cx={w/2} cy={10} rx={(w-8)/2} ry={8} fill={SKIN_FILL} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                            <ellipse cx={w/2} cy={h} rx={(w-8)/2} ry={6} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                            {[0,1,2,3,4].map(i => (
+                              <rect key={i} x={10 + i*((w-20)/4) - 1.5} y={14} width="3" height={h - 18} fill={SKIN_FILL} opacity={0.85} />
+                            ))}
+                          </>
+                        )}
+                      </svg>
+                    )}
                     <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">
                       {PART_LABEL[part]}
                     </div>
