@@ -240,12 +240,12 @@ export default function BackingTrackView({
       </div>
 
       {/* Keyboard shortcuts key — sits in the empty space below the lanes */}
-      <div className="px-3 pt-3 pb-2">
-        <div className="inline-block rounded-md border border-border bg-card/40 px-3 py-2">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
+      <div className="px-2 pt-1.5 pb-1 shrink-0">
+        <div className="inline-block rounded border border-border bg-card/40 px-2 py-1">
+          <div className="text-[7px] font-mono uppercase tracking-wider text-muted-foreground mb-0.5">
             Keyboard Shortcuts
           </div>
-          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px] font-mono">
+          <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0 text-[8px] font-mono leading-tight">
             {[
               ['Z', 'Extend selected chord(s) to next chord'],
               ['X', 'Convert selected chord(s) to dominant 7'],
@@ -258,7 +258,7 @@ export default function BackingTrackView({
               ['Enter', 'Confirm name / save'],
             ].map(([k, desc]) => (
               <div key={k} className="contents">
-                <kbd className="justify-self-start rounded border border-border bg-muted/60 px-1.5 py-0.5 text-[10px] text-foreground">
+                <kbd className="justify-self-start rounded border border-border bg-muted/60 px-1 py-0 text-[7px] text-foreground">
                   {k}
                 </kbd>
                 <span className="text-muted-foreground self-center">{desc}</span>
