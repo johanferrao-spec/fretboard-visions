@@ -168,7 +168,17 @@ export default function SongTimeline({
       const desiredStart = rawBeat - dragChord.offsetBeats;
       const snapped = Math.max(0, Math.min(totalBeats - snapGrid, Math.round(desiredStart / snapGrid) * snapGrid));
       onMoveChord(dragChord.id, snapped);
-      if (zHeld) onResizeChord(dragChord.id, 4);
+      if (zHeld) {
+        // Extend the dragged chord up to the next chord's start (or end of timeline)
+        const c = chords.find(x => x.id === dragChord.id);
+        if (c) {
+          const nextStart = chords
+            .filter(x => x.id !== dragChord.id && x.startBeat > c.startBeat)
+            .reduce<number | null>((min, x) => (min === null || x.startBeat < min) ? x.startBeat : min, null);
+          const target = nextStart ?? totalBeats;
+          onResizeChord(dragChord.id, Math.max(snapGrid, target - c.startBeat));
+        }
+      }
     };
     const onUp = () => {
       const id = dragChord.id;
