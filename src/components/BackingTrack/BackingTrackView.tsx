@@ -165,6 +165,36 @@ export default function BackingTrackView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bt.drumFills]);
 
+  /* ── Continuous regeneration: every time the playhead wraps back to the
+        top of the loop, regenerate fresh midi for piano/bass/drums so each
+        cycle is uniquely improvised. The new notes won't take effect until
+        the *next* wrap (since the schedule for the current cycle is already
+        committed) — so we regenerate slightly *before* the wrap to give the
+        engine room to re-schedule. */
+  const lastBeatRef = useRef(0);
+  useEffect(() => {
+    if (!isPlaying || chords.length === 0) return;
+    const total = Math.max(4, measures * 4);
+    // Detect wrap-around: previous beat near the end, current beat near zero.
+    const prev = lastBeatRef.current;
+    const wrapped = prev > total - 0.5 && currentBeat < 0.5;
+    lastBeatRef.current = currentBeat;
+    if (wrapped) {
+      // Regenerate quickly off the render path; force=true to overwrite even
+      // manually-edited tracks would be too aggressive — only refresh the
+      // non-edited ones (default regenerateAll behaviour).
+      requestAnimationFrame(() => {
+        latestBtRef.current.regenerateAll(
+          latestTimelineRef.current.chords,
+          latestTimelineRef.current.measures,
+          latestTimelineRef.current.genre,
+          false,
+          latestTimelineRef.current.groove,
+        );
+      });
+    }
+  }, [currentBeat, isPlaying, chords.length, measures]);
+
   // Register save/load with parent (so they appear in the chord timeline toolbar)
   useEffect(() => {
     registerHandlers?.(registeredApi);
