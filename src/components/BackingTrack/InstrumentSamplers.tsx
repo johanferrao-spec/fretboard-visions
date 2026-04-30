@@ -875,12 +875,19 @@ function BassMainIcon({
         e.preventDefault();
         e.stopPropagation();
         const files = Array.from(e.dataTransfer.files ?? []);
-        const image = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
+        const rawImage = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
         const audio = files.find(f => /^audio\//.test(f.type) || /\.(wav|mp3|ogg|m4a|aiff?|flac)$/i.test(f.name));
+        // Auto-trim transparent / uniform-background borders so the artwork
+        // hugs the frame regardless of the source aspect ratio.
+        let image: { blob: Blob; mime: string } | null = null;
+        if (rawImage) {
+          const trimmed = await autoTrimImageBlob(rawImage);
+          image = trimmed;
+        }
         // Persist the icon to its own store first (survives reload even
         // when no audio sample exists for this kit yet).
         if (image) {
-          await lib.setBassIcon(kitTarget, image, image.type || 'image/png');
+          await lib.setBassIcon(kitTarget, image.blob, image.mime);
         }
         if (audio) {
           // Reuse the parent's slot-index map by promoting this kit, then
@@ -890,7 +897,7 @@ function BassMainIcon({
           if (idx >= 0) {
             await lib.setSlotIndexedSample('bass', idx, audio, {
               kit: kitTarget as DrumKitGenre,
-              ...(image ? { imageBlob: image, imageMime: image.type || 'image/png' } : {}),
+              ...(image ? { imageBlob: image.blob, imageMime: image.mime } : {}),
             });
           }
         } else if (image) {
@@ -898,7 +905,7 @@ function BassMainIcon({
           // sample for this kit so the per-sample artwork stays in sync.
           const existing = lib.samples.find(s => s.slot === 'bass' && s.kit === kitTarget);
           if (existing) {
-            await lib.updateSample(existing.id, { imageBlob: image, imageMime: image.type || 'image/png' });
+            await lib.updateSample(existing.id, { imageBlob: image.blob, imageMime: image.mime });
           }
         }
         // Promote the chip's kit so future bass playback uses this sample.
