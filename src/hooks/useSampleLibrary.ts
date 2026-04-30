@@ -283,6 +283,20 @@ export function useSampleLibrary() {
       writeActive(next);
       return next;
     });
+    // Mirror to Cloud Storage. For bass: kit-tagged path; otherwise generic.
+    if (slot === 'bass' && extras?.kit) {
+      cloudUploadBassSample(extras.kit, file, file.type || 'audio/wav');
+    } else {
+      cloudUploadInstrumentSample(slot, extras?.kit ?? `slot${slotIndex}`, file, file.type || 'audio/wav');
+    }
+    if (extras?.imageBlob) {
+      const variant = extras.kit ?? `slot${slotIndex}`;
+      if (slot === 'bass' && extras.kit) {
+        cloudUploadBassIcon(extras.kit, extras.imageBlob, extras.imageMime || 'image/png');
+      } else {
+        cloudUploadInstrumentIcon(slot, variant, extras.imageBlob, extras.imageMime || 'image/png');
+      }
+    }
     return id;
   }, []);
 
