@@ -45,8 +45,8 @@ function playJazzKitSample(inst: EngineInstruments, pitch: number, t: number, ga
       const gainNode = new Tone.Gain(gain).connect(inst.master);
       src.connect(gainNode);
       src.onended = () => {
-        try { src.dispose(); } catch {}
-        try { gainNode.dispose(); } catch {}
+        try { src.dispose(); } catch { /* ignore disposal races */ }
+        try { gainNode.dispose(); } catch { /* ignore disposal races */ }
       };
       src.start(t);
       return true;
