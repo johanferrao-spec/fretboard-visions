@@ -331,7 +331,7 @@ export default function SongTimeline({
       existingOverlaps.forEach(c => onRemoveChord(c.id));
       onAddChord(root, chordType, beat, dur);
     } catch {}
-  }, [getBeatFromX, getRawBeatFromX, onAddChord, chords, diatonicChords, onRemoveChord, onSetChordBass]);
+  }, [getBeatFromX, getRawBeatFromX, onAddChord, chords, diatonicChords, onRemoveChord, onSetChordBass, xHeld, toSeventh]);
 
   const handleGridDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
