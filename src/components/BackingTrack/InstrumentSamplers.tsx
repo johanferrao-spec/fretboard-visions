@@ -99,6 +99,22 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   /** Pending file dropped on a drum slot — awaiting kit choice from the dialog. */
   const [pendingDrop, setPendingDrop] = useState<{ slot: SlotKey; file: File } | null>(null);
 
+  /** Track object-URLs for every loaded instrument icon. Recreated whenever
+   *  the underlying blob (or its `updatedAt` stamp) changes. */
+  const iconUrls = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const [key, icon] of Object.entries(lib.instrumentIcons)) {
+      out[key] = URL.createObjectURL(icon.blob);
+    }
+    return out;
+    // We deliberately key on the updatedAt timestamps so we recreate URLs
+    // ONLY when an icon actually changes (avoids leaking blobs on every render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Object.entries(lib.instrumentIcons).map(([k, v]) => `${k}:${v.updatedAt}`).join('|')]);
+  useEffect(() => () => {
+    Object.values(iconUrls).forEach(u => URL.revokeObjectURL(u));
+  }, [iconUrls]);
+
   const slot = selectionToSlot(selection);
   const slotSamples = lib.samplesForSlot(slot);
   const activeEntry = lib.activeEntryFor(slot);
