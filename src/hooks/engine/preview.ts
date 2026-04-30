@@ -94,7 +94,7 @@ export function previewTrackNote(
 
   if (trackId === 'bass') {
     const bassKit = genre === 'Pop' ? 'Rock' : genre;
-    const res = resolveUserSample?.(`bass:${bassKit}`, n.pitch) ?? resolveUserSample?.('bass', n.pitch);
+    const res = resolveUserSample?.('bass', n.pitch) ?? resolveUserSample?.(`bass:${bassKit}`, n.pitch);
     if (res?.kind === 'user') {
       const basePitch = typeof res.sample.pitch === 'number' ? res.sample.pitch : 40;
       const rate = Math.pow(2, (n.pitch - basePitch) / 12);
