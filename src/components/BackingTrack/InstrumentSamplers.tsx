@@ -600,21 +600,33 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
                 const w = 78, h = 52;
                 return (
                   <div key={part} className="flex flex-col items-center gap-1" {...partProps(part)}>
-                    <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h}>
-                      {/* Stand */}
-                      <line x1={w/2} y1={h*0.55} x2={w/2} y2={h-2} stroke={HARDWARE} strokeWidth="2" />
-                      {/* Cymbal */}
-                      {part === 'hihat_pedal' ? (
-                        <>
-                          {/* Pedal hat — small foot pedal art */}
-                          <ellipse cx={w/2} cy={h*0.4} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                          <ellipse cx={w/2} cy={h*0.5} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} opacity="0.85" />
-                          <rect x={w*0.2} y={h-8} width={w*0.6} height={6} rx={1} fill={HARDWARE_DARK} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.6} />
-                        </>
-                      ) : (
-                        <ellipse cx={w/2} cy={h*0.45} rx={w*0.45} ry={part === 'crash' || part === 'ride' ? 12 : 8} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
-                      )}
-                    </svg>
+                    {iconUrls[`drums:${part}|${viewKit}`] ? (
+                      <img
+                        src={iconUrls[`drums:${part}|${viewKit}`]}
+                        alt={`${viewKit} ${PART_LABEL[part]}`}
+                        width={w}
+                        height={h}
+                        className={`object-contain rounded ${isPartSelected(part) ? 'ring-2 ring-primary' : ''} ${isPartDragOver(part) ? 'ring-2 ring-[hsl(var(--beginner-yellow))]' : ''}`}
+                        style={{ width: w, height: h }}
+                        draggable={false}
+                      />
+                    ) : (
+                      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h}>
+                        {/* Stand */}
+                        <line x1={w/2} y1={h*0.55} x2={w/2} y2={h-2} stroke={HARDWARE} strokeWidth="2" />
+                        {/* Cymbal */}
+                        {part === 'hihat_pedal' ? (
+                          <>
+                            {/* Pedal hat — small foot pedal art */}
+                            <ellipse cx={w/2} cy={h*0.4} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                            <ellipse cx={w/2} cy={h*0.5} rx={w*0.4} ry={5} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} opacity="0.85" />
+                            <rect x={w*0.2} y={h-8} width={w*0.6} height={6} rx={1} fill={HARDWARE_DARK} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)*0.6} />
+                          </>
+                        ) : (
+                          <ellipse cx={w/2} cy={h*0.45} rx={w*0.45} ry={part === 'crash' || part === 'ride' ? 12 : 8} fill={partFill(part)} stroke={partStroke(part)} strokeWidth={partStrokeWidth(part)} />
+                        )}
+                      </svg>
+                    )}
                     <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">
                       {PART_LABEL[part]}
                     </div>
