@@ -305,12 +305,19 @@ export function useSampleLibrary() {
     // Bass (with optional kit filter): "bass" or "bass:Rock" / "bass:Jazz" / etc.
     if (slot === 'bass' || slot.startsWith('bass:')) {
       const requestedKit = slot.startsWith('bass:') ? slot.slice('bass:'.length) : null;
-      let bassSamples = samples.filter(s => s.slot === 'bass' && typeof s.pitch === 'number');
+      // Snap a stored pitch into the bass register E1..E3 (28..52) so that
+      // detector sub-harmonic mistakes don't cause octave-up playback.
+      const snap = (p: number) => {
+        let q = p;
+        while (q < 28) q += 12;
+        while (q > 52) q -= 12;
+        return q;
+      };
+      let bassSamples = samples
+        .filter(s => s.slot === 'bass' && typeof s.pitch === 'number')
+        .map(s => ({ ...s, pitch: snap(s.pitch as number) }));
       if (requestedKit) {
         const kitMatch = bassSamples.filter(s => s.kit === requestedKit);
-        // If the user has filled the requested kit, use it. Otherwise fall
-        // back to ANY bass sample (better than synth) — but only when there
-        // is at least one bass sample assigned anywhere.
         if (kitMatch.length > 0) bassSamples = kitMatch;
       }
       if (bassSamples.length === 0) return null;
