@@ -864,14 +864,44 @@ function BassMainIcon({
       onDragOverCapture={(e) => setChipDragOver(getBassKitAtPoint(e.clientX, e.clientY))}
       onDragLeave={onDragLeave}
       onDrop={async (e) => {
+        // If the drop landed on a kit chip, persist the upload under THAT
+        // kit (image -> bass_icons + sample.imageBlob, audio -> new sample
+        // tagged with the chip's kit). Otherwise defer to the parent
+        // handleDrop which uses the currently-active bassKitChoice.
         const kitTarget = getBassKitAtPoint(e.clientX, e.clientY);
+        setChipDragOver(null);
         if (!kitTarget) { onDrop(e); return; }
         e.preventDefault();
         e.stopPropagation();
-        setChipDragOver(null);
         const files = Array.from(e.dataTransfer.files ?? []);
         const image = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
-        if (image) await lib.setBassIcon(kitTarget, image, image.type || 'image/png');
+        const audio = files.find(f => /^audio\//.test(f.type) || /\.(wav|mp3|ogg|m4a|aiff?|flac)$/i.test(f.name));
+        // Persist the icon to its own store first (survives reload even
+        // when no audio sample exists for this kit yet).
+        if (image) {
+          await lib.setBassIcon(kitTarget, image, image.type || 'image/png');
+        }
+        if (audio) {
+          // Reuse the parent's slot-index map by promoting this kit, then
+          // write a new sample tagged with the chip's kit. Pitch detection
+          // is handled here mirroring the parent path.
+          const idx = ['Rock','Jazz','Funk','Latin','Pop'].indexOf(kitTarget);
+          if (idx >= 0) {
+            await lib.setSlotIndexedSample('bass', idx, audio, {
+              kit: kitTarget as DrumKitGenre,
+              ...(image ? { imageBlob: image, imageMime: image.type || 'image/png' } : {}),
+            });
+          }
+        } else if (image) {
+          // No audio file dropped → also stamp the image onto any existing
+          // sample for this kit so the per-sample artwork stays in sync.
+          const existing = lib.samples.find(s => s.slot === 'bass' && s.kit === kitTarget);
+          if (existing) {
+            await lib.updateSample(existing.id, { imageBlob: image, imageMime: image.type || 'image/png' });
+          }
+        }
+        // Promote the chip's kit so future bass playback uses this sample.
+        onPickKit(kitTarget as DrumKitGenre);
       }}
       style={{ cursor: 'pointer' }}
     >
