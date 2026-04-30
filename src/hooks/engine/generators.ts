@@ -645,14 +645,14 @@ export function generatePiano(
       });
       const cell = pickWeighted(PIANO_BEAT_CELLS, weights.map(w => Math.max(0.04, w)));
 
-      // Random skip for organic phrasing
-      if (chance(0.08 - intensity * 0.06)) continue;
+      // Random skip for organic phrasing — kept rare so comping stays full.
+      if (chance(0.03 - intensity * 0.02)) continue;
 
       // Voicing rotation: shell on b==0, full elsewhere, color-tone occasionally
       let voicing = pitches;
-      if (b === 0) voicing = [pitches[0], pitches[Math.min(2, pitches.length - 1)]]; // root + 7th-ish shell
+      if (b === 0) voicing = pitches.slice(0, Math.min(3, pitches.length)); // root + 3 + 5/7
       if (b === 1 && complexity > 0.5) voicing = pitches.slice(1); // upper structure
-      if (b === fullBeats - 1 && complexity > 0.7 && chance(0.35)) voicing = [pitches[pitches.length - 1] + 7]; // single high color
+      if (b === fullBeats - 1 && complexity > 0.7 && chance(0.25)) voicing = [pitches[pitches.length - 1] + 7]; // single high color
 
       cell.hits.forEach((off, i) => {
         const beat = beatStart + off + (genre === 'Jazz' && off % 1 !== 0 ? jazzSwing : 0);
