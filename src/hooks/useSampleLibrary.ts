@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, type StoredBassIcon, type StoredSample } from '@/lib/sampleStorage';
+import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, putInstrumentIcon, getAllInstrumentIcons, deleteInstrumentIcon, type StoredBassIcon, type StoredInstrumentIcon, type StoredSample } from '@/lib/sampleStorage';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import {
   BUILT_IN_KIT_SAMPLES,
