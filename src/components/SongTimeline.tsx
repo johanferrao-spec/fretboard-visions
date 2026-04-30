@@ -126,9 +126,41 @@ export default function SongTimeline({
     return Math.max(0, Math.min(totalBeats, rawBeat));
   }, [totalBeats]);
 
+  // Helpers to convert chord types between triad/seventh/dominant variants.
+  const toSeventh = useCallback((type: string): string => {
+    if (type === 'Major') return 'Major 7';
+    if (type === 'Minor') return 'Minor 7';
+    if (type === 'Diminished') return 'Half-Dim 7';
+    if (type === 'Augmented') return 'Aug 7';
+    return type; // already extended
+  }, []);
+  const toDominant7 = useCallback((_type: string): string => 'Dominant 7', []);
+  const toTriad = useCallback((type: string): string => {
+    if (type === 'Major 7' || type === 'Dominant 7' || type === 'Major 9' || type === 'Dominant 9' || type === 'Major 6' || type === 'Add9' || type === '13' || type === '11' || type === 'Maj11' || type === 'Maj13') return 'Major';
+    if (type === 'Minor 7' || type === 'Minor 9' || type === 'Minor 6' || type === 'Madd9' || type === 'Minor 11' || type === 'Minor 13' || type === 'Min/Maj 7') return 'Minor';
+    if (type === 'Half-Dim 7' || type === 'Dim 7') return 'Diminished';
+    if (type === 'Aug 7') return 'Augmented';
+    return type;
+  }, []);
+
+  // Mutate one chord by id via remove+add (preserves position/duration)
+  const mutateChordType = useCallback((id: string, mapper: (t: string) => string) => {
+    const c = chords.find(ch => ch.id === id);
+    if (!c) return;
+    const newType = mapper(c.chordType);
+    if (newType === c.chordType) return;
+    onRemoveChord(id);
+    const newId = onAddChord(c.root, newType, c.startBeat, c.duration);
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.delete(id)) next.add(newId);
+      return next;
+    });
+  }, [chords, onAddChord, onRemoveChord]);
+
   // Drag move — preserves the cursor's grab-offset within the region so the
   // region doesn't snap its start to the cursor. Hold Z to force the moved
-  // region to a full bar (4 beats) duration.
+  // region to a full bar (4 beats) duration. Hold X to convert it to dom7.
   useEffect(() => {
     if (!dragChord) return;
     const onMove = (e: MouseEvent) => {
@@ -140,28 +172,51 @@ export default function SongTimeline({
     };
     const onUp = () => {
       const id = dragChord.id;
+      if (xHeld) mutateChordType(id, toDominant7);
       setDragChord(null);
       onCommitMove(id);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [dragChord, getRawBeatFromX, onMoveChord, onCommitMove, onResizeChord, zHeld, snapGrid, totalBeats]);
+  }, [dragChord, getRawBeatFromX, onMoveChord, onCommitMove, onResizeChord, zHeld, xHeld, snapGrid, totalBeats, mutateChordType, toDominant7]);
 
-  // Track Z (whole-bar drag) and Cmd/Ctrl (delete cursor) modifiers globally
+  // Track Z (whole-bar drag), X (dom7), and Cmd/Ctrl (delete cursor) modifiers
+  // plus shortcut keys: Z extends selected chord(s) to a full bar; X converts
+  // selected chord(s) to dominant 7; A converts selected chord(s) to triads.
   useEffect(() => {
     const isTextTarget = (t: EventTarget | null) =>
       t instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName);
     const onDown = (e: KeyboardEvent) => {
       if (isTextTarget(e.target)) return;
-      if (e.key === 'z' || e.key === 'Z') setZHeld(true);
+      const k = e.key.toLowerCase();
+      if (k === 'z') {
+        setZHeld(true);
+        // Apply Z to selected when not actively dragging a chord
+        if (!dragChord && selectedIds.size > 0) {
+          selectedIds.forEach(id => onResizeChord(id, 4));
+        }
+      }
+      if (k === 'x') {
+        setXHeld(true);
+        if (!dragChord && selectedIds.size > 0) {
+          Array.from(selectedIds).forEach(id => mutateChordType(id, toDominant7));
+        }
+      }
+      if (k === 'a') {
+        if (selectedIds.size > 0) {
+          Array.from(selectedIds).forEach(id => mutateChordType(id, toTriad));
+        }
+      }
       if (e.metaKey || e.ctrlKey) setCmdHeld(true);
     };
     const onUp = (e: KeyboardEvent) => {
-      if (e.key === 'z' || e.key === 'Z') setZHeld(false);
+      const k = e.key.toLowerCase();
+      if (k === 'z') setZHeld(false);
+      if (k === 'x') setXHeld(false);
       if (!e.metaKey && !e.ctrlKey) setCmdHeld(false);
     };
-    const onBlur = () => { setZHeld(false); setCmdHeld(false); };
+    const onBlur = () => { setZHeld(false); setXHeld(false); setCmdHeld(false); };
     window.addEventListener('keydown', onDown);
     window.addEventListener('keyup', onUp);
     window.addEventListener('blur', onBlur);
@@ -170,7 +225,7 @@ export default function SongTimeline({
       window.removeEventListener('keyup', onUp);
       window.removeEventListener('blur', onBlur);
     };
-  }, []);
+  }, [dragChord, selectedIds, onResizeChord, mutateChordType, toDominant7, toTriad]);
 
   // Resize chord from either edge; resize uses the range handler so dragged
   // edges consume/shrink neighbouring chord regions while the mouse moves.
