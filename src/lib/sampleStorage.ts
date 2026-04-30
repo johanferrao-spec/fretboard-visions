@@ -43,6 +43,22 @@ export interface StoredBassIcon {
   updatedAt: number;
 }
 
+/**
+ * Generic per-instrument icon, keyed by a composite string `slot|variant`.
+ * Examples:
+ *   drums:kick|Rock       — Rock kick drum image
+ *   drums:snare|Jazz      — Jazz snare image
+ *   keys|upright          — Upright piano image
+ * Persists across reloads via IndexedDB.
+ */
+export interface StoredInstrumentIcon {
+  /** Composite primary key: `${slot}|${variant}` */
+  key: string;
+  blob: Blob;
+  mime: string;
+  updatedAt: number;
+}
+
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -54,6 +70,9 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(BASS_ICON_STORE)) {
         db.createObjectStore(BASS_ICON_STORE, { keyPath: 'kit' });
+      }
+      if (!db.objectStoreNames.contains(INSTRUMENT_ICON_STORE)) {
+        db.createObjectStore(INSTRUMENT_ICON_STORE, { keyPath: 'key' });
       }
     };
     req.onsuccess = () => resolve(req.result);
