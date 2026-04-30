@@ -89,7 +89,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     } catch { return 'upright'; }
   });
   useEffect(() => {
-    try { localStorage.setItem(KEYS_VARIANT_KEY, keysVariant); } catch {}
+    try { localStorage.setItem(KEYS_VARIANT_KEY, keysVariant); } catch { /* ignore unavailable localStorage */ }
   }, [keysVariant]);
 
   /** Which kit the overview panel is currently viewing. Defaults to the kit
@@ -213,7 +213,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   const previewSample = (entry: SampleListEntry | null, semitoneShift = 0) => {
     if (!entry) return;
     if (previewRef.current) {
-      try { previewRef.current.pause(); } catch {}
+      try { previewRef.current.pause(); } catch { /* ignore preview cleanup */ }
       previewRef.current.src = '';
     }
     let url: string | null = null;
@@ -844,7 +844,7 @@ function BassMainIcon({
     const url = URL.createObjectURL(blob);
     setArtUrl(url);
     return () => URL.revokeObjectURL(url);
-  }, [artworkSample?.id, artworkSample?.imageBlob, artworkIcon?.updatedAt]);
+  }, [artworkSample?.id, artworkSample?.imageBlob, artworkIcon?.blob, artworkIcon?.updatedAt]);
 
   return (
     <div
