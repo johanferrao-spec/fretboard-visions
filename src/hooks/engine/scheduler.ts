@@ -175,7 +175,8 @@ export function scheduleTrack(
           const rate = Math.pow(2, (n.pitch - basePitch) / 12);
           if (playUserSample(res.sample, inst.master, { time: t, rate, gain, durationSec: dur })) return;
         }
-        inst.bass.triggerAttackRelease(midiToNote(n.pitch), dur, t, gain);
+        // Bass is sample-only: if no user bass sample is available/decoded yet,
+        // stay silent rather than falling back to the synth bass.
       } else if (trackId === 'piano') {
         const res = resolveUserSample?.('keys', n.pitch);
         if (res?.kind === 'user') {
