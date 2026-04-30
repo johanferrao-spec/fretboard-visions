@@ -1034,7 +1034,8 @@ function VariationsPanel({
   return (
     <div
       ref={ref}
-      className="fixed z-[9999] right-3 top-20 w-64 max-h-[70vh] flex flex-col bg-card border border-border rounded-lg shadow-2xl"
+      className="fixed z-[9999] w-64 max-h-[60vh] flex flex-col bg-card border border-border rounded-lg shadow-2xl animate-fade-in"
+      style={{ left, top }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
