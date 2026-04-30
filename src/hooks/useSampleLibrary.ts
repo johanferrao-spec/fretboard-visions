@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, putInstrumentIcon, getAllInstrumentIcons, deleteInstrumentIcon, type StoredBassIcon, type StoredInstrumentIcon, type StoredSample } from '@/lib/sampleStorage';
+import {
+  uploadBassIcon as cloudUploadBassIcon,
+  uploadBassSample as cloudUploadBassSample,
+  uploadInstrumentIcon as cloudUploadInstrumentIcon,
+  uploadInstrumentSample as cloudUploadInstrumentSample,
+} from '@/lib/cloudAssets';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import {
   BUILT_IN_KIT_SAMPLES,
@@ -139,28 +145,35 @@ export function useSampleLibrary() {
   }, []);
 
   const setBassIcon = useCallback(async (kit: BassIconKit, file: File | Blob, mime?: string) => {
+    const resolvedMime = mime || (file instanceof File ? file.type : '') || 'image/png';
     const icon: StoredBassIcon = {
       kit,
       blob: file,
-      mime: mime || (file instanceof File ? file.type : '') || 'image/png',
+      mime: resolvedMime,
       updatedAt: Date.now(),
     };
     await putBassIcon(icon);
     setBassIcons(prev => ({ ...prev, [kit]: icon }));
+    // Mirror to Cloud Storage so the asset survives across devices/browser clears.
+    cloudUploadBassIcon(kit, file, resolvedMime);
   }, []);
 
   /** Set a generic per-instrument icon. Key format: `${slot}|${variant}`.
    *  Replaces ONLY this specific (slot, variant) entry — other variants are
    *  untouched. Persisted in IndexedDB so it survives reloads. */
   const setInstrumentIcon = useCallback(async (key: string, file: File | Blob, mime?: string) => {
+    const resolvedMime = mime || (file instanceof File ? file.type : '') || 'image/png';
     const icon: StoredInstrumentIcon = {
       key,
       blob: file,
-      mime: mime || (file instanceof File ? file.type : '') || 'image/png',
+      mime: resolvedMime,
       updatedAt: Date.now(),
     };
     await putInstrumentIcon(icon);
     setInstrumentIcons(prev => ({ ...prev, [key]: icon }));
+    // Mirror to Cloud Storage. Key format `${slot}|${variant}`.
+    const [slot, variant = 'default'] = key.split('|');
+    cloudUploadInstrumentIcon(slot, variant, file, resolvedMime);
   }, []);
 
   const removeInstrumentIcon = useCallback(async (key: string) => {
@@ -208,6 +221,9 @@ export function useSampleLibrary() {
       writeActive(next);
       return next;
     });
+    // Mirror to Cloud Storage (durable, cross-device).
+    const variant = (isDrum ? kit : undefined) ?? 'default';
+    cloudUploadInstrumentSample(slot, variant, file, file.type || 'audio/wav');
     return id;
   }, []);
 
@@ -270,6 +286,20 @@ export function useSampleLibrary() {
       writeActive(next);
       return next;
     });
+    // Mirror to Cloud Storage. For bass: kit-tagged path; otherwise generic.
+    if (slot === 'bass' && extras?.kit) {
+      cloudUploadBassSample(extras.kit, file, file.type || 'audio/wav');
+    } else {
+      cloudUploadInstrumentSample(slot, extras?.kit ?? `slot${slotIndex}`, file, file.type || 'audio/wav');
+    }
+    if (extras?.imageBlob) {
+      const variant = extras.kit ?? `slot${slotIndex}`;
+      if (slot === 'bass' && extras.kit) {
+        cloudUploadBassIcon(extras.kit, extras.imageBlob, extras.imageMime || 'image/png');
+      } else {
+        cloudUploadInstrumentIcon(slot, variant, extras.imageBlob, extras.imageMime || 'image/png');
+      }
+    }
     return id;
   }, []);
 
