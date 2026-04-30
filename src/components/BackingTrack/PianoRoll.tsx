@@ -37,10 +37,13 @@ const newNoteId = () => `pr-${Date.now()}-${nextNoteId++}`;
 export default function PianoRoll({ trackId, notes, measures, currentBeat, isPlaying, onChange, onClose, onPreviewNote }: PianoRollProps) {
   const [snap, setSnap] = useState<1 | 0.5 | 0.25>(0.25);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pos, setPos] = useState({ x: 80, y: 80 });
   const [size, setSize] = useState({ width: 800, height: 420 });
   const [minimized, setMinimized] = useState(false);
-  const dragRef = useRef<{ kind: 'window' | 'note' | 'resize-note' | 'resize-window' | null; offsetX: number; offsetY: number; noteId?: string; origStart?: number; origPitch?: number; origDuration?: number } | null>(null);
+  const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const dragRef = useRef<{ kind: 'window' | 'note' | 'resize-note' | 'resize-window' | 'marquee' | null; offsetX: number; offsetY: number; noteId?: string; origStart?: number; origPitch?: number; origDuration?: number; gridX?: number; gridY?: number } | null>(null);
+
 
   const totalBeats = measures * 4;
   const color = TRACK_COLORS[trackId];
