@@ -921,7 +921,7 @@ function BassMainIcon({
           <img
             src={artUrl}
             alt={`${bassKit} bass artwork`}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-contain"
             draggable={false}
           />
         ) : (
