@@ -992,16 +992,26 @@ export default function SongTimeline({
  * panel (or press Escape) to dismiss.
  */
 function VariationsPanel({
-  degreeLabel, variations, onSelect, onSetBass, onClearBass, onClose,
+  degreeLabel, variations, anchorX, anchorY, onSelect, onSetBass, onClearBass, onClose,
 }: {
   degreeLabel: string;
   variations: ChordVariation[];
+  anchorX: number;
+  anchorY: number;
   onSelect: (v: ChordVariation) => void;
   onSetBass: (n: NoteName) => void;
   onClearBass: () => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const PANEL_W = 256;
+  const PANEL_H_MAX = Math.round(window.innerHeight * 0.6);
+  // Clamp into viewport so it stays visible. Prefer anchor to the RIGHT of the
+  // chord cell; if it would overflow, flip to the left side.
+  let left = anchorX + 8;
+  if (left + PANEL_W > window.innerWidth - 8) left = Math.max(8, anchorX - PANEL_W - 8);
+  let top = anchorY;
+  if (top + PANEL_H_MAX > window.innerHeight - 8) top = Math.max(8, window.innerHeight - PANEL_H_MAX - 8);
   useEffect(() => {
     const onDocMouseDown = (ev: MouseEvent) => {
       if (!ref.current) return;
