@@ -329,7 +329,8 @@ export default function SongTimeline({
         return (beat < cEnd && beat + dur > c.startBeat);
       });
       existingOverlaps.forEach(c => onRemoveChord(c.id));
-      onAddChord(root, chordType, beat, dur);
+      const finalType = xHeld ? 'Dominant 7' : toSeventh(chordType);
+      onAddChord(root, finalType, beat, dur);
     } catch {}
   }, [getBeatFromX, getRawBeatFromX, onAddChord, chords, diatonicChords, onRemoveChord, onSetChordBass, xHeld, toSeventh]);
 
