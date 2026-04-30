@@ -707,12 +707,21 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
           onDrop={(e) => handleDrop(e, 'keys')}
           style={{ cursor: 'pointer' }}
         >
-          <KeysIcon
-            variant={keysVariant}
-            active={!!keysActive}
-            color={keysActive?.color}
-            selected={selection.instrument === 'keys'}
-          />
+          {iconUrls[`keys|${keysVariant}`] ? (
+            <img
+              src={iconUrls[`keys|${keysVariant}`]}
+              alt={`${keysVariant} keys`}
+              className={`h-[180px] w-auto object-contain rounded ${selection.instrument === 'keys' ? 'ring-2 ring-primary' : ''}`}
+              draggable={false}
+            />
+          ) : (
+            <KeysIcon
+              variant={keysVariant}
+              active={!!keysActive}
+              color={keysActive?.color}
+              selected={selection.instrument === 'keys'}
+            />
+          )}
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
             {KEYS_OPTIONS.find(o => o.id === keysVariant)?.label}
           </div>
