@@ -4,7 +4,7 @@ import { DRUM_PITCHES } from '@/lib/backingTrackTypes';
 import type { EngineInstruments } from './instruments';
 import type { Genre } from '@/hooks/useSongTimeline';
 import { midiToNote, velocityToGain } from './humanize';
-import { getUserPlayer } from './userSamples';
+import { playUserSample } from './userSamples';
 import type { StoredSample } from '@/lib/sampleStorage';
 import type { BuiltInKitSample } from '@/lib/builtInKits';
 
@@ -139,15 +139,7 @@ export function scheduleTrack(
 
         // 1) User-uploaded sample takes top priority.
         if (resolution?.kind === 'user') {
-          const p = getUserPlayer(resolution.sample, inst.master);
-          if (p && p.loaded) {
-            try {
-              p.playbackRate = 1;
-              p.volume.value = Tone.gainToDb(Math.max(0.001, gain));
-              p.start(t);
-            } catch {}
-            return;
-          }
+          if (playUserSample(resolution.sample, inst.master, { time: t, rate: 1, gain })) return;
         }
 
         // 2) Built-in kit selection — jazz samples or synth fallback.
@@ -175,32 +167,19 @@ export function scheduleTrack(
         const res = resolveUserSample?.(`bass:${bassKit}`, n.pitch)
           ?? resolveUserSample?.('bass', n.pitch);
         if (res?.kind === 'user') {
-          const p = getUserPlayer(res.sample, inst.master);
-          if (p && p.loaded) {
-            try {
-              // Use the sample's detected natural pitch as the base when
-              // available; fall back to C3 (48) for legacy samples.
-              const basePitch = typeof res.sample.pitch === 'number' ? res.sample.pitch : 48;
-              p.playbackRate = Math.pow(2, (n.pitch - basePitch) / 12);
-              p.volume.value = Tone.gainToDb(Math.max(0.001, gain));
-              p.start(t);
-              return;
-            } catch {}
-          }
+          // Use the sample's detected natural pitch as the base when
+          // available; fall back to E2 (40) for legacy samples (typical bass).
+          const basePitch = typeof res.sample.pitch === 'number' ? res.sample.pitch : 40;
+          const rate = Math.pow(2, (n.pitch - basePitch) / 12);
+          if (playUserSample(res.sample, inst.master, { time: t, rate, gain, durationSec: dur })) return;
         }
         inst.bass.triggerAttackRelease(midiToNote(n.pitch), dur, t, gain);
       } else if (trackId === 'piano') {
-        const res = resolveUserSample?.('keys');
+        const res = resolveUserSample?.('keys', n.pitch);
         if (res?.kind === 'user') {
-          const p = getUserPlayer(res.sample, inst.master);
-          if (p && p.loaded) {
-            try {
-              p.playbackRate = Math.pow(2, (n.pitch - 60) / 12); // base C4
-              p.volume.value = Tone.gainToDb(Math.max(0.001, gain));
-              p.start(t);
-              return;
-            } catch {}
-          }
+          const basePitch = typeof res.sample.pitch === 'number' ? res.sample.pitch : 60;
+          const rate = Math.pow(2, (n.pitch - basePitch) / 12);
+          if (playUserSample(res.sample, inst.master, { time: t, rate, gain, durationSec: dur })) return;
         }
         inst.piano.triggerAttackRelease(midiToNote(n.pitch), dur, t, gain);
       }

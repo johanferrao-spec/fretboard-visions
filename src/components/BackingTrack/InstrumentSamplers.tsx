@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trash2, Music, Upload } from 'lucide-react';
 import BassSlotGrid from './BassSlotGrid';
+import { detectPitchFromBlob } from '@/lib/pitchDetect';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import type { Genre } from '@/hooks/useSongTimeline';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
@@ -52,6 +53,11 @@ const PART_LABEL: Record<DrumPart, string> = {
 };
 
 const DRUM_KITS: DrumKitGenre[] = ['Funk', 'Jazz', 'Rock', 'Latin'];
+
+/** Mirror of the slot indices used by BassSlotGrid (Rock,Jazz,Funk,Latin). */
+const BASS_KIT_INDEX: Record<DrumKitGenre, number> = {
+  Rock: 0, Jazz: 1, Funk: 2, Latin: 3,
+};
 
 /** Map a song genre to its closest drum-kit genre (Pop falls back to Rock). */
 function songGenreToKit(g: Genre): DrumKitGenre {
@@ -123,7 +129,25 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
       setPendingDrop({ slot: dropSlot, file });
       return;
     }
-    // Bass / Keys: no kit needed.
+    if (dropSlot === 'bass') {
+      // Drop onto the main bass icon → assign to the slot for the current
+      // song's bass kit, with auto-pitch detection. Mirrors BassSlotGrid.
+      const bassKitForDrop = songGenreToKit(genre);
+      const slotIndex = BASS_KIT_INDEX[bassKitForDrop];
+      const detected = await detectPitchFromBlob(file);
+      let snapped: number | undefined = detected?.midi;
+      if (typeof snapped === 'number') {
+        while (snapped < 28) snapped += 12;
+        while (snapped > 52) snapped -= 12;
+      }
+      await lib.setSlotIndexedSample('bass', slotIndex, file, {
+        pitch: snapped,
+        kit: bassKitForDrop,
+      });
+      setSelection({ instrument: 'bass' });
+      return;
+    }
+    // Keys: no kit needed.
     await lib.addSample(dropSlot, file);
     setSelection({ instrument: dropSlot as 'bass' | 'keys' });
   };

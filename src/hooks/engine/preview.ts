@@ -5,7 +5,7 @@ import type { EngineInstruments } from './instruments';
 import type { Genre } from '@/hooks/useSongTimeline';
 import type { UserSampleResolver } from './scheduler';
 import { midiToNote, velocityToGain } from './humanize';
-import { getUserPlayer } from './userSamples';
+import { playUserSample } from './userSamples';
 
 function pitchToDrumPart(pitch: number): DrumPart | null {
   switch (pitch) {
@@ -73,15 +73,7 @@ export function previewTrackNote(
     const part = pitchToDrumPart(n.pitch);
     const resolution = part && resolveUserSample ? resolveUserSample(`drums:${part}`) : null;
     if (resolution?.kind === 'user') {
-      const p = getUserPlayer(resolution.sample, inst.master);
-      if (p && p.loaded) {
-        try {
-          p.playbackRate = 1;
-          p.volume.value = Tone.gainToDb(Math.max(0.001, gain));
-          p.start(t);
-          return;
-        } catch {}
-      }
+      if (playUserSample(resolution.sample, inst.master, { time: t, rate: 1, gain })) return;
     }
     if (resolution?.kind === 'builtin') {
       if (resolution.sample.source === 'jazz-sample' && playJazzKitSample(inst, n.pitch, t, gain)) return;
@@ -95,34 +87,22 @@ export function previewTrackNote(
   }
 
   if (trackId === 'bass') {
-    const res = resolveUserSample?.('bass');
+    const res = resolveUserSample?.('bass', n.pitch);
     if (res?.kind === 'user') {
-      const p = getUserPlayer(res.sample, inst.master);
-      if (p && p.loaded) {
-        try {
-          p.playbackRate = Math.pow(2, (n.pitch - 48) / 12);
-          p.volume.value = Tone.gainToDb(Math.max(0.001, gain));
-          p.start(t);
-          return;
-        } catch {}
-      }
+      const basePitch = typeof res.sample.pitch === 'number' ? res.sample.pitch : 40;
+      const rate = Math.pow(2, (n.pitch - basePitch) / 12);
+      if (playUserSample(res.sample, inst.master, { time: t, rate, gain })) return;
     }
     inst.bass.triggerAttackRelease(midiToNote(n.pitch), dur, t, gain);
     return;
   }
 
   if (trackId === 'piano') {
-    const res = resolveUserSample?.('keys');
+    const res = resolveUserSample?.('keys', n.pitch);
     if (res?.kind === 'user') {
-      const p = getUserPlayer(res.sample, inst.master);
-      if (p && p.loaded) {
-        try {
-          p.playbackRate = Math.pow(2, (n.pitch - 60) / 12);
-          p.volume.value = Tone.gainToDb(Math.max(0.001, gain));
-          p.start(t);
-          return;
-        } catch {}
-      }
+      const basePitch = typeof res.sample.pitch === 'number' ? res.sample.pitch : 60;
+      const rate = Math.pow(2, (n.pitch - basePitch) / 12);
+      if (playUserSample(res.sample, inst.master, { time: t, rate, gain })) return;
     }
     inst.piano.triggerAttackRelease(midiToNote(n.pitch), dur, t, gain);
   }

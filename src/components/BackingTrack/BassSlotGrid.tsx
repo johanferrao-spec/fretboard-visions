@@ -101,6 +101,14 @@ export default function BassSlotGrid({ lib, volume }: Props) {
     setBusyIndex(index);
     try {
       const detected = await detectPitchFromBlob(file);
+      // Snap the detected pitch into the bass register (E1=28 .. E3=52).
+      // Detectors often latch onto a sub-harmonic for low notes — without
+      // this, samples can play back 1–2 octaves too high.
+      let snapped: number | undefined = detected?.midi;
+      if (typeof snapped === 'number') {
+        while (snapped < 28) snapped += 12;
+        while (snapped > 52) snapped -= 12;
+      }
       const slot = slotByIndex(index);
       // Carry over any existing artwork on this slot to the new sample.
       const existing = slot.sample;
@@ -108,7 +116,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
         ? { imageBlob: existing.imageBlob, imageMime: existing.imageMime }
         : {};
       await lib.setSlotIndexedSample('bass', index, file, {
-        pitch: detected?.midi,
+        pitch: snapped,
         kit: slot.kit,
         ...carryImage,
       });

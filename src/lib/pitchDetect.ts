@@ -54,8 +54,11 @@ function detectFromBuffer(buffer: AudioBuffer): DetectedPitch | null {
   rms = Math.sqrt(rms / win.length);
   if (rms < 0.005) return null;
 
-  // Search range: 30 Hz (B0-ish) up to 1000 Hz (B5-ish). Cover bass + low keys.
-  const minHz = 30;
+  // Search range: 40 Hz (≈E1) up to 1000 Hz (B5-ish). Starting above 30 Hz
+  // helps prevent the autocorrelator from locking onto a sub-harmonic of a
+  // bass note (which made detected pitches read 1–2 octaves too low and the
+  // sample then play back 1–2 octaves too high).
+  const minHz = 40;
   const maxHz = 1000;
   const minLag = Math.floor(sr / maxHz);
   const maxLag = Math.min(Math.floor(sr / minHz), Math.floor(win.length / 2));
