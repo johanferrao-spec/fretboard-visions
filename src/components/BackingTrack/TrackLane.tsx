@@ -343,22 +343,8 @@ export default function TrackLane({
             const width = (clip.duration / totalBeats) * 100;
             const isSelected = selectedId === clip.id;
 
-            // Pitch range for clip preview
-            let minP = 127, maxP = 0;
-            if (track.id === 'drums') { minP = 30; maxP = 55; }
-            else {
-              for (const n of clip.notes) {
-                if (n.pitch < minP) minP = n.pitch;
-                if (n.pitch > maxP) maxP = n.pitch;
-              }
-              if (clip.notes.length === 0) { minP = 48; maxP = 72; }
-              const span = maxP - minP;
-              if (span < 12) {
-                const pad = (12 - span) / 2;
-                minP -= Math.ceil(pad); maxP += Math.floor(pad);
-              }
-            }
-            const pRange = maxP - minP || 1;
+
+
 
             return (
               <div
