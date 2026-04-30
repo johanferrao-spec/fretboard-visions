@@ -52,7 +52,9 @@ function playSynthDrum(inst: EngineInstruments, pitch: number, dur: number, t: n
       inst.kick.triggerAttackRelease('C1', dur, t, gain);
       break;
     case DRUM_PITCHES.snare:
-      inst.snare.triggerAttackRelease(dur, t, gain);
+      // Snare is a one-shot — never truncate it to the MIDI note duration,
+      // otherwise short notes cut the natural decay mid-crack.
+      inst.snare.triggerAttackRelease(0.35, t, gain);
       break;
     case DRUM_PITCHES.hihat_closed:
       inst.hihat.triggerAttackRelease('C5', dur * 0.4, t, gain);
@@ -77,7 +79,7 @@ function playSynthDrum(inst: EngineInstruments, pitch: number, dur: number, t: n
       inst.ride.triggerAttackRelease('G5', dur * 1.2, t, gain);
       break;
     default:
-      inst.snare.triggerAttackRelease(dur, t, gain);
+      inst.snare.triggerAttackRelease(0.35, t, gain);
   }
 }
 

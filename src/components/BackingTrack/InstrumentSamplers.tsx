@@ -120,13 +120,14 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(null);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    if (!/^audio\//.test(file.type) && !/\.(wav|mp3|ogg|m4a|aiff?)$/i.test(file.name)) return;
+    const files = Array.from(e.dataTransfer.files ?? []);
+    if (files.length === 0) return;
+    const audio = files.find(f => /^audio\//.test(f.type) || /\.(wav|mp3|ogg|m4a|aiff?|flac)$/i.test(f.name));
+    const image = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
 
     if (dropSlot.startsWith('drums:')) {
       // Drum drop → ask which kit to save under before storing.
-      setPendingDrop({ slot: dropSlot, file });
+      if (audio) setPendingDrop({ slot: dropSlot, file: audio });
       return;
     }
     if (dropSlot === 'bass') {
@@ -134,22 +135,36 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
       // song's bass kit, with auto-pitch detection. Mirrors BassSlotGrid.
       const bassKitForDrop = songGenreToKit(genre);
       const slotIndex = BASS_KIT_INDEX[bassKitForDrop];
-      const detected = await detectPitchFromBlob(file);
-      let snapped: number | undefined = detected?.midi;
-      if (typeof snapped === 'number') {
-        while (snapped < 28) snapped += 12;
-        while (snapped > 52) snapped -= 12;
+      if (audio) {
+        const detected = await detectPitchFromBlob(audio);
+        let snapped: number | undefined = detected?.midi;
+        if (typeof snapped === 'number') {
+          while (snapped < 28) snapped += 12;
+          while (snapped > 52) snapped -= 12;
+        }
+        await lib.setSlotIndexedSample('bass', slotIndex, audio, {
+          pitch: snapped,
+          kit: bassKitForDrop,
+          ...(image ? { imageBlob: image, imageMime: image.type || 'image/png' } : {}),
+        });
+      } else if (image) {
+        // No audio — attach artwork to the existing sample for this kit.
+        const existing = lib.samples.find(s => s.slot === 'bass' && s.kit === bassKitForDrop);
+        if (existing) {
+          await lib.updateSample(existing.id, {
+            imageBlob: image,
+            imageMime: image.type || 'image/png',
+          });
+        }
       }
-      await lib.setSlotIndexedSample('bass', slotIndex, file, {
-        pitch: snapped,
-        kit: bassKitForDrop,
-      });
       setSelection({ instrument: 'bass' });
       return;
     }
     // Keys: no kit needed.
-    await lib.addSample(dropSlot, file);
-    setSelection({ instrument: dropSlot as 'bass' | 'keys' });
+    if (audio) {
+      await lib.addSample(dropSlot, audio);
+      setSelection({ instrument: dropSlot as 'bass' | 'keys' });
+    }
   };
 
   const confirmKitForPending = async (kit: DrumKitGenre) => {
@@ -711,25 +726,18 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">Drum kit · {viewKit}</div>
         </div>
 
-        {/* BASS — genre-specific icon */}
-        <div
-          className={`flex flex-col items-center min-w-[110px] rounded-md transition-colors ${dragOver === 'bass' ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
-          onClick={() => { setSelection({ instrument: 'bass' }); previewSample(lib.activeEntryFor('bass')); }}
+        {/* BASS — genre-specific icon (or dropped artwork if available) */}
+        <BassMainIcon
+          lib={lib}
+          bassKit={bassKit}
+          bassActive={bassActive}
+          dragOver={dragOver === 'bass'}
+          selected={selection.instrument === 'bass'}
+          onSelect={() => { setSelection({ instrument: 'bass' }); previewSample(lib.activeEntryFor('bass')); }}
           onDragOver={(e) => { e.preventDefault(); setDragOver('bass'); }}
           onDragLeave={() => setDragOver(null)}
           onDrop={(e) => handleDrop(e, 'bass')}
-          style={{ cursor: 'pointer' }}
-        >
-          <BassIcon
-            kit={bassKit}
-            active={!!bassActive}
-            color={bassActive?.color}
-            selected={selection.instrument === 'bass'}
-          />
-          <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
-            Bass · {bassKit}
-          </div>
-        </div>
+        />
 
         {/* KEYS — user-chosen icon variant */}
         <div
@@ -785,6 +793,105 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Bass main icon — shows dropped artwork (per kit) when available so that
+// uploaded bass samples don't "disappear" behind the SVG. Falls back to
+// the genre-specific vector illustration.
+// ─────────────────────────────────────────────────────────────────────
+const BASS_KITS_ALL: DrumKitGenre[] = ['Rock', 'Jazz', 'Funk', 'Latin'];
+
+function BassMainIcon({
+  lib, bassKit, bassActive, dragOver, selected,
+  onSelect, onDragOver, onDragLeave, onDrop,
+}: {
+  lib: ReturnType<typeof useSampleLibrary>;
+  bassKit: DrumKitGenre;
+  bassActive: SampleListEntry | null;
+  dragOver: boolean;
+  selected: boolean;
+  onSelect: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent) => void;
+}) {
+  // Find the bass sample assigned to the current kit (preferred) and the
+  // one currently active; either may carry artwork we want to render.
+  const sampleForKit = useMemo(
+    () => lib.samples.find(s => s.slot === 'bass' && s.kit === bassKit) ?? null,
+    [lib.samples, bassKit],
+  );
+  const artworkSample = sampleForKit?.imageBlob
+    ? sampleForKit
+    : (bassActive?.userSample?.imageBlob ? bassActive.userSample : null);
+
+  // Manage object URL for the dropped artwork.
+  const [artUrl, setArtUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!artworkSample?.imageBlob) { setArtUrl(null); return; }
+    const url = URL.createObjectURL(artworkSample.imageBlob);
+    setArtUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [artworkSample?.id, artworkSample?.imageBlob]);
+
+  return (
+    <div
+      className={`flex flex-col items-center min-w-[140px] rounded-md transition-colors ${dragOver ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
+      onClick={onSelect}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      style={{ cursor: 'pointer' }}
+    >
+      {artUrl ? (
+        <img
+          src={artUrl}
+          alt={`${bassKit} bass artwork`}
+          className={`h-[200px] w-[140px] object-contain rounded ${selected ? 'ring-2 ring-primary' : ''}`}
+        />
+      ) : (
+        <BassIcon
+          kit={bassKit}
+          active={!!bassActive}
+          color={bassActive?.color}
+          selected={selected}
+        />
+      )}
+      <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
+        Bass · {bassKit}
+      </div>
+      {/* Kit selector chips so user can pick which bass plays */}
+      <div className="flex gap-1 mt-1">
+        {BASS_KITS_ALL.map(k => {
+          const has = lib.samples.some(s => s.slot === 'bass' && s.kit === k);
+          const isOn = k === bassKit;
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Promote a sample for this kit as the active 'bass' selection.
+                const sample = lib.samples.find(s => s.slot === 'bass' && s.kit === k);
+                if (sample) lib.selectSample('bass', sample.id);
+              }}
+              className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border transition-colors ${
+                isOn
+                  ? 'border-primary bg-primary/15 text-foreground'
+                  : has
+                    ? 'border-border text-foreground hover:bg-muted/40'
+                    : 'border-dashed border-border/60 text-muted-foreground/60'
+              }`}
+              title={has ? `Use ${k} bass sample` : `No ${k} bass sample yet`}
+            >
+              {k}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

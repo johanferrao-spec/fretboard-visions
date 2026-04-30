@@ -373,6 +373,35 @@ export function useBackingTrack() {
     return { startAudioTime, startPerfTime: performance.now() + 50 };
   }, [init, startToneAudio, ensureInstruments]);
 
+  /**
+   * Re-schedule the current track notes onto the running Transport WITHOUT
+   * restarting playback. Used by continuous-regeneration so each loop cycle
+   * plays freshly improvised midi without dropping the playhead.
+   *
+   * `lookahead` is the absolute transport position (in seconds) before
+   * which we MUST NOT cancel — anything already scheduled before that point
+   * should keep playing as-is. We pass `Tone.now()` so only future events
+   * are wiped and replaced.
+   */
+  const rescheduleAll = useCallback((
+    measures: number,
+    genre: Genre = 'Rock',
+    resolveUserSample?: import('./engine/scheduler').UserSampleResolver,
+  ) => {
+    const inst = instRef.current;
+    if (!inst) return;
+    const transport = Tone.getTransport();
+    // Cancel only events that haven't fired yet.
+    transport.cancel(transport.seconds + 0.001);
+    const liveTracks = tracksRef.current;
+    (Object.keys(liveTracks) as TrackId[]).forEach(id => {
+      const flat = flattenClips(liveTracks[id].clips);
+      scheduleTrack(id, flat, inst, muteRefs.current[id], genre, resolveUserSample);
+    });
+    // Re-arm the playhead repeater (was cancelled above).
+    schedulePlayhead((b) => setCurrentBeat(b));
+  }, []);
+
   const stop = useCallback(() => {
     Tone.getTransport().stop();
     Tone.getTransport().cancel();
@@ -501,7 +530,7 @@ export function useBackingTrack() {
   return {
     tracks, setTrackParam, setTrackClips, setTrackNotes, setClipNotes,
     updateClip, deleteClip, duplicateClip,
-    regenerateTrack, regenerateAll,
+    regenerateTrack, regenerateAll, rescheduleAll,
     isPlaying, currentBeat,
     play, stop, prewarm, setMasterVolume, previewNote,
     savedTracks, save, load, remove, reset,

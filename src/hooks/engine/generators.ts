@@ -597,13 +597,14 @@ export function generateDrums(
  *   • Sustain length scales with complexity; rests scale with intensity inversely.
  * ════════════════════════════════════════════════════════════════════════ */
 const PIANO_BEAT_CELLS: { hits: number[]; vel: number[]; busyness: number; weight: number }[] = [
-  { hits: [0],           vel: [88],          busyness: 0.0, weight: 1.0 },  // pad / whole-beat
-  { hits: [0, 0.5],      vel: [85, 60],      busyness: 0.35, weight: 0.9 }, // 8ths
-  { hits: [0.5],         vel: [78],          busyness: 0.4, weight: 0.7 },  // off-beat
-  { hits: [0, 0.25, 0.5],vel: [80, 55, 65],  busyness: 0.65, weight: 0.5 },
-  { hits: [0.25, 0.75],  vel: [70, 70],      busyness: 0.55, weight: 0.5 },
-  { hits: [0, 0.5, 0.75],vel: [85, 60, 70],  busyness: 0.7, weight: 0.4 },  // syncopated
-  { hits: [],            vel: [],            busyness: 0.0, weight: 0.45 }, // rest beat
+  { hits: [0],           vel: [88],          busyness: 0.0, weight: 0.7 },  // pad / whole-beat
+  { hits: [0, 0.5],      vel: [85, 60],      busyness: 0.35, weight: 1.2 }, // 8ths
+  { hits: [0.5],         vel: [78],          busyness: 0.4, weight: 0.8 },  // off-beat
+  { hits: [0, 0.25, 0.5],vel: [80, 55, 65],  busyness: 0.65, weight: 0.9 },
+  { hits: [0.25, 0.75],  vel: [70, 70],      busyness: 0.55, weight: 0.8 },
+  { hits: [0, 0.5, 0.75],vel: [85, 60, 70],  busyness: 0.7, weight: 0.9 },  // syncopated
+  { hits: [0, 0.25, 0.5, 0.75], vel: [82, 55, 70, 55], busyness: 0.85, weight: 0.7 }, // 16ths
+  { hits: [],            vel: [],            busyness: 0.0, weight: 0.10 }, // rest beat (rare)
 ];
 
 export function generatePiano(
@@ -644,14 +645,14 @@ export function generatePiano(
       });
       const cell = pickWeighted(PIANO_BEAT_CELLS, weights.map(w => Math.max(0.04, w)));
 
-      // Random skip for organic phrasing
-      if (chance(0.08 - intensity * 0.06)) continue;
+      // Random skip for organic phrasing — kept rare so comping stays full.
+      if (chance(0.03 - intensity * 0.02)) continue;
 
       // Voicing rotation: shell on b==0, full elsewhere, color-tone occasionally
       let voicing = pitches;
-      if (b === 0) voicing = [pitches[0], pitches[Math.min(2, pitches.length - 1)]]; // root + 7th-ish shell
+      if (b === 0) voicing = pitches.slice(0, Math.min(3, pitches.length)); // root + 3 + 5/7
       if (b === 1 && complexity > 0.5) voicing = pitches.slice(1); // upper structure
-      if (b === fullBeats - 1 && complexity > 0.7 && chance(0.35)) voicing = [pitches[pitches.length - 1] + 7]; // single high color
+      if (b === fullBeats - 1 && complexity > 0.7 && chance(0.25)) voicing = [pitches[pitches.length - 1] + 7]; // single high color
 
       cell.hits.forEach((off, i) => {
         const beat = beatStart + off + (genre === 'Jazz' && off % 1 !== 0 ? jazzSwing : 0);
