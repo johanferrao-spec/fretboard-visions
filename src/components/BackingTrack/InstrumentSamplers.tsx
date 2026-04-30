@@ -797,7 +797,7 @@ function getBassKitAtPoint(x: number, y: number): BassIconKit | null {
 
 function BassMainIcon({
   lib, bassKit, bassActive, dragOver, selected,
-  onSelect, onDragOver, onDragLeave, onDrop,
+  onSelect, onDragOver, onDragLeave, onDrop, onPickKit,
 }: {
   lib: ReturnType<typeof useSampleLibrary>;
   bassKit: DrumKitGenre;
@@ -808,6 +808,7 @@ function BassMainIcon({
   onDragOver: (e: React.DragEvent) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent) => void;
+  onPickKit: (kit: DrumKitGenre) => void;
 }) {
   const [chipDragOver, setChipDragOver] = useState<BassIconKit | null>(null);
   // Find the bass sample assigned to the current kit (preferred) and the
