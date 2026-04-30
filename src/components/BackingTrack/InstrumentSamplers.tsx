@@ -862,20 +862,28 @@ function BassMainIcon({
       }}
       style={{ cursor: 'pointer' }}
     >
-      {artUrl ? (
-        <img
-          src={artUrl}
-          alt={`${bassKit} bass artwork`}
-          className={`h-[280px] w-[180px] object-contain rounded p-1 ${selected ? 'ring-2 ring-primary' : ''}`}
-        />
-      ) : (
-        <BassIcon
-          kit={bassKit}
-          active={!!bassActive}
-          color={bassActive?.color}
-          selected={selected}
-        />
-      )}
+      <div
+        className={`relative overflow-hidden rounded-md border bg-background/40 ${selected ? 'ring-2 ring-primary border-primary' : 'border-border'}`}
+        style={{ width: 180, height: 280 }}
+      >
+        {artUrl ? (
+          <img
+            src={artUrl}
+            alt={`${bassKit} bass artwork`}
+            className="absolute inset-0 w-full h-full object-cover"
+            draggable={false}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <BassIcon
+              kit={bassKit}
+              active={!!bassActive}
+              color={bassActive?.color}
+              selected={false}
+            />
+          </div>
+        )}
+      </div>
       <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
         Bass · {bassKit}
       </div>
