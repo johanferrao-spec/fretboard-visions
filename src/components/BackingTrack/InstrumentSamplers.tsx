@@ -950,7 +950,8 @@ function kitDefaultBassFill(kit: DrumKitGenre): string {
   if (kit === 'Jazz')  return 'hsl(28 55% 28%)';   // dark wood
   if (kit === 'Funk')  return 'hsl(50 70% 55%)';   // sunburst yellow
   if (kit === 'Latin') return 'hsl(35 40% 65%)';   // pale wood
-  return 'hsl(0 65% 45%)'; // rock — fiesta red
+  if (kit === 'Pop')   return 'hsl(200 70% 75%)';  // pale blue
+  return 'hsl(0 65% 45%)'; // rock
 }
 
 /** Fender Precision — slab body, single split-coil pickup, large headstock. */
