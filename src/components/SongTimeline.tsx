@@ -1015,13 +1015,21 @@ export default function SongTimeline({
                 >
                   {chordLabel}{bassLabel && <span className="opacity-70">{bassLabel}</span>}
                 </span>
-                {/* Resize handles — invisible but draggable */}
+                {/* Resize handles */}
                 <div
-                  className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20"
-                />
+                  className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center hover:brightness-125"
+                  style={{ background: 'hsl(var(--foreground) / 0.35)' }}
+                  title="Drag to resize from left"
+                >
+                  <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
+                </div>
                 <div
-                  className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20"
-                />
+                  className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center hover:brightness-125"
+                  style={{ background: 'hsl(var(--foreground) / 0.35)' }}
+                  title="Drag to resize from right"
+                >
+                  <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
+                </div>
               </div>
             );
           })}
