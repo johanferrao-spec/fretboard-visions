@@ -239,7 +239,36 @@ export default function BackingTrackView({
         )}
       </div>
 
-      {/* Piano roll for selected clip */}
+      {/* Keyboard shortcuts key — sits in the empty space below the lanes */}
+      <div className="px-3 pt-3 pb-2">
+        <div className="inline-block rounded-md border border-border bg-card/40 px-3 py-2">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
+            Keyboard Shortcuts
+          </div>
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px] font-mono">
+            {[
+              ['Z', 'Extend selected chord(s) to next chord'],
+              ['X', 'Convert selected chord(s) to dominant 7'],
+              ['A', 'Convert selected chord(s) to triads'],
+              ['Del / ⌫', 'Remove selected chord or clip'],
+              ['⌘D / Ctrl+D', 'Duplicate selected clip'],
+              ['⌘ / Ctrl + click', 'Delete chord on click'],
+              ['Shift + click', 'Add to selection'],
+              ['Esc', 'Close piano roll / cancel'],
+              ['Enter', 'Confirm name / save'],
+            ].map(([k, desc]) => (
+              <div key={k} className="contents">
+                <kbd className="justify-self-start rounded border border-border bg-muted/60 px-1.5 py-0.5 text-[10px] text-foreground">
+                  {k}
+                </kbd>
+                <span className="text-muted-foreground self-center">{desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+
       {openClip && openClipNotes && (
         <PianoRoll
           trackId={openClip.trackId}
