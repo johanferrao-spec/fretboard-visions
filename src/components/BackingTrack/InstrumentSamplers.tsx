@@ -347,7 +347,10 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     style: { cursor: 'pointer' as const },
   });
 
-  const bassKit = (bassActive?.userSample?.kit as DrumKitGenre | undefined) ?? songGenreToKit(genre);
+  // Bass display kit: prefer the active sample's kit, then the user's
+  // explicit choice, then fall back to the song genre. This lets the user
+  // pick e.g. Funk bass while playing a Jazz groove.
+  const bassKit = (bassActive?.userSample?.kit as DrumKitGenre | undefined) ?? bassKitChoice;
 
   return (
     <div className="flex h-full bg-card border-t border-border overflow-hidden">
