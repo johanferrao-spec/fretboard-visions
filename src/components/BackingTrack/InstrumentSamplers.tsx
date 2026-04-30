@@ -514,7 +514,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
             </div>
             {/* Part rows — ordered: kick, snare, toms, then cymbals */}
             <div className="px-2 py-2 space-y-1">
-              {(['kick','snare','tom1','tom2','hihat_closed','hihat_pedal','hihat_open','ride','crash'] as DrumPart[]).map(part => {
+              {(['kick','snare','tom1','tom3','tom2','hihat_closed','hihat_pedal','hihat_open','ride','crash'] as DrumPart[]).map(part => {
                 const slotKey = `drums:${part}` as SlotKey;
                 const userSampleForKit = lib.samples.find(s => s.slot === slotKey && s.kit === viewKit);
                 const builtInId = `kit:${viewKit.toLowerCase()}:${part}`;
@@ -643,7 +643,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
                         <img
                           src={iconUrls[`drums:${part}|${viewKit}`]}
                           alt={`${viewKit} ${PART_LABEL[part]}`}
-                          className="absolute inset-0 w-full h-full object-cover"
+                          className="absolute inset-0 w-full h-full object-contain"
                           draggable={false}
                         />
                       ) : (
@@ -671,13 +671,14 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
 
             {/* DRUMS ROW (bottom) — uniform rectangular frames */}
             <div className="flex items-end justify-around gap-3 mt-2">
-             {(['kick', 'snare', 'tom1', 'tom2'] as DrumPart[]).map(part => {
+             {(['kick', 'snare', 'tom1', 'tom3', 'tom2'] as DrumPart[]).map(part => {
                 // Approx real-world drum sizes: kick 22", floor tom 16", rack tom 12", snare 14"x6"
                 const DRUM_DIM: Record<string, { w: number; h: number }> = {
                   kick: { w: 120, h: 120 },
                   tom2: { w: 92, h: 92 },   // floor tom
                   snare: { w: 80, h: 64 },  // shallow shell
-                  tom1: { w: 70, h: 70 },   // rack tom
+                  tom1: { w: 70, h: 70 },   // rack tom 1
+                  tom3: { w: 70, h: 70 },   // rack tom 2
                 };
                 const { w, h } = DRUM_DIM[part] ?? { w: 88, h: 88 };
                 return (
@@ -694,7 +695,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
                         <img
                           src={iconUrls[`drums:${part}|${viewKit}`]}
                           alt={`${viewKit} ${PART_LABEL[part]}`}
-                          className="absolute inset-0 w-full h-full object-cover"
+                          className="absolute inset-0 w-full h-full object-contain"
                           draggable={false}
                         />
                       ) : (
