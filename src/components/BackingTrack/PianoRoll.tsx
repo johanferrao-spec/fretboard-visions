@@ -163,11 +163,71 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
     onPreviewNote?.(trackId, newNote.pitch, newNote.velocity);
   };
 
+  // Marquee drag-select on the grid
+  const handleGridMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    // Skip if started on a note (notes stop propagation in their own handlers)
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-note-id]')) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    dragRef.current = { kind: 'marquee', offsetX: e.clientX, offsetY: e.clientY, gridX: rect.left, gridY: rect.top };
+    setMarquee({ x1: x, y1: y, x2: x, y2: y });
+    setSelectedId(null);
+    setSelectedIds(new Set());
+  };
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const d = dragRef.current;
+      if (!d || d.kind !== 'marquee') return;
+      const x = e.clientX - (d.gridX ?? 0);
+      const y = e.clientY - (d.gridY ?? 0);
+      setMarquee(m => m ? { ...m, x2: x, y2: y } : null);
+    };
+    const onUp = () => {
+      const d = dragRef.current;
+      if (!d || d.kind !== 'marquee') return;
+      dragRef.current = null;
+      setMarquee(curr => {
+        if (!curr) return null;
+        const minX = Math.min(curr.x1, curr.x2);
+        const maxX = Math.max(curr.x1, curr.x2);
+        const minY = Math.min(curr.y1, curr.y2);
+        const maxY = Math.max(curr.y1, curr.y2);
+        const ids = new Set<string>();
+        for (const n of notes) {
+          const rowIdx = visiblePitches.indexOf(n.pitch);
+          if (rowIdx < 0) continue;
+          const nx1 = beatToX(n.startBeat);
+          const nx2 = beatToX(n.startBeat + n.duration);
+          const ny1 = rowIdx * rowHeight;
+          const ny2 = ny1 + rowHeight;
+          if (nx1 < maxX && nx2 > minX && ny1 < maxY && ny2 > minY) {
+            ids.add(n.id);
+          }
+        }
+        setSelectedIds(ids);
+        return null;
+      });
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [notes, visiblePitches, rowHeight, gridWidth, totalBeats]);
+
   // Delete key
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedId && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+        const inField = ['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName);
+        if (inField) return;
+        if (selectedIds.size > 0) {
+          onChange(notes.filter(n => !selectedIds.has(n.id)));
+          setSelectedIds(new Set());
+          setSelectedId(null);
+        } else if (selectedId) {
           onChange(notes.filter(n => n.id !== selectedId));
           setSelectedId(null);
         }
@@ -175,7 +235,8 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, notes, onChange]);
+  }, [selectedId, selectedIds, notes, onChange]);
+
 
   if (minimized) {
     return (
