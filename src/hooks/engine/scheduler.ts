@@ -172,8 +172,8 @@ export function scheduleTrack(
         // Bass slots are pinned to a specific kit (Rock/Jazz/Funk/Latin).
         // Pop falls back to Rock — same mapping used in the UI.
         const bassKit = genre === 'Pop' ? 'Rock' : genre;
-        const res = resolveUserSample?.(`bass:${bassKit}`, n.pitch)
-          ?? resolveUserSample?.('bass', n.pitch);
+        const res = resolveUserSample?.('bass', n.pitch)
+          ?? resolveUserSample?.(`bass:${bassKit}`, n.pitch);
         if (res?.kind === 'user') {
           // Use the sample's detected natural pitch as the base when
           // available; fall back to E2 (40) for legacy samples (typical bass).
