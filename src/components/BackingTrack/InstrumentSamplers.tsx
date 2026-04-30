@@ -1073,8 +1073,6 @@ function KeysIcon({
     case 'upright':  return <UprightPianoIcon tint={tint} stroke={stroke} sw={sw} />;
     case 'electric': return <ElectricPianoIcon tint={tint} stroke={stroke} sw={sw} />;
     case 'synth':    return <SynthIcon tint={tint} stroke={stroke} sw={sw} />;
-    case 'organ':    return <OrganIcon tint={tint} stroke={stroke} sw={sw} />;
-    case 'sampler':  return <SamplerIcon tint={tint} stroke={stroke} sw={sw} />;
   }
 }
 
