@@ -923,3 +923,114 @@ export default function SongTimeline({
     </div>
   );
 }
+
+/**
+ * Chord-variations panel — fixed to the right edge of the viewport so the
+ * full list of voicings + bass-note picker is always visible regardless of
+ * how close to the right side the source chord block is. Click outside the
+ * panel (or press Escape) to dismiss.
+ */
+function VariationsPanel({
+  degreeLabel, variations, onSelect, onSetBass, onClearBass, onClose,
+}: {
+  degreeLabel: string;
+  variations: ChordVariation[];
+  onSelect: (v: ChordVariation) => void;
+  onSetBass: (n: NoteName) => void;
+  onClearBass: () => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onDocMouseDown = (ev: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(ev.target as Node)) onClose();
+    };
+    const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') onClose(); };
+    // Defer registration so the very click that opened the panel doesn't
+    // immediately close it.
+    const id = window.setTimeout(() => {
+      document.addEventListener('mousedown', onDocMouseDown);
+      document.addEventListener('keydown', onKey);
+    }, 0);
+    return () => {
+      window.clearTimeout(id);
+      document.removeEventListener('mousedown', onDocMouseDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="fixed z-[9999] right-3 top-20 w-64 max-h-[70vh] flex flex-col bg-card border border-border rounded-lg shadow-2xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+        <span className="text-[10px] font-mono font-bold text-foreground uppercase tracking-wider">
+          Voicings ({degreeLabel})
+        </span>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <X size={12} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
+        {variations.map((v, i) => (
+          <button
+            key={i}
+            onClick={() => onSelect(v)}
+            className={`w-full text-left px-2 py-1 rounded text-[10px] font-mono transition-all border ${
+              v.isDiatonic
+                ? 'bg-muted/50 border-transparent hover:bg-muted text-foreground'
+                : 'border-transparent hover:brightness-110 text-foreground'
+            }`}
+            style={!v.isDiatonic ? {
+              backgroundColor: 'hsl(50, 90%, 55%, 0.15)',
+              borderColor: 'hsl(50, 90%, 55%, 0.3)',
+            } : {}}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold">{v.label}</span>
+              {!v.isDiatonic && (
+                <span
+                  className="text-[8px] px-1 py-0.5 rounded font-bold"
+                  style={{ backgroundColor: 'hsl(50, 90%, 55%, 0.3)', color: 'hsl(50, 70%, 35%)' }}
+                >
+                  BORROWED
+                </span>
+              )}
+            </div>
+            {v.borrowedFrom && (
+              <div className="text-[8px] text-muted-foreground mt-0.5 leading-tight">
+                ⚠ {v.borrowedFrom}
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+      <div className="border-t border-border px-2 py-2">
+        <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-1">
+          Bass Note
+        </div>
+        <div className="flex flex-wrap gap-0.5">
+          <button
+            onClick={onClearBass}
+            className="px-1.5 py-0.5 rounded text-[8px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+          >
+            Root
+          </button>
+          {NOTE_NAMES.map(n => (
+            <button
+              key={n}
+              onClick={() => onSetBass(n)}
+              className="px-1 py-0.5 rounded text-[8px] font-mono bg-muted/50 text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
