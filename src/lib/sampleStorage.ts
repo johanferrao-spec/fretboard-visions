@@ -5,8 +5,9 @@
  */
 
 const DB_NAME = 'mf-sample-library';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'samples';
+const BASS_ICON_STORE = 'bass_icons';
 
 export interface StoredSample {
   /** Unique id, also used as IndexedDB primary key */
@@ -34,6 +35,13 @@ export interface StoredSample {
   imageMime?: string;
 }
 
+export interface StoredBassIcon {
+  kit: 'Funk' | 'Jazz' | 'Rock' | 'Latin';
+  blob: Blob;
+  mime: string;
+  updatedAt: number;
+}
+
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -42,6 +50,9 @@ function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE)) {
         const store = db.createObjectStore(STORE, { keyPath: 'id' });
         store.createIndex('slot', 'slot');
+      }
+      if (!db.objectStoreNames.contains(BASS_ICON_STORE)) {
+        db.createObjectStore(BASS_ICON_STORE, { keyPath: 'kit' });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -81,4 +92,27 @@ export async function deleteSample(id: string): Promise<void> {
     tx.onerror = () => reject(tx.error);
   });
   db.close();
+}
+
+export async function putBassIcon(icon: StoredBassIcon): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(BASS_ICON_STORE, 'readwrite');
+    tx.objectStore(BASS_ICON_STORE).put(icon);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+export async function getAllBassIcons(): Promise<StoredBassIcon[]> {
+  const db = await openDb();
+  const out = await new Promise<StoredBassIcon[]>((resolve, reject) => {
+    const tx = db.transaction(BASS_ICON_STORE, 'readonly');
+    const req = tx.objectStore(BASS_ICON_STORE).getAll();
+    req.onsuccess = () => resolve(req.result as StoredBassIcon[]);
+    req.onerror = () => reject(req.error);
+  });
+  db.close();
+  return out;
 }

@@ -26,7 +26,7 @@ const Index = () => {
   const midi = useMidiEngine();
   const sampleLib = useSampleLibrary();
   const resolveUserSample = useCallback(
-    (slot: string) => sampleLib.resolveSlot(slot),
+    (slot: string, targetPitch?: number) => sampleLib.resolveSlot(slot, targetPitch),
     [sampleLib.resolveSlot],
   );
   const [showCustomTuning, setShowCustomTuning] = useState(false);
@@ -266,7 +266,7 @@ const Index = () => {
     // Synchronously kick Tone.js inside the user gesture so audio is allowed.
     try {
       await ensureToneAudioContext('timeline-play');
-    } catch {}
+    } catch { /* audio will surface errors in backing playback below */ }
     // Both engines share Tone's global Transport — make sure the other one
     // isn't mid-playback before we schedule, otherwise they cancel each other.
     midi.stop();

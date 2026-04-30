@@ -5,7 +5,7 @@ import { detectPitchFromBlob } from '@/lib/pitchDetect';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import type { Genre } from '@/hooks/useSongTimeline';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
-import type { SlotKey, SampleListEntry } from '@/hooks/useSampleLibrary';
+import type { BassIconKit, SlotKey, SampleListEntry } from '@/hooks/useSampleLibrary';
 import {
   BUILT_IN_KIT_SAMPLES,
   KIT_COLORS,
@@ -89,7 +89,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     } catch { return 'upright'; }
   });
   useEffect(() => {
-    try { localStorage.setItem(KEYS_VARIANT_KEY, keysVariant); } catch {}
+    try { localStorage.setItem(KEYS_VARIANT_KEY, keysVariant); } catch { /* ignore unavailable localStorage */ }
   }, [keysVariant]);
 
   /** Which kit the overview panel is currently viewing. Defaults to the kit
@@ -135,6 +135,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
       // song's bass kit, with auto-pitch detection. Mirrors BassSlotGrid.
       const bassKitForDrop = songGenreToKit(genre);
       const slotIndex = BASS_KIT_INDEX[bassKitForDrop];
+      if (image) await lib.setBassIcon(bassKitForDrop, image, image.type || 'image/png');
       if (audio) {
         const detected = await detectPitchFromBlob(audio);
         let snapped: number | undefined = detected?.midi;
@@ -212,7 +213,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
   const previewSample = (entry: SampleListEntry | null, semitoneShift = 0) => {
     if (!entry) return;
     if (previewRef.current) {
-      try { previewRef.current.pause(); } catch {}
+      try { previewRef.current.pause(); } catch { /* ignore preview cleanup */ }
       previewRef.current.src = '';
     }
     let url: string | null = null;
@@ -300,7 +301,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     style: { cursor: 'pointer' as const },
   });
 
-  const bassKit = songGenreToKit(genre);
+  const bassKit = (bassActive?.userSample?.kit as DrumKitGenre | undefined) ?? songGenreToKit(genre);
 
   return (
     <div className="flex h-full bg-card border-t border-border overflow-hidden">
@@ -804,6 +805,13 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
 // ─────────────────────────────────────────────────────────────────────
 const BASS_KITS_ALL: DrumKitGenre[] = ['Rock', 'Jazz', 'Funk', 'Latin'];
 
+function getBassKitAtPoint(x: number, y: number): BassIconKit | null {
+  const el = document.elementFromPoint(x, y) as HTMLElement | null;
+  const target = el?.closest?.('[data-bass-kit]') as HTMLElement | null;
+  const kit = target?.dataset.bassKit as BassIconKit | undefined;
+  return kit && BASS_KITS_ALL.includes(kit) ? kit : null;
+}
+
 function BassMainIcon({
   lib, bassKit, bassActive, dragOver, selected,
   onSelect, onDragOver, onDragLeave, onDrop,
@@ -818,32 +826,44 @@ function BassMainIcon({
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent) => void;
 }) {
+  const [chipDragOver, setChipDragOver] = useState<BassIconKit | null>(null);
   // Find the bass sample assigned to the current kit (preferred) and the
   // one currently active; either may carry artwork we want to render.
   const sampleForKit = useMemo(
     () => lib.samples.find(s => s.slot === 'bass' && s.kit === bassKit) ?? null,
     [lib.samples, bassKit],
   );
-  const artworkSample = sampleForKit?.imageBlob
-    ? sampleForKit
-    : (bassActive?.userSample?.imageBlob ? bassActive.userSample : null);
+  const artworkSample = sampleForKit?.imageBlob ? sampleForKit : (bassActive?.userSample?.imageBlob ? bassActive.userSample : null);
+  const artworkIcon = lib.bassIcons[bassKit];
 
   // Manage object URL for the dropped artwork.
   const [artUrl, setArtUrl] = useState<string | null>(null);
   useEffect(() => {
-    if (!artworkSample?.imageBlob) { setArtUrl(null); return; }
-    const url = URL.createObjectURL(artworkSample.imageBlob);
+    const blob = artworkSample?.imageBlob ?? artworkIcon?.blob;
+    if (!blob) { setArtUrl(null); return; }
+    const url = URL.createObjectURL(blob);
     setArtUrl(url);
     return () => URL.revokeObjectURL(url);
-  }, [artworkSample?.id, artworkSample?.imageBlob]);
+  }, [artworkSample?.id, artworkSample?.imageBlob, artworkIcon?.blob, artworkIcon?.updatedAt]);
 
   return (
     <div
       className={`flex flex-col items-center min-w-[140px] rounded-md transition-colors ${dragOver ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
       onClick={onSelect}
       onDragOver={onDragOver}
+      onDragEnter={(e) => setChipDragOver(getBassKitAtPoint(e.clientX, e.clientY))}
+      onDragOverCapture={(e) => setChipDragOver(getBassKitAtPoint(e.clientX, e.clientY))}
       onDragLeave={onDragLeave}
-      onDrop={onDrop}
+      onDrop={async (e) => {
+        const kitTarget = getBassKitAtPoint(e.clientX, e.clientY);
+        if (!kitTarget) { onDrop(e); return; }
+        e.preventDefault();
+        e.stopPropagation();
+        setChipDragOver(null);
+        const files = Array.from(e.dataTransfer.files ?? []);
+        const image = files.find(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name));
+        if (image) await lib.setBassIcon(kitTarget, image, image.type || 'image/png');
+      }}
       style={{ cursor: 'pointer' }}
     >
       {artUrl ? (
@@ -871,6 +891,7 @@ function BassMainIcon({
           return (
             <button
               key={k}
+              data-bass-kit={k}
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
@@ -881,6 +902,8 @@ function BassMainIcon({
               className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border transition-colors ${
                 isOn
                   ? 'border-primary bg-primary/15 text-foreground'
+                  : chipDragOver === k
+                    ? 'border-primary bg-primary/10 text-foreground'
                   : has
                     ? 'border-border text-foreground hover:bg-muted/40'
                     : 'border-dashed border-border/60 text-muted-foreground/60'

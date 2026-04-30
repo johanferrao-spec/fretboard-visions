@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { deleteSample, getAllSamples, putSample, type StoredSample } from '@/lib/sampleStorage';
+import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, type StoredBassIcon, type StoredSample } from '@/lib/sampleStorage';
 import type { DrumPart } from '@/lib/backingTrackTypes';
 import {
   BUILT_IN_KIT_SAMPLES,
@@ -19,6 +19,7 @@ import type { SampleResolution } from './engine/scheduler';
  *   keys           — single keys slot
  */
 export type SlotKey = `drums:${DrumPart}` | 'bass' | 'keys';
+export type BassIconKit = 'Funk' | 'Jazz' | 'Rock' | 'Latin';
 
 /** Per-sample tint within a slot — used for non-drum (bass/keys) user uploads. */
 const SAMPLE_TINTS = [
@@ -53,7 +54,7 @@ function readActive(): Record<string, string> {
 }
 
 function writeActive(map: Record<string, string>) {
-  try { localStorage.setItem(ACTIVE_KEY, JSON.stringify(map)); } catch {}
+  try { localStorage.setItem(ACTIVE_KEY, JSON.stringify(map)); } catch { /* ignore unavailable localStorage */ }
 }
 
 /** Unified entry shown in the sample list — wraps either a user sample or built-in kit piece. */
@@ -74,11 +75,16 @@ export interface SampleListEntry {
 
 export function useSampleLibrary() {
   const [samples, setSamples] = useState<StoredSample[]>([]);
+  const [bassIcons, setBassIcons] = useState<Record<BassIconKit, StoredBassIcon | undefined>>({
+    Funk: undefined, Jazz: undefined, Rock: undefined, Latin: undefined,
+  });
   // Always-current ref so callbacks never operate on a stale samples snapshot.
   // Without this, two rapid uploads can each see "[]" in their closure and the
   // second write can clobber the first when state finally flushes.
   const samplesRef = useRef<StoredSample[]>([]);
   samplesRef.current = samples;
+  const bassIconsRef = useRef(bassIcons);
+  bassIconsRef.current = bassIcons;
   // Default: pre-assign every drum part to the Rock kit so audio still plays
   // before the user touches anything. Loaded value (if any) overrides this.
   const [active, setActive] = useState<Record<string, string>>(() => {
@@ -90,7 +96,7 @@ export function useSampleLibrary() {
 
   useEffect(() => {
     let cancelled = false;
-    getAllSamples().then(s => {
+    getAllSamples().then(async s => {
       if (cancelled) return;
       // Migrate any legacy `drums:hihat` slot to `drums:hihat_closed`.
       const migrated = s.map(item => item.slot === 'drums:hihat'
@@ -106,9 +112,30 @@ export function useSampleLibrary() {
         for (const m of migrated) if (!seen.has(m.id)) merged.push(m);
         return merged;
       });
+      try {
+        const icons = await getAllBassIcons();
+        if (!cancelled) {
+          setBassIcons(prev => {
+            const next = { ...prev };
+            for (const icon of icons) next[icon.kit] = icon;
+            return next;
+          });
+        }
+      } catch { /* ignore missing icon store during migration */ }
       setLoaded(true);
     }).catch(() => setLoaded(true));
     return () => { cancelled = true; };
+  }, []);
+
+  const setBassIcon = useCallback(async (kit: BassIconKit, file: File | Blob, mime?: string) => {
+    const icon: StoredBassIcon = {
+      kit,
+      blob: file,
+      mime: mime || (file instanceof File ? file.type : '') || 'image/png',
+      updatedAt: Date.now(),
+    };
+    await putBassIcon(icon);
+    setBassIcons(prev => ({ ...prev, [kit]: icon }));
   }, []);
 
   const addSample = useCallback(async (
@@ -202,10 +229,9 @@ export function useSampleLibrary() {
       const filtered = existing ? prev.filter(s => s.id !== existing.id) : prev;
       return [...filtered, stored];
     });
-    // Also make this the "active" entry for the slot if none was active yet,
-    // so the scheduler resolver returns *something* for legacy single-pick paths.
+    // Make this the active bass sound immediately; the selector chips can
+    // change it later, and playback resolves through this active choice.
     setActive(prev => {
-      if (prev[slot]) return prev;
       const next = { ...prev, [slot]: id };
       writeActive(next);
       return next;
@@ -314,8 +340,12 @@ export function useSampleLibrary() {
         return q;
       };
       let bassSamples = samples
-        .filter(s => s.slot === 'bass' && typeof s.pitch === 'number')
-        .map(s => ({ ...s, pitch: snap(s.pitch as number) }));
+        .filter(s => s.slot === 'bass')
+        .map(s => (typeof s.pitch === 'number' ? { ...s, pitch: snap(s.pitch) } : s));
+      if (!requestedKit && active.bass) {
+        const selected = bassSamples.find(s => s.id === active.bass);
+        if (selected) return { kind: 'user', sample: selected };
+      }
       if (requestedKit) {
         const kitMatch = bassSamples.filter(s => s.kit === requestedKit);
         if (kitMatch.length > 0) bassSamples = kitMatch;
@@ -323,9 +353,9 @@ export function useSampleLibrary() {
       if (bassSamples.length === 0) return null;
       if (typeof targetPitch === 'number') {
         let best = bassSamples[0];
-        let bestDist = Math.abs((best.pitch as number) - targetPitch);
+        let bestDist = Math.abs(((best.pitch as number | undefined) ?? 40) - targetPitch);
         for (let i = 1; i < bassSamples.length; i++) {
-          const d = Math.abs((bassSamples[i].pitch as number) - targetPitch);
+          const d = Math.abs(((bassSamples[i].pitch as number | undefined) ?? 40) - targetPitch);
           if (d < bestDist) { best = bassSamples[i]; bestDist = d; }
         }
         return { kind: 'user', sample: best };
@@ -382,8 +412,10 @@ export function useSampleLibrary() {
 
   return {
     samples,
+    bassIcons,
     loaded,
     active,
+    setBassIcon,
     addSample,
     updateSample,
     setSlotIndexedSample,

@@ -88,8 +88,14 @@ function playJazzKitSample(inst: EngineInstruments, pitch: number, t: number, ga
   const playSample = (pl: Tone.Player) => {
     if (!pl.loaded) return false;
     try {
-      pl.volume.value = Tone.gainToDb(Math.max(0.001, gain));
-      pl.start(t);
+      const src = new Tone.ToneBufferSource(pl.buffer);
+      const gainNode = new Tone.Gain(gain).connect(inst.master);
+      src.connect(gainNode);
+      src.onended = () => {
+        try { src.dispose(); } catch { /* ignore disposal races */ }
+        try { gainNode.dispose(); } catch { /* ignore disposal races */ }
+      };
+      src.start(t);
       return true;
     } catch {
       return false;
@@ -166,8 +172,8 @@ export function scheduleTrack(
         // Bass slots are pinned to a specific kit (Rock/Jazz/Funk/Latin).
         // Pop falls back to Rock — same mapping used in the UI.
         const bassKit = genre === 'Pop' ? 'Rock' : genre;
-        const res = resolveUserSample?.(`bass:${bassKit}`, n.pitch)
-          ?? resolveUserSample?.('bass', n.pitch);
+        const res = resolveUserSample?.('bass', n.pitch)
+          ?? resolveUserSample?.(`bass:${bassKit}`, n.pitch);
         if (res?.kind === 'user') {
           // Use the sample's detected natural pitch as the base when
           // available; fall back to E2 (40) for legacy samples (typical bass).
@@ -175,7 +181,8 @@ export function scheduleTrack(
           const rate = Math.pow(2, (n.pitch - basePitch) / 12);
           if (playUserSample(res.sample, inst.master, { time: t, rate, gain, durationSec: dur })) return;
         }
-        inst.bass.triggerAttackRelease(midiToNote(n.pitch), dur, t, gain);
+        // Bass is sample-only: if no user bass sample is available/decoded yet,
+        // stay silent rather than falling back to the synth bass.
       } else if (trackId === 'piano') {
         const res = resolveUserSample?.('keys', n.pitch);
         if (res?.kind === 'user') {

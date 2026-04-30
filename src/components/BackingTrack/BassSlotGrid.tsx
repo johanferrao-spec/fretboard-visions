@@ -69,15 +69,21 @@ export default function BassSlotGrid({ lib, volume }: Props) {
         next[s.sample.id] = url;
         created.push(url);
       }
+      const icon = lib.bassIcons[s.kit];
+      if (icon?.blob) {
+        const url = URL.createObjectURL(icon.blob);
+        next[`kit:${s.kit}`] = url;
+        created.push(url);
+      }
     }
     setImageUrls(next);
     return () => { created.forEach(u => URL.revokeObjectURL(u)); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slots.map(s => s.sample?.id + ':' + (s.sample?.imageBlob ? '1' : '0')).join('|')]);
+  }, [slots.map(s => `${s.kit}:${s.sample?.id ?? ''}:${s.sample?.imageBlob ? '1' : '0'}:${lib.bassIcons[s.kit]?.updatedAt ?? 0}`).join('|')]);
 
   useEffect(() => () => {
     if (previewRef.current) {
-      try { previewRef.current.pause(); } catch {}
+      try { previewRef.current.pause(); } catch { /* ignore preview cleanup */ }
       previewRef.current = null;
     }
   }, []);
@@ -85,7 +91,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
   const previewSlot = (sample: StoredSample | null) => {
     if (!sample) return;
     if (previewRef.current) {
-      try { previewRef.current.pause(); } catch {}
+      try { previewRef.current.pause(); } catch { /* ignore preview cleanup */ }
     }
     const url = URL.createObjectURL(sample.blob);
     const a = new Audio(url);
@@ -128,11 +134,9 @@ export default function BassSlotGrid({ lib, volume }: Props) {
   const assignImage = async (index: number, file: File) => {
     const slot = slotByIndex(index);
     const existing = slot.sample;
+    await lib.setBassIcon(slot.kit, file, file.type || 'image/png');
     if (existing) {
       await lib.updateSample(existing.id, { imageBlob: file, imageMime: file.type || 'image/png' });
-    } else {
-      // eslint-disable-next-line no-console
-      console.warn('[bass slot] image dropped on empty slot — drop a .wav first');
     }
   };
 
@@ -141,9 +145,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
     const audio = arr.find(isAudioFile);
     const image = arr.find(isImageFile);
     if (audio) await assignAudio(index, audio);
-    if (image) {
-      if (audio || slots[index].sample) await assignImage(index, image);
-    }
+    if (image) await assignImage(index, image);
   };
 
   const handleDrop = async (e: React.DragEvent, index: number) => {
@@ -169,7 +171,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
         {slots.map(({ index, kit, label, sample }) => {
           const isOver = dragOverIndex === index;
           const isBusy = busyIndex === index;
-          const imageUrl = sample ? imageUrls[sample.id] : undefined;
+          const imageUrl = (sample ? imageUrls[sample.id] : undefined) ?? imageUrls[`kit:${kit}`];
           const noteName =
             typeof sample?.pitch === 'number' ? midiToName(sample.pitch) : null;
           return (
@@ -249,8 +251,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); imageInputRefs.current[index]?.click(); }}
                   title="Upload .png artwork"
-                  className="text-muted-foreground hover:text-foreground p-0.5 disabled:opacity-30"
-                  disabled={!sample}
+                  className="text-muted-foreground hover:text-foreground p-0.5"
                 >
                   <ImagePlus size={10} />
                 </button>
