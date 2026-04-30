@@ -104,6 +104,8 @@ export function useSampleLibrary() {
   samplesRef.current = samples;
   const bassIconsRef = useRef(bassIcons);
   bassIconsRef.current = bassIcons;
+  const instrumentIconsRef = useRef(instrumentIcons);
+  instrumentIconsRef.current = instrumentIcons;
   // Default: pre-assign every drum part to the Rock kit so audio still plays
   // before the user touches anything. Loaded value (if any) overrides this.
   const [active, setActive] = useState<Record<string, string>>(() => {
@@ -244,6 +246,7 @@ export function useSampleLibrary() {
 
   const setBassIcon = useCallback(async (kit: BassIconKit, file: File | Blob, mime?: string) => {
     const resolvedMime = mime || (file instanceof File ? file.type : '') || 'image/png';
+    const previous = bassIconsRef.current[kit];
     const icon: StoredBassIcon = {
       kit,
       blob: file,
@@ -253,7 +256,12 @@ export function useSampleLibrary() {
     await putBassIcon(icon);
     setBassIcons(prev => ({ ...prev, [kit]: icon }));
     // Mirror to Cloud Storage so the asset survives across devices/browser clears.
-    cloudUploadBassIcon(kit, file, resolvedMime);
+    const uploaded = await cloudUploadBassIcon(kit, file, resolvedMime);
+    if (!uploaded && previous) {
+      await putBassIcon(previous);
+      setBassIcons(prev => ({ ...prev, [kit]: previous }));
+    }
+    return Boolean(uploaded);
   }, []);
 
   /** Set a generic per-instrument icon. Key format: `${slot}|${variant}`.
@@ -261,6 +269,7 @@ export function useSampleLibrary() {
    *  untouched. Persisted in IndexedDB so it survives reloads. */
   const setInstrumentIcon = useCallback(async (key: string, file: File | Blob, mime?: string) => {
     const resolvedMime = mime || (file instanceof File ? file.type : '') || 'image/png';
+    const previous = instrumentIconsRef.current[key];
     const icon: StoredInstrumentIcon = {
       key,
       blob: file,
@@ -271,7 +280,12 @@ export function useSampleLibrary() {
     setInstrumentIcons(prev => ({ ...prev, [key]: icon }));
     // Mirror to Cloud Storage. Key format `${slot}|${variant}`.
     const [slot, variant = 'default'] = key.split('|');
-    cloudUploadInstrumentIcon(slot, variant, file, resolvedMime);
+    const uploaded = await cloudUploadInstrumentIcon(slot, variant, file, resolvedMime);
+    if (!uploaded && previous) {
+      await putInstrumentIcon(previous);
+      setInstrumentIcons(prev => ({ ...prev, [key]: previous }));
+    }
+    return Boolean(uploaded);
   }, []);
 
   const removeInstrumentIcon = useCallback(async (key: string) => {
