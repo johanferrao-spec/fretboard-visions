@@ -73,6 +73,7 @@ const KEYS_OPTIONS: { id: KeysVariant; label: string }[] = [
   { id: 'sampler', label: 'Sampler' },
 ];
 const KEYS_VARIANT_KEY = 'mf-keys-variant';
+const BASS_KIT_CHOICE_KEY = 'mf-bass-kit-choice';
 
 export default function InstrumentSamplers({ volume, genre }: Props) {
   const lib = useSampleLibrary();
