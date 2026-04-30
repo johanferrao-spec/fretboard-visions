@@ -268,11 +268,7 @@ export default function BackingTrackView({
         </div>
       </div>
 
-      {/* placeholder to keep diff small */}
-      <div className="hidden">
 
-
-      {/* Piano roll for selected clip */}
       {openClip && openClipNotes && (
         <PianoRoll
           trackId={openClip.trackId}
