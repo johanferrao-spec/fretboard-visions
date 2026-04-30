@@ -75,7 +75,7 @@ const KEYS_OPTIONS: { id: KeysVariant; label: string }[] = [
 const KEYS_VARIANT_KEY = 'mf-keys-variant';
 const BASS_KIT_CHOICE_KEY = 'mf-bass-kit-choice';
 
-export default function InstrumentSamplers({ volume, genre }: Props) {
+export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
   const lib = useSampleLibrary();
   const [selection, setSelection] = useState<Selection>({ instrument: 'drums', part: 'snare' });
   const [dragOver, setDragOver] = useState<SlotKey | null>(null);
