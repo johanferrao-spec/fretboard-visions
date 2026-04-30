@@ -136,3 +136,37 @@ export async function getAllBassIcons(): Promise<StoredBassIcon[]> {
   db.close();
   return out;
 }
+
+export async function putInstrumentIcon(icon: StoredInstrumentIcon): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(INSTRUMENT_ICON_STORE, 'readwrite');
+    tx.objectStore(INSTRUMENT_ICON_STORE).put(icon);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+export async function getAllInstrumentIcons(): Promise<StoredInstrumentIcon[]> {
+  const db = await openDb();
+  const out = await new Promise<StoredInstrumentIcon[]>((resolve, reject) => {
+    const tx = db.transaction(INSTRUMENT_ICON_STORE, 'readonly');
+    const req = tx.objectStore(INSTRUMENT_ICON_STORE).getAll();
+    req.onsuccess = () => resolve(req.result as StoredInstrumentIcon[]);
+    req.onerror = () => reject(req.error);
+  });
+  db.close();
+  return out;
+}
+
+export async function deleteInstrumentIcon(key: string): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(INSTRUMENT_ICON_STORE, 'readwrite');
+    tx.objectStore(INSTRUMENT_ICON_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
