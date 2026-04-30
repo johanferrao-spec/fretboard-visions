@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, putInstrumentIcon, getAllInstrumentIcons, deleteInstrumentIcon, type StoredBassIcon, type StoredInstrumentIcon, type StoredSample } from '@/lib/sampleStorage';
 import {
   uploadBassIcon as cloudUploadBassIcon,
@@ -36,6 +36,16 @@ const SAMPLE_TINTS = [
 ];
 
 const ACTIVE_KEY = 'mf-active-samples';
+
+function cloudSampleId(folder: string, base: string): string {
+  return `cloud_${folder}_${base}`;
+}
+
+function decodeCloudSlot(encoded: string): string {
+  if (encoded === 'bass' || encoded === 'keys') return encoded;
+  if (encoded.startsWith('drums_')) return encoded.replace(/^drums_/, 'drums:');
+  return encoded.replace(/_/g, ':');
+}
 
 /** Migrate older slot keys: the legacy `drums:hihat` slot is now split into
  *  closed/pedal/open. We map any pre-existing assignment to `hihat_closed`. */
