@@ -54,7 +54,7 @@ function readActive(): Record<string, string> {
 }
 
 function writeActive(map: Record<string, string>) {
-  try { localStorage.setItem(ACTIVE_KEY, JSON.stringify(map)); } catch {}
+  try { localStorage.setItem(ACTIVE_KEY, JSON.stringify(map)); } catch { /* ignore unavailable localStorage */ }
 }
 
 /** Unified entry shown in the sample list — wraps either a user sample or built-in kit piece. */
@@ -121,7 +121,7 @@ export function useSampleLibrary() {
             return next;
           });
         }
-      } catch {}
+      } catch { /* ignore missing icon store during migration */ }
       setLoaded(true);
     }).catch(() => setLoaded(true));
     return () => { cancelled = true; };
