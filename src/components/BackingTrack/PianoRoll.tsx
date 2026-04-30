@@ -306,15 +306,22 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
               const rowIdx = visiblePitches.indexOf(n.pitch);
               if (rowIdx < 0) return null;
               const isSel = selectedId === n.id;
+              // Velocity controls vertical size — low-velocity notes shrink
+              // so they never reach the row borders, mirroring DAW conventions.
+              // Map velocity 1..127 → height 28%..100% of available row space.
+              const velFrac = Math.max(0.28, Math.min(1, n.velocity / 127));
+              const maxNoteH = rowHeight - 2;
+              const noteH = Math.max(4, maxNoteH * velFrac);
+              const noteTop = rowIdx * rowHeight + 1 + (maxNoteH - noteH) / 2;
               return (
                 <div
                   key={n.id}
                   className="absolute rounded-sm cursor-grab active:cursor-grabbing group"
                   style={{
                     left: beatToX(n.startBeat),
-                    top: rowIdx * rowHeight + 1,
+                    top: noteTop,
                     width: Math.max(6, beatToX(n.duration)),
-                    height: rowHeight - 2,
+                    height: noteH,
                     backgroundColor: `hsl(${color} / ${0.6 + (n.velocity / 127) * 0.4})`,
                     border: isSel ? '2px solid hsl(var(--primary))' : `1px solid hsl(${color})`,
                     boxShadow: isSel ? '0 0 6px hsl(var(--primary) / 0.7)' : `0 0 2px hsl(${color} / 0.5)`,

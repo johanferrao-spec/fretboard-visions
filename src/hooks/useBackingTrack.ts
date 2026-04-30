@@ -365,12 +365,15 @@ export function useBackingTrack() {
     schedulePlayhead((b) => setCurrentBeat(b));
     setupLoop(measures);
     Tone.getTransport().position = 0;
-    const startAudioTime = Tone.now() + 0.05;
+    // Tight start delay — just enough for the scheduler to be safe but
+    // small enough that the playhead and audio feel simultaneous.
+    const START_DELAY = 0.015;
+    const startAudioTime = Tone.now() + START_DELAY;
     // eslint-disable-next-line no-console
     console.log('[backing] AudioContext state:', Tone.getContext().state, 'startAudioTime=', startAudioTime);
-    transport.start('+0.05', 0);
+    transport.start(`+${START_DELAY}`, 0);
     setIsPlaying(true);
-    return { startAudioTime, startPerfTime: performance.now() + 50 };
+    return { startAudioTime, startPerfTime: performance.now() + START_DELAY * 1000 };
   }, [init, startToneAudio, ensureInstruments]);
 
   /**
@@ -391,8 +394,13 @@ export function useBackingTrack() {
     const inst = instRef.current;
     if (!inst) return;
     const transport = Tone.getTransport();
-    // Cancel only events that haven't fired yet.
-    transport.cancel(transport.seconds + 0.001);
+    // Wipe ALL scheduled events. In loop mode, scheduled events re-fire
+    // on every loop cycle relative to loopStart, so a partial cancel by
+    // absolute seconds leaves the previous cycle's notes in place — which
+    // then play simultaneously with the freshly-scheduled notes (audible
+    // as doubled bass / piano on each loop). Cancel from time 0 to fully
+    // clear, then re-schedule everything fresh.
+    transport.cancel(0);
     const liveTracks = tracksRef.current;
     (Object.keys(liveTracks) as TrackId[]).forEach(id => {
       const flat = flattenClips(liveTracks[id].clips);
