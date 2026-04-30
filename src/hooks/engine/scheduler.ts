@@ -150,22 +150,20 @@ export function scheduleTrack(
           if (playUserSample(resolution.sample, inst.master, { time: t, rate: 1, gain })) return;
         }
 
-        // 2) Built-in kit selection — jazz samples or synth fallback.
+        // 2) Built-in kit selection — honour the user's chosen kit. Do NOT
+        //    override with jazz samples just because the song genre is Jazz;
+        //    if the user explicitly selected the Rock kit, play Rock sounds.
         if (resolution?.kind === 'builtin') {
           if (resolution.sample.source === 'jazz-sample') {
             const ok = playJazzKitSample(inst, n.pitch, t, gain);
             if (ok) return;
           }
-          // synth selection (e.g. Rock ride): when the song is Jazz, prefer
-          // the real jazz wav for parts that have one (kick/snare/hats/ride)
-          // so the ride doesn't fall back to a MetalSynth in a jazz groove.
-          if (genre === 'Jazz' && playJazzKitSample(inst, n.pitch, t, gain)) return;
-          // synth (or jazz-sample miss) → synthesised voice
+          // synth (or jazz-sample miss) → synthesised voice for the chosen kit
           playSynthDrum(inst, n.pitch, dur, t, gain);
           return;
         }
 
-        // 3) No selection → default by genre (jazz uses jazz kit, others synth).
+        // 3) No selection at all → default by genre (jazz uses jazz kit, others synth).
         if (genre === 'Jazz' && playJazzKitSample(inst, n.pitch, t, gain)) return;
         playSynthDrum(inst, n.pitch, dur, t, gain);
       } else if (trackId === 'bass') {

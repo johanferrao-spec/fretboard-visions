@@ -168,7 +168,17 @@ export default function SongTimeline({
       const desiredStart = rawBeat - dragChord.offsetBeats;
       const snapped = Math.max(0, Math.min(totalBeats - snapGrid, Math.round(desiredStart / snapGrid) * snapGrid));
       onMoveChord(dragChord.id, snapped);
-      if (zHeld) onResizeChord(dragChord.id, 4);
+      if (zHeld) {
+        // Extend the dragged chord up to the next chord's start (or end of timeline)
+        const c = chords.find(x => x.id === dragChord.id);
+        if (c) {
+          const nextStart = chords
+            .filter(x => x.id !== dragChord.id && x.startBeat > c.startBeat)
+            .reduce<number | null>((min, x) => (min === null || x.startBeat < min) ? x.startBeat : min, null);
+          const target = nextStart ?? totalBeats;
+          onResizeChord(dragChord.id, Math.max(snapGrid, target - c.startBeat));
+        }
+      }
     };
     const onUp = () => {
       const id = dragChord.id;
@@ -179,11 +189,27 @@ export default function SongTimeline({
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [dragChord, getRawBeatFromX, onMoveChord, onCommitMove, onResizeChord, zHeld, xHeld, snapGrid, totalBeats, mutateChordType, toDominant7]);
+  }, [dragChord, getRawBeatFromX, onMoveChord, onCommitMove, onResizeChord, zHeld, xHeld, snapGrid, totalBeats, mutateChordType, toDominant7, chords]);
 
-  // Track Z (whole-bar drag), X (dom7), and Cmd/Ctrl (delete cursor) modifiers
-  // plus shortcut keys: Z extends selected chord(s) to a full bar; X converts
-  // selected chord(s) to dominant 7; A converts selected chord(s) to triads.
+  // Extend a chord's duration so its end reaches the start of the next chord
+  // (or the end of the timeline if it's the last one). Used by the `z` key.
+  const extendToNextChord = useCallback((id: string) => {
+    const c = chords.find(x => x.id === id);
+    if (!c) return;
+    const nextStart = chords
+      .filter(x => x.id !== id && x.startBeat > c.startBeat)
+      .reduce<number | null>((min, x) => (min === null || x.startBeat < min) ? x.startBeat : min, null);
+    const target = nextStart ?? totalBeats;
+    const newDuration = Math.max(snapGrid, target - c.startBeat);
+    if (Math.abs(newDuration - c.duration) > 1e-6) {
+      onResizeChord(id, newDuration);
+    }
+  }, [chords, totalBeats, snapGrid, onResizeChord]);
+
+  // Track Z (extend-to-next-chord), X (dom7), and Cmd/Ctrl (delete cursor) modifiers
+  // plus shortcut keys: Z extends selected chord(s) to the next chord; X
+  // converts selected chord(s) to dominant 7; A converts selected chord(s)
+  // to triads.
   useEffect(() => {
     const isTextTarget = (t: EventTarget | null) =>
       t instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName);
@@ -194,7 +220,7 @@ export default function SongTimeline({
         setZHeld(true);
         // Apply Z to selected when not actively dragging a chord
         if (!dragChord && selectedIds.size > 0) {
-          selectedIds.forEach(id => onResizeChord(id, 4));
+          selectedIds.forEach(id => extendToNextChord(id));
         }
       }
       if (k === 'x') {
@@ -225,7 +251,7 @@ export default function SongTimeline({
       window.removeEventListener('keyup', onUp);
       window.removeEventListener('blur', onBlur);
     };
-  }, [dragChord, selectedIds, onResizeChord, mutateChordType, toDominant7, toTriad]);
+  }, [dragChord, selectedIds, extendToNextChord, mutateChordType, toDominant7, toTriad]);
 
   // Resize chord from either edge; resize uses the range handler so dragged
   // edges consume/shrink neighbouring chord regions while the mouse moves.
