@@ -301,7 +301,7 @@ export default function InstrumentSamplers({ volume, genre }: Props) {
     style: { cursor: 'pointer' as const },
   });
 
-  const bassKit = songGenreToKit(genre);
+  const bassKit = (bassActive?.userSample?.kit as DrumKitGenre | undefined) ?? songGenreToKit(genre);
 
   return (
     <div className="flex h-full bg-card border-t border-border overflow-hidden">
