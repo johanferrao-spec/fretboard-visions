@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight } from 'lucide-react';
+import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight, RefreshCw } from 'lucide-react';
 import type { TimelineChord, SnapValue, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
@@ -47,6 +47,7 @@ interface SongTimelineProps {
   backingTrackActive?: boolean;
   onOpenBackingTrack?: () => void;
   onCloseBackingTrack?: () => void;
+  onRegenerateBackingMidi?: () => void;
   onSaveBackingTrack?: (name: string) => void;
   onLoadBackingTrack?: (id: string) => void;
   onDeleteBackingTrack?: (id: string) => void;
@@ -61,6 +62,7 @@ export default function SongTimeline({
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
   onSeek, onSetChordBass,
   backingTrackActive, onOpenBackingTrack, onCloseBackingTrack,
+  onRegenerateBackingMidi,
   onSaveBackingTrack, onLoadBackingTrack, onDeleteBackingTrack, savedBackingTracks = [],
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
@@ -689,7 +691,19 @@ export default function SongTimeline({
         {/* Grid wrapper — adds left header-spacer so chord grid aligns with DAW lanes */}
         <div className="flex-1 flex min-h-0">
           {backingTrackActive && !cellView && (
-            <div style={{ width: 200, minWidth: 200 }} className="border-r border-border/30 bg-card/40" />
+            <div
+              style={{ width: 200, minWidth: 200 }}
+              className="border-r border-border/30 bg-card/40 flex items-start justify-center pt-2"
+            >
+              <button
+                onClick={() => onRegenerateBackingMidi?.()}
+                className="px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider flex items-center gap-1 bg-primary/20 text-primary hover:bg-primary/30 transition-colors border border-primary/30"
+                title="Regenerate backing track MIDI from current chords"
+              >
+                <RefreshCw size={10} />
+                Regenerate MIDI
+              </button>
+            </div>
           )}
           {cellView ? (
             <CellGridView
