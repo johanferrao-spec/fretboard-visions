@@ -313,9 +313,9 @@ export default function SongTimeline({
         return (beat < cEnd && beat + dur > c.startBeat);
       });
       existingOverlaps.forEach(c => onRemoveChord(c.id));
-      // V chord defaults to dominant 7
-      const chordType = degree === 4 ? 'Dominant 7' : dc.type;
-      onAddChord(dc.root, chordType, beat, dur);
+      // Default to 7th-quality chord; X drag overrides to dominant 7
+      const baseType = xHeld ? 'Dominant 7' : toSeventh(dc.type);
+      onAddChord(dc.root, baseType, beat, dur);
       return;
     }
 
