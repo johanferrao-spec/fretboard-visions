@@ -79,7 +79,7 @@ function playSynthDrum(inst: EngineInstruments, pitch: number, dur: number, t: n
       inst.ride.triggerAttackRelease('G5', dur * 1.2, t, gain);
       break;
     default:
-      inst.snare.triggerAttackRelease(dur, t, gain);
+      inst.snare.triggerAttackRelease(0.35, t, gain);
   }
 }
 
