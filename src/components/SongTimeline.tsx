@@ -253,6 +253,36 @@ export default function SongTimeline({
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [resizeChord, onResizeChordRange, snapGrid, totalBeats, onTrimOverlaps]);
 
+  // Marquee selection — touch-select any chord whose box intersects the
+  // marquee rect. Active only while the user is rubber-banding on the empty
+  // grid background.
+  useEffect(() => {
+    if (!marquee) return;
+    const onMove = (ev: MouseEvent) => {
+      const rect = gridRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const x1 = ev.clientX - rect.left;
+      const y1 = ev.clientY - rect.top;
+      setMarquee(m => m ? { ...m, x1, y1 } : m);
+      const minX = Math.min(marquee.x0, x1);
+      const maxX = Math.max(marquee.x0, x1);
+      const beatsPerPx = totalBeats / rect.width;
+      const beatMin = minX * beatsPerPx;
+      const beatMax = maxX * beatsPerPx;
+      const hits = new Set<string>();
+      chords.forEach(c => {
+        const cs = c.startBeat;
+        const ce = c.startBeat + c.duration;
+        if (ce > beatMin && cs < beatMax) hits.add(c.id);
+      });
+      setSelectedIds(hits);
+    };
+    const onUp = () => setMarquee(null);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [marquee, chords, totalBeats]);
+
   // Playhead drag
   useEffect(() => {
     if (!playheadDragging) return;
