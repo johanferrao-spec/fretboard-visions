@@ -41,8 +41,14 @@ function playJazzKitSample(inst: EngineInstruments, pitch: number, t: number, ga
   const playSample = (pl: Tone.Player) => {
     if (!pl.loaded) return false;
     try {
-      pl.volume.value = Tone.gainToDb(Math.max(0.001, gain));
-      pl.start(t);
+      const src = new Tone.ToneBufferSource(pl.buffer);
+      const gainNode = new Tone.Gain(gain).connect(inst.master);
+      src.connect(gainNode);
+      src.onended = () => {
+        try { src.dispose(); } catch {}
+        try { gainNode.dispose(); } catch {}
+      };
+      src.start(t);
       return true;
     } catch { return false; }
   };
