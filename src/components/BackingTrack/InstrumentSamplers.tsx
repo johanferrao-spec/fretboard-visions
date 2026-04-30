@@ -855,7 +855,7 @@ function BassMainIcon({
         <img
           src={artUrl}
           alt={`${bassKit} bass artwork`}
-          className={`h-[200px] w-[140px] object-contain rounded ${selected ? 'ring-2 ring-primary' : ''}`}
+          className={`h-[280px] w-[180px] object-contain rounded p-1 ${selected ? 'ring-2 ring-primary' : ''}`}
         />
       ) : (
         <BassIcon
