@@ -229,10 +229,9 @@ export function useSampleLibrary() {
       const filtered = existing ? prev.filter(s => s.id !== existing.id) : prev;
       return [...filtered, stored];
     });
-    // Also make this the "active" entry for the slot if none was active yet,
-    // so the scheduler resolver returns *something* for legacy single-pick paths.
+    // Make this the active bass sound immediately; the selector chips can
+    // change it later, and playback resolves through this active choice.
     setActive(prev => {
-      if (prev[slot]) return prev;
       const next = { ...prev, [slot]: id };
       writeActive(next);
       return next;
