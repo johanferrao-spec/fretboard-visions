@@ -145,9 +145,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
     const audio = arr.find(isAudioFile);
     const image = arr.find(isImageFile);
     if (audio) await assignAudio(index, audio);
-    if (image) {
-      if (audio || slots[index].sample) await assignImage(index, image);
-    }
+    if (image) await assignImage(index, image);
   };
 
   const handleDrop = async (e: React.DragEvent, index: number) => {
@@ -253,8 +251,7 @@ export default function BassSlotGrid({ lib, volume }: Props) {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); imageInputRefs.current[index]?.click(); }}
                   title="Upload .png artwork"
-                  className="text-muted-foreground hover:text-foreground p-0.5 disabled:opacity-30"
-                  disabled={!sample}
+                  className="text-muted-foreground hover:text-foreground p-0.5"
                 >
                   <ImagePlus size={10} />
                 </button>
