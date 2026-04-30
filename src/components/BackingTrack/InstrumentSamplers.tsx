@@ -486,13 +486,22 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
               <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
                 Kit overview
               </span>
-              <button
-                onClick={() => lib.applyKitForAllParts(viewKit)}
-                className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-muted"
-                title={`Set every drum part to ${viewKit}`}
-              >
-                Apply
-              </button>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => lib.applyKitForAllParts(viewKit)}
+                  className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-muted"
+                  title={`Set every drum part to ${viewKit}`}
+                >
+                  Apply
+                </button>
+                <button
+                  onClick={() => lib.resetKit(viewKit)}
+                  className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-destructive/20 text-destructive hover:bg-destructive/30"
+                  title={`Reset ${viewKit} kit to defaults (removes custom icons & samples)`}
+                >
+                  Reset
+                </button>
+              </div>
             </div>
             {/* Kit picker tabs */}
             <div className="grid grid-cols-4 gap-1 px-2">
