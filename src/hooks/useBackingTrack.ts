@@ -530,7 +530,7 @@ export function useBackingTrack() {
   return {
     tracks, setTrackParam, setTrackClips, setTrackNotes, setClipNotes,
     updateClip, deleteClip, duplicateClip,
-    regenerateTrack, regenerateAll,
+    regenerateTrack, regenerateAll, rescheduleAll,
     isPlaying, currentBeat,
     play, stop, prewarm, setMasterVolume, previewNote,
     savedTracks, save, load, remove, reset,
