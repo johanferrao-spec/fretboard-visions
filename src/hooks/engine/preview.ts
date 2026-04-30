@@ -25,7 +25,7 @@ function pitchToDrumPart(pitch: number): DrumPart | null {
 function playSynthDrum(inst: EngineInstruments, pitch: number, dur: number, t: number, gain: number) {
   switch (pitch) {
     case DRUM_PITCHES.kick:         inst.kick.triggerAttackRelease('C1', dur, t, gain); break;
-    case DRUM_PITCHES.snare:        inst.snare.triggerAttackRelease(dur, t, gain); break;
+    case DRUM_PITCHES.snare:        inst.snare.triggerAttackRelease(0.35, t, gain); break;
     case DRUM_PITCHES.hihat_closed: inst.hihat.triggerAttackRelease('C5', dur * 0.4, t, gain); break;
     case DRUM_PITCHES.hihat_pedal:  inst.hihat.triggerAttackRelease('A4', dur * 0.35, t, gain * 0.7); break;
     case DRUM_PITCHES.hihat_open:   inst.hihat.triggerAttackRelease('C5', Math.max(0.4, dur * 1.4), t, gain); break;
@@ -33,7 +33,7 @@ function playSynthDrum(inst: EngineInstruments, pitch: number, dur: number, t: n
     case DRUM_PITCHES.tom1:         inst.kick.triggerAttackRelease('G2', dur, t, gain * 0.9); break;
     case DRUM_PITCHES.tom2:         inst.kick.triggerAttackRelease('D2', dur, t, gain * 0.9); break;
     case DRUM_PITCHES.crash:        inst.ride.triggerAttackRelease('G5', dur * 1.2, t, gain); break;
-    default:                        inst.snare.triggerAttackRelease(dur, t, gain);
+    default:                        inst.snare.triggerAttackRelease(0.35, t, gain);
   }
 }
 
@@ -87,13 +87,13 @@ export function previewTrackNote(
   }
 
   if (trackId === 'bass') {
-    const res = resolveUserSample?.('bass', n.pitch);
+    const bassKit = genre === 'Pop' ? 'Rock' : genre;
+    const res = resolveUserSample?.(`bass:${bassKit}`, n.pitch) ?? resolveUserSample?.('bass', n.pitch);
     if (res?.kind === 'user') {
       const basePitch = typeof res.sample.pitch === 'number' ? res.sample.pitch : 40;
       const rate = Math.pow(2, (n.pitch - basePitch) / 12);
       if (playUserSample(res.sample, inst.master, { time: t, rate, gain })) return;
     }
-    inst.bass.triggerAttackRelease(midiToNote(n.pitch), dur, t, gain);
     return;
   }
 
