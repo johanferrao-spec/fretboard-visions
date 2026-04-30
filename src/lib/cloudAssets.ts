@@ -72,3 +72,69 @@ export function uploadInstrumentSample(slot: string, variant: string, blob: Blob
   const path = `instruments/${safe(slot)}__${safe(variant)}.${ext}`;
   void upload(path, blob, mime || 'audio/wav');
 }
+
+// ---------------------------------------------------------------------------
+// Cloud restore: fetch assets back from the bucket when IndexedDB is empty
+// ---------------------------------------------------------------------------
+
+export interface CloudAssetEntry {
+  name: string;       // filename inside its folder
+  folder: 'bass' | 'instruments';
+  publicUrl: string;
+  isImage: boolean;
+  isAudio: boolean;
+}
+
+function mimeFromExt(ext: string): string {
+  const e = ext.toLowerCase();
+  if (e === 'png') return 'image/png';
+  if (e === 'jpg' || e === 'jpeg') return 'image/jpeg';
+  if (e === 'webp') return 'image/webp';
+  if (e === 'gif') return 'image/gif';
+  if (e === 'svg') return 'image/svg+xml';
+  if (e === 'wav') return 'audio/wav';
+  if (e === 'mp3') return 'audio/mpeg';
+  if (e === 'ogg') return 'audio/ogg';
+  if (e === 'm4a') return 'audio/mp4';
+  if (e === 'flac') return 'audio/flac';
+  return 'application/octet-stream';
+}
+
+const IMG_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg']);
+const AUDIO_EXTS = new Set(['wav', 'mp3', 'ogg', 'm4a', 'flac', 'aiff', 'aif']);
+
+/** List all files in the cloud bucket and return structured metadata. */
+export async function listCloudAssets(): Promise<CloudAssetEntry[]> {
+  const entries: CloudAssetEntry[] = [];
+  for (const folder of ['bass', 'instruments'] as const) {
+    try {
+      const { data, error } = await supabase.storage.from(BUCKET).list(folder, { limit: 500 });
+      if (error || !data) continue;
+      for (const f of data) {
+        if (!f.name || f.name.startsWith('.')) continue;
+        const ext = f.name.split('.').pop()?.toLowerCase() || '';
+        const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(`${folder}/${f.name}`);
+        entries.push({
+          name: f.name,
+          folder,
+          publicUrl: urlData.publicUrl,
+          isImage: IMG_EXTS.has(ext),
+          isAudio: AUDIO_EXTS.has(ext),
+        });
+      }
+    } catch { /* network issue — skip folder */ }
+  }
+  return entries;
+}
+
+/** Download a blob from the bucket. */
+export async function downloadCloudAsset(folder: string, name: string): Promise<{ blob: Blob; mime: string } | null> {
+  try {
+    const { data, error } = await supabase.storage.from(BUCKET).download(`${folder}/${name}`);
+    if (error || !data) return null;
+    const ext = name.split('.').pop()?.toLowerCase() || '';
+    return { blob: data, mime: mimeFromExt(ext) };
+  } catch {
+    return null;
+  }
+}
