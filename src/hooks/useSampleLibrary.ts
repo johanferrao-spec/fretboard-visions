@@ -596,6 +596,47 @@ export function useSampleLibrary() {
     });
   }, [samples]);
 
+  /** Reset a kit to factory defaults: remove all custom icons and user samples
+   *  for that kit, then re-apply the built-in selections. */
+  const resetKit = useCallback(async (kit: DrumKitGenre) => {
+    // 1. Remove all instrument icons for this kit's drum slots
+    for (const part of KIT_PARTS) {
+      const iconKey = `drums:${part}|${kit}`;
+      if (instrumentIconsRef.current[iconKey]) {
+        await deleteInstrumentIcon(iconKey);
+      }
+    }
+    setInstrumentIcons(prev => {
+      const next = { ...prev };
+      for (const part of KIT_PARTS) {
+        delete next[`drums:${part}|${kit}`];
+      }
+      return next;
+    });
+
+    // 2. Remove user-uploaded samples tagged to this kit
+    const toRemove = samplesRef.current.filter(
+      s => s.slot?.startsWith('drums:') && s.kit === kit
+    );
+    for (const s of toRemove) {
+      await deleteSample(s.id);
+    }
+    if (toRemove.length) {
+      const removeIds = new Set(toRemove.map(s => s.id));
+      setSamples(prev => prev.filter(s => !removeIds.has(s.id)));
+    }
+
+    // 3. Reset active selections to built-in defaults
+    setActive(prev => {
+      const next = { ...prev };
+      for (const part of KIT_PARTS) {
+        next[`drums:${part}`] = `kit:${kit.toLowerCase()}:${part}`;
+      }
+      writeActive(next);
+      return next;
+    });
+  }, []);
+
   return {
     samples,
     bassIcons,
@@ -616,5 +657,6 @@ export function useSampleLibrary() {
     resolveSlot,
     activeEntryFor,
     applyKitForAllParts,
+    resetKit,
   };
 }
