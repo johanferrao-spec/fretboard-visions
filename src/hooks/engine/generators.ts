@@ -771,8 +771,13 @@ export function generateBass(
 
       for (let b = 0; b < beats; b++) {
         const slot = pat[b % pat.length];
-        for (let s = 0; s < slot.length; s++) {
-          const subBeat = chord.startBeat + b + s / slot.length;
+        const subdivisions = slot.length;
+        // Each non-ghost note should ring out to the end of its slot —
+        // a quarter when subdivisions===1, an eighth when ===2, etc.
+        // Slight gap (95%) prevents click-stacking on legato playback.
+        const slotDur = (1 / subdivisions) * 0.95;
+        for (let s = 0; s < subdivisions; s++) {
+          const subBeat = chord.startBeat + b + s / subdivisions;
           let pitch = root;
           switch (slot[s]) {
             case 0: pitch = b === 0 && s === 0 ? beat1Pitch : root; break;
@@ -783,7 +788,7 @@ export function generateBass(
           }
           const isGhost = slot[s] === 4 || (complexity > 0.6 && s > 0 && chance(0.18));
           const vel = isGhost ? 38 + complexity * 15 : (b === 0 && s === 0 ? 100 : 80);
-          push(subBeat, pitch, vel, isGhost ? 0.18 : 0.4);
+          push(subBeat, pitch, vel, isGhost ? 0.18 : slotDur);
         }
       }
 
@@ -905,8 +910,9 @@ function generateJazzWalkingBass(
       notes.push({
         id: newId('b'),
         startBeat: jitterTime(beat, 0.018),
-        // Short duration — pluck + decay of an upright (~70% of a beat).
-        duration: 0.7,
+        // Sustain the upright nearly to the next quarter for a connected
+        // walking-bass sound (~95% of a beat).
+        duration: 0.95,
         pitch,
         velocity: vel,
       });
