@@ -145,28 +145,35 @@ export function useSampleLibrary() {
   }, []);
 
   const setBassIcon = useCallback(async (kit: BassIconKit, file: File | Blob, mime?: string) => {
+    const resolvedMime = mime || (file instanceof File ? file.type : '') || 'image/png';
     const icon: StoredBassIcon = {
       kit,
       blob: file,
-      mime: mime || (file instanceof File ? file.type : '') || 'image/png',
+      mime: resolvedMime,
       updatedAt: Date.now(),
     };
     await putBassIcon(icon);
     setBassIcons(prev => ({ ...prev, [kit]: icon }));
+    // Mirror to Cloud Storage so the asset survives across devices/browser clears.
+    cloudUploadBassIcon(kit, file, resolvedMime);
   }, []);
 
   /** Set a generic per-instrument icon. Key format: `${slot}|${variant}`.
    *  Replaces ONLY this specific (slot, variant) entry — other variants are
    *  untouched. Persisted in IndexedDB so it survives reloads. */
   const setInstrumentIcon = useCallback(async (key: string, file: File | Blob, mime?: string) => {
+    const resolvedMime = mime || (file instanceof File ? file.type : '') || 'image/png';
     const icon: StoredInstrumentIcon = {
       key,
       blob: file,
-      mime: mime || (file instanceof File ? file.type : '') || 'image/png',
+      mime: resolvedMime,
       updatedAt: Date.now(),
     };
     await putInstrumentIcon(icon);
     setInstrumentIcons(prev => ({ ...prev, [key]: icon }));
+    // Mirror to Cloud Storage. Key format `${slot}|${variant}`.
+    const [slot, variant = 'default'] = key.split('|');
+    cloudUploadInstrumentIcon(slot, variant, file, resolvedMime);
   }, []);
 
   const removeInstrumentIcon = useCallback(async (key: string) => {
