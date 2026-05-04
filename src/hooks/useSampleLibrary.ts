@@ -165,7 +165,7 @@ export function useSampleLibrary() {
       // --- Cloud restore: always merge any missing durable assets back in. ---
       if (!cancelled) {
         try {
-          const cloudFiles = await listCloudAssets();
+          const cloudFiles = (await listCloudAssets()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
           if (cancelled || cloudFiles.length === 0) { setLoaded(true); return; }
           console.log('[cloudRestore] restoring', cloudFiles.length, 'assets from cloud');
 
