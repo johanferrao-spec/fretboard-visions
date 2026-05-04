@@ -73,12 +73,25 @@ const KEYS_OPTIONS: { id: KeysVariant; label: string }[] = [
 const KEYS_VARIANT_KEY = 'mf-keys-variant';
 const BASS_KIT_CHOICE_KEY = 'mf-bass-kit-choice';
 
+const LEFT_COL_WIDTH_KEY = 'mf-sampler-left-width';
+
 export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
   const lib = useSampleLibrary();
   const [selection, setSelection] = useState<Selection>({ instrument: 'drums', part: 'snare' });
   const [dragOver, setDragOver] = useState<SlotKey | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLAudioElement | null>(null);
+
+  /** Width of the left sample-list column. User-resizable, persisted per-browser. */
+  const [leftColWidth, setLeftColWidth] = useState<number>(() => {
+    try {
+      const v = parseInt(localStorage.getItem(LEFT_COL_WIDTH_KEY) ?? '', 10);
+      return Number.isFinite(v) && v >= 200 && v <= 720 ? v : 288;
+    } catch { return 288; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(LEFT_COL_WIDTH_KEY, String(leftColWidth)); } catch { /* ignore */ }
+  }, [leftColWidth]);
 
   /** Keys icon variant — user choice, persisted per-browser (not genre-driven). */
   const [keysVariant, setKeysVariant] = useState<KeysVariant>(() => {
