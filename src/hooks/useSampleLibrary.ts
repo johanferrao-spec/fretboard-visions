@@ -188,13 +188,17 @@ export function useSampleLibrary() {
               restoredBassKits.add(kit);
               if (!cancelled) setBassIcons(prev => ({ ...prev, [kit]: icon }));
             } else if (cf.folder === 'instruments' && cf.isImage) {
-              // instrument icon: name is e.g. "drums_kick__Rock.png"
-              // Parse back to key format: slot|variant
+              // instrument icon: name is e.g. "drums_kick__Rock.png" or
+              // "drums_kick__Rock__norm_v2.png" (normalized version) or
+              // "drums_kick__Rock__v1234_abc.png" (immutable version suffix).
+              // Strip any trailing version/normalization suffix to recover the canonical kit.
               const base = cf.name.replace(/\.[^.]+$/, '');
               const sepIdx = base.indexOf('__');
               if (sepIdx < 0) continue;
               const slot = decodeCloudSlot(base.slice(0, sepIdx));
-              const variant = base.slice(sepIdx + 2);
+              let variant = base.slice(sepIdx + 2);
+              // Drop any "__norm_*" or "__v<timestamp>_*" trailing suffix
+              variant = variant.replace(/__(norm|v\d+).*$/, '');
               const key = `${slot}|${variant}`;
               if (existingInstrumentKeys.has(key)) continue;
               const dl = await downloadCloudAsset(cf.folder, cf.name);
