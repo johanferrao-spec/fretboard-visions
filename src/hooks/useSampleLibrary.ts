@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, deleteBassIcon, putSample, putInstrumentIcon, getAllInstrumentIcons, deleteInstrumentIcon, type StoredBassIcon, type StoredInstrumentIcon, type StoredSample } from '@/lib/sampleStorage';
+import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, putInstrumentIcon, getAllInstrumentIcons, deleteInstrumentIcon, type StoredBassIcon, type StoredInstrumentIcon, type StoredSample } from '@/lib/sampleStorage';
 import {
   uploadBassIcon as cloudUploadBassIcon,
   uploadBassSample as cloudUploadBassSample,
