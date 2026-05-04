@@ -47,6 +47,11 @@ function decodeCloudSlot(encoded: string): string {
   return encoded.replace(/_/g, ':');
 }
 
+function canonicalBassKitFromCloudName(name: string): BassIconKit | null {
+  const base = name.replace(/__v\d+_[a-z0-9]+(?=\.[^.]+$)/i, '').replace(/\.[^.]+$/, '');
+  return ['Funk', 'Jazz', 'Rock', 'Latin', 'Pop'].includes(base) ? (base as BassIconKit) : null;
+}
+
 /** Migrate older slot keys: the legacy `drums:hihat` slot is now split into
  *  closed/pedal/open. We map any pre-existing assignment to `hihat_closed`. */
 function migrateSlot(slot: string): string {
@@ -164,7 +169,7 @@ export function useSampleLibrary() {
           if (cancelled || cloudFiles.length === 0) { setLoaded(true); return; }
           console.log('[cloudRestore] restoring', cloudFiles.length, 'assets from cloud');
 
-          const existingBassKits = new Set(idbBassIcons.map(icon => icon.kit));
+          const restoredBassKits = new Set<BassIconKit>();
           const existingInstrumentKeys = new Set(idbInstrumentIcons.map(icon => icon.key));
           const existingSampleIds = new Set(migrated.map(sample => sample.id));
           const existingSampleSlots = new Set(migrated.map(sample => `${sample.slot}|${sample.kit ?? 'default'}`));
@@ -173,14 +178,14 @@ export function useSampleLibrary() {
             if (cancelled) break;
 
             if (cf.folder === 'bass' && cf.isImage) {
-              // bass icon: name is e.g. "Rock.png" → kit = "Rock"
-              const kit = cf.name.replace(/\.[^.]+$/, '') as StoredBassIcon['kit'];
-              if (existingBassKits.has(kit)) continue;
+              // bass icon: name is e.g. "Rock.png" or "Rock__v123_abc.png" → kit = "Rock"
+              const kit = canonicalBassKitFromCloudName(cf.name);
+              if (!kit || restoredBassKits.has(kit)) continue;
               const dl = await downloadCloudAsset(cf.folder, cf.name);
               if (!dl) continue;
               const icon: StoredBassIcon = { kit, blob: dl.blob, mime: dl.mime, updatedAt: Date.now() };
               await putBassIcon(icon);
-              existingBassKits.add(kit);
+              restoredBassKits.add(kit);
               if (!cancelled) setBassIcons(prev => ({ ...prev, [kit]: icon }));
             } else if (cf.folder === 'instruments' && cf.isImage) {
               // instrument icon: name is e.g. "drums_kick__Rock.png"
