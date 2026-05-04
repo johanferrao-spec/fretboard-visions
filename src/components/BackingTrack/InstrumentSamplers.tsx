@@ -794,7 +794,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
 
         {/* KEYS — user-chosen icon variant */}
         <div
-          className={`flex flex-col items-center min-w-[180px] rounded-md transition-colors px-3 ${dragOver === 'keys' ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
+          className={`flex flex-col items-center shrink-0 min-w-[180px] rounded-md transition-colors px-3 ${dragOver === 'keys' ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
           onClick={() => { setSelection({ instrument: 'keys' }); previewSample(lib.activeEntryFor('keys')); }}
           onDragOver={(e) => { e.preventDefault(); setDragOver('keys'); }}
           onDragLeave={() => setDragOver(null)}
