@@ -631,12 +631,37 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
         )}
       </div>
 
+      {/* Vertical drag handle to resize the left sample-list column */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          const startX = e.clientX;
+          const startW = leftColWidth;
+          const onMove = (ev: MouseEvent) => {
+            const next = Math.min(720, Math.max(200, startW + (ev.clientX - startX)));
+            setLeftColWidth(next);
+          };
+          const onUp = () => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            document.body.style.cursor = '';
+          };
+          window.addEventListener('mousemove', onMove);
+          window.addEventListener('mouseup', onUp);
+          document.body.style.cursor = 'col-resize';
+        }}
+        className="w-1.5 shrink-0 cursor-col-resize bg-border hover:bg-primary/60 transition-colors"
+        title="Drag to resize sample list"
+      />
+
       {/* CENTER + RIGHT: vector art for all three instruments — drums shown
           in parallel (cymbals row above, drums row below) rather than as a
           set-up kit. Vertical dividers separate drums | bass | keys. */}
-      <div className="flex-1 flex items-stretch justify-around gap-3 p-3 overflow-x-auto divide-x divide-border">
+      <div className="flex-1 min-w-0 flex items-stretch justify-start gap-3 p-3 overflow-x-auto divide-x divide-border">
         {/* DRUM KIT — parallel layout */}
-        <div className="flex flex-col items-center min-w-[360px] flex-1 px-3">
+        <div className="flex flex-col items-center shrink-0 px-3" style={{ minWidth: 480 }}>
           <div className="flex flex-col gap-3 w-full max-h-[260px]">
             {/* CYMBALS ROW (top) — uniform square frames */}
             <div className="flex items-end justify-around gap-2">
