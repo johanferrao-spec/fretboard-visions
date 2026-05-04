@@ -80,7 +80,7 @@ const BASS_KIT_CHOICE_KEY = 'mf-bass-kit-choice';
 
 const LEFT_COL_WIDTH_KEY = 'mf-sampler-left-width';
 
-export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
+export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDrum, onPreviewBass: _onPreviewBass, onPreviewKeys }: Props) {
   const lib = useSampleLibrary();
   const [selection, setSelection] = useState<Selection>({ instrument: 'drums', part: 'snare' });
   const [dragOver, setDragOver] = useState<SlotKey | null>(null);
