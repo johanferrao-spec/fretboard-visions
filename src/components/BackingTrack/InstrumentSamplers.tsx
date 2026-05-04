@@ -362,8 +362,11 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
   const partProps = (part: DrumPart) => ({
     onClick: () => {
       setSelection({ instrument: 'drums', part });
-      // Preview whatever sample is currently active for this part.
-      previewSample(lib.activeEntryFor(`drums:${part}` as SlotKey));
+      // Route preview through the audio engine so the user hears whichever
+      // sample/synth is currently active for this drum part (works for all
+      // kits, not just Jazz wavs).
+      if (onPreviewDrum) onPreviewDrum(DRUM_PITCHES[part]);
+      else previewSample(lib.activeEntryFor(`drums:${part}` as SlotKey));
     },
     onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOver(`drums:${part}` as SlotKey); },
     onDragLeave: () => setDragOver(null),
