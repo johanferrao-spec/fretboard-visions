@@ -73,12 +73,25 @@ const KEYS_OPTIONS: { id: KeysVariant; label: string }[] = [
 const KEYS_VARIANT_KEY = 'mf-keys-variant';
 const BASS_KIT_CHOICE_KEY = 'mf-bass-kit-choice';
 
+const LEFT_COL_WIDTH_KEY = 'mf-sampler-left-width';
+
 export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
   const lib = useSampleLibrary();
   const [selection, setSelection] = useState<Selection>({ instrument: 'drums', part: 'snare' });
   const [dragOver, setDragOver] = useState<SlotKey | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLAudioElement | null>(null);
+
+  /** Width of the left sample-list column. User-resizable, persisted per-browser. */
+  const [leftColWidth, setLeftColWidth] = useState<number>(() => {
+    try {
+      const v = parseInt(localStorage.getItem(LEFT_COL_WIDTH_KEY) ?? '', 10);
+      return Number.isFinite(v) && v >= 200 && v <= 720 ? v : 288;
+    } catch { return 288; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(LEFT_COL_WIDTH_KEY, String(leftColWidth)); } catch { /* ignore */ }
+  }, [leftColWidth]);
 
   /** Keys icon variant — user choice, persisted per-browser (not genre-driven). */
   const [keysVariant, setKeysVariant] = useState<KeysVariant>(() => {
@@ -361,7 +374,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
   return (
     <div className="flex h-full min-h-0 bg-card border-t border-border overflow-hidden">
       {/* LEFT COLUMN: per-piece header + sample list (no part-icon grid) */}
-      <div className="w-72 shrink-0 border-r border-border flex flex-col h-full min-h-0 overflow-y-auto">
+      <div className="shrink-0 flex flex-col h-full min-h-0 overflow-y-auto" style={{ width: leftColWidth }}>
         <div className="px-3 py-2 border-b border-border">
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
             {selection.instrument === 'drums' ? `Drums · ${PART_LABEL[selection.part]}` : selection.instrument === 'bass' ? 'Bass sampler' : 'Keys sampler'}
@@ -618,12 +631,37 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
         )}
       </div>
 
+      {/* Vertical drag handle to resize the left sample-list column */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          const startX = e.clientX;
+          const startW = leftColWidth;
+          const onMove = (ev: MouseEvent) => {
+            const next = Math.min(720, Math.max(200, startW + (ev.clientX - startX)));
+            setLeftColWidth(next);
+          };
+          const onUp = () => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            document.body.style.cursor = '';
+          };
+          window.addEventListener('mousemove', onMove);
+          window.addEventListener('mouseup', onUp);
+          document.body.style.cursor = 'col-resize';
+        }}
+        className="w-1.5 shrink-0 cursor-col-resize bg-border hover:bg-primary/60 transition-colors"
+        title="Drag to resize sample list"
+      />
+
       {/* CENTER + RIGHT: vector art for all three instruments — drums shown
           in parallel (cymbals row above, drums row below) rather than as a
           set-up kit. Vertical dividers separate drums | bass | keys. */}
-      <div className="flex-1 flex items-stretch justify-around gap-3 p-3 overflow-x-auto divide-x divide-border">
+      <div className="flex-1 min-w-0 flex items-stretch justify-start gap-3 p-3 overflow-x-auto divide-x divide-border">
         {/* DRUM KIT — parallel layout */}
-        <div className="flex flex-col items-center min-w-[360px] flex-1 px-3">
+        <div className="flex flex-col items-center shrink-0 px-3" style={{ minWidth: 480 }}>
           <div className="flex flex-col gap-3 w-full max-h-[260px]">
             {/* CYMBALS ROW (top) — uniform square frames */}
             <div className="flex items-end justify-around gap-2">
@@ -739,7 +777,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
         </div>
 
         {/* BASS — genre-specific icon (or dropped artwork if available) */}
-        <div className="px-3">
+        <div className="px-3 shrink-0">
           <BassMainIcon
             lib={lib}
             bassKit={bassKit}
@@ -756,7 +794,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
 
         {/* KEYS — user-chosen icon variant */}
         <div
-          className={`flex flex-col items-center min-w-[180px] rounded-md transition-colors px-3 ${dragOver === 'keys' ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
+          className={`flex flex-col items-center shrink-0 min-w-[180px] rounded-md transition-colors px-3 ${dragOver === 'keys' ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
           onClick={() => { setSelection({ instrument: 'keys' }); previewSample(lib.activeEntryFor('keys')); }}
           onDragOver={(e) => { e.preventDefault(); setDragOver('keys'); }}
           onDragLeave={() => setDragOver(null)}
