@@ -73,6 +73,7 @@ const Index = () => {
     play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre, resolveUserSample?: import('@/hooks/engine/scheduler').UserSampleResolver) => Promise<{ startAudioTime: number; startPerfTime: number }>;
     stop: () => void;
     prewarm: () => Promise<void>;
+    previewNote: (trackId: import('@/lib/backingTrackTypes').TrackId, pitch: number, velocity?: number) => void;
   } | null>(null);
   const backingPlayheadBeatRef = useRef(0);
   // Anchor (perf-time ms) of when audio actually starts; null until play begins.
@@ -832,7 +833,13 @@ const Index = () => {
               title="Drag to resize"
             />
             <div className="flex-1 min-h-0">
-              <InstrumentSamplers volume={volume} genre={timeline.genre} />
+              <InstrumentSamplers
+                volume={volume}
+                genre={timeline.genre}
+                onPreviewDrum={(pitch) => backingApi?.previewNote('drums', pitch, 110)}
+                onPreviewBass={(pitch) => backingApi?.previewNote('bass', pitch, 100)}
+                onPreviewKeys={(pitch) => backingApi?.previewNote('piano', pitch, 90)}
+              />
             </div>
           </div>
         </div>

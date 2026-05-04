@@ -31,6 +31,7 @@ interface BackingTrackViewProps {
     play: (bpm: number, measures: number, genre: import('@/hooks/useSongTimeline').Genre, resolveUserSample?: import('@/hooks/engine/scheduler').UserSampleResolver) => Promise<{ startAudioTime: number; startPerfTime: number }>;
     stop: () => void;
     prewarm: () => Promise<void>;
+    previewNote: (trackId: TrackId, pitch: number, velocity?: number) => void;
   }) => void;
 }
 
@@ -80,6 +81,10 @@ export default function BackingTrackView({
     },
     stop: () => latestBtRef.current.stop(),
     prewarm: () => latestBtRef.current.prewarm(),
+    previewNote: (trackId: TrackId, pitch: number, velocity = 100) => {
+      const { genre } = latestTimelineRef.current;
+      latestBtRef.current.previewNote(trackId, pitch, velocity, genre, resolveUserSample);
+    },
   }), [savedItems, resolveUserSample]);
 
   // Sync master volume from parent

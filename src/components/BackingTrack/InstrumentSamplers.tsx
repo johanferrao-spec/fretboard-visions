@@ -4,6 +4,7 @@ import BassSlotGrid from './BassSlotGrid';
 import { detectPitchFromBlob } from '@/lib/pitchDetect';
 import { autoTrimImageBlob } from '@/lib/imageTrim';
 import type { DrumPart } from '@/lib/backingTrackTypes';
+import { DRUM_PITCHES } from '@/lib/backingTrackTypes';
 import type { Genre } from '@/hooks/useSongTimeline';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
 import type { BassIconKit, SlotKey, SampleListEntry } from '@/hooks/useSampleLibrary';
@@ -29,6 +30,10 @@ interface Props {
   volume: number;
   /** Current song genre (drives bass icon variant). */
   genre: Genre;
+  /** Trigger the audio engine to play a single drum/bass/keys note for preview. */
+  onPreviewDrum?: (pitch: number) => void;
+  onPreviewBass?: (pitch: number) => void;
+  onPreviewKeys?: (pitch: number) => void;
 }
 
 type Selection =
@@ -75,7 +80,7 @@ const BASS_KIT_CHOICE_KEY = 'mf-bass-kit-choice';
 
 const LEFT_COL_WIDTH_KEY = 'mf-sampler-left-width';
 
-export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
+export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDrum, onPreviewBass: _onPreviewBass, onPreviewKeys }: Props) {
   const lib = useSampleLibrary();
   const [selection, setSelection] = useState<Selection>({ instrument: 'drums', part: 'snare' });
   const [dragOver, setDragOver] = useState<SlotKey | null>(null);
@@ -357,8 +362,11 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
   const partProps = (part: DrumPart) => ({
     onClick: () => {
       setSelection({ instrument: 'drums', part });
-      // Preview whatever sample is currently active for this part.
-      previewSample(lib.activeEntryFor(`drums:${part}` as SlotKey));
+      // Route preview through the audio engine so the user hears whichever
+      // sample/synth is currently active for this drum part (works for all
+      // kits, not just Jazz wavs).
+      if (onPreviewDrum) onPreviewDrum(DRUM_PITCHES[part]);
+      else previewSample(lib.activeEntryFor(`drums:${part}` as SlotKey));
     },
     onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOver(`drums:${part}` as SlotKey); },
     onDragLeave: () => setDragOver(null),
@@ -374,7 +382,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
   return (
     <div className="flex h-full min-h-0 bg-card border-t border-border overflow-hidden">
       {/* LEFT COLUMN: per-piece header + sample list (no part-icon grid) */}
-      <div className="shrink-0 flex flex-col h-full min-h-0 overflow-y-auto" style={{ width: leftColWidth }}>
+      <div className="shrink-0 h-full min-h-0 overflow-y-auto overflow-x-hidden" style={{ width: leftColWidth }}>
         <div className="px-3 py-2 border-b border-border">
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
             {selection.instrument === 'drums' ? `Drums · ${PART_LABEL[selection.part]}` : selection.instrument === 'bass' ? 'Bass sampler' : 'Keys sampler'}
@@ -455,7 +463,13 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
                   } else {
                     lib.selectSample(slot, s.id);
                   }
-                  previewSample(s);
+                  if (selection.instrument === 'drums' && onPreviewDrum) {
+                    setTimeout(() => onPreviewDrum(DRUM_PITCHES[selection.part]), 0);
+                  } else if (selection.instrument === 'keys' && onPreviewKeys) {
+                    setTimeout(() => onPreviewKeys(60), 0);
+                  } else {
+                    previewSample(s);
+                  }
                 }}
               >
                 <span
@@ -576,7 +590,10 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
                       } else {
                         lib.selectSample(slotKey, entryToUse.id);
                       }
-                      previewSample(entryToUse);
+                      // Defer so the new active selection is in the resolver
+                      // before the engine reads it.
+                      if (onPreviewDrum) setTimeout(() => onPreviewDrum(DRUM_PITCHES[part]), 0);
+                      else previewSample(entryToUse);
                     }}
                     onDragOver={(e) => { e.preventDefault(); setDragOver(slotKey); }}
                     onDragLeave={() => setDragOver(null)}
