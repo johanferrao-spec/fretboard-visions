@@ -757,6 +757,24 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
             </div>
           </div>
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mt-3">Drum kit · {viewKit}</div>
+          {/* Kit picker tabs — pick which kit's illustration / samples to view */}
+          <div className="flex flex-wrap gap-1 mt-2 justify-center w-full max-w-[480px]">
+            {DRUM_KITS.map(kit => {
+              const isOn = viewKit === kit;
+              return (
+                <button
+                  key={kit}
+                  onClick={() => setViewKit(kit)}
+                  className={`text-[9px] font-mono uppercase rounded px-2 py-1 border transition-colors ${
+                    isOn ? 'border-primary text-foreground' : 'border-border text-muted-foreground hover:bg-muted/40'
+                  }`}
+                  style={isOn ? { backgroundColor: `hsl(${KIT_COLORS[kit]} / 0.35)` } : undefined}
+                >
+                  {kit}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* BASS — genre-specific icon (or dropped artwork if available) */}
