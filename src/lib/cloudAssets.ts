@@ -127,6 +127,7 @@ export interface CloudAssetEntry {
   name: string;       // filename inside its folder
   folder: 'bass' | 'instruments';
   publicUrl: string;
+  updatedAt: string;
   isImage: boolean;
   isAudio: boolean;
 }
@@ -164,6 +165,7 @@ export async function listCloudAssets(): Promise<CloudAssetEntry[]> {
           name: f.name,
           folder,
           publicUrl: urlData.publicUrl,
+          updatedAt: f.updated_at || f.created_at || '',
           isImage: IMG_EXTS.has(ext),
           isAudio: AUDIO_EXTS.has(ext),
         });
