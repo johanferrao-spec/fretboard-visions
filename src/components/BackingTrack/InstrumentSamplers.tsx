@@ -382,7 +382,7 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
   return (
     <div className="flex h-full min-h-0 bg-card border-t border-border overflow-hidden">
       {/* LEFT COLUMN: per-piece header + sample list (no part-icon grid) */}
-      <div className="shrink-0 flex flex-col h-full min-h-0 overflow-y-auto" style={{ width: leftColWidth }}>
+      <div className="shrink-0 h-full min-h-0 overflow-y-auto overflow-x-hidden" style={{ width: leftColWidth }}>
         <div className="px-3 py-2 border-b border-border">
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
             {selection.instrument === 'drums' ? `Drums · ${PART_LABEL[selection.part]}` : selection.instrument === 'bass' ? 'Bass sampler' : 'Keys sampler'}
