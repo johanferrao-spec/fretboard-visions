@@ -777,7 +777,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
         </div>
 
         {/* BASS — genre-specific icon (or dropped artwork if available) */}
-        <div className="px-3">
+        <div className="px-3 shrink-0">
           <BassMainIcon
             lib={lib}
             bassKit={bassKit}
