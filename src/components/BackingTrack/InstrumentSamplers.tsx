@@ -939,10 +939,13 @@ function BassMainIcon({
   );
   const artworkSample = sampleForKit?.imageBlob ? sampleForKit : (bassActive?.userSample?.imageBlob ? bassActive.userSample : null);
   const artworkIcon = lib.bassIcons[bassKit];
+  const fallbackArtUrl = `/samples/bass/${bassKit}.png`;
 
   // Manage object URL for the dropped artwork.
   const [artUrl, setArtUrl] = useState<string | null>(null);
+  const [artFailed, setArtFailed] = useState(false);
   useEffect(() => {
+    setArtFailed(false);
     const blob = artworkSample?.imageBlob ?? artworkIcon?.blob;
     if (!blob) { setArtUrl(null); return; }
     const url = URL.createObjectURL(blob);
@@ -1011,12 +1014,13 @@ function BassMainIcon({
         className={`relative overflow-hidden rounded-md border bg-background/40 ${selected ? 'ring-2 ring-primary border-primary' : 'border-border'}`}
         style={{ width: 180, height: 280 }}
       >
-        {artUrl ? (
+        {(artUrl || fallbackArtUrl) ? (
           <img
-            src={artUrl}
+            src={artUrl && !artFailed ? artUrl : fallbackArtUrl}
             alt={`${bassKit} bass artwork`}
             className="absolute inset-0 w-full h-full object-contain"
             draggable={false}
+            onError={() => setArtFailed(true)}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">

@@ -30,15 +30,30 @@ function safe(s: string): string {
   return s.replace(/[^a-zA-Z0-9._-]+/g, '_');
 }
 
-/** Upload a Blob to a deterministic path; overwrites any existing file. */
+function immutableVersionPath(path: string): string {
+  const dot = path.lastIndexOf('.');
+  const stamp = `__v${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  if (dot <= 0) return `${path}${stamp}`;
+  return `${path.slice(0, dot)}${stamp}${path.slice(dot)}`;
+}
+
+/** Upload a Blob. If the stable path already exists, write an immutable new version instead. */
 async function upload(path: string, blob: Blob, contentType: string): Promise<string | null> {
   try {
     const { error } = await supabase.storage
       .from(BUCKET)
-      .upload(path, blob, { upsert: true, contentType });
+      .upload(path, blob, { upsert: false, contentType });
     if (error) {
-      console.warn('[cloudAssets] upload failed', path, error.message);
-      return null;
+      const versionPath = immutableVersionPath(path);
+      const { error: versionError } = await supabase.storage
+        .from(BUCKET)
+        .upload(versionPath, blob, { upsert: false, contentType });
+      if (versionError) {
+        console.warn('[cloudAssets] upload failed', path, versionError.message || error.message);
+        return null;
+      }
+      const { data } = supabase.storage.from(BUCKET).getPublicUrl(versionPath);
+      return data.publicUrl;
     }
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
     return data.publicUrl;
@@ -112,6 +127,7 @@ export interface CloudAssetEntry {
   name: string;       // filename inside its folder
   folder: 'bass' | 'instruments';
   publicUrl: string;
+  updatedAt: string;
   isImage: boolean;
   isAudio: boolean;
 }
@@ -149,6 +165,7 @@ export async function listCloudAssets(): Promise<CloudAssetEntry[]> {
           name: f.name,
           folder,
           publicUrl: urlData.publicUrl,
+          updatedAt: f.updated_at || f.created_at || '',
           isImage: IMG_EXTS.has(ext),
           isAudio: AUDIO_EXTS.has(ext),
         });

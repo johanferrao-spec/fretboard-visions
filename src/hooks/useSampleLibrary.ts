@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, deleteBassIcon, putSample, putInstrumentIcon, getAllInstrumentIcons, deleteInstrumentIcon, type StoredBassIcon, type StoredInstrumentIcon, type StoredSample } from '@/lib/sampleStorage';
+import { deleteSample, getAllSamples, putBassIcon, getAllBassIcons, putSample, putInstrumentIcon, getAllInstrumentIcons, deleteInstrumentIcon, type StoredBassIcon, type StoredInstrumentIcon, type StoredSample } from '@/lib/sampleStorage';
 import {
   uploadBassIcon as cloudUploadBassIcon,
   uploadBassSample as cloudUploadBassSample,
@@ -45,6 +45,11 @@ function decodeCloudSlot(encoded: string): string {
   if (encoded === 'bass' || encoded === 'keys') return encoded;
   if (encoded.startsWith('drums_')) return encoded.replace(/^drums_/, 'drums:');
   return encoded.replace(/_/g, ':');
+}
+
+function canonicalBassKitFromCloudName(name: string): BassIconKit | null {
+  const base = name.replace(/__v\d+_[a-z0-9]+(?=\.[^.]+$)/i, '').replace(/\.[^.]+$/, '');
+  return ['Funk', 'Jazz', 'Rock', 'Latin', 'Pop'].includes(base) ? (base as BassIconKit) : null;
 }
 
 /** Migrate older slot keys: the legacy `drums:hihat` slot is now split into
@@ -160,11 +165,11 @@ export function useSampleLibrary() {
       // --- Cloud restore: always merge any missing durable assets back in. ---
       if (!cancelled) {
         try {
-          const cloudFiles = await listCloudAssets();
+          const cloudFiles = (await listCloudAssets()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
           if (cancelled || cloudFiles.length === 0) { setLoaded(true); return; }
           console.log('[cloudRestore] restoring', cloudFiles.length, 'assets from cloud');
 
-          const existingBassKits = new Set(idbBassIcons.map(icon => icon.kit));
+          const restoredBassKits = new Set<BassIconKit>();
           const existingInstrumentKeys = new Set(idbInstrumentIcons.map(icon => icon.key));
           const existingSampleIds = new Set(migrated.map(sample => sample.id));
           const existingSampleSlots = new Set(migrated.map(sample => `${sample.slot}|${sample.kit ?? 'default'}`));
@@ -173,14 +178,14 @@ export function useSampleLibrary() {
             if (cancelled) break;
 
             if (cf.folder === 'bass' && cf.isImage) {
-              // bass icon: name is e.g. "Rock.png" → kit = "Rock"
-              const kit = cf.name.replace(/\.[^.]+$/, '') as StoredBassIcon['kit'];
-              if (existingBassKits.has(kit)) continue;
+              // bass icon: name is e.g. "Rock.png" or "Rock__v123_abc.png" → kit = "Rock"
+              const kit = canonicalBassKitFromCloudName(cf.name);
+              if (!kit || restoredBassKits.has(kit)) continue;
               const dl = await downloadCloudAsset(cf.folder, cf.name);
               if (!dl) continue;
               const icon: StoredBassIcon = { kit, blob: dl.blob, mime: dl.mime, updatedAt: Date.now() };
               await putBassIcon(icon);
-              existingBassKits.add(kit);
+              restoredBassKits.add(kit);
               if (!cancelled) setBassIcons(prev => ({ ...prev, [kit]: icon }));
             } else if (cf.folder === 'instruments' && cf.isImage) {
               // instrument icon: name is e.g. "drums_kick__Rock.png"
@@ -246,7 +251,6 @@ export function useSampleLibrary() {
 
   const setBassIcon = useCallback(async (kit: BassIconKit, file: File | Blob, mime?: string) => {
     const resolvedMime = mime || (file instanceof File ? file.type : '') || 'image/png';
-    const previous = bassIconsRef.current[kit];
     const icon: StoredBassIcon = {
       kit,
       blob: file,
@@ -257,13 +261,7 @@ export function useSampleLibrary() {
     setBassIcons(prev => ({ ...prev, [kit]: icon }));
     // Mirror to Cloud Storage so the asset survives across devices/browser clears.
     const uploaded = await cloudUploadBassIcon(kit, file, resolvedMime);
-    if (!uploaded && previous) {
-      await putBassIcon(previous);
-      setBassIcons(prev => ({ ...prev, [kit]: previous }));
-    } else if (!uploaded) {
-      await deleteBassIcon(kit);
-      setBassIcons(prev => ({ ...prev, [kit]: undefined }));
-    }
+    if (!uploaded) console.warn('[sampleLibrary] bass icon saved locally but cloud mirror failed', kit);
     return Boolean(uploaded);
   }, []);
 
@@ -272,7 +270,6 @@ export function useSampleLibrary() {
    *  untouched. Persisted in IndexedDB so it survives reloads. */
   const setInstrumentIcon = useCallback(async (key: string, file: File | Blob, mime?: string) => {
     const resolvedMime = mime || (file instanceof File ? file.type : '') || 'image/png';
-    const previous = instrumentIconsRef.current[key];
     const icon: StoredInstrumentIcon = {
       key,
       blob: file,
@@ -284,17 +281,7 @@ export function useSampleLibrary() {
     // Mirror to Cloud Storage. Key format `${slot}|${variant}`.
     const [slot, variant = 'default'] = key.split('|');
     const uploaded = await cloudUploadInstrumentIcon(slot, variant, file, resolvedMime);
-    if (!uploaded && previous) {
-      await putInstrumentIcon(previous);
-      setInstrumentIcons(prev => ({ ...prev, [key]: previous }));
-    } else if (!uploaded) {
-      await deleteInstrumentIcon(key);
-      setInstrumentIcons(prev => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    }
+    if (!uploaded) console.warn('[sampleLibrary] instrument icon saved locally but cloud mirror failed', key);
     return Boolean(uploaded);
   }, []);
 
