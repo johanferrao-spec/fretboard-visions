@@ -128,21 +128,45 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
   /** Pending file dropped on a drum slot — awaiting kit choice from the dialog. */
   const [pendingDrop, setPendingDrop] = useState<{ slot: SlotKey; file: File } | null>(null);
 
-  /** Track object-URLs for every loaded instrument icon. Recreated whenever
-   *  the underlying blob (or its `updatedAt` stamp) changes. */
+  /** Stable per-blob object-URL cache. We allocate ONE object URL per
+   *  (key, blob-identity) and keep it alive for as long as the blob is
+   *  still referenced by `lib.instrumentIcons`. Revoking on every render
+   *  (the previous approach) caused a race where freshly-restored icons
+   *  showed as broken images because their URLs were invalidated before
+   *  the browser had finished decoding them. */
+  const urlCacheRef = useRef<Map<string, { blob: Blob; url: string }>>(new Map());
   const iconUrls = useMemo(() => {
+    const cache = urlCacheRef.current;
     const out: Record<string, string> = {};
+    const liveKeys = new Set<string>();
     for (const [key, icon] of Object.entries(lib.instrumentIcons)) {
-      out[key] = URL.createObjectURL(icon.blob);
+      liveKeys.add(key);
+      const cached = cache.get(key);
+      if (cached && cached.blob === icon.blob) {
+        out[key] = cached.url;
+      } else {
+        if (cached) { try { URL.revokeObjectURL(cached.url); } catch { /* noop */ } }
+        const url = URL.createObjectURL(icon.blob);
+        cache.set(key, { blob: icon.blob, url });
+        out[key] = url;
+      }
+    }
+    // Drop cache entries whose key is no longer present.
+    for (const key of Array.from(cache.keys())) {
+      if (!liveKeys.has(key)) {
+        const entry = cache.get(key);
+        if (entry) { try { URL.revokeObjectURL(entry.url); } catch { /* noop */ } }
+        cache.delete(key);
+      }
     }
     return out;
-    // We deliberately key on the updatedAt timestamps so we recreate URLs
-    // ONLY when an icon actually changes (avoids leaking blobs on every render).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Object.entries(lib.instrumentIcons).map(([k, v]) => `${k}:${v.updatedAt}`).join('|')]);
+  }, [lib.instrumentIcons]);
   useEffect(() => () => {
-    Object.values(iconUrls).forEach(u => URL.revokeObjectURL(u));
-  }, [iconUrls]);
+    // Component unmount: release every cached URL.
+    const cache = urlCacheRef.current;
+    cache.forEach(({ url }) => { try { URL.revokeObjectURL(url); } catch { /* noop */ } });
+    cache.clear();
+  }, []);
 
   const slot = selectionToSlot(selection);
   const slotSamples = lib.samplesForSlot(slot);
