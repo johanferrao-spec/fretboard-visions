@@ -690,16 +690,18 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
             {/* CYMBALS ROW (top) — uniform square frames */}
             <div className="flex items-end justify-around gap-2">
              {(['hihat_closed', 'hihat_pedal', 'hihat_open', 'crash', 'ride'] as DrumPart[]).map(part => {
-                // Approx real-world cymbal sizes (inches): hi-hat 14", crash 16-18", ride 20-22"
-                const CYMBAL_DIM: Record<string, number> = {
-                  hihat_closed: 60,
-                  hihat_pedal: 60,
-                  hihat_open: 60,
-                  crash: 78,
-                  ride: 96,
+                // Box dimensions match each PNG's aspect ratio so the artwork fills the frame
+                // exactly. All same-part PNGs share identical canvas dims (post-normalization),
+                // so every kit's closed-hat (etc.) renders at exactly the same visible size.
+                // Heights scaled so cymbals visually relate (hi-hat 14", crash 16-18", ride 20-22").
+                const CYMBAL_DIM: Record<string, { w: number; h: number }> = {
+                  hihat_closed: { w: 86, h: 60 },   // 1048x735 ratio
+                  hihat_pedal: { w: 66, h: 90 },    // 1008x1383 ratio (vertical, includes pedal)
+                  hihat_open: { w: 92, h: 60 },     // 1039x674 ratio
+                  crash: { w: 100, h: 70 },         // 1008x696 ratio
+                  ride: { w: 118, h: 78 },          // 1198x788 ratio
                 };
-                const w = CYMBAL_DIM[part] ?? 78;
-                const h = w;
+                const { w, h } = CYMBAL_DIM[part] ?? { w: 78, h: 78 };
                 return (
                   <div key={part} className="flex flex-col items-center gap-1" {...partProps(part)}>
                     <div
@@ -743,15 +745,17 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
             {/* DRUMS ROW (bottom) — uniform rectangular frames */}
             <div className="flex items-end justify-around gap-3 mt-2">
              {(['kick', 'snare', 'tom1', 'tom3', 'tom2'] as DrumPart[]).map(part => {
-                // Approx real-world drum sizes: kick 22", floor tom 16", rack tom 12", snare 14"x6"
+                // Box dimensions match each PNG aspect ratio so artwork fills frame exactly,
+                // and every kit's same-part icon renders at identical visible size.
                 const DRUM_DIM: Record<string, { w: number; h: number }> = {
-                  kick: { w: 120, h: 120 },
-                  tom2: { w: 92, h: 92 },   // floor tom
-                  snare: { w: 80, h: 64 },  // shallow shell
-                  tom1: { w: 70, h: 70 },   // rack tom 1
-                  tom3: { w: 70, h: 70 },   // rack tom 2
+                  kick:  { w: 130, h: 122 }, // 1612x1506 ratio
+                  snare: { w: 88,  h: 81 },  // 1343x1237 ratio
+                  tom1:  { w: 66,  h: 80 },  // 749x903 ratio  (rack tom 1)
+                  tom3:  { w: 66,  h: 71 },  // 735x793 ratio  (rack tom 2)
+                  tom2:  { w: 80,  h: 106 }, // 845x1123 ratio (floor tom)
                 };
                 const { w, h } = DRUM_DIM[part] ?? { w: 88, h: 88 };
+
                 return (
                   <div key={part} className="flex flex-col items-center gap-1" {...partProps(part)}>
                     <div
