@@ -4,6 +4,7 @@ import BassSlotGrid from './BassSlotGrid';
 import { detectPitchFromBlob } from '@/lib/pitchDetect';
 import { autoTrimImageBlob } from '@/lib/imageTrim';
 import type { DrumPart } from '@/lib/backingTrackTypes';
+import { DRUM_PITCHES } from '@/lib/backingTrackTypes';
 import type { Genre } from '@/hooks/useSongTimeline';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
 import type { BassIconKit, SlotKey, SampleListEntry } from '@/hooks/useSampleLibrary';
