@@ -170,7 +170,10 @@ export function useSampleLibrary() {
           console.log('[cloudRestore] restoring', cloudFiles.length, 'assets from cloud');
 
           const restoredBassKits = new Set<BassIconKit>();
-          const existingInstrumentKeys = new Set(idbInstrumentIcons.map(icon => icon.key));
+          // Allow normalized (__norm_*) cloud versions to override stale IndexedDB icons.
+          // We track which keys we've already restored from cloud (not from IDB) so the
+          // first cloud entry per key wins (cloudFiles is sorted newest-first).
+          const existingInstrumentKeys = new Set<string>();
           const existingSampleIds = new Set(migrated.map(sample => sample.id));
           const existingSampleSlots = new Set(migrated.map(sample => `${sample.slot}|${sample.kit ?? 'default'}`));
 
