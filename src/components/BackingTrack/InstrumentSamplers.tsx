@@ -30,6 +30,10 @@ interface Props {
   volume: number;
   /** Current song genre (drives bass icon variant). */
   genre: Genre;
+  /** Trigger the audio engine to play a single drum/bass/keys note for preview. */
+  onPreviewDrum?: (pitch: number) => void;
+  onPreviewBass?: (pitch: number) => void;
+  onPreviewKeys?: (pitch: number) => void;
 }
 
 type Selection =
