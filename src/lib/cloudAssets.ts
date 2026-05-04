@@ -48,27 +48,59 @@ async function upload(path: string, blob: Blob, contentType: string): Promise<st
   }
 }
 
-export function uploadBassIcon(kit: string, blob: Blob, mime: string): Promise<string | null> {
-  const ext = extFromMime(mime, 'png');
-  return upload(`bass/${safe(kit)}.${ext}`, blob, mime || 'image/png');
+/**
+ * Archive an existing asset by copying it (server-side) to a timestamped path
+ * under `history/` BEFORE the live path gets overwritten. This guarantees the
+ * old version survives forever (the bucket RLS forbids deletes/updates on
+ * `history/`-style paths anyway, since no UPDATE/DELETE policy exists).
+ *
+ * Returns the archived path on success, null if there was nothing to archive
+ * or the copy failed (we never block the new upload on archive failure).
+ */
+async function archiveExisting(livePath: string): Promise<string | null> {
+  try {
+    // Probe whether the live file actually exists by attempting a copy.
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const archivePath = `history/${ts}__${livePath.replace(/\//g, '__')}`;
+    const { error } = await supabase.storage.from(BUCKET).copy(livePath, archivePath);
+    if (error) {
+      // Most common reason: the live file doesn't exist yet (first upload).
+      // That's fine — nothing to archive.
+      return null;
+    }
+    return archivePath;
+  } catch {
+    return null;
+  }
 }
 
-export function uploadBassSample(kit: string, blob: Blob, mime: string): Promise<string | null> {
+export async function uploadBassIcon(kit: string, blob: Blob, mime: string): Promise<string | null> {
+  const ext = extFromMime(mime, 'png');
+  const path = `bass/${safe(kit)}.${ext}`;
+  await archiveExisting(path);
+  return upload(path, blob, mime || 'image/png');
+}
+
+export async function uploadBassSample(kit: string, blob: Blob, mime: string): Promise<string | null> {
   const ext = extFromMime(mime, 'wav');
-  return upload(`bass/${safe(kit)}.${ext}`, blob, mime || 'audio/wav');
+  const path = `bass/${safe(kit)}.${ext}`;
+  await archiveExisting(path);
+  return upload(path, blob, mime || 'audio/wav');
 }
 
 /** Generic per-instrument icon, e.g. slot=`drums:kick` variant=`Rock`. */
-export function uploadInstrumentIcon(slot: string, variant: string, blob: Blob, mime: string): Promise<string | null> {
+export async function uploadInstrumentIcon(slot: string, variant: string, blob: Blob, mime: string): Promise<string | null> {
   const ext = extFromMime(mime, 'png');
   const path = `instruments/${safe(slot)}__${safe(variant)}.${ext}`;
+  await archiveExisting(path);
   return upload(path, blob, mime || 'image/png');
 }
 
 /** Generic per-instrument sample (e.g. drum part audio). */
-export function uploadInstrumentSample(slot: string, variant: string, blob: Blob, mime: string): Promise<string | null> {
+export async function uploadInstrumentSample(slot: string, variant: string, blob: Blob, mime: string): Promise<string | null> {
   const ext = extFromMime(mime, 'wav');
   const path = `instruments/${safe(slot)}__${safe(variant)}.${ext}`;
+  await archiveExisting(path);
   return upload(path, blob, mime || 'audio/wav');
 }
 
