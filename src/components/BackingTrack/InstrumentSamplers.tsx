@@ -463,7 +463,13 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
                   } else {
                     lib.selectSample(slot, s.id);
                   }
-                  previewSample(s);
+                  if (selection.instrument === 'drums' && onPreviewDrum) {
+                    setTimeout(() => onPreviewDrum(DRUM_PITCHES[selection.part]), 0);
+                  } else if (selection.instrument === 'keys' && onPreviewKeys) {
+                    setTimeout(() => onPreviewKeys(60), 0);
+                  } else {
+                    previewSample(s);
+                  }
                 }}
               >
                 <span
