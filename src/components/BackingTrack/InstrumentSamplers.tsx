@@ -745,15 +745,17 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
             {/* DRUMS ROW (bottom) — uniform rectangular frames */}
             <div className="flex items-end justify-around gap-3 mt-2">
              {(['kick', 'snare', 'tom1', 'tom3', 'tom2'] as DrumPart[]).map(part => {
-                // Approx real-world drum sizes: kick 22", floor tom 16", rack tom 12", snare 14"x6"
+                // Box dimensions match each PNG aspect ratio so artwork fills frame exactly,
+                // and every kit's same-part icon renders at identical visible size.
                 const DRUM_DIM: Record<string, { w: number; h: number }> = {
-                  kick: { w: 120, h: 120 },
-                  tom2: { w: 92, h: 92 },   // floor tom
-                  snare: { w: 80, h: 64 },  // shallow shell
-                  tom1: { w: 70, h: 70 },   // rack tom 1
-                  tom3: { w: 70, h: 70 },   // rack tom 2
+                  kick:  { w: 130, h: 122 }, // 1612x1506 ratio
+                  snare: { w: 88,  h: 81 },  // 1343x1237 ratio
+                  tom1:  { w: 66,  h: 80 },  // 749x903 ratio  (rack tom 1)
+                  tom3:  { w: 66,  h: 71 },  // 735x793 ratio  (rack tom 2)
+                  tom2:  { w: 80,  h: 106 }, // 845x1123 ratio (floor tom)
                 };
                 const { w, h } = DRUM_DIM[part] ?? { w: 88, h: 88 };
+
                 return (
                   <div key={part} className="flex flex-col items-center gap-1" {...partProps(part)}>
                     <div
