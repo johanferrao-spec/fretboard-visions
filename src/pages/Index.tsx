@@ -833,7 +833,13 @@ const Index = () => {
               title="Drag to resize"
             />
             <div className="flex-1 min-h-0">
-              <InstrumentSamplers volume={volume} genre={timeline.genre} />
+              <InstrumentSamplers
+                volume={volume}
+                genre={timeline.genre}
+                onPreviewDrum={(pitch) => backingApi?.previewNote('drums', pitch, 110)}
+                onPreviewBass={(pitch) => backingApi?.previewNote('bass', pitch, 100)}
+                onPreviewKeys={(pitch) => backingApi?.previewNote('piano', pitch, 90)}
+              />
             </div>
           </div>
         </div>
