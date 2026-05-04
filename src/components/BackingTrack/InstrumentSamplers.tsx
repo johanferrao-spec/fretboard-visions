@@ -516,24 +516,7 @@ export default function InstrumentSamplers({ volume, genre: _genre }: Props) {
                 </button>
               </div>
             </div>
-            {/* Kit picker tabs */}
-            <div className="grid grid-cols-4 gap-1 px-2">
-              {DRUM_KITS.map(kit => {
-                const isOn = viewKit === kit;
-                return (
-                  <button
-                    key={kit}
-                    onClick={() => setViewKit(kit)}
-                    className={`text-[9px] font-mono uppercase rounded py-1 border transition-colors ${
-                      isOn ? 'border-primary text-foreground' : 'border-border text-muted-foreground hover:bg-muted/40'
-                    }`}
-                    style={isOn ? { backgroundColor: `hsl(${KIT_COLORS[kit]} / 0.35)` } : undefined}
-                  >
-                    {kit}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Kit picker tabs moved to beneath the drum kit illustration on the right */}
             {/* Part rows — ordered: kick, snare, toms, then cymbals */}
             <div className="px-2 py-2 space-y-1">
               {(['kick','snare','tom1','tom3','tom2','hihat_closed','hihat_pedal','hihat_open','ride','crash'] as DrumPart[]).map(part => {
