@@ -584,7 +584,10 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
                       } else {
                         lib.selectSample(slotKey, entryToUse.id);
                       }
-                      previewSample(entryToUse);
+                      // Defer so the new active selection is in the resolver
+                      // before the engine reads it.
+                      if (onPreviewDrum) setTimeout(() => onPreviewDrum(DRUM_PITCHES[part]), 0);
+                      else previewSample(entryToUse);
                     }}
                     onDragOver={(e) => { e.preventDefault(); setDragOver(slotKey); }}
                     onDragLeave={() => setDragOver(null)}
