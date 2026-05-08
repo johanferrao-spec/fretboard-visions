@@ -4,6 +4,7 @@ import { DRUM_PITCHES } from '@/lib/backingTrackTypes';
 import { NOTE_NAMES, CHORD_FORMULAS } from '@/lib/music';
 import { jitterTime, jitterVelocity } from './humanize';
 import { GROOVE_FUNK_1 } from './groove1';
+import { GROOVE_ROCK_DRIVING_8S } from './grooveRockDriving8s';
 import { generateAllFromGroove } from './grooveGenerator';
 
 let nextId = 1;
@@ -1172,6 +1173,11 @@ export function generateAllTracks(
   console.log('[generators] generateAllTracks genre=', genre, 'groove=', groove, 'chords=', chords.length);
   if (genre === 'Funk' && groove === 1) {
     return generateAllFromGroove(GROOVE_FUNK_1, chords, measures, intensities, complexities);
+  }
+  if (genre === 'Rock' && groove === 1) {
+    // Rock · "Driving 8s" — kick on 1&3 with driving variations, snare backbeat,
+    // straight 8th hats with open-hat lifts, tom fill on bar 4.
+    return generateAllFromGroove(GROOVE_ROCK_DRIVING_8S, chords, measures, intensities, complexities);
   }
   if (genre === 'Jazz' && groove === 1) {
     // eslint-disable-next-line no-console
