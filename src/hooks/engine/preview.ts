@@ -79,7 +79,9 @@ export function previewTrackNote(
 
   if (trackId === 'drums') {
     const part = pitchToDrumPart(n.pitch);
-    const resolution = part && resolveUserSample ? resolveUserSample(`drums:${part}`) : null;
+    const drumKit = genre === 'Pop' ? 'Rock' : genre;
+    const slotWithKit = part ? `drums:${part}|${drumKit}` : null;
+    const resolution = slotWithKit && resolveUserSample ? resolveUserSample(slotWithKit) : null;
     if (resolution?.kind === 'user') {
       if (playUserSample(resolution.sample, inst.master, { time: t, rate: 1, gain })) return;
     }
