@@ -147,7 +147,11 @@ export function scheduleTrack(
 
       if (trackId === 'drums') {
         const part = pitchToDrumPart(n.pitch);
-        const resolution = part && resolveUserSample ? resolveUserSample(`drums:${part}`) : null;
+        // Pass the playback genre as a kit hint so the resolver can prefer
+        // user samples tagged to that kit (sticky per-kit binding).
+        const drumKit = genre === 'Pop' ? 'Rock' : genre;
+        const slotWithKit = part ? `drums:${part}|${drumKit}` : null;
+        const resolution = slotWithKit && resolveUserSample ? resolveUserSample(slotWithKit) : null;
         if (part) logSampleResolver(`drums:${part}`, resolution?.kind ?? 'none', resolution?.kind === 'builtin' ? resolution.sample.id : resolution?.kind === 'user' ? resolution.sample.name : null);
 
         // 1) User-uploaded sample takes top priority.
