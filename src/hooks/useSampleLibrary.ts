@@ -542,6 +542,25 @@ export function useSampleLibrary() {
       }
       return { kind: 'user', sample: bassSamples[0] };
     }
+    // Drum slots accept an optional `|<Kit>` suffix from the scheduler so that
+    // playback can request "the Rock kick" specifically. A user-uploaded
+    // sample tagged to that kit ALWAYS wins — once the user has dropped a
+    // sample on a kit's part it stays the source of truth for that kit
+    // forever (until they drop a new one in its place). This makes
+    // selecting another kit's row in the sample list non-destructive: it
+    // only changes the previewed/edited entry, not the playback binding for
+    // other kits.
+    if (slot.startsWith('drums:') && slot.includes('|')) {
+      const [baseSlot, kitTag] = slot.split('|') as [string, string];
+      const kitTagged = samples.find(s => s.slot === baseSlot && s.kit === (kitTag as DrumKitGenre));
+      if (kitTagged) return { kind: 'user', sample: kitTagged };
+      // Fall back to a built-in kit piece for that kit.
+      const part = baseSlot.split(':')[1];
+      const builtIn = getBuiltInKitSample(`kit:${kitTag.toLowerCase()}:${part}`);
+      if (builtIn) return { kind: 'builtin', sample: builtIn };
+      // Last resort: drop the kit hint and use the global active slot below.
+      slot = baseSlot;
+    }
     const id = active[slot];
     if (!id) return null;
     if (id.startsWith('kit:')) {
