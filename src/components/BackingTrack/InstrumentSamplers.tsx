@@ -560,7 +560,11 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
             return (
               <div
                 key={s.id}
+                draggable
                 className={`group flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted/50 ${isActive ? 'bg-muted/70' : ''}`}
+                onDragStart={(e) => {
+                  if (!startAudioFileDrag(e, s)) e.preventDefault();
+                }}
                 onClick={() => {
                   // Each drum slot — including each individual hi-hat
                   // (closed/pedal/open) — has its own independent sample.
@@ -685,6 +689,7 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
                       <div className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground/70 px-1 pt-1 pb-0.5">Cymbals</div>
                     )}
                     <div
+                    draggable
                       onClick={() => {
                       setSelection({ instrument: 'drums', part });
                       // Each hi-hat slot is independently allocated — never
@@ -694,6 +699,9 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
                       // before the engine reads it.
                       if (onPreviewDrum) setTimeout(() => onPreviewDrum(DRUM_PITCHES[part]), 0);
                       else previewSample(entryToUse);
+                    }}
+                    onDragStart={(e) => {
+                      if (!startAudioFileDrag(e, entryToUse)) e.preventDefault();
                     }}
                     onDragOver={(e) => { e.preventDefault(); setDragOver(slotKey); }}
                     onDragLeave={() => setDragOver(null)}
