@@ -398,6 +398,9 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
         const ext = mime.includes('mpeg') ? 'mp3' : mime.includes('ogg') ? 'ogg' : mime.includes('mp4') || mime.includes('m4a') ? 'm4a' : mime.includes('flac') ? 'flac' : 'wav';
         filename = `${filename}.${ext}`;
       }
+      try {
+        e.dataTransfer.items.add(new File([entry.userSample.blob], filename, { type: mime }));
+      } catch { /* Some browsers only accept DownloadURL for dragging out. */ }
     } else if (entry.kind === 'builtin' && entry.kit === 'Jazz' && entry.part) {
       const fileMap: Partial<Record<DrumPart, string>> = {
         kick: 'kick', snare: 'snare', ride: 'ride',
@@ -459,6 +462,7 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
     isPartSelected(part) || isPartDragOver(part) ? 2.5 : 1;
 
   const partProps = (part: DrumPart) => ({
+    draggable: true,
     onClick: () => {
       setSelection({ instrument: 'drums', part });
       // Route preview through the audio engine so the user hears whichever
@@ -469,6 +473,11 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
     },
     onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOver(`drums:${part}` as SlotKey); },
     onDragLeave: () => setDragOver(null),
+    onDragStart: (e: React.DragEvent<HTMLElement>) => {
+      if (!startAudioFileDrag(e, entryForKitPart(part, viewKit))) {
+        e.preventDefault();
+      }
+    },
     onDrop: (e: React.DragEvent) => handleDrop(e, `drums:${part}` as SlotKey),
     style: { cursor: 'pointer' as const },
   });
