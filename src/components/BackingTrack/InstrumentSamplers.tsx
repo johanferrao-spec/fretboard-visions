@@ -86,6 +86,7 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
   const [dragOver, setDragOver] = useState<SlotKey | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLAudioElement | null>(null);
+  const dragOutUrlsRef = useRef<string[]>([]);
 
   /** Width of the left sample-list column. User-resizable, persisted per-browser. */
   const [leftColWidth, setLeftColWidth] = useState<number>(() => {
@@ -344,7 +345,81 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
       previewRef.current.pause();
       previewRef.current = null;
     }
+    dragOutUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+    dragOutUrlsRef.current = [];
   }, []);
+
+  const handleLeftColumnWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const maxScroll = el.scrollHeight - el.clientHeight;
+    if (maxScroll <= 0 || e.deltaY === 0) return;
+    const before = el.scrollTop;
+    el.scrollTop = Math.max(0, Math.min(maxScroll, before + e.deltaY));
+    if (el.scrollTop !== before) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const entryForKitPart = (part: DrumPart, kit: DrumKitGenre): SampleListEntry => {
+    const slotKey = `drums:${part}` as SlotKey;
+    const userSample = lib.samples.find(s => s.slot === slotKey && s.kit === kit);
+    if (userSample) {
+      return {
+        id: userSample.id,
+        name: userSample.name,
+        color: userSample.color,
+        kind: 'user',
+        kit,
+        userSample,
+      };
+    }
+    const builtIn = BUILT_IN_KIT_SAMPLES.find(s => s.id === `kit:${kit.toLowerCase()}:${part}`);
+    return {
+      id: builtIn?.id ?? `kit:${kit.toLowerCase()}:${part}`,
+      name: builtIn?.name ?? `${kit} ${part}`,
+      color: builtIn?.color ?? colorForKitPart(kit, part),
+      kind: 'builtin',
+      kit,
+      part,
+    };
+  };
+
+  const startAudioFileDrag = (e: React.DragEvent<HTMLElement>, entry: SampleListEntry): boolean => {
+    const clean = (value: string) => value.replace(/[^a-z0-9._-]+/gi, '_').replace(/^_+|_+$/g, '');
+    let url: string | null = null;
+    let mime = 'audio/wav';
+    let filename = clean(entry.name || 'sample.wav');
+    if (entry.kind === 'user' && entry.userSample) {
+      url = URL.createObjectURL(entry.userSample.blob);
+      dragOutUrlsRef.current.push(url);
+      mime = entry.userSample.mime || 'audio/wav';
+      if (!/\.(wav|mp3|ogg|m4a|aiff?|flac)$/i.test(filename)) {
+        const ext = mime.includes('mpeg') ? 'mp3' : mime.includes('ogg') ? 'ogg' : mime.includes('mp4') || mime.includes('m4a') ? 'm4a' : mime.includes('flac') ? 'flac' : 'wav';
+        filename = `${filename}.${ext}`;
+      }
+    } else if (entry.kind === 'builtin' && entry.kit === 'Jazz' && entry.part) {
+      const fileMap: Partial<Record<DrumPart, string>> = {
+        kick: 'kick', snare: 'snare', ride: 'ride',
+        hihat_closed: 'hihat', hihat_pedal: 'hihat', hihat_open: 'hihat',
+      };
+      const file = fileMap[entry.part];
+      if (file) {
+        url = `${window.location.origin}/samples/jazz/${file}.wav`;
+        filename = `${entry.kit}_${entry.part}.wav`;
+      }
+    }
+    if (!url) return false;
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('DownloadURL', `${mime}:${filename}:${url}`);
+    e.dataTransfer.setData('text/uri-list', url);
+    e.dataTransfer.setData('text/plain', filename);
+    window.setTimeout(() => {
+      const stale = dragOutUrlsRef.current.splice(0);
+      stale.forEach(objectUrl => URL.revokeObjectURL(objectUrl));
+    }, 15000);
+    return true;
+  };
 
   // ── Drum SVG helpers (front-view illustration) ────────────────────
   const STROKE_DEFAULT = 'hsl(220 10% 35%)';
