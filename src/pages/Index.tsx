@@ -808,7 +808,7 @@ const Index = () => {
             />
           </div>
           {/* Instrument samplers — resizable bottom strip */}
-          <div className="shrink-0 flex flex-col" style={{ height: samplerHeight }}>
+          <div className="flex flex-col min-h-0" style={{ flex: `0 1 ${samplerHeight}px`, maxHeight: samplerHeight }}>
             <div
               role="separator"
               aria-orientation="horizontal"
