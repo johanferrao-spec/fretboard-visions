@@ -485,17 +485,27 @@ export function useSampleLibrary() {
 
     if (slot.startsWith('drums:')) {
       const part = slot.split(':')[1] as DrumPart;
-      const builtIns: SampleListEntry[] = BUILT_IN_KIT_SAMPLES
+      // One entry per kit: prefer the user-uploaded sample tagged to that
+      // kit; otherwise fall back to the built-in kit piece. This ensures
+      // each kit appears exactly once in the list and reflects the actual
+      // allocated sample (no duplicate trailing user-upload list).
+      const merged: SampleListEntry[] = BUILT_IN_KIT_SAMPLES
         .filter(k => k.part === part)
-        .map<SampleListEntry>(k => ({
-          id: k.id,
-          name: `${k.kit} ${k.part}`,
-          color: k.color,
-          kind: 'builtin',
-          kit: k.kit,
-          part: k.part,
-        }));
-      return [...builtIns, ...userEntries];
+        .map<SampleListEntry>(k => {
+          const userTagged = userEntries.find(u => u.kit === k.kit);
+          if (userTagged) return userTagged;
+          return {
+            id: k.id,
+            name: `${k.kit} ${k.part}`,
+            color: k.color,
+            kind: 'builtin',
+            kit: k.kit,
+            part: k.part,
+          };
+        });
+      // Append any user uploads that don't have a kit tag (legacy uploads).
+      const untagged = userEntries.filter(u => !u.kit);
+      return [...merged, ...untagged];
     }
     return userEntries;
   }, [samples]);

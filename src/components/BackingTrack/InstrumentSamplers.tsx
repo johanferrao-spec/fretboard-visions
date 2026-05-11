@@ -478,15 +478,10 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
                 key={s.id}
                 className={`group flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted/50 ${isActive ? 'bg-muted/70' : ''}`}
                 onClick={() => {
-                  // Hi-hat slots are grouped: choosing any hi-hat sample
-                  // from a kit reassigns all 3 hi-hat slots to that kit.
-                  const isHihat = slot === 'drums:hihat_closed' || slot === 'drums:hihat_pedal' || slot === 'drums:hihat_open';
-                  const kit = isHihat ? lib.kitForSampleId(s.id) : null;
-                  if (isHihat && kit) {
-                    lib.selectHihatGroup(kit);
-                  } else {
-                    lib.selectSample(slot, s.id);
-                  }
+                  // Each drum slot — including each individual hi-hat
+                  // (closed/pedal/open) — has its own independent sample.
+                  // Never group hi-hats together.
+                  lib.selectSample(slot, s.id);
                   if (selection.instrument === 'drums' && onPreviewDrum) {
                     setTimeout(() => onPreviewDrum(DRUM_PITCHES[selection.part]), 0);
                   } else if (selection.instrument === 'keys' && onPreviewKeys) {
@@ -608,12 +603,9 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
                     <div
                       onClick={() => {
                       setSelection({ instrument: 'drums', part });
-                      const isHihat = part === 'hihat_closed' || part === 'hihat_pedal' || part === 'hihat_open';
-                      if (isHihat) {
-                        lib.selectHihatGroup(viewKit);
-                      } else {
-                        lib.selectSample(slotKey, entryToUse.id);
-                      }
+                      // Each hi-hat slot is independently allocated — never
+                      // propagate selection across closed/pedal/open.
+                      lib.selectSample(slotKey, entryToUse.id);
                       // Defer so the new active selection is in the resolver
                       // before the engine reads it.
                       if (onPreviewDrum) setTimeout(() => onPreviewDrum(DRUM_PITCHES[part]), 0);

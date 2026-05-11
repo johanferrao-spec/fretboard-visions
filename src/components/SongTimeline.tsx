@@ -616,7 +616,9 @@ export default function SongTimeline({
           >
             {genre === 'Rock'
               ? <option value={1}>Driving 8s</option>
-              : <option value={1}>1</option>}
+              : genre === 'Jazz'
+                ? <option value={1}>Walking Swing</option>
+                : <option value={1}>1</option>}
           </select>
         </div>
 
