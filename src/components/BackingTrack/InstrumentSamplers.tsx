@@ -479,9 +479,9 @@ export default function InstrumentSamplers({ volume, genre: _genre, onPreviewDru
   const bassKit = (bassActive?.userSample?.kit as DrumKitGenre | undefined) ?? bassKitChoice;
 
   return (
-    <div className="flex h-full min-h-0 bg-card border-t border-border overflow-hidden">
+      <div className="flex h-full min-h-0 bg-card border-t border-border overflow-hidden overscroll-contain">
       {/* LEFT COLUMN: per-piece header + sample list (no part-icon grid) */}
-      <div className="shrink-0 h-full min-h-0 overflow-y-auto overflow-x-hidden" style={{ width: leftColWidth }}>
+      <div className="shrink-0 h-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y" style={{ width: leftColWidth }} onWheel={handleLeftColumnWheel}>
         <div className="px-3 py-2 border-b border-border">
           <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
             {selection.instrument === 'drums' ? `Drums · ${PART_LABEL[selection.part]}` : selection.instrument === 'bass' ? 'Bass sampler' : 'Keys sampler'}
