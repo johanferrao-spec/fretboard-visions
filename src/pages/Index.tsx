@@ -366,30 +366,7 @@ const Index = () => {
       </header>
 
       <div className={`flex-1 flex flex-col lg:flex-row min-h-0 ${activeTab === 'backing' ? 'hidden' : ''}`}>
-        {/* Side panel — controls */}
-        <aside className="lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
-          <div className="p-3">
-            <ControlPanel
-              primaryScale={fb.primaryScale}
-              setPrimaryScale={fb.setPrimaryScale}
-              secondaryScale={fb.secondaryScale}
-              setSecondaryScale={fb.setSecondaryScale}
-              secondaryEnabled={fb.secondaryEnabled}
-              setSecondaryEnabled={fb.setSecondaryEnabled}
-              activePrimary={fb.activePrimary}
-              setActivePrimary={fb.setActivePrimary}
-              secondaryOpacity={fb.secondaryOpacity}
-              setSecondaryOpacity={fb.setSecondaryOpacity}
-              secondaryColor={fb.secondaryColor}
-              setSecondaryColor={fb.setSecondaryColor}
-              primaryColor={fb.primaryColor}
-              setPrimaryColor={fb.setPrimaryColor}
-              condensed={fb.secondaryEnabled}
-            />
-          </div>
-        </aside>
-
-        {/* Main area */}
+        {/* Main area — full-width fretboard */}
         <main className={`flex-1 flex ${isVertical ? 'flex-row' : 'flex-col'} min-w-0 overflow-auto`}>
           {/* Toolbar above fretboard */}
           <div className="flex items-center gap-2 px-4 py-2 border-b border-border flex-wrap shrink-0">
