@@ -282,7 +282,7 @@ function ColorDropdown({ color, onColorChange }: { color: string; onColorChange:
   );
 }
 
-function ModeSelector({
+export function ModeSelector({
   label, value, onChange, active, color, onColorChange, condensed, hideDescription,
 }: {
   label: string;
