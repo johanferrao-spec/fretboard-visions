@@ -211,7 +211,7 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
 }
 
 // ============================================================
-// SCALES PANEL — multi-slot scale/arpeggio picker
+// SCALES PANEL — multi-slot scale/arpeggio picker (compact)
 // ============================================================
 const SCALE_SLOTS_KEY = 'scale-slots-v1';
 const SCALE_SLOT_ACTIVE_KEY = 'scale-slot-active-v1';
@@ -223,6 +223,178 @@ const SLOT_COLORS = [
   'hsl(160, 70%, 50%)',
   'hsl(200, 85%, 55%)',
 ];
+
+import { ScaleRootSelector, ColorDropdown, COLOR_OPTIONS } from './ControlPanel';
+import { ARPEGGIO_CATEGORIES, SCALE_CATEGORIES } from './ControlPanel';
+
+function CompactScaleSlot({
+  slot,
+  index,
+  active,
+  onChange,
+  onActivate,
+}: {
+  slot: ScaleSelection;
+  index: number;
+  active: boolean;
+  onChange: (next: ScaleSelection) => void;
+  onActivate: () => void;
+}) {
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
+  const [hoveredScale, setHoveredScale] = useState<string | null>(null);
+  const color = SLOT_COLORS[index];
+
+  const handleSelectScale = (scaleName: string) => {
+    onChange({ ...slot, mode: 'scale', scale: scaleName });
+    setOpenCategory(null);
+    setHoveredScale(null);
+  };
+
+  return (
+    <div className={`relative rounded-lg border transition-colors flex flex-col ${active ? 'border-primary bg-secondary/50' : 'border-border bg-card/40'}`}>
+      {/* Header: label left, color right */}
+      <div className="flex items-center justify-between px-2 pt-1.5 pb-1">
+        <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Slot {index + 1}</span>
+        <ColorDropdown color={color} onColorChange={() => { /* fixed per slot */ }} />
+      </div>
+
+      {/* Root selector — compact */}
+      <div className="px-2 pb-1">
+        <ScaleRootSelector selectedRoot={slot.root} onSelect={(n) => onChange({ ...slot, root: n })} />
+      </div>
+
+      {/* Scale / Arpeggio toggle — compact */}
+      <div className="flex gap-1 px-2 pb-1">
+        <button
+          onClick={() => { onChange({ ...slot, mode: 'scale', scale: 'Major (Ionian)' }); setOpenCategory(null); }}
+          className={`flex-1 px-1 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+            slot.mode === 'scale' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+          }`}
+        >Scale</button>
+        <button
+          onClick={() => { onChange({ ...slot, mode: 'arpeggio', scale: 'Major' }); setOpenCategory(null); }}
+          className={`flex-1 px-1 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+            slot.mode === 'arpeggio' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+          }`}
+        >Arp</button>
+      </div>
+
+      {/* Current selection display */}
+      <div className="mx-2 mb-1 text-[9px] font-mono font-bold rounded px-1.5 py-0.5 border truncate" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 8px hsl(270, 80%, 65%, 0.3)' }}>
+        ♪ {slot.root} {slot.mode === 'arpeggio' ? `${slot.scale} (Arp)` : slot.scale}
+      </div>
+
+      {/* Category grid — 2 columns, very compact */}
+      <div className="flex-1 px-2 pb-1 overflow-y-auto" style={{ maxHeight: 140 }}>
+        {slot.mode === 'arpeggio' ? (
+          openCategory === null ? (
+            <div className="grid grid-cols-2 gap-0.5">
+              {ARPEGGIO_CATEGORIES.map(cat => (
+                <button
+                  key={cat.label}
+                  onClick={() => setOpenCategory(cat.label)}
+                  className="text-left px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-all bg-muted text-foreground/80 hover:bg-muted/80"
+                >{cat.label} →</button>
+              ))}
+            </div>
+          ) : (
+            <div className="animate-fade-in">
+              <button
+                onClick={() => setOpenCategory(null)}
+                className="text-[8px] font-mono text-muted-foreground hover:text-foreground mb-0.5 flex items-center gap-0.5 transition-colors"
+              >← Back</button>
+              <div className="grid grid-cols-1 gap-px">
+                {ARPEGGIO_CATEGORIES.find(c => c.label === openCategory)?.types
+                  ?.filter(t => ARPEGGIO_FORMULAS[t])
+                  .map(s => (
+                  <button
+                    key={s}
+                    onClick={() => { onChange({ ...slot, scale: s }); setOpenCategory(null); }}
+                    className={`text-left px-1.5 py-0.5 rounded text-[9px] font-mono transition-all border ${
+                      slot.scale === s
+                        ? 'bg-primary/20 text-primary border-primary/60 shadow-[0_0_6px_hsl(var(--primary)/0.3)] font-bold'
+                        : 'bg-muted/50 text-foreground/80 hover:bg-muted hover:text-foreground border-transparent'
+                    }`}
+                  >{s}</button>
+                ))}
+              </div>
+            </div>
+          )
+        ) : (
+          openCategory === null ? (
+            <div className="grid grid-cols-2 gap-0.5">
+              {SCALE_CATEGORIES.map(cat => {
+                const isDirect = cat.label === 'Major' || cat.label === 'Minor';
+                return (
+                  <button
+                    key={cat.label}
+                    onClick={() => {
+                      if (isDirect && cat.scales) {
+                        handleSelectScale(cat.scales[0]);
+                      } else {
+                        setOpenCategory(cat.label);
+                      }
+                    }}
+                    className={`text-left px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-all ${
+                      cat.isModesGroup
+                        ? 'bg-accent/15 text-foreground/50 hover:bg-accent/30'
+                        : 'bg-muted text-foreground/80 hover:bg-muted/80'
+                    }`}
+                  >
+                    {cat.label} {!isDirect && '→'}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="animate-fade-in">
+              <button
+                onClick={() => setOpenCategory(null)}
+                className="text-[8px] font-mono text-muted-foreground hover:text-foreground mb-0.5 flex items-center gap-0.5 transition-colors"
+              >← Back</button>
+              <div className="grid grid-cols-1 gap-px">
+                {SCALE_CATEGORIES.find(c => c.label === openCategory)?.scales?.map(s => (
+                  <button
+                    key={s}
+                    onClick={() => handleSelectScale(s)}
+                    onMouseEnter={() => setHoveredScale(s)}
+                    onMouseLeave={() => setHoveredScale(null)}
+                    className={`text-left px-1.5 py-0.5 rounded text-[9px] font-mono transition-all border ${
+                      slot.scale === s
+                        ? 'bg-primary/20 text-primary border-primary/60 shadow-[0_0_6px_hsl(var(--primary)/0.3)] font-bold'
+                        : 'bg-muted/50 text-foreground/80 hover:bg-muted hover:text-foreground border-transparent'
+                    }`}
+                  >{s}</button>
+                ))}
+              </div>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* Activation button at bottom — clearly separated from color */}
+      <button
+        onClick={onActivate}
+        className="mx-2 mb-1.5 mt-0.5 flex items-center justify-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-all border"
+        style={{
+          backgroundColor: active ? `${color.replace(')', ', 0.15)')}` : 'transparent',
+          borderColor: active ? color : 'hsl(var(--border))',
+          color: active ? color : 'hsl(var(--muted-foreground))',
+          boxShadow: active ? `0 0 8px ${color}` : 'none',
+        }}
+      >
+        <span
+          className="w-2.5 h-2.5 rounded-full border"
+          style={{
+            backgroundColor: active ? color : 'transparent',
+            borderColor: color,
+          }}
+        />
+        {active ? 'Active' : 'Activate'}
+      </button>
+    </div>
+  );
+}
 
 function ScalesPanel({
   primaryScale,
@@ -282,34 +454,17 @@ function ScalesPanel({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-      {slots.map((slot, i) => {
-        const active = i === activeIdx;
-        return (
-          <div key={i} className="relative">
-            <button
-              onClick={() => activateSlot(i)}
-              className="absolute top-2 right-2 z-10 w-4 h-4 rounded-full border-2 transition-all hover:scale-110"
-              style={{
-                backgroundColor: active ? SLOT_COLORS[i] : 'transparent',
-                borderColor: SLOT_COLORS[i],
-                boxShadow: active ? `0 0 10px ${SLOT_COLORS[i]}, 0 0 4px ${SLOT_COLORS[i]}` : 'none',
-              }}
-              title={active ? 'Active slot' : 'Activate this slot'}
-            />
-            <ModeSelector
-              label={`Slot ${i + 1}`}
-              value={slot}
-              onChange={(next) => updateSlot(i, next)}
-              active={active}
-              color={SLOT_COLORS[i]}
-              onColorChange={() => { /* fixed per slot */ }}
-              condensed={false}
-              hideDescription={false}
-            />
-          </div>
-        );
-      })}
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      {slots.map((slot, i) => (
+        <CompactScaleSlot
+          key={i}
+          slot={slot}
+          index={i}
+          active={i === activeIdx}
+          onChange={(next) => updateSlot(i, next)}
+          onActivate={() => activateSlot(i)}
+        />
+      ))}
     </div>
   );
 }
