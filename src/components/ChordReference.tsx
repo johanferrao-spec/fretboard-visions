@@ -901,6 +901,7 @@ export default function ChordReference({
           setVoiceLeadingMode={setVoiceLeadingMode}
           voiceLeadingMelody={voiceLeadingMelody}
           setVoiceLeadingMelody={setVoiceLeadingMelody}
+          onApplyScale={onApplyScale}
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
