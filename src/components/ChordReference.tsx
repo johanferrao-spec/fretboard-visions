@@ -372,7 +372,8 @@ export default function ChordReference({
       <div className="flex gap-1 mb-2 flex-wrap">
         {([
           { key: 'beginner' as MainTab, label: '🎓 Beginner' },
-          { key: 'scaleview' as MainTab, label: 'Diatonic Harmony' },
+          { key: 'scales' as MainTab, label: '♪ Scales' },
+          { key: 'scaleview' as MainTab, label: 'Functional Harmony' },
           { key: 'chords' as MainTab, label: 'Chord Library' },
           { key: 'arpeggios' as MainTab, label: 'Arpeggio Positions' },
           { key: 'caged' as MainTab, label: 'CAGED' },
