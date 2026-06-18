@@ -879,6 +879,8 @@ export default function ChordReference({
           primaryScale={primaryScale}
           onApplyScale={onApplyScale}
           onApplySecondaryScale={onApplySecondaryScale}
+          onApplyPrimaryColor={onApplyPrimaryColor}
+          onApplySecondaryColor={onApplySecondaryColor}
         />
       ) : activeTab === 'scaleview' ? (
         <ScaleViewPanel
