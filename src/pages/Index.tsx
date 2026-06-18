@@ -627,6 +627,8 @@ const Index = () => {
                   fb.setSecondaryEnabled(false);
                 }
               }}
+              onApplyPrimaryColor={(c) => fb.setPrimaryColor(c)}
+              onApplySecondaryColor={(c) => fb.setSecondaryColor(c)}
                onSeekToChord={(beat) => handleSeek(beat)}
                onSetArpeggioPosition={fb.setArpeggioPosition}
                arpOverlayOpacity={fb.arpOverlayOpacity}

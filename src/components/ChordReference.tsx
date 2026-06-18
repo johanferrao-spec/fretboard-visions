@@ -51,6 +51,8 @@ interface ChordReferenceProps {
   timelineKey: NoteName;
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   onApplySecondaryScale?: (slot: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string } | null) => void;
+  onApplyPrimaryColor?: (color: string) => void;
+  onApplySecondaryColor?: (color: string) => void;
   keyMode: KeyMode;
   onSeekToChord?: (beat: number) => void;
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
@@ -271,6 +273,7 @@ function CompactScaleSlot({
   onActivate,
   onClear,
   onUnlink,
+  onNotchClick,
   onDragStartSlot,
   onDragOverSlot,
   onDropSlot,
@@ -284,6 +287,7 @@ function CompactScaleSlot({
   onActivate: () => void;
   onClear: () => void;
   onUnlink: () => void;
+  onNotchClick: () => void;
   onDragStartSlot: (e: React.DragEvent) => void;
   onDragOverSlot: (e: React.DragEvent) => void;
   onDropSlot: (e: React.DragEvent) => void;
@@ -309,16 +313,14 @@ function CompactScaleSlot({
 
   return (
     <div
-      draggable
-      onDragStart={onDragStartSlot}
       onDragOver={onDragOverSlot}
       onDrop={onDropSlot}
       className={`relative rounded-lg border transition-colors flex flex-col ${borderClass}`}
     >
       {/* Header: label left, color right */}
       <div className="flex items-center justify-between px-2 pt-1.5 pb-1">
-        <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider flex items-center gap-1 cursor-grab active:cursor-grabbing" title="Drag onto another slot to link">
-          ⋮⋮ Slot {index + 1}
+        <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+          Slot {index + 1}
           {linked && (
             <span className="text-accent" title="Linked (dual scale)">🔗</span>
           )}
@@ -466,6 +468,22 @@ function CompactScaleSlot({
         />
         {active ? 'Active' : linked ? 'Linked' : 'Activate'}
       </button>
+
+      {/* Link notch — protruding tab at bottom center. Drag onto another notch (or click) to link slots for dual-scale mode. */}
+      <div
+        draggable
+        onDragStart={onDragStartSlot}
+        onClick={(e) => { e.stopPropagation(); onNotchClick(); }}
+        title={linked ? 'Click to unlink' : active ? 'Drag onto another slot to link' : 'Drag or click to link with active slot'}
+        className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-8 h-4 rounded-b-full border flex items-end justify-center cursor-grab active:cursor-grabbing transition-all hover:scale-110"
+        style={{
+          backgroundColor: linked || active ? color : 'hsl(var(--muted))',
+          borderColor: color,
+          boxShadow: linked ? `0 0 6px ${color}` : 'none',
+        }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-background mb-0.5" />
+      </div>
     </div>
   );
 }
@@ -474,10 +492,14 @@ function ScalesPanel({
   primaryScale,
   onApplyScale,
   onApplySecondaryScale,
+  onApplyPrimaryColor,
+  onApplySecondaryColor,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   onApplySecondaryScale?: (slot: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string } | null) => void;
+  onApplyPrimaryColor?: (color: string) => void;
+  onApplySecondaryColor?: (color: string) => void;
 }) {
   const [slots, setSlots] = useState<SlotState[]>(() => {
     try {
@@ -523,22 +545,26 @@ function ScalesPanel({
     try { localStorage.setItem(SCALE_SLOT_LINK_KEY, linkedIdx == null ? 'null' : String(linkedIdx)); } catch { /* ignore */ }
   }, [linkedIdx]);
 
-  // Mirror active slot into primary scale
+  // Mirror active slot into primary scale + color
   useEffect(() => {
     const s = slots[activeIdx];
     if (s) onApplyScale(s.root, s.scale, s.mode);
+    onApplyPrimaryColor?.(SLOT_COLORS[activeIdx]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIdx]);
 
-  // Mirror linked slot into secondary scale
+  // Mirror linked slot into secondary scale + color
   useEffect(() => {
-    if (!onApplySecondaryScale) return;
     if (linkedIdx == null) {
-      onApplySecondaryScale(null);
+      onApplySecondaryScale?.(null);
     } else {
       const s = slots[linkedIdx];
-      if (s) onApplySecondaryScale(s);
-      else onApplySecondaryScale(null);
+      if (s) {
+        onApplySecondaryScale?.(s);
+        onApplySecondaryColor?.(SLOT_COLORS[linkedIdx]);
+      } else {
+        onApplySecondaryScale?.(null);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkedIdx, slots]);
@@ -628,6 +654,14 @@ function ScalesPanel({
             onActivate={() => activateSlot(i)}
             onClear={() => clearSlot(i)}
             onUnlink={() => setLinkedIdx(null)}
+            onNotchClick={() => {
+              if (i === activeIdx) {
+                if (linkedIdx != null) setLinkedIdx(null);
+                return;
+              }
+              if (linkedIdx === i) { setLinkedIdx(null); return; }
+              setLinkedIdx(i);
+            }}
             onDragStartSlot={onDragStart(i)}
             onDragOverSlot={onDragOver(i)}
             onDropSlot={onDrop(i)}
@@ -644,7 +678,7 @@ export default function ChordReference({
   identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre,
   degreeColors, setDegreeColors, identifyRoot, setIdentifyRoot,
   tuning, tuningLabels,
-  timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, onApplySecondaryScale, keyMode,
+  timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, onApplySecondaryScale, onApplyPrimaryColor, onApplySecondaryColor, keyMode,
   onSeekToChord, onSetArpeggioPosition,
   arpOverlayOpacity, setArpOverlayOpacity, arpPathVisible, setArpPathVisible,
   onArpAddClick, arpAddMode, setArpAddMode, arpAddClickRef, arpBarreDragRef,
@@ -845,6 +879,8 @@ export default function ChordReference({
           primaryScale={primaryScale}
           onApplyScale={onApplyScale}
           onApplySecondaryScale={onApplySecondaryScale}
+          onApplyPrimaryColor={onApplyPrimaryColor}
+          onApplySecondaryColor={onApplySecondaryColor}
         />
       ) : activeTab === 'scaleview' ? (
         <ScaleViewPanel
