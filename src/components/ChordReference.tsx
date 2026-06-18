@@ -901,6 +901,7 @@ export default function ChordReference({
           setVoiceLeadingMode={setVoiceLeadingMode}
           voiceLeadingMelody={voiceLeadingMelody}
           setVoiceLeadingMelody={setVoiceLeadingMelody}
+          onApplyScale={onApplyScale}
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
@@ -1179,6 +1180,7 @@ function ScaleViewPanel({
   threeNpsMode, setThreeNpsMode,
   voiceLeadingMode, setVoiceLeadingMode,
   voiceLeadingMelody, setVoiceLeadingMelody,
+  onApplyScale,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
@@ -1197,6 +1199,7 @@ function ScaleViewPanel({
   setVoiceLeadingMode: (v: boolean) => void;
   voiceLeadingMelody: { stringIndex: number; fret: number } | null;
   setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
+  onApplyScale?: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
@@ -1624,6 +1627,28 @@ function ScaleViewPanel({
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Default empty-space content: key selector + functional harmony description */}
+        {!dropMode && !threeNpsMode && !voiceLeadingMode && (
+          <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex flex-col gap-3 min-w-0">
+            <div>
+              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Key</div>
+              <ScaleRootSelector
+                selectedRoot={primaryScale.root}
+                onSelect={(n) => onApplyScale?.(n, primaryScale.scale, 'scale')}
+              />
+            </div>
+            <div className="flex-1">
+              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">What is Functional Harmony?</div>
+              <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
+                Functional harmony organizes chords into roles based on how they function within a key. Each degree (I–VII) has a specific harmonic purpose—<span className="text-primary font-bold">tonic</span> chords provide resolution, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension.
+              </p>
+              <p className="text-[11px] font-mono text-foreground/80 leading-relaxed mt-2">
+                Click any degree above to highlight its chord tones on the fretboard. Use Drop 2 / Drop 3 to explore jazz voicings, or 3-Notes-Per-String to see modal patterns.
+              </p>
+            </div>
           </div>
         )}
       </div>
