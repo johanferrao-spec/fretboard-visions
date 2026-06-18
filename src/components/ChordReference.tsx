@@ -735,10 +735,12 @@ function ScaleViewPanel({
     try { return JSON.parse(localStorage.getItem('mf-drop-descriptions') || '{}'); } catch { return {}; }
   });
 
+  useEffect(() => {
+    try { localStorage.setItem('mf-drop-descriptions', JSON.stringify(dropDescriptions)); } catch {/*ignore*/}
+  }, [dropDescriptions]);
+
   const handleDropDescChange = (key: string, value: string) => {
-    const updated = { ...dropDescriptions, [key]: value };
-    setDropDescriptions(updated);
-    localStorage.setItem('mf-drop-descriptions', JSON.stringify(updated));
+    setDropDescriptions(prev => ({ ...prev, [key]: value }));
   };
 
   // Build 7th chord labels for each diatonic chord
