@@ -209,6 +209,110 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
     </div>
   );
 }
+
+// ============================================================
+// SCALES PANEL — multi-slot scale/arpeggio picker
+// ============================================================
+const SCALE_SLOTS_KEY = 'scale-slots-v1';
+const SCALE_SLOT_ACTIVE_KEY = 'scale-slot-active-v1';
+const SLOT_COUNT = 4;
+
+const SLOT_COLORS = [
+  'hsl(38, 90%, 55%)',
+  'hsl(270, 70%, 60%)',
+  'hsl(160, 70%, 50%)',
+  'hsl(200, 85%, 55%)',
+];
+
+function ScalesPanel({
+  primaryScale,
+  onApplyScale,
+}: {
+  primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
+  onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
+}) {
+  const [slots, setSlots] = useState<ScaleSelection[]>(() => {
+    try {
+      const raw = localStorage.getItem(SCALE_SLOTS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length === SLOT_COUNT) return parsed;
+      }
+    } catch { /* ignore */ }
+    const defaults: ScaleSelection[] = [
+      { mode: 'scale', root: primaryScale.root, scale: primaryScale.scale },
+      { mode: 'scale', root: 'A', scale: 'Natural Minor (Aeolian)' },
+      { mode: 'scale', root: 'C', scale: 'Major (Ionian)' },
+      { mode: 'scale', root: 'D', scale: 'Dorian' },
+    ];
+    return defaults;
+  });
+  const [activeIdx, setActiveIdx] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(SCALE_SLOT_ACTIVE_KEY);
+      const n = raw == null ? 0 : Number(raw);
+      return Number.isInteger(n) && n >= 0 && n < SLOT_COUNT ? n : 0;
+    } catch { return 0; }
+  });
+
+  // Persist
+  useEffect(() => {
+    try { localStorage.setItem(SCALE_SLOTS_KEY, JSON.stringify(slots)); } catch { /* ignore */ }
+  }, [slots]);
+  useEffect(() => {
+    try { localStorage.setItem(SCALE_SLOT_ACTIVE_KEY, String(activeIdx)); } catch { /* ignore */ }
+  }, [activeIdx]);
+
+  // Mirror active slot into primary scale on mount and when active slot changes
+  useEffect(() => {
+    const s = slots[activeIdx];
+    if (s) onApplyScale(s.root, s.scale, s.mode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIdx]);
+
+  const updateSlot = (idx: number, next: ScaleSelection) => {
+    setSlots(prev => prev.map((s, i) => i === idx ? next : s));
+    if (idx === activeIdx) onApplyScale(next.root, next.scale, next.mode);
+  };
+
+  const activateSlot = (idx: number) => {
+    setActiveIdx(idx);
+    const s = slots[idx];
+    if (s) onApplyScale(s.root, s.scale, s.mode);
+  };
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+      {slots.map((slot, i) => {
+        const active = i === activeIdx;
+        return (
+          <div key={i} className="relative">
+            <button
+              onClick={() => activateSlot(i)}
+              className="absolute top-2 right-2 z-10 w-4 h-4 rounded-full border-2 transition-all hover:scale-110"
+              style={{
+                backgroundColor: active ? SLOT_COLORS[i] : 'transparent',
+                borderColor: SLOT_COLORS[i],
+                boxShadow: active ? `0 0 10px ${SLOT_COLORS[i]}, 0 0 4px ${SLOT_COLORS[i]}` : 'none',
+              }}
+              title={active ? 'Active slot' : 'Activate this slot'}
+            />
+            <ModeSelector
+              label={`Slot ${i + 1}`}
+              value={slot}
+              onChange={(next) => updateSlot(i, next)}
+              active={active}
+              color={SLOT_COLORS[i]}
+              onColorChange={() => { /* fixed per slot */ }}
+              condensed={false}
+              hideDescription={false}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 export default function ChordReference({
   activeChord, setActiveChord, showCAGED, setShowCAGED,
   cagedShape, setCagedShape, cagedRoot,
