@@ -213,8 +213,9 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
 // ============================================================
 // SCALES PANEL — multi-slot scale/arpeggio picker (compact)
 // ============================================================
-const SCALE_SLOTS_KEY = 'scale-slots-v1';
-const SCALE_SLOT_ACTIVE_KEY = 'scale-slot-active-v1';
+const SCALE_SLOTS_KEY = 'scale-slots-v2';
+const SCALE_SLOT_ACTIVE_KEY = 'scale-slot-active-v2';
+const SCALE_SLOT_LINK_KEY = 'scale-slot-link-v2';
 const SLOT_COUNT = 4;
 
 const SLOT_COLORS = [
@@ -227,18 +228,65 @@ const SLOT_COLORS = [
 import { ScaleRootSelector, ColorDropdown, COLOR_OPTIONS } from './ControlPanel';
 import { ARPEGGIO_CATEGORIES, SCALE_CATEGORIES } from './ControlPanel';
 
+type SlotState = ScaleSelection | null;
+
+function EmptyScaleSlot({
+  index,
+  onCreate,
+  onDragOverSlot,
+  onDropSlot,
+  dragOver,
+}: {
+  index: number;
+  onCreate: () => void;
+  onDragOverSlot: (e: React.DragEvent) => void;
+  onDropSlot: (e: React.DragEvent) => void;
+  dragOver: boolean;
+}) {
+  return (
+    <button
+      onClick={onCreate}
+      onDragOver={onDragOverSlot}
+      onDrop={onDropSlot}
+      className={`relative rounded-lg border-2 border-dashed flex flex-col items-center justify-center min-h-[230px] transition-all group ${
+        dragOver
+          ? 'border-primary/70 bg-primary/5'
+          : 'border-muted-foreground/30 hover:border-muted-foreground/60 bg-card/20 hover:bg-card/40'
+      }`}
+    >
+      <span className="absolute top-2 left-2 text-[9px] font-mono text-muted-foreground/50 uppercase tracking-wider">Slot {index + 1}</span>
+      <span className="text-4xl font-thin text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors leading-none">+</span>
+      <span className="text-[9px] font-mono text-muted-foreground/40 group-hover:text-muted-foreground/70 mt-2 uppercase tracking-wider">Add Scale</span>
+    </button>
+  );
+}
+
 function CompactScaleSlot({
   slot,
   index,
   active,
+  linked,
   onChange,
   onActivate,
+  onClear,
+  onUnlink,
+  onDragStartSlot,
+  onDragOverSlot,
+  onDropSlot,
+  dragOver,
 }: {
   slot: ScaleSelection;
   index: number;
   active: boolean;
+  linked: boolean;
   onChange: (next: ScaleSelection) => void;
   onActivate: () => void;
+  onClear: () => void;
+  onUnlink: () => void;
+  onDragStartSlot: (e: React.DragEvent) => void;
+  onDragOverSlot: (e: React.DragEvent) => void;
+  onDropSlot: (e: React.DragEvent) => void;
+  dragOver: boolean;
 }) {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [hoveredScale, setHoveredScale] = useState<string | null>(null);
@@ -250,12 +298,37 @@ function CompactScaleSlot({
     setHoveredScale(null);
   };
 
+  const borderClass = dragOver
+    ? 'border-primary ring-2 ring-primary/30'
+    : linked
+      ? 'border-accent'
+      : active
+        ? 'border-primary bg-secondary/50'
+        : 'border-border bg-card/40';
+
   return (
-    <div className={`relative rounded-lg border transition-colors flex flex-col ${active ? 'border-primary bg-secondary/50' : 'border-border bg-card/40'}`}>
+    <div
+      draggable
+      onDragStart={onDragStartSlot}
+      onDragOver={onDragOverSlot}
+      onDrop={onDropSlot}
+      className={`relative rounded-lg border transition-colors flex flex-col ${borderClass}`}
+    >
       {/* Header: label left, color right */}
       <div className="flex items-center justify-between px-2 pt-1.5 pb-1">
-        <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Slot {index + 1}</span>
-        <ColorDropdown color={color} onColorChange={() => { /* fixed per slot */ }} />
+        <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider flex items-center gap-1 cursor-grab active:cursor-grabbing" title="Drag onto another slot to link">
+          ⋮⋮ Slot {index + 1}
+          {linked && (
+            <span className="text-accent" title="Linked (dual scale)">🔗</span>
+          )}
+        </span>
+        <div className="flex items-center gap-1">
+          {linked && (
+            <button onClick={onUnlink} className="text-[8px] font-mono text-muted-foreground hover:text-foreground uppercase">Unlink</button>
+          )}
+          <button onClick={onClear} className="text-[10px] font-mono text-muted-foreground/60 hover:text-destructive transition-colors leading-none px-1" title="Clear slot">×</button>
+          <ColorDropdown color={color} onColorChange={() => { /* fixed per slot */ }} />
+        </div>
       </div>
 
       {/* Root selector — compact */}
@@ -390,7 +463,7 @@ function CompactScaleSlot({
             borderColor: color,
           }}
         />
-        {active ? 'Active' : 'Activate'}
+        {active ? 'Active' : linked ? 'Linked' : 'Activate'}
       </button>
     </div>
   );
@@ -399,11 +472,13 @@ function CompactScaleSlot({
 function ScalesPanel({
   primaryScale,
   onApplyScale,
+  onApplySecondaryScale,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
+  onApplySecondaryScale?: (slot: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string } | null) => void;
 }) {
-  const [slots, setSlots] = useState<ScaleSelection[]>(() => {
+  const [slots, setSlots] = useState<SlotState[]>(() => {
     try {
       const raw = localStorage.getItem(SCALE_SLOTS_KEY);
       if (raw) {
@@ -411,13 +486,12 @@ function ScalesPanel({
         if (Array.isArray(parsed) && parsed.length === SLOT_COUNT) return parsed;
       }
     } catch { /* ignore */ }
-    const defaults: ScaleSelection[] = [
-      { mode: 'scale', root: primaryScale.root, scale: primaryScale.scale },
-      { mode: 'scale', root: 'A', scale: 'Natural Minor (Aeolian)' },
-      { mode: 'scale', root: 'C', scale: 'Major (Ionian)' },
-      { mode: 'scale', root: 'D', scale: 'Dorian' },
+    return [
+      { mode: 'scale', root: primaryScale.root, scale: primaryScale.scale } as ScaleSelection,
+      null,
+      null,
+      null,
     ];
-    return defaults;
   });
   const [activeIdx, setActiveIdx] = useState<number>(() => {
     try {
@@ -426,6 +500,16 @@ function ScalesPanel({
       return Number.isInteger(n) && n >= 0 && n < SLOT_COUNT ? n : 0;
     } catch { return 0; }
   });
+  const [linkedIdx, setLinkedIdx] = useState<number | null>(() => {
+    try {
+      const raw = localStorage.getItem(SCALE_SLOT_LINK_KEY);
+      if (raw == null || raw === 'null') return null;
+      const n = Number(raw);
+      return Number.isInteger(n) && n >= 0 && n < SLOT_COUNT ? n : null;
+    } catch { return null; }
+  });
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   // Persist
   useEffect(() => {
@@ -434,13 +518,29 @@ function ScalesPanel({
   useEffect(() => {
     try { localStorage.setItem(SCALE_SLOT_ACTIVE_KEY, String(activeIdx)); } catch { /* ignore */ }
   }, [activeIdx]);
+  useEffect(() => {
+    try { localStorage.setItem(SCALE_SLOT_LINK_KEY, linkedIdx == null ? 'null' : String(linkedIdx)); } catch { /* ignore */ }
+  }, [linkedIdx]);
 
-  // Mirror active slot into primary scale on mount and when active slot changes
+  // Mirror active slot into primary scale
   useEffect(() => {
     const s = slots[activeIdx];
     if (s) onApplyScale(s.root, s.scale, s.mode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIdx]);
+
+  // Mirror linked slot into secondary scale
+  useEffect(() => {
+    if (!onApplySecondaryScale) return;
+    if (linkedIdx == null) {
+      onApplySecondaryScale(null);
+    } else {
+      const s = slots[linkedIdx];
+      if (s) onApplySecondaryScale(s);
+      else onApplySecondaryScale(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedIdx, slots]);
 
   const updateSlot = (idx: number, next: ScaleSelection) => {
     setSlots(prev => prev.map((s, i) => i === idx ? next : s));
@@ -448,22 +548,91 @@ function ScalesPanel({
   };
 
   const activateSlot = (idx: number) => {
+    if (slots[idx] == null) return;
+    if (linkedIdx === idx) setLinkedIdx(null); // can't have same slot active & linked
     setActiveIdx(idx);
     const s = slots[idx];
     if (s) onApplyScale(s.root, s.scale, s.mode);
   };
 
+  const createSlot = (idx: number) => {
+    const next: ScaleSelection = { mode: 'scale', root: 'C', scale: 'Major (Ionian)' };
+    setSlots(prev => prev.map((s, i) => i === idx ? next : s));
+  };
+
+  const clearSlot = (idx: number) => {
+    setSlots(prev => prev.map((s, i) => i === idx ? null : s));
+    if (linkedIdx === idx) setLinkedIdx(null);
+    if (activeIdx === idx) {
+      // pick another filled slot if available
+      const nextActive = slots.findIndex((s, i) => i !== idx && s != null);
+      if (nextActive >= 0) {
+        setActiveIdx(nextActive);
+      }
+    }
+  };
+
+  // Drag handlers — drop a filled slot onto another filled slot to link them
+  const onDragStart = (idx: number) => (e: React.DragEvent) => {
+    if (slots[idx] == null) { e.preventDefault(); return; }
+    setDragIdx(idx);
+    e.dataTransfer.effectAllowed = 'link';
+    try { e.dataTransfer.setData('text/plain', String(idx)); } catch { /* ignore */ }
+  };
+  const onDragOver = (idx: number) => (e: React.DragEvent) => {
+    if (dragIdx == null || dragIdx === idx) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'link';
+    if (dragOverIdx !== idx) setDragOverIdx(idx);
+  };
+  const onDrop = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const from = dragIdx;
+    setDragIdx(null);
+    setDragOverIdx(null);
+    if (from == null || from === idx) return;
+    if (slots[from] == null) return;
+    if (slots[idx] == null) {
+      // drop on empty -> move the dragged slot's config there
+      setSlots(prev => prev.map((s, i) => i === idx ? prev[from] : i === from ? null : s));
+      if (activeIdx === from) setActiveIdx(idx);
+      if (linkedIdx === from) setLinkedIdx(idx);
+      return;
+    }
+    // link the two filled slots: drop target becomes active, source becomes linked secondary
+    setActiveIdx(idx);
+    setLinkedIdx(from);
+  };
+
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
       {slots.map((slot, i) => (
-        <CompactScaleSlot
-          key={i}
-          slot={slot}
-          index={i}
-          active={i === activeIdx}
-          onChange={(next) => updateSlot(i, next)}
-          onActivate={() => activateSlot(i)}
-        />
+        slot == null ? (
+          <EmptyScaleSlot
+            key={i}
+            index={i}
+            onCreate={() => createSlot(i)}
+            onDragOverSlot={onDragOver(i)}
+            onDropSlot={onDrop(i)}
+            dragOver={dragOverIdx === i}
+          />
+        ) : (
+          <CompactScaleSlot
+            key={i}
+            slot={slot}
+            index={i}
+            active={i === activeIdx}
+            linked={i === linkedIdx}
+            onChange={(next) => updateSlot(i, next)}
+            onActivate={() => activateSlot(i)}
+            onClear={() => clearSlot(i)}
+            onUnlink={() => setLinkedIdx(null)}
+            onDragStartSlot={onDragStart(i)}
+            onDragOverSlot={onDragOver(i)}
+            onDropSlot={onDrop(i)}
+            dragOver={dragOverIdx === i}
+          />
+        )
       ))}
     </div>
   );
