@@ -24,19 +24,19 @@ const arpeggioNames = Object.keys(ARPEGGIO_FORMULAS);
 
 const NATURAL_NOTES: NoteName[] = ['E', 'F', 'G', 'A', 'B', 'C', 'D'];
 
-const ARPEGGIO_CATEGORIES: { label: string; types: string[] }[] = [
+export const ARPEGGIO_CATEGORIES: { label: string; types: string[] }[] = [
   { label: 'Major', types: ['Major', 'Major 7', 'Dominant 7', 'Augmented', 'Aug 7', 'Add9', 'Major 9', 'Dominant 9', 'Major 6', '7#9', '7♭9', '11', '13'] },
   { label: 'Minor', types: ['Minor', 'Minor 7', 'Diminished', 'Dim 7', 'Half-Dim 7', 'Min/Maj 7', 'Minor 9', 'Minor 6', 'Minor 11', 'Minor 13'] },
   { label: 'Other', types: ['Sus2', 'Sus4', '7sus4'] },
 ];
 
-interface ScaleCategory {
+export interface ScaleCategory {
   label: string;
   scales?: string[];
   isModesGroup?: boolean;
 }
 
-const SCALE_CATEGORIES: ScaleCategory[] = [
+export const SCALE_CATEGORIES: ScaleCategory[] = [
   { label: 'Major', scales: ['Major (Ionian)'] },
   { label: 'Minor', scales: ['Natural Minor (Aeolian)'] },
   {
