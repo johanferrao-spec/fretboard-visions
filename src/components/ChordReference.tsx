@@ -51,6 +51,8 @@ interface ChordReferenceProps {
   timelineKey: NoteName;
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   onApplySecondaryScale?: (slot: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string } | null) => void;
+  onApplyPrimaryColor?: (color: string) => void;
+  onApplySecondaryColor?: (color: string) => void;
   keyMode: KeyMode;
   onSeekToChord?: (beat: number) => void;
   onSetArpeggioPosition?: (pos: ArpeggioPosition | null) => void;
