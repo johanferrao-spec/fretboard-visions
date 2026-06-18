@@ -100,7 +100,7 @@ interface ChordReferenceProps {
 }
 
 type VoicingTab = 'full' | 'shell' | 'drop2' | 'drop3' | 'triads';
-type MainTab = 'beginner' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tabvis' | null;
+type MainTab = 'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tabvis' | null;
 type OctaveRange = 1 | 2 | 3;
 
 const DEFAULT_ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
