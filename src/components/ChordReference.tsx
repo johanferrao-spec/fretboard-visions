@@ -490,10 +490,14 @@ function ScalesPanel({
   primaryScale,
   onApplyScale,
   onApplySecondaryScale,
+  onApplyPrimaryColor,
+  onApplySecondaryColor,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   onApplySecondaryScale?: (slot: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string } | null) => void;
+  onApplyPrimaryColor?: (color: string) => void;
+  onApplySecondaryColor?: (color: string) => void;
 }) {
   const [slots, setSlots] = useState<SlotState[]>(() => {
     try {
