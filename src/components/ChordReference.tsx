@@ -644,6 +644,14 @@ function ScalesPanel({
             onActivate={() => activateSlot(i)}
             onClear={() => clearSlot(i)}
             onUnlink={() => setLinkedIdx(null)}
+            onNotchClick={() => {
+              if (i === activeIdx) {
+                if (linkedIdx != null) setLinkedIdx(null);
+                return;
+              }
+              if (linkedIdx === i) { setLinkedIdx(null); return; }
+              setLinkedIdx(i);
+            }}
             onDragStartSlot={onDragStart(i)}
             onDragOverSlot={onDragOver(i)}
             onDropSlot={onDrop(i)}
