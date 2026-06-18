@@ -678,7 +678,7 @@ export default function ChordReference({
   identifyMode, setIdentifyMode, identifyFrets, setIdentifyFrets, identifyBarre, setIdentifyBarre,
   degreeColors, setDegreeColors, identifyRoot, setIdentifyRoot,
   tuning, tuningLabels,
-  timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, onApplySecondaryScale, keyMode,
+  timelineChords, currentBeat, isPlaying, timelineKey, onApplyScale, onApplySecondaryScale, onApplyPrimaryColor, onApplySecondaryColor, keyMode,
   onSeekToChord, onSetArpeggioPosition,
   arpOverlayOpacity, setArpOverlayOpacity, arpPathVisible, setArpPathVisible,
   onArpAddClick, arpAddMode, setArpAddMode, arpAddClickRef, arpBarreDragRef,
