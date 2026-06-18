@@ -464,6 +464,22 @@ function CompactScaleSlot({
         />
         {active ? 'Active' : linked ? 'Linked' : 'Activate'}
       </button>
+
+      {/* Link notch — protruding tab at bottom center. Drag onto another notch (or click) to link slots for dual-scale mode. */}
+      <div
+        draggable
+        onDragStart={onDragStartSlot}
+        onClick={(e) => { e.stopPropagation(); onNotchClick(); }}
+        title={linked ? 'Click to unlink' : active ? 'Drag onto another slot to link' : 'Drag or click to link with active slot'}
+        className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-8 h-4 rounded-b-full border flex items-end justify-center cursor-grab active:cursor-grabbing transition-all hover:scale-110"
+        style={{
+          backgroundColor: linked || active ? color : 'hsl(var(--muted))',
+          borderColor: color,
+          boxShadow: linked ? `0 0 6px ${color}` : 'none',
+        }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-background mb-0.5" />
+      </div>
     </div>
   );
 }
