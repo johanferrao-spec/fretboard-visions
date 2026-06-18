@@ -19,7 +19,7 @@ import {
   type ArpeggioPosition, type StringGroup, type InversionVoicing,
   type VoiceLeadingVoicing,
 } from '@/lib/music';
-import type { ChordSelection } from '@/hooks/useFretboard';
+import type { ChordSelection, ScaleSelection } from '@/hooks/useFretboard';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
 
 // Natural notes starting from E
