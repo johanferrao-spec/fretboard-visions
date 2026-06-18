@@ -543,22 +543,26 @@ function ScalesPanel({
     try { localStorage.setItem(SCALE_SLOT_LINK_KEY, linkedIdx == null ? 'null' : String(linkedIdx)); } catch { /* ignore */ }
   }, [linkedIdx]);
 
-  // Mirror active slot into primary scale
+  // Mirror active slot into primary scale + color
   useEffect(() => {
     const s = slots[activeIdx];
     if (s) onApplyScale(s.root, s.scale, s.mode);
+    onApplyPrimaryColor?.(SLOT_COLORS[activeIdx]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIdx]);
 
-  // Mirror linked slot into secondary scale
+  // Mirror linked slot into secondary scale + color
   useEffect(() => {
-    if (!onApplySecondaryScale) return;
     if (linkedIdx == null) {
-      onApplySecondaryScale(null);
+      onApplySecondaryScale?.(null);
     } else {
       const s = slots[linkedIdx];
-      if (s) onApplySecondaryScale(s);
-      else onApplySecondaryScale(null);
+      if (s) {
+        onApplySecondaryScale?.(s);
+        onApplySecondaryColor?.(SLOT_COLORS[linkedIdx]);
+      } else {
+        onApplySecondaryScale?.(null);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkedIdx, slots]);
