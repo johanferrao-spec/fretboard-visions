@@ -309,16 +309,14 @@ function CompactScaleSlot({
 
   return (
     <div
-      draggable
-      onDragStart={onDragStartSlot}
       onDragOver={onDragOverSlot}
       onDrop={onDropSlot}
       className={`relative rounded-lg border transition-colors flex flex-col ${borderClass}`}
     >
       {/* Header: label left, color right */}
       <div className="flex items-center justify-between px-2 pt-1.5 pb-1">
-        <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider flex items-center gap-1 cursor-grab active:cursor-grabbing" title="Drag onto another slot to link">
-          ⋮⋮ Slot {index + 1}
+        <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+          Slot {index + 1}
           {linked && (
             <span className="text-accent" title="Linked (dual scale)">🔗</span>
           )}
