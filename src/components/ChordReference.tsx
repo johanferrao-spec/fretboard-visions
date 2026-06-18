@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import BeginnerModePanel from './BeginnerMode';
 import TabVisualiser from './TabVisualiser';
 import type { TabNote } from './TabVisualiser';
-import { ModeSelector } from './ControlPanel';
+
 import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
