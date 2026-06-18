@@ -844,6 +844,7 @@ export default function ChordReference({
         <ScalesPanel
           primaryScale={primaryScale}
           onApplyScale={onApplyScale}
+          onApplySecondaryScale={onApplySecondaryScale}
         />
       ) : activeTab === 'scaleview' ? (
         <ScaleViewPanel
