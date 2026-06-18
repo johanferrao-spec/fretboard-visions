@@ -6,7 +6,7 @@ import { useSongTimeline } from '@/hooks/useSongTimeline';
 import { useMidiEngine } from '@/hooks/useMidiEngine';
 import { useMetronome } from '@/hooks/useMetronome';
 import Fretboard from '@/components/Fretboard';
-import ControlPanel from '@/components/ControlPanel';
+
 import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
