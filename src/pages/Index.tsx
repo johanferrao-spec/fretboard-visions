@@ -619,6 +619,14 @@ const Index = () => {
                 fb.setArpeggioPosition(null);
                 setActiveInversionVoicing(null);
               }}
+              onApplySecondaryScale={(slot) => {
+                if (slot) {
+                  fb.setSecondaryScale(slot);
+                  fb.setSecondaryEnabled(true);
+                } else {
+                  fb.setSecondaryEnabled(false);
+                }
+              }}
                onSeekToChord={(beat) => handleSeek(beat)}
                onSetArpeggioPosition={fb.setArpeggioPosition}
                arpOverlayOpacity={fb.arpOverlayOpacity}
