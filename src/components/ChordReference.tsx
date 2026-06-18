@@ -411,6 +411,11 @@ export default function ChordReference({
           onApplyPreset={onApplyBeginnerPreset}
           onApplyOpenChord={onApplyOpenChord}
         />
+      ) : activeTab === 'scales' ? (
+        <ScalesPanel
+          primaryScale={primaryScale}
+          onApplyScale={onApplyScale}
+        />
       ) : activeTab === 'scaleview' ? (
         <ScaleViewPanel
           primaryScale={primaryScale}
