@@ -126,7 +126,7 @@ export default function ControlPanel({
   );
 }
 
-function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: NoteName; onSelect: (n: NoteName) => void }) {
+export function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: NoteName; onSelect: (n: NoteName) => void }) {
   const [baseNote, setBaseNote] = useState<NoteName>(() => {
     if (NATURAL_NOTES.includes(selectedRoot)) return selectedRoot;
     const idx = NOTE_NAMES.indexOf(selectedRoot);
@@ -212,7 +212,7 @@ function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: NoteName;
   );
 }
 
-const COLOR_OPTIONS = [
+export const COLOR_OPTIONS = [
   'hsl(38, 90%, 55%)',   // gold
   'hsl(270, 70%, 60%)',  // purple
   'hsl(160, 70%, 50%)',  // teal
@@ -227,7 +227,7 @@ const COLOR_OPTIONS = [
   'hsl(240, 60%, 60%)',  // indigo
 ];
 
-function ColorDropdown({ color, onColorChange }: { color: string; onColorChange: (c: string) => void }) {
+export function ColorDropdown({ color, onColorChange }: { color: string; onColorChange: (c: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
