@@ -271,6 +271,7 @@ function CompactScaleSlot({
   onActivate,
   onClear,
   onUnlink,
+  onNotchClick,
   onDragStartSlot,
   onDragOverSlot,
   onDropSlot,
@@ -284,6 +285,7 @@ function CompactScaleSlot({
   onActivate: () => void;
   onClear: () => void;
   onUnlink: () => void;
+  onNotchClick: () => void;
   onDragStartSlot: (e: React.DragEvent) => void;
   onDragOverSlot: (e: React.DragEvent) => void;
   onDropSlot: (e: React.DragEvent) => void;
