@@ -1180,6 +1180,7 @@ function ScaleViewPanel({
   threeNpsMode, setThreeNpsMode,
   voiceLeadingMode, setVoiceLeadingMode,
   voiceLeadingMelody, setVoiceLeadingMelody,
+  onApplyScale,
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
@@ -1198,6 +1199,7 @@ function ScaleViewPanel({
   setVoiceLeadingMode: (v: boolean) => void;
   voiceLeadingMelody: { stringIndex: number; fret: number } | null;
   setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
+  onApplyScale?: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
