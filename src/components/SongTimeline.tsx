@@ -704,22 +704,61 @@ export default function SongTimeline({
           {diatonicChords.map((dc, i) => (
             <button
               key={i}
-              draggable
+              draggable={!keyUnknown}
               onDragStart={(e) => {
+                if (keyUnknown) { e.preventDefault(); return; }
                 e.dataTransfer.setData('application/diatonic-degree', JSON.stringify({ degree: i }));
                 e.dataTransfer.effectAllowed = 'copy';
               }}
-              className="w-8 h-6 rounded-md text-[8px] font-mono font-bold flex items-center justify-center cursor-grab active:cursor-grabbing transition-all hover:brightness-110"
+              disabled={keyUnknown}
+              className={`w-8 h-6 rounded-md text-[8px] font-mono font-bold flex items-center justify-center transition-all ${
+                keyUnknown
+                  ? 'cursor-not-allowed grayscale opacity-40'
+                  : 'cursor-grab active:cursor-grabbing hover:brightness-110'
+              }`}
               style={{
-                backgroundColor: `hsl(${SCALE_DEGREE_COLORS[i]})`,
+                backgroundColor: keyUnknown ? 'hsl(0, 0%, 35%)' : `hsl(${SCALE_DEGREE_COLORS[i]})`,
                 color: '#000',
               }}
-              title={`${dc.symbol} — ${dc.roman} — drag to timeline`}
+              title={keyUnknown ? 'Pick a key to enable diatonic degrees' : `${dc.symbol} — ${dc.roman} — drag to timeline`}
             >
               {dc.roman}
             </button>
           ))}
         </div>
+
+        {keyUnknown && (
+          <div className="flex items-center gap-2 ml-1">
+            <div className="flex flex-col gap-0.5" title={`${filledBars} of ${measures} bars filled`}>
+              <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">
+                Bars filled {filledBars}/{measures}
+              </span>
+              <div className="w-32 h-1.5 rounded-full overflow-hidden bg-muted">
+                <div
+                  className="h-full transition-all"
+                  style={{
+                    width: `${measures > 0 ? (filledBars / measures) * 100 : 0}%`,
+                    background: allBarsFilled
+                      ? 'linear-gradient(90deg, hsl(150, 70%, 50%), hsl(180, 70%, 55%))'
+                      : 'hsl(210, 70%, 60%)',
+                  }}
+                />
+              </div>
+            </div>
+            {allBarsFilled && (
+              <button
+                onClick={runKeyAnalysis}
+                disabled={analyzing}
+                className="px-2 py-1 rounded-md text-[9px] font-mono uppercase tracking-wider bg-primary text-primary-foreground hover:brightness-110 transition-all flex items-center gap-1 disabled:opacity-60 disabled:cursor-wait shadow-md shadow-primary/30 animate-fade-in"
+                title="Use AI to detect the key and suggest what to play"
+              >
+                {analyzing ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                {analyzing ? 'Analyzing…' : 'Figure it out!'}
+              </button>
+            )}
+          </div>
+        )}
+
 
         <div className="ml-auto flex items-center gap-1 relative">
           {backingTrackActive && (
