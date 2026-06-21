@@ -333,25 +333,25 @@ function CompactScaleSlot({
         </div>
       </div>
 
-      {/* Root selector — compact */}
-      <div className="px-2 pb-1">
-        <ScaleRootSelector selectedRoot={slot.root} onSelect={(n) => onChange({ ...slot, root: n })} />
-      </div>
-
-      {/* Scale / Arpeggio toggle — compact */}
-      <div className="flex gap-1 px-2 pb-1">
-        <button
-          onClick={() => { onChange({ ...slot, mode: 'scale', scale: 'Major (Ionian)' }); setOpenCategory(null); }}
-          className={`flex-1 px-1 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
-            slot.mode === 'scale' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-          }`}
-        >Scale</button>
-        <button
-          onClick={() => { onChange({ ...slot, mode: 'arpeggio', scale: 'Major' }); setOpenCategory(null); }}
-          className={`flex-1 px-1 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
-            slot.mode === 'arpeggio' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-          }`}
-        >Arp</button>
+      {/* Root selector + Scale/Arp toggle on the same line */}
+      <div className="px-2 pb-1 flex items-end gap-1.5">
+        <div className="flex-1 min-w-0">
+          <ScaleRootSelector selectedRoot={slot.root} onSelect={(n) => onChange({ ...slot, root: n })} />
+        </div>
+        <div className="flex flex-col gap-0.5 shrink-0">
+          <button
+            onClick={() => { onChange({ ...slot, mode: 'scale', scale: 'Major (Ionian)' }); setOpenCategory(null); }}
+            className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+              slot.mode === 'scale' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+            }`}
+          >Scale</button>
+          <button
+            onClick={() => { onChange({ ...slot, mode: 'arpeggio', scale: 'Major' }); setOpenCategory(null); }}
+            className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+              slot.mode === 'arpeggio' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+            }`}
+          >Arp</button>
+        </div>
       </div>
 
       {/* Current selection display */}
