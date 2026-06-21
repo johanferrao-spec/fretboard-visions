@@ -29,7 +29,7 @@ NOTE_NAMES.forEach(note => {
 
 export function useFretboard() {
   const [maxFrets, setMaxFrets] = useState(22);
-  const [primaryScale, setPrimaryScale] = useState<ScaleSelection>({ mode: 'scale', root: 'E', scale: 'Natural Minor (Aeolian)' });
+  const [primaryScale, setPrimaryScale] = useState<ScaleSelection>({ mode: 'scale', root: 'G', scale: 'Major (Ionian)' });
   const [secondaryScale, setSecondaryScale] = useState<ScaleSelection>({ mode: 'scale', root: 'B', scale: 'Superlocrian (Altered)' });
   const [secondaryEnabled, setSecondaryEnabled] = useState(false);
   const [activePrimary, setActivePrimary] = useState(true);
@@ -44,8 +44,8 @@ export function useFretboard() {
   const [showFretBox, setShowFretBox] = useState(false);
   const [fretBoxStart, setFretBoxStart] = useState(1);
   const [fretBoxSize, setFretBoxSize] = useState(5);
-  const [fretBoxStringStart, setFretBoxStringStart] = useState(0); // 0-based row index in stringOrder
-  const [fretBoxStringSize, setFretBoxStringSize] = useState(6); // number of strings visible
+  const [fretBoxStringStart, setFretBoxStringStart] = useState(1); // 0-based row index in stringOrder
+  const [fretBoxStringSize, setFretBoxStringSize] = useState(4); // number of strings visible
   const [noteMarkerSize, setNoteMarkerSize] = useState(20);
   const [degreeColors, setDegreeColors] = useState(false);
   const [disabledDegrees, setDisabledDegrees] = useState<Set<string>>(new Set());

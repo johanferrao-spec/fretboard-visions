@@ -143,7 +143,7 @@ export default function Fretboard({
   const arpDragRef = useRef<{startString: number, fret: number, coveredStrings: Set<number>} | null>(null);
 
   // Position box drag state
-  const [boxDragging, setBoxDragging] = useState<'move' | 'left' | 'right' | 'bottom' | 'corner' | null>(null);
+  const [boxDragging, setBoxDragging] = useState<'move' | 'left' | 'right' | 'top' | 'bottom' | 'corner' | null>(null);
   const boxDragStartRef = useRef<{ mouseX: number; mouseY: number; startFret: number; startSize: number; startStrStart: number; startStrSize: number }>({ mouseX: 0, mouseY: 0, startFret: 0, startSize: 0, startStrStart: 0, startStrSize: 0 });
 
   const cumLeft: number[] = [];
@@ -882,7 +882,7 @@ export default function Fretboard({
   const glowStrings = getOpenStringGlow();
 
   // Position box drag handlers
-  const handleBoxMouseDown = useCallback((e: React.MouseEvent, mode: 'move' | 'left' | 'right' | 'bottom' | 'corner') => {
+  const handleBoxMouseDown = useCallback((e: React.MouseEvent, mode: 'move' | 'left' | 'right' | 'top' | 'bottom' | 'corner') => {
     e.preventDefault();
     e.stopPropagation();
     setBoxDragging(mode);
@@ -922,6 +922,10 @@ export default function Fretboard({
       } else if (boxDragging === 'bottom') {
         const newStrSize = Math.max(2, Math.min(6, startStrSize + dStrings));
         if (startStrStart + newStrSize <= 6) setFretBoxStringSize(newStrSize);
+      } else if (boxDragging === 'top') {
+        const newStrStart = Math.max(0, Math.min(startStrStart + startStrSize - 2, startStrStart + dStrings));
+        const newStrSize = startStrSize - (newStrStart - startStrStart);
+        if (newStrSize >= 2 && newStrSize <= 6) { setFretBoxStringStart(newStrStart); setFretBoxStringSize(newStrSize); }
       } else if (boxDragging === 'corner') {
         // Horizontal
         const newSize = Math.max(3, Math.min(12, startSize + dFrets));
@@ -1166,6 +1170,7 @@ export default function Fretboard({
             >
               <div className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'left')} />
               <div className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'right')} />
+              <div className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'top')} />
               <div className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'bottom')} />
               <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize hover:bg-white/40 z-30" onMouseDown={e => handleBoxMouseDown(e, 'corner')} />
             </div>

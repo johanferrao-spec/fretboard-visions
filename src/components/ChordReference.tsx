@@ -333,25 +333,25 @@ function CompactScaleSlot({
         </div>
       </div>
 
-      {/* Root selector — compact */}
-      <div className="px-2 pb-1">
-        <ScaleRootSelector selectedRoot={slot.root} onSelect={(n) => onChange({ ...slot, root: n })} />
-      </div>
-
-      {/* Scale / Arpeggio toggle — compact */}
-      <div className="flex gap-1 px-2 pb-1">
-        <button
-          onClick={() => { onChange({ ...slot, mode: 'scale', scale: 'Major (Ionian)' }); setOpenCategory(null); }}
-          className={`flex-1 px-1 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
-            slot.mode === 'scale' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-          }`}
-        >Scale</button>
-        <button
-          onClick={() => { onChange({ ...slot, mode: 'arpeggio', scale: 'Major' }); setOpenCategory(null); }}
-          className={`flex-1 px-1 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
-            slot.mode === 'arpeggio' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-          }`}
-        >Arp</button>
+      {/* Root selector + Scale/Arp toggle on the same line */}
+      <div className="px-2 pb-1 flex items-end gap-1.5">
+        <div className="flex-1 min-w-0">
+          <ScaleRootSelector selectedRoot={slot.root} onSelect={(n) => onChange({ ...slot, root: n })} />
+        </div>
+        <div className="flex flex-col gap-0.5 shrink-0">
+          <button
+            onClick={() => { onChange({ ...slot, mode: 'scale', scale: 'Major (Ionian)' }); setOpenCategory(null); }}
+            className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+              slot.mode === 'scale' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+            }`}
+          >Scale</button>
+          <button
+            onClick={() => { onChange({ ...slot, mode: 'arpeggio', scale: 'Major' }); setOpenCategory(null); }}
+            className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+              slot.mode === 'arpeggio' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+            }`}
+          >Arp</button>
+        </div>
       </div>
 
       {/* Current selection display */}
@@ -671,7 +671,7 @@ function ScalesPanel({
     : null;
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative pb-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {slots.map((slot, i) => (
           slot == null ? (
@@ -745,8 +745,8 @@ function ScalesPanel({
 
       {curve && (
         <svg
-          className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
-          style={{ zIndex: 5 }}
+          className="pointer-events-none absolute left-0 right-0"
+          style={{ top: 0, height: 'calc(100% + 80px)', overflow: 'visible', zIndex: 5 }}
           aria-hidden
         >
           <path
@@ -929,7 +929,7 @@ export default function ChordReference({
           { key: 'scaleview' as MainTab, label: 'Functional Harmony' },
           { key: 'chords' as MainTab, label: 'Chord Library' },
           { key: 'arpeggios' as MainTab, label: 'Arpeggio Positions' },
-          { key: 'caged' as MainTab, label: 'CAGED' },
+          
           { key: 'identify' as MainTab, label: "What's This?" },
           { key: 'changes' as MainTab, label: 'Progression Analyser' },
           { key: 'backing' as MainTab, label: '🎹 Backing Track' },
@@ -1017,8 +1017,6 @@ export default function ChordReference({
           arpAddClickRef={arpAddClickRef}
           setArpAddReferenceNotes={setArpAddReferenceNotes}
         />
-      ) : activeTab === 'caged' ? (
-        <CAGEDPanel positions={cagedPositions} cagedShape={cagedShape} setCagedShape={setCagedShape} root={cagedRoot} />
       ) : activeTab === 'identify' ? (
         <IdentifyPanel
           frets={identifyFrets}
@@ -1720,27 +1718,53 @@ function ScaleViewPanel({
           </div>
         )}
 
-        {/* Default empty-space content: key selector + functional harmony description */}
-        {!dropMode && !threeNpsMode && !voiceLeadingMode && (
-          <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex flex-col gap-3 min-w-0">
-            <div>
-              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Key</div>
-              <ScaleRootSelector
-                selectedRoot={primaryScale.root}
-                onSelect={(n) => onApplyScale?.(n, primaryScale.scale, 'scale')}
-              />
+        {/* Default empty-space content: key selector + mode dropdown + functional harmony description */}
+        {!dropMode && !threeNpsMode && !voiceLeadingMode && (() => {
+          const STANDARD_MODES: { label: string; scale: string }[] = [
+            { label: 'Ionian', scale: 'Major (Ionian)' },
+            { label: 'Dorian', scale: 'Dorian' },
+            { label: 'Phrygian', scale: 'Phrygian' },
+            { label: 'Lydian', scale: 'Lydian' },
+            { label: 'Mixolydian', scale: 'Mixolydian' },
+            { label: 'Aeolian', scale: 'Natural Minor (Aeolian)' },
+            { label: 'Locrian', scale: 'Locrian' },
+          ];
+          const currentMode = STANDARD_MODES.find(m => m.scale === primaryScale.scale)?.scale ?? 'Major (Ionian)';
+          return (
+            <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex flex-col gap-3 min-w-0">
+              <div className="flex items-end gap-3 flex-wrap">
+                <div className="flex-1 min-w-[180px]">
+                  <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Key</div>
+                  <ScaleRootSelector
+                    selectedRoot={primaryScale.root}
+                    onSelect={(n) => onApplyScale?.(n, primaryScale.scale, 'scale')}
+                  />
+                </div>
+                <div className="shrink-0">
+                  <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Mode</div>
+                  <select
+                    value={currentMode}
+                    onChange={(e) => onApplyScale?.(primaryScale.root, e.target.value, 'scale')}
+                    className="bg-muted text-foreground text-[11px] font-mono rounded border border-border px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    {STANDARD_MODES.map(m => (
+                      <option key={m.scale} value={m.scale}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">What is Functional Harmony?</div>
+                <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
+                  Functional harmony organizes chords into roles based on how they function within a key. Each degree (I–VII) has a specific harmonic purpose—<span className="text-primary font-bold">tonic</span> chords provide resolution, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension.
+                </p>
+                <p className="text-[11px] font-mono text-foreground/80 leading-relaxed mt-2">
+                  Click any degree above to highlight its chord tones on the fretboard. Use Drop 2 / Drop 3 to explore jazz voicings, or 3-Notes-Per-String to see modal patterns.
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">What is Functional Harmony?</div>
-              <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
-                Functional harmony organizes chords into roles based on how they function within a key. Each degree (I–VII) has a specific harmonic purpose—<span className="text-primary font-bold">tonic</span> chords provide resolution, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension.
-              </p>
-              <p className="text-[11px] font-mono text-foreground/80 leading-relaxed mt-2">
-                Click any degree above to highlight its chord tones on the fretboard. Use Drop 2 / Drop 3 to explore jazz voicings, or 3-Notes-Per-String to see modal patterns.
-              </p>
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {!dropMode && !threeNpsMode && degreeFilter === null && (
