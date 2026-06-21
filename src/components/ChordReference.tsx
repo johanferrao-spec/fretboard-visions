@@ -745,8 +745,8 @@ function ScalesPanel({
 
       {curve && (
         <svg
-          className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
-          style={{ zIndex: 5 }}
+          className="pointer-events-none absolute left-0 right-0"
+          style={{ top: 0, height: 'calc(100% + 80px)', overflow: 'visible', zIndex: 5 }}
           aria-hidden
         >
           <path
