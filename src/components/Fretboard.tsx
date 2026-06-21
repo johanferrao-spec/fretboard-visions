@@ -882,7 +882,7 @@ export default function Fretboard({
   const glowStrings = getOpenStringGlow();
 
   // Position box drag handlers
-  const handleBoxMouseDown = useCallback((e: React.MouseEvent, mode: 'move' | 'left' | 'right' | 'bottom' | 'corner') => {
+  const handleBoxMouseDown = useCallback((e: React.MouseEvent, mode: 'move' | 'left' | 'right' | 'top' | 'bottom' | 'corner') => {
     e.preventDefault();
     e.stopPropagation();
     setBoxDragging(mode);
