@@ -922,6 +922,10 @@ export default function Fretboard({
       } else if (boxDragging === 'bottom') {
         const newStrSize = Math.max(2, Math.min(6, startStrSize + dStrings));
         if (startStrStart + newStrSize <= 6) setFretBoxStringSize(newStrSize);
+      } else if (boxDragging === 'top') {
+        const newStrStart = Math.max(0, Math.min(startStrStart + startStrSize - 2, startStrStart + dStrings));
+        const newStrSize = startStrSize - (newStrStart - startStrStart);
+        if (newStrSize >= 2 && newStrSize <= 6) { setFretBoxStringStart(newStrStart); setFretBoxStringSize(newStrSize); }
       } else if (boxDragging === 'corner') {
         // Horizontal
         const newSize = Math.max(3, Math.min(12, startSize + dFrets));
