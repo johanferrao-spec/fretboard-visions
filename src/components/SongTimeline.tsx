@@ -105,6 +105,38 @@ export default function SongTimeline({
   const totalBeats = measures * 4;
   const snapGrid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
 
+  // Count how many bars have at least one chord overlapping them
+  const filledBars = useMemo(() => {
+    let count = 0;
+    for (let m = 0; m < measures; m++) {
+      const barStart = m * 4;
+      const barEnd = barStart + 4;
+      if (chords.some(c => c.startBeat < barEnd && c.startBeat + c.duration > barStart)) count++;
+    }
+    return count;
+  }, [chords, measures]);
+  const allBarsFilled = filledBars >= measures && measures > 0;
+
+  const runKeyAnalysis = useCallback(async () => {
+    if (analyzing || chords.length === 0) return;
+    setAnalyzing(true);
+    setAnalysisError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-key', {
+        body: { chords, measures, bpm },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.result) setKeyAnalysis(data.result);
+      else setAnalysisError('Could not parse AI response.');
+    } catch (e) {
+      setAnalysisError((e as Error).message || 'Analysis failed');
+    } finally {
+      setAnalyzing(false);
+    }
+  }, [analyzing, chords, measures, bpm]);
+
+
   const diatonicChords = useMemo(() => getDiatonicChords(timelineKey, keyMode), [timelineKey, keyMode]);
   const { numerals: currentNumerals } = useMemo(() => {
     const ALL_MODES: KeyMode[] = ['major', 'minor', 'ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian', 'locrian'];
