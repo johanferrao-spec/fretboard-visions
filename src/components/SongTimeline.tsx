@@ -608,35 +608,50 @@ export default function SongTimeline({
 
         <div className="flex items-center gap-1 group/key relative">
           <span className="text-[10px] font-mono text-muted-foreground uppercase">Key</span>
-          <select
-            value={timelineKey}
-            onChange={e => setTimelineKey(e.target.value as NoteName)}
-            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
-          >
-            {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
-          <select
-            value={keyUnknown ? 'major' : keyMode}
-            onChange={e => {
-              const v = e.target.value as KeyMode;
-              setKeyUnknown(false);
-              setKeyAnalysis(null);
-              setAnalysisError(null);
-              setKeyMode(v);
-            }}
-            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
-          >
-            {(['major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'] as KeyMode[]).map(m => (
-              <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
-            ))}
-          </select>
-          {/* Hover caption for unknown key */}
-          <button
-            onClick={() => setKeyUnknown(true)}
-            className="absolute -top-6 left-1/2 -translate-x-1/2 h-6 px-4 flex items-center justify-center rounded-md border text-[10px] font-mono uppercase whitespace-nowrap bg-card/95 text-yellow-300 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)] hover:shadow-[0_0_24px_rgba(250,204,21,0.9)] hover:bg-yellow-400/10 transition-all delay-150 duration-200 opacity-0 group-hover/key:opacity-100 pointer-events-none group-hover/key:pointer-events-auto"
-          >
-            Don't know?
-          </button>
+          {keyUnknown ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setKeyUnknown(false)}
+                className="h-6 px-3 flex items-center justify-center rounded-md border text-[10px] font-mono uppercase whitespace-nowrap bg-card/95 text-yellow-300 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)] hover:shadow-[0_0_24px_rgba(250,204,21,0.9)] hover:bg-yellow-400/10 transition-all"
+                title="Click to choose a key"
+              >
+                Don't know?
+              </button>
+              <span className="text-[9px] font-mono text-muted-foreground">click to choose key</span>
+            </div>
+          ) : (
+            <>
+              <select
+                value={timelineKey}
+                onChange={e => setTimelineKey(e.target.value as NoteName)}
+                className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
+              >
+                {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <select
+                value={keyMode}
+                onChange={e => {
+                  const v = e.target.value as KeyMode;
+                  setKeyUnknown(false);
+                  setKeyAnalysis(null);
+                  setAnalysisError(null);
+                  setKeyMode(v);
+                }}
+                className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
+              >
+                {(['major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'] as KeyMode[]).map(m => (
+                  <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
+                ))}
+              </select>
+              {/* Hover caption for unknown key */}
+              <button
+                onClick={() => setKeyUnknown(true)}
+                className="absolute -top-6 left-1/2 -translate-x-1/2 h-6 px-4 flex items-center justify-center rounded-md border text-[10px] font-mono uppercase whitespace-nowrap bg-card/95 text-yellow-300 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)] hover:shadow-[0_0_24px_rgba(250,204,21,0.9)] hover:bg-yellow-400/10 transition-all delay-150 duration-200 opacity-0 group-hover/key:opacity-100 pointer-events-none group-hover/key:pointer-events-auto"
+              >
+                Don't know?
+              </button>
+            </>
+          )}
         </div>
 
 
