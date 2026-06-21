@@ -1314,11 +1314,19 @@ function ScaleViewPanel({
     return { ...chord, label7: `${chord.root}${suffix}`, chordType7 };
   }), [diatonicChords]);
 
-  // Mode names per scale degree (rotation of the parent scale)
+  // Mode names per scale degree (rotation of the parent scale).
+  // For diatonic modes, rotate MAJOR_MODE_NAMES so the I chord matches the selected mode
+  // (e.g. G Dorian → I=Dorian, ii=Phrygian, iii=Lydian, …).
   const modeNames = useMemo(() => {
-    // Use minor mode-rotation if the parent scale is minor/aeolian
-    if (keyMode === 'minor' || keyMode === 'aeolian') return MINOR_MODE_NAMES;
-    return MAJOR_MODE_NAMES;
+    const offsets: Partial<Record<KeyMode, number>> = {
+      major: 0, ionian: 0, dorian: 1, phrygian: 2, lydian: 3,
+      mixolydian: 4, minor: 5, aeolian: 5, locrian: 6,
+    };
+    const off = offsets[keyMode];
+    if (off === undefined) {
+      return (keyMode === 'harmonic_minor' || keyMode === 'melodic_minor') ? MINOR_MODE_NAMES : MAJOR_MODE_NAMES;
+    }
+    return Array.from({ length: 7 }, (_, i) => MAJOR_MODE_NAMES[(off + i) % 7]);
   }, [keyMode]);
 
   // Generate inversions when in drop mode with a string group and degree selected

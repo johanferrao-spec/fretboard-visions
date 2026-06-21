@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight, RefreshCw } from 'lucide-react';
+import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight, RefreshCw, Sparkles, Loader2 } from 'lucide-react';
 import type { TimelineChord, SnapValue, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
@@ -8,6 +8,8 @@ import {
   type ChordVariation, type KeyMode,
 } from '@/lib/music';
 import CellGridView from './ChordCellGrid';
+import { supabase } from '@/integrations/supabase/client';
+
 
 interface SongTimelineProps {
   chords: TimelineChord[];
@@ -92,9 +94,48 @@ export default function SongTimeline({
     x: number;
     y: number;
   } | null>(null);
+  const [keyUnknown, setKeyUnknown] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [keyAnalysis, setKeyAnalysis] = useState<{
+    key: string; tonalCentre?: string; mode?: string; analysis: string;
+    whatToPlay: string; chordNotes?: { chord: string; advice: string }[];
+  } | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const totalBeats = measures * 4;
   const snapGrid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
+
+  // Count how many bars have at least one chord overlapping them
+  const filledBars = useMemo(() => {
+    let count = 0;
+    for (let m = 0; m < measures; m++) {
+      const barStart = m * 4;
+      const barEnd = barStart + 4;
+      if (chords.some(c => c.startBeat < barEnd && c.startBeat + c.duration > barStart)) count++;
+    }
+    return count;
+  }, [chords, measures]);
+  const allBarsFilled = filledBars >= measures && measures > 0;
+
+  const runKeyAnalysis = useCallback(async () => {
+    if (analyzing || chords.length === 0) return;
+    setAnalyzing(true);
+    setAnalysisError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-key', {
+        body: { chords, measures, bpm },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.result) setKeyAnalysis(data.result);
+      else setAnalysisError('Could not parse AI response.');
+    } catch (e) {
+      setAnalysisError((e as Error).message || 'Analysis failed');
+    } finally {
+      setAnalyzing(false);
+    }
+  }, [analyzing, chords, measures, bpm]);
+
 
   const diatonicChords = useMemo(() => getDiatonicChords(timelineKey, keyMode), [timelineKey, keyMode]);
   const { numerals: currentNumerals } = useMemo(() => {
@@ -575,15 +616,27 @@ export default function SongTimeline({
             {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
           </select>
           <select
-            value={keyMode}
-            onChange={e => setKeyMode(e.target.value as KeyMode)}
+            value={keyUnknown ? '__unknown' : keyMode}
+            onChange={e => {
+              const v = e.target.value;
+              if (v === '__unknown') {
+                setKeyUnknown(true);
+              } else {
+                setKeyUnknown(false);
+                setKeyAnalysis(null);
+                setAnalysisError(null);
+                setKeyMode(v as KeyMode);
+              }
+            }}
             className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
           >
             {(['major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'] as KeyMode[]).map(m => (
               <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
             ))}
+            <option value="__unknown">Don't know</option>
           </select>
         </div>
+
 
         <div className="flex items-center gap-1">
           <span className="text-[10px] font-mono text-muted-foreground uppercase">Genre</span>
@@ -651,22 +704,61 @@ export default function SongTimeline({
           {diatonicChords.map((dc, i) => (
             <button
               key={i}
-              draggable
+              draggable={!keyUnknown}
               onDragStart={(e) => {
+                if (keyUnknown) { e.preventDefault(); return; }
                 e.dataTransfer.setData('application/diatonic-degree', JSON.stringify({ degree: i }));
                 e.dataTransfer.effectAllowed = 'copy';
               }}
-              className="w-8 h-6 rounded-md text-[8px] font-mono font-bold flex items-center justify-center cursor-grab active:cursor-grabbing transition-all hover:brightness-110"
+              disabled={keyUnknown}
+              className={`w-8 h-6 rounded-md text-[8px] font-mono font-bold flex items-center justify-center transition-all ${
+                keyUnknown
+                  ? 'cursor-not-allowed grayscale opacity-40'
+                  : 'cursor-grab active:cursor-grabbing hover:brightness-110'
+              }`}
               style={{
-                backgroundColor: `hsl(${SCALE_DEGREE_COLORS[i]})`,
+                backgroundColor: keyUnknown ? 'hsl(0, 0%, 35%)' : `hsl(${SCALE_DEGREE_COLORS[i]})`,
                 color: '#000',
               }}
-              title={`${dc.symbol} — ${dc.roman} — drag to timeline`}
+              title={keyUnknown ? 'Pick a key to enable diatonic degrees' : `${dc.symbol} — ${dc.roman} — drag to timeline`}
             >
               {dc.roman}
             </button>
           ))}
         </div>
+
+        {keyUnknown && (
+          <div className="flex items-center gap-2 ml-1">
+            <div className="flex flex-col gap-0.5" title={`${filledBars} of ${measures} bars filled`}>
+              <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">
+                Bars filled {filledBars}/{measures}
+              </span>
+              <div className="w-32 h-1.5 rounded-full overflow-hidden bg-muted">
+                <div
+                  className="h-full transition-all"
+                  style={{
+                    width: `${measures > 0 ? (filledBars / measures) * 100 : 0}%`,
+                    background: allBarsFilled
+                      ? 'linear-gradient(90deg, hsl(150, 70%, 50%), hsl(180, 70%, 55%))'
+                      : 'hsl(210, 70%, 60%)',
+                  }}
+                />
+              </div>
+            </div>
+            {allBarsFilled && (
+              <button
+                onClick={runKeyAnalysis}
+                disabled={analyzing}
+                className="px-2 py-1 rounded-md text-[9px] font-mono uppercase tracking-wider bg-primary text-primary-foreground hover:brightness-110 transition-all flex items-center gap-1 disabled:opacity-60 disabled:cursor-wait shadow-md shadow-primary/30 animate-fade-in"
+                title="Use AI to detect the key and suggest what to play"
+              >
+                {analyzing ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                {analyzing ? 'Analyzing…' : 'Figure it out!'}
+              </button>
+            )}
+          </div>
+        )}
+
 
         <div className="ml-auto flex items-center gap-1 relative">
           {backingTrackActive && (
@@ -763,6 +855,50 @@ export default function SongTimeline({
           )}
         </div>
       </div>
+
+      {keyUnknown && (keyAnalysis || analysisError) && (
+        <div className="mx-2 mt-1 rounded-md border border-primary/40 bg-card/80 backdrop-blur p-2 text-[10px] font-mono animate-fade-in relative">
+          <button
+            onClick={() => { setKeyAnalysis(null); setAnalysisError(null); }}
+            className="absolute top-1 right-1 p-0.5 rounded text-muted-foreground hover:text-foreground"
+            title="Close"
+          >
+            <X size={10} />
+          </button>
+          {analysisError && (
+            <div className="text-destructive">Analysis failed: {analysisError}</div>
+          )}
+          {keyAnalysis && (
+            <div className="flex flex-col gap-1 pr-5">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-[8px] uppercase tracking-wider text-muted-foreground">Detected key</span>
+                <span className="text-primary font-bold text-[12px]">{keyAnalysis.key}</span>
+                {keyAnalysis.mode && (
+                  <span className="text-[9px] text-muted-foreground">({keyAnalysis.mode})</span>
+                )}
+              </div>
+              <div className="text-foreground/90">{keyAnalysis.analysis}</div>
+              <div>
+                <span className="text-[8px] uppercase tracking-wider text-muted-foreground">What to play: </span>
+                <span className="text-foreground/90">{keyAnalysis.whatToPlay}</span>
+              </div>
+              {keyAnalysis.chordNotes && keyAnalysis.chordNotes.length > 0 && (
+                <div className="flex flex-col gap-0.5 mt-1 pt-1 border-t border-border/40">
+                  <span className="text-[8px] uppercase tracking-wider text-muted-foreground">Chord-specific advice</span>
+                  {keyAnalysis.chordNotes.map((cn, i) => (
+                    <div key={i} className="flex gap-2">
+                      <span className="text-primary font-bold min-w-[50px]">{cn.chord}</span>
+                      <span className="text-foreground/80">{cn.advice}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+
 
       {/* Timeline grid */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
