@@ -1017,8 +1017,6 @@ export default function ChordReference({
           arpAddClickRef={arpAddClickRef}
           setArpAddReferenceNotes={setArpAddReferenceNotes}
         />
-      ) : activeTab === 'caged' ? (
-        <CAGEDPanel positions={cagedPositions} cagedShape={cagedShape} setCagedShape={setCagedShape} root={cagedRoot} />
       ) : activeTab === 'identify' ? (
         <IdentifyPanel
           frets={identifyFrets}
