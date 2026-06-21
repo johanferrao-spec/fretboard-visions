@@ -506,15 +506,18 @@ function ScalesPanel({
       const raw = localStorage.getItem(SCALE_SLOTS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length === SLOT_COUNT) return parsed;
+        if (Array.isArray(parsed)) {
+          const arr = parsed.slice(0, SLOT_COUNT) as SlotState[];
+          while (arr.length < SLOT_COUNT) arr.push(null);
+          return arr;
+        }
       }
     } catch { /* ignore */ }
-    return [
+    const arr: SlotState[] = [
       { mode: 'scale', root: primaryScale.root, scale: primaryScale.scale } as ScaleSelection,
-      null,
-      null,
-      null,
     ];
+    while (arr.length < SLOT_COUNT) arr.push(null);
+    return arr;
   });
   const [activeIdx, setActiveIdx] = useState<number>(() => {
     try {
