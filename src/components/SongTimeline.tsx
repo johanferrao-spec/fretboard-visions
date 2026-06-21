@@ -94,6 +94,13 @@ export default function SongTimeline({
     x: number;
     y: number;
   } | null>(null);
+  const [keyUnknown, setKeyUnknown] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [keyAnalysis, setKeyAnalysis] = useState<{
+    key: string; tonalCentre?: string; mode?: string; analysis: string;
+    whatToPlay: string; chordNotes?: { chord: string; advice: string }[];
+  } | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const totalBeats = measures * 4;
   const snapGrid = snap === '1/4' ? 1 : snap === '1/8' ? 0.5 : 0.25;
