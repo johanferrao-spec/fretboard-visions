@@ -633,9 +633,9 @@ export default function SongTimeline({
           {/* Hover caption for unknown key */}
           <button
             onClick={() => setKeyUnknown(true)}
-            className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded border text-[9px] font-mono uppercase whitespace-nowrap bg-card text-muted-foreground border-border shadow-sm opacity-0 group-hover/key:opacity-100 transition-opacity pointer-events-none group-hover/key:pointer-events-auto"
+            className="absolute -top-6 left-1/2 -translate-x-1/2 h-6 px-4 flex items-center justify-center rounded-md border text-[10px] font-mono uppercase whitespace-nowrap bg-card/95 text-yellow-300 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)] hover:shadow-[0_0_24px_rgba(250,204,21,0.9)] hover:bg-yellow-400/10 transition-all delay-150 duration-200 opacity-0 group-hover/key:opacity-100 pointer-events-none group-hover/key:pointer-events-auto"
           >
-            Don't know
+            Don't know?
           </button>
         </div>
 
