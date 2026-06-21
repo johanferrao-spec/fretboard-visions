@@ -12,7 +12,7 @@ import {
   analyzeProgression, identifyArpeggioFromNotes,
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
   getDiatonicChords, generate7thInversions, generateDrop3Inversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
-  STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS, MAJOR_MODE_NAMES, MINOR_MODE_NAMES,
+  STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS, MAJOR_MODE_NAMES, MINOR_MODE_NAMES, SCALE_DESCRIPTIONS,
   generateVoiceLeadingVoicings,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
   type ArpeggioPosition, type StringGroup, type InversionVoicing,
@@ -219,13 +219,12 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
 const SCALE_SLOTS_KEY = 'scale-slots-v2';
 const SCALE_SLOT_ACTIVE_KEY = 'scale-slot-active-v2';
 const SCALE_SLOT_LINK_KEY = 'scale-slot-link-v2';
-const SLOT_COUNT = 4;
+const SLOT_COUNT = 3;
 
 const SLOT_COLORS = [
   'hsl(38, 90%, 55%)',
   'hsl(270, 70%, 60%)',
   'hsl(160, 70%, 50%)',
-  'hsl(200, 85%, 55%)',
 ];
 
 import { ScaleRootSelector, ColorDropdown, COLOR_OPTIONS } from './ControlPanel';
@@ -471,11 +470,12 @@ function CompactScaleSlot({
 
       {/* Link notch — protruding tab at bottom center. Drag onto another notch (or click) to link slots for dual-scale mode. */}
       <div
+        data-notch-idx={index}
         draggable
         onDragStart={onDragStartSlot}
         onClick={(e) => { e.stopPropagation(); onNotchClick(); }}
         title={linked ? 'Click to unlink' : active ? 'Drag onto another slot to link' : 'Drag or click to link with active slot'}
-        className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-8 h-4 rounded-b-full border flex items-end justify-center cursor-grab active:cursor-grabbing transition-all hover:scale-110"
+        className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-8 h-4 rounded-b-full border flex items-end justify-center cursor-grab active:cursor-grabbing transition-all hover:scale-110 z-10"
         style={{
           backgroundColor: linked || active ? color : 'hsl(var(--muted))',
           borderColor: color,
@@ -506,15 +506,18 @@ function ScalesPanel({
       const raw = localStorage.getItem(SCALE_SLOTS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length === SLOT_COUNT) return parsed;
+        if (Array.isArray(parsed)) {
+          const arr = parsed.slice(0, SLOT_COUNT) as SlotState[];
+          while (arr.length < SLOT_COUNT) arr.push(null);
+          return arr;
+        }
       }
     } catch { /* ignore */ }
-    return [
+    const arr: SlotState[] = [
       { mode: 'scale', root: primaryScale.root, scale: primaryScale.scale } as ScaleSelection,
-      null,
-      null,
-      null,
     ];
+    while (arr.length < SLOT_COUNT) arr.push(null);
+    return arr;
   });
   const [activeIdx, setActiveIdx] = useState<number>(() => {
     try {
@@ -631,44 +634,131 @@ function ScalesPanel({
     setLinkedIdx(from);
   };
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [curve, setCurve] = useState<{ d: string; color: string } | null>(null);
+
+  useEffect(() => {
+    const compute = () => {
+      const container = containerRef.current;
+      if (!container || linkedIdx == null || slots[activeIdx] == null || slots[linkedIdx] == null) {
+        setCurve(null);
+        return;
+      }
+      const a = container.querySelector<HTMLElement>(`[data-notch-idx="${activeIdx}"]`);
+      const b = container.querySelector<HTMLElement>(`[data-notch-idx="${linkedIdx}"]`);
+      if (!a || !b) { setCurve(null); return; }
+      const cr = container.getBoundingClientRect();
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      const x1 = ar.left + ar.width / 2 - cr.left;
+      const y1 = ar.bottom - cr.top;
+      const x2 = br.left + br.width / 2 - cr.left;
+      const y2 = br.bottom - cr.top;
+      const dy = Math.max(40, Math.abs(x2 - x1) * 0.35);
+      const d = `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 + dy}, ${x2} ${y2}`;
+      setCurve({ d, color: SLOT_COLORS[activeIdx] });
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    if (containerRef.current) ro.observe(containerRef.current);
+    window.addEventListener('resize', compute);
+    return () => { ro.disconnect(); window.removeEventListener('resize', compute); };
+  }, [activeIdx, linkedIdx, slots]);
+
+  const activeSlot = slots[activeIdx];
+  const scaleDescription = activeSlot
+    ? (SCALE_DESCRIPTIONS[activeSlot.scale] ?? 'A musical scale. Explore its sound by playing through the highlighted notes on the fretboard.')
+    : null;
+
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-      {slots.map((slot, i) => (
-        slot == null ? (
-          <EmptyScaleSlot
-            key={i}
-            index={i}
-            onCreate={() => createSlot(i)}
-            onDragOverSlot={onDragOver(i)}
-            onDropSlot={onDrop(i)}
-            dragOver={dragOverIdx === i}
+    <div ref={containerRef} className="relative">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {slots.map((slot, i) => (
+          slot == null ? (
+            <EmptyScaleSlot
+              key={i}
+              index={i}
+              onCreate={() => createSlot(i)}
+              onDragOverSlot={onDragOver(i)}
+              onDropSlot={onDrop(i)}
+              dragOver={dragOverIdx === i}
+            />
+          ) : (
+            <CompactScaleSlot
+              key={i}
+              slot={slot}
+              index={i}
+              active={i === activeIdx}
+              linked={i === linkedIdx}
+              onChange={(next) => updateSlot(i, next)}
+              onActivate={() => activateSlot(i)}
+              onClear={() => clearSlot(i)}
+              onUnlink={() => setLinkedIdx(null)}
+              onNotchClick={() => {
+                if (i === activeIdx) {
+                  if (linkedIdx != null) setLinkedIdx(null);
+                  return;
+                }
+                if (linkedIdx === i) { setLinkedIdx(null); return; }
+                setLinkedIdx(i);
+              }}
+              onDragStartSlot={onDragStart(i)}
+              onDragOverSlot={onDragOver(i)}
+              onDropSlot={onDrop(i)}
+              dragOver={dragOverIdx === i}
+            />
+          )
+        ))}
+
+        {/* Dynamic scale description (replaces 4th slot) */}
+        <div
+          className="relative rounded-lg border min-h-[230px] p-3 flex flex-col bg-card/30"
+          style={{ borderColor: activeSlot ? `${SLOT_COLORS[activeIdx]}66` : 'hsl(var(--border))' }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground/70">About Scale</span>
+            {activeSlot && (
+              <span
+                className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded"
+                style={{ color: SLOT_COLORS[activeIdx], backgroundColor: `${SLOT_COLORS[activeIdx]}1a` }}
+              >
+                Slot {activeIdx + 1}
+              </span>
+            )}
+          </div>
+          {activeSlot ? (
+            <>
+              <div className="text-sm font-semibold mb-1" style={{ color: SLOT_COLORS[activeIdx] }}>
+                {activeSlot.root} {activeSlot.scale}
+              </div>
+              <p className="text-xs text-muted-foreground/90 leading-relaxed">
+                {scaleDescription}
+              </p>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/50 text-center px-2">
+              Select a scale to see a description of when and how to use it.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {curve && (
+        <svg
+          className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
+          style={{ zIndex: 5 }}
+          aria-hidden
+        >
+          <path
+            d={curve.d}
+            stroke={curve.color}
+            strokeWidth={2.5}
+            fill="none"
+            strokeLinecap="round"
+            style={{ filter: `drop-shadow(0 0 4px ${curve.color})` }}
           />
-        ) : (
-          <CompactScaleSlot
-            key={i}
-            slot={slot}
-            index={i}
-            active={i === activeIdx}
-            linked={i === linkedIdx}
-            onChange={(next) => updateSlot(i, next)}
-            onActivate={() => activateSlot(i)}
-            onClear={() => clearSlot(i)}
-            onUnlink={() => setLinkedIdx(null)}
-            onNotchClick={() => {
-              if (i === activeIdx) {
-                if (linkedIdx != null) setLinkedIdx(null);
-                return;
-              }
-              if (linkedIdx === i) { setLinkedIdx(null); return; }
-              setLinkedIdx(i);
-            }}
-            onDragStartSlot={onDragStart(i)}
-            onDragOverSlot={onDragOver(i)}
-            onDropSlot={onDrop(i)}
-            dragOver={dragOverIdx === i}
-          />
-        )
-      ))}
+        </svg>
+      )}
     </div>
   );
 }
