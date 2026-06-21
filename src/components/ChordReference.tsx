@@ -670,6 +670,7 @@ function ScalesPanel({
     ? (SCALE_DESCRIPTIONS[activeSlot.scale] ?? 'A musical scale. Explore its sound by playing through the highlighted notes on the fretboard.')
     : null;
 
+  return (
     <div ref={containerRef} className="relative pb-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {slots.map((slot, i) => (
