@@ -609,16 +609,13 @@ export default function SongTimeline({
         <div className="flex items-center gap-1 group/key relative">
           <span className="text-[10px] font-mono text-muted-foreground uppercase">Key</span>
           {keyUnknown ? (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setKeyUnknown(false)}
-                className="h-6 px-3 flex items-center justify-center rounded-md border text-[10px] font-mono uppercase whitespace-nowrap bg-card/95 text-yellow-300 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)] hover:shadow-[0_0_24px_rgba(250,204,21,0.9)] hover:bg-yellow-400/10 transition-all"
-                title="Click to choose a key"
-              >
-                Don't know?
-              </button>
-              <span className="text-[9px] font-mono text-muted-foreground">click to choose key</span>
-            </div>
+            <button
+              onClick={() => setKeyUnknown(false)}
+              className="h-6 px-3 flex items-center justify-center rounded-md border text-[10px] font-mono uppercase whitespace-nowrap bg-card/95 text-yellow-300 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)] hover:shadow-[0_0_24px_rgba(250,204,21,0.9)] hover:bg-yellow-400/10 transition-all"
+              title="Click to choose a key"
+            >
+              Don't know?
+            </button>
           ) : (
             <>
               <select
