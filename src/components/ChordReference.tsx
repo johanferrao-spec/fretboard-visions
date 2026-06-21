@@ -219,13 +219,12 @@ function RootSelector({ selectedRoot, setSelectedRoot }: { selectedRoot: NoteNam
 const SCALE_SLOTS_KEY = 'scale-slots-v2';
 const SCALE_SLOT_ACTIVE_KEY = 'scale-slot-active-v2';
 const SCALE_SLOT_LINK_KEY = 'scale-slot-link-v2';
-const SLOT_COUNT = 4;
+const SLOT_COUNT = 3;
 
 const SLOT_COLORS = [
   'hsl(38, 90%, 55%)',
   'hsl(270, 70%, 60%)',
   'hsl(160, 70%, 50%)',
-  'hsl(200, 85%, 55%)',
 ];
 
 import { ScaleRootSelector, ColorDropdown, COLOR_OPTIONS } from './ControlPanel';
