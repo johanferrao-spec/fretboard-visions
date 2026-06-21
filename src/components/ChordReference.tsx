@@ -929,7 +929,7 @@ export default function ChordReference({
           { key: 'scaleview' as MainTab, label: 'Functional Harmony' },
           { key: 'chords' as MainTab, label: 'Chord Library' },
           { key: 'arpeggios' as MainTab, label: 'Arpeggio Positions' },
-          { key: 'caged' as MainTab, label: 'CAGED' },
+          
           { key: 'identify' as MainTab, label: "What's This?" },
           { key: 'changes' as MainTab, label: 'Progression Analyser' },
           { key: 'backing' as MainTab, label: '🎹 Backing Track' },
