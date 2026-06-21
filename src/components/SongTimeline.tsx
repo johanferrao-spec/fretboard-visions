@@ -616,15 +616,27 @@ export default function SongTimeline({
             {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
           </select>
           <select
-            value={keyMode}
-            onChange={e => setKeyMode(e.target.value as KeyMode)}
+            value={keyUnknown ? '__unknown' : keyMode}
+            onChange={e => {
+              const v = e.target.value;
+              if (v === '__unknown') {
+                setKeyUnknown(true);
+              } else {
+                setKeyUnknown(false);
+                setKeyAnalysis(null);
+                setAnalysisError(null);
+                setKeyMode(v as KeyMode);
+              }
+            }}
             className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
           >
             {(['major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'] as KeyMode[]).map(m => (
               <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
             ))}
+            <option value="__unknown">Don't know</option>
           </select>
         </div>
+
 
         <div className="flex items-center gap-1">
           <span className="text-[10px] font-mono text-muted-foreground uppercase">Genre</span>
