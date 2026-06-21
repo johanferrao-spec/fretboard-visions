@@ -1170,6 +1170,7 @@ export default function Fretboard({
             >
               <div className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'left')} />
               <div className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'right')} />
+              <div className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'top')} />
               <div className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/30 z-30" onMouseDown={e => handleBoxMouseDown(e, 'bottom')} />
               <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize hover:bg-white/40 z-30" onMouseDown={e => handleBoxMouseDown(e, 'corner')} />
             </div>
