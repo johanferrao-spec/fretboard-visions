@@ -143,7 +143,7 @@ export default function Fretboard({
   const arpDragRef = useRef<{startString: number, fret: number, coveredStrings: Set<number>} | null>(null);
 
   // Position box drag state
-  const [boxDragging, setBoxDragging] = useState<'move' | 'left' | 'right' | 'bottom' | 'corner' | null>(null);
+  const [boxDragging, setBoxDragging] = useState<'move' | 'left' | 'right' | 'top' | 'bottom' | 'corner' | null>(null);
   const boxDragStartRef = useRef<{ mouseX: number; mouseY: number; startFret: number; startSize: number; startStrStart: number; startStrSize: number }>({ mouseX: 0, mouseY: 0, startFret: 0, startSize: 0, startStrStart: 0, startStrSize: 0 });
 
   const cumLeft: number[] = [];
