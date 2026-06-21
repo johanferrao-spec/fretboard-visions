@@ -856,6 +856,50 @@ export default function SongTimeline({
         </div>
       </div>
 
+      {keyUnknown && (keyAnalysis || analysisError) && (
+        <div className="mx-2 mt-1 rounded-md border border-primary/40 bg-card/80 backdrop-blur p-2 text-[10px] font-mono animate-fade-in relative">
+          <button
+            onClick={() => { setKeyAnalysis(null); setAnalysisError(null); }}
+            className="absolute top-1 right-1 p-0.5 rounded text-muted-foreground hover:text-foreground"
+            title="Close"
+          >
+            <X size={10} />
+          </button>
+          {analysisError && (
+            <div className="text-destructive">Analysis failed: {analysisError}</div>
+          )}
+          {keyAnalysis && (
+            <div className="flex flex-col gap-1 pr-5">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-[8px] uppercase tracking-wider text-muted-foreground">Detected key</span>
+                <span className="text-primary font-bold text-[12px]">{keyAnalysis.key}</span>
+                {keyAnalysis.mode && (
+                  <span className="text-[9px] text-muted-foreground">({keyAnalysis.mode})</span>
+                )}
+              </div>
+              <div className="text-foreground/90">{keyAnalysis.analysis}</div>
+              <div>
+                <span className="text-[8px] uppercase tracking-wider text-muted-foreground">What to play: </span>
+                <span className="text-foreground/90">{keyAnalysis.whatToPlay}</span>
+              </div>
+              {keyAnalysis.chordNotes && keyAnalysis.chordNotes.length > 0 && (
+                <div className="flex flex-col gap-0.5 mt-1 pt-1 border-t border-border/40">
+                  <span className="text-[8px] uppercase tracking-wider text-muted-foreground">Chord-specific advice</span>
+                  {keyAnalysis.chordNotes.map((cn, i) => (
+                    <div key={i} className="flex gap-2">
+                      <span className="text-primary font-bold min-w-[50px]">{cn.chord}</span>
+                      <span className="text-foreground/80">{cn.advice}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+
+
       {/* Timeline grid */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {/* Measure labels — clickable to place playhead.
