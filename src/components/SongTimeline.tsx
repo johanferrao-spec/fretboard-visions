@@ -606,7 +606,7 @@ export default function SongTimeline({
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 group/key relative">
           <span className="text-[10px] font-mono text-muted-foreground uppercase">Key</span>
           <select
             value={timelineKey}
@@ -616,25 +616,27 @@ export default function SongTimeline({
             {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
           </select>
           <select
-            value={keyUnknown ? '__unknown' : keyMode}
+            value={keyUnknown ? 'major' : keyMode}
             onChange={e => {
-              const v = e.target.value;
-              if (v === '__unknown') {
-                setKeyUnknown(true);
-              } else {
-                setKeyUnknown(false);
-                setKeyAnalysis(null);
-                setAnalysisError(null);
-                setKeyMode(v as KeyMode);
-              }
+              const v = e.target.value as KeyMode;
+              setKeyUnknown(false);
+              setKeyAnalysis(null);
+              setAnalysisError(null);
+              setKeyMode(v);
             }}
             className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
           >
             {(['major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'] as KeyMode[]).map(m => (
               <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
             ))}
-            <option value="__unknown">Don't know</option>
           </select>
+          {/* Hover caption for unknown key */}
+          <button
+            onClick={() => setKeyUnknown(true)}
+            className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded border text-[9px] font-mono uppercase whitespace-nowrap bg-card text-muted-foreground border-border shadow-sm opacity-0 group-hover/key:opacity-100 transition-opacity pointer-events-none group-hover/key:pointer-events-auto"
+          >
+            Don't know
+          </button>
         </div>
 
 
