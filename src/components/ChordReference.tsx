@@ -1733,7 +1733,7 @@ function ScaleViewPanel({
           return (
             <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex flex-col gap-3 min-w-0">
               <div className="flex items-end gap-3 flex-wrap">
-                <div className="flex-1 min-w-[180px]">
+                <div className="min-w-[140px]">
                   <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Key</div>
                   <ScaleRootSelector
                     selectedRoot={primaryScale.root}
