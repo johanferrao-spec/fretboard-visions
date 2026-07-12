@@ -80,7 +80,10 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-export async function putSample(s: StoredSample): Promise<void> {
+export async function putSample(
+  s: StoredSample,
+  opts: { skipCloudSync?: boolean } = {},
+): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
@@ -89,6 +92,12 @@ export async function putSample(s: StoredSample): Promise<void> {
     tx.onerror = () => reject(tx.error);
   });
   db.close();
+  // Fire-and-forget durable sync to Supabase Storage. Never blocks local
+  // playback — offline/failed uploads are fine, IndexedDB still has the blob.
+  if (!opts.skipCloudSync) {
+    // Dynamic import avoids a circular dep at module init.
+    import('./cloudSamples').then(m => m.uploadSampleToCloud(s)).catch(() => {});
+  }
 }
 
 export async function getAllSamples(): Promise<StoredSample[]> {
