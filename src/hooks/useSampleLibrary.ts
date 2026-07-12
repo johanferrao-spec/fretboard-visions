@@ -122,8 +122,23 @@ export function useSampleLibrary() {
 
   useEffect(() => {
     let cancelled = false;
-    getAllSamples().then(async s => {
+    (async () => {
+      // 1) Load whatever is already in IndexedDB (fast path).
+      const localSamples = await getAllSamples();
       if (cancelled) return;
+
+      // 2) Hydrate any missing samples from Supabase Storage (durable copy)
+      //    BEFORE we push into state, so the first render includes them.
+      let cloudRestored: StoredSample[] = [];
+      try {
+        const mod = await import('@/lib/cloudSamples');
+        cloudRestored = await mod.hydrateSamplesFromCloud(new Set(localSamples.map(s => s.id)));
+      } catch (err) {
+        console.warn('[useSampleLibrary] cloud hydrate failed', err);
+      }
+      if (cancelled) return;
+
+      const s = [...localSamples, ...cloudRestored];
       // Migrate any legacy `drums:hihat` slot to `drums:hihat_closed`.
       const migrated = s.map(item => item.slot === 'drums:hihat'
         ? { ...item, slot: 'drums:hihat_closed' }
