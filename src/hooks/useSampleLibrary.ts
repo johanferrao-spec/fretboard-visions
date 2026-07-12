@@ -267,7 +267,7 @@ export function useSampleLibrary() {
       }
 
       setLoaded(true);
-    }).catch(() => setLoaded(true));
+    })().catch(() => setLoaded(true));
     return () => { cancelled = true; };
   }, []);
 
