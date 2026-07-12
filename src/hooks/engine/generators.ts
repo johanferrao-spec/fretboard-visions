@@ -1186,33 +1186,36 @@ function generateBossaBass(
 
   for (let ci = 0; ci < chords.length; ci++) {
     const chord = chords[ci];
-    const rIdx = NOTE_NAMES.indexOf(chord.root as any);
-    if (rIdx < 0) continue;
-    let root = 36 + rIdx;
+    const rootIdx = NOTE_NAMES.indexOf(chord.root as any);
+    if (rootIdx < 0) continue;
+    const root = 36 + rootIdx;
+    const fifth = root + 7;
+    let beat1Pitch = root;
     if (chord.bassNote) {
       const bIdx = NOTE_NAMES.indexOf(chord.bassNote as any);
-      if (bIdx >= 0) root = 36 + bIdx;
-    }
-    const fifth = root + 7;
-
-    const next = chords[ci + 1];
-    const nextRoot = next ? 36 + Math.max(0, NOTE_NAMES.indexOf(next.root as any)) : null;
-    const dur = chord.duration;
-    const endBeat = chord.startBeat + dur;
-
-    // Beat 1: root
-    push(chord.startBeat, root, 95 + intensity * 5, Math.min(1.9, Math.max(0.3, dur - 0.05)));
-
-    // Beat 3: fifth (only if chord lasts long enough)
-    if (dur >= 3) {
-      const beat3 = chord.startBeat + 2;
-      const fifthDur = Math.min(1.9, endBeat - beat3 - 0.05);
-      if (fifthDur > 0.2) push(beat3, fifth, 85 + intensity * 5, fifthDur);
+      if (bIdx >= 0) beat1Pitch = 36 + bIdx;
     }
 
-    // Anticipation into next chord — half-beat early on ~50% of transitions.
-    if (next && nextRoot !== null && dur >= 1 && chance(0.5)) {
-      push(endBeat - 0.5, nextRoot, 90 + intensity * 5, 0.55);
+    const beats = chord.duration;
+    const start = chord.startBeat;
+
+    // Walk the chord's full duration in 4-beat bars. EVERY bar gets two
+    // notes: root on beat 1 (sustained ~half note), fifth on beat 3
+    // (sustained ~half note). This must fire once per bar, not once per chord.
+    for (let barOffset = 0; barOffset < beats; barOffset += 4) {
+      const barStart = start + barOffset;
+      const remaining = beats - barOffset;
+      push(barStart, barOffset === 0 ? beat1Pitch : root, 96, Math.min(1.9, remaining));
+      if (remaining > 2) {
+        push(barStart + 2, fifth, 85, Math.min(1.9, remaining - 2));
+      }
+    }
+
+    // Anticipation: pull the NEXT chord's root a half-beat early.
+    if (ci < chords.length - 1 && chance(0.5)) {
+      const next = chords[ci + 1];
+      const nIdx = NOTE_NAMES.indexOf(next.root as any);
+      if (nIdx >= 0) push(next.startBeat - 0.5, 36 + nIdx, 100, 0.5);
     }
   }
 
@@ -1225,81 +1228,43 @@ function generateBossaPiano(
   complexity: number,
 ): MidiNote[] {
   const notes: MidiNote[] = [];
-  // Son-clave 3-side hits within a bar (steps 0, 6, 12 out of 16).
-  const CLAVE_HITS = [0, 1.5, 3.0];
 
-  let prevVoicing: number[] | null = null;
+  const buildVoicing = (root: string, chordType: string): number[] => {
+    let pitches = chordPitches(root, chordType, 4);
+    if (complexity > 0.5 && pitches.length >= 3) pitches = pitches.slice(1); // rootless
+    return pitches;
+  };
+
+  // Clave-anchored hit points per 4-beat bar (son clave 3-side: 1, 2&, 4)
+  const HIT_OFFSETS = [0, 1.5, 3];
 
   for (let ci = 0; ci < chords.length; ci++) {
     const chord = chords[ci];
-    let pitches = chordPitches(chord.root, chord.chordType, 4);
-    if (!pitches.length) continue;
+    const voicing = buildVoicing(chord.root, chord.chordType);
+    if (!voicing.length) continue;
+    const beats = chord.duration;
 
-    // Rootless upper-structure at higher complexity
-    if (complexity > 0.55 && pitches.length >= 4 && chance(0.6)) {
-      pitches = pitches.slice(1);
-    }
-    let voicing = pitches.slice(0, 4).map(p => {
-      while (p < 55) p += 12;
-      while (p > 78) p -= 12;
-      return p;
-    }).sort((a, b) => a - b);
+    for (let barOffset = 0; barOffset < beats; barOffset += 4) {
+      const barStart = chord.startBeat + barOffset;
+      const remaining = beats - barOffset;
+      const numHits = 2 + (chance(complexity) ? 1 : 0);
+      const offsets = [...HIT_OFFSETS].sort(() => Math.random() - 0.5).slice(0, numHits).sort((a, b) => a - b);
 
-    // Smooth voice leading vs previous
-    if (prevVoicing && prevVoicing.length) {
-      const prev = prevVoicing;
-      voicing = voicing.map(p => {
-        const cands = [p - 12, p, p + 12].filter(x => x >= 55 && x <= 80);
-        let best = p, bestD = Infinity;
-        for (const c of cands) {
-          let d = Infinity;
-          for (const q of prev) d = Math.min(d, Math.abs(c - q));
-          if (d < bestD) { bestD = d; best = c; }
-        }
-        return best;
-      }).sort((a, b) => a - b);
-    }
-    prevVoicing = voicing;
-
-    const bars = Math.max(1, Math.ceil(chord.duration / 4));
-    const endBeat = chord.startBeat + chord.duration;
-
-    for (let bar = 0; bar < bars; bar++) {
-      const barStart = chord.startBeat + bar * 4;
-
-      // How many of the 3 clave anchor points to hit this bar (1..3)
-      const target = intensity * 0.5 + complexity * 0.5;
-      const numHits = 1 + (chance(0.4 + target * 0.5) ? 1 : 0) + (chance(target) ? 1 : 0);
-      const shuffled = [...CLAVE_HITS].sort(() => rand() - 0.5);
-      const chosen = shuffled.slice(0, Math.min(3, numHits)).sort((a, b) => a - b);
-
-      for (let hi = 0; hi < chosen.length; hi++) {
-        const off = chosen[hi];
-        const beat = barStart + off;
-        if (beat >= endBeat) continue;
-
-        // Anticipation into next chord on the last hit of the region
-        const isLastHit = bar === bars - 1 && hi === chosen.length - 1;
+      for (const off of offsets) {
+        if (off >= remaining) continue;
+        const isLastHit = off === offsets[offsets.length - 1];
+        const isAnticipation = isLastHit && off >= 3 && ci < chords.length - 1 && chance(0.5);
         let v = voicing;
-        if (isLastHit && ci < chords.length - 1 && chance(0.5)) {
-          const nextRaw = chordPitches(chords[ci + 1].root, chords[ci + 1].chordType, 4);
-          if (nextRaw.length) {
-            v = nextRaw.slice(0, 4).map(p => {
-              while (p < 55) p += 12;
-              while (p > 78) p -= 12;
-              return p;
-            }).sort((a, b) => a - b);
-          }
+        if (isAnticipation) {
+          const next = buildVoicing(chords[ci + 1].root, chords[ci + 1].chordType);
+          if (next.length) v = next;
         }
-
-        // Short-to-medium staccato; no swing
-        const dur = 0.35 + Math.random() * 0.3;
-        const baseVel = off === 0 ? 78 : 68;
-        const vel = jitterVelocity(baseVel + intensity * 8, 9);
+        const vel = jitterVelocity(78 + intensity * 10, 9);
+        const dur = off === 0 ? 1.2 : 0.6;
         for (const p of v) {
           notes.push({
             id: newId('p'),
-            startBeat: jitterTime(beat, 0.012),
+            startBeat: jitterTime(barStart + off, 0.012),
             duration: dur,
             pitch: p,
             velocity: vel,
@@ -1337,59 +1302,38 @@ function generateBossaDrums(
     for (let i = 0; i < f.lengthBars; i++) coveredBars.add(f.startBar + i);
   }
 
-  const phraseLen = measures >= 8 ? 4 : Math.min(4, measures);
-  const autoFillsAllowed = fills.length === 0;
-
-  // Hi-hat: straight 8ths, clave accents on steps 0, 6, 12.
-  const HAT_STEPS = [0, 2, 4, 6, 8, 10, 12, 14];
-  const CLAVE_ACCENTS = new Set([0, 6, 12]);
-
   for (let m = 0; m < measures; m++) {
     const fill = fillByStartBar.get(m);
-    if (fill) {
-      generateUserFill(m * 4, fill.lengthBars, intensity, pushNote);
-      continue;
-    }
+    if (fill) { generateUserFill(m * 4, fill.lengthBars, intensity, pushNote); continue; }
     if (coveredBars.has(m)) continue;
 
     const base = m * 4;
-    const phrasePos = m % phraseLen;
-    const isPhraseEnd = phrasePos === phraseLen - 1;
-    // Bossa: sparser auto-fills — only late in phrase at higher intensity.
-    const autoFill = autoFillsAllowed && isPhraseEnd && chance(intensity * 0.45);
 
-    // SURDO KICK — beats 1 and 3
-    pushNote(base + 0, DRUM_PITCHES.kick, 100 + intensity * 10, 0.25);
-    pushNote(base + 2, DRUM_PITCHES.kick, 100 + intensity * 10, 0.25);
+    // KICK (surdo): beat 1, a mandatory soft pickup on the 16th just before
+    // beat 3 (this pickup must ALWAYS be present — it's the signature bossa
+    // surdo anticipation, not optional), then beat 3.
+    pushNote(base + 0,    DRUM_PITCHES.kick, 108);
+    pushNote(base + 1.75, DRUM_PITCHES.kick, 55);
+    pushNote(base + 2,    DRUM_PITCHES.kick, 100);
 
-    // Optional ghost kicks (push into beats 3 and 1)
-    if (complexity > 0.4 && chance(0.4 + complexity * 0.3)) {
-      pushNote(base + 7 / 4, DRUM_PITCHES.kick, 32 + complexity * 10, 0.12);
-    }
-    if (complexity > 0.4 && chance(0.4 + complexity * 0.3)) {
-      pushNote(base + 15 / 4, DRUM_PITCHES.kick, 32 + complexity * 10, 0.12);
-    }
+    // RIM / CLAVE — played on the snare voice as a cross-stick (this engine
+    // has no dedicated rim/clave pitch, so snare is the correct substitute —
+    // same convention already used in SNARE_CELLS.Latin elsewhere in this
+    // file). Son clave 3-side: beats 0, 1.5, 3. This MUST fire every bar.
+    pushNote(base + 0,   DRUM_PITCHES.snare, 95, 0.12);
+    pushNote(base + 1.5, DRUM_PITCHES.snare, 100, 0.12);
+    pushNote(base + 3,   DRUM_PITCHES.snare, 92, 0.12);
 
-    // HI-HAT — cabasa/clave hybrid
-    for (const s of HAT_STEPS) {
-      if (autoFill && s >= 12) continue; // clear tail for fill
-      const isAccent = CLAVE_ACCENTS.has(s);
-      const vel = isAccent ? 100 + intensity * 10 : 55 + intensity * 10;
-      pushNote(base + s / 4, DRUM_PITCHES.hihat_closed, vel, isAccent ? 0.14 : 0.08);
-    }
-
-    // Occasional crash at phrase start
-    if (m === 0 || (m > 0 && (m - 1) % phraseLen === phraseLen - 1 && chance(0.5))) {
-      pushNote(base, DRUM_PITCHES.crash, 90 + intensity * 15, 0.5);
-    }
-
-    if (autoFill) {
-      generateFill(base, 1, intensity * 0.7, complexity, pushNote);
+    // HI-HAT: straight 8ths, softer than the snare/clave so the clave stays
+    // the foreground rhythm.
+    for (let s = 0; s < 16; s += 2) {
+      pushNote(base + s / 4, DRUM_PITCHES.hihat_closed, 55 + (s % 4 === 0 ? 10 : 0), 0.08);
     }
   }
 
   return notes;
 }
+
 
 export function generateAllTracks(
   chords: TimelineChord[],
