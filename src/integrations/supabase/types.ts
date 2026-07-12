@@ -163,6 +163,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_samples: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          kit: string | null
+          mime: string
+          name: string
+          pitch: number | null
+          slot: string
+          slot_index: number | null
+          storage_path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          id: string
+          kit?: string | null
+          mime: string
+          name: string
+          pitch?: number | null
+          slot: string
+          slot_index?: number | null
+          storage_path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          kit?: string | null
+          mime?: string
+          name?: string
+          pitch?: number | null
+          slot?: string
+          slot_index?: number | null
+          storage_path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
