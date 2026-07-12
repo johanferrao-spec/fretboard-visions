@@ -410,8 +410,10 @@ export default function SongTimeline({
         return (beat < cEnd && beat + dur > c.startBeat);
       });
       existingOverlaps.forEach(c => onRemoveChord(c.id));
-      // Default to 7th-quality chord; X drag overrides to dominant 7
-      const baseType = xHeld ? 'Dominant 7' : toSeventh(dc.type);
+      // Default to 7th-quality chord; X drag overrides to dominant 7.
+      // The V degree in a major-family key is a dominant 7, not a major 7.
+      const isDominantV = degree === 4 && dc.type === 'Major';
+      const baseType = xHeld || isDominantV ? 'Dominant 7' : toSeventh(dc.type);
       onAddChord(dc.root, baseType, beat, dur);
       return;
     }
