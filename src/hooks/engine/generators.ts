@@ -5,6 +5,7 @@ import { NOTE_NAMES, CHORD_FORMULAS } from '@/lib/music';
 import { jitterTime, jitterVelocity } from './humanize';
 import { GROOVE_FUNK_1 } from './groove1';
 import { GROOVE_ROCK_DRIVING_8S } from './grooveRockDriving8s';
+import { GROOVE_BOSSA_1 } from './grooveBossa1';
 import { generateAllFromGroove } from './grooveGenerator';
 
 let nextId = 1;
@@ -1365,10 +1366,10 @@ export function generateAllTracks(
   if (genre === 'Latin' && groove === 1) {
     // eslint-disable-next-line no-console
     console.log('[generators] → Latin groove 1 path (Bossa Nova)');
+    const fromGroove = generateAllFromGroove(GROOVE_BOSSA_1, chords, measures, intensities, complexities);
     return {
+      ...fromGroove,
       piano: generateBossaPiano(chords, intensities.piano, complexities.piano),
-      bass:  generateBossaBass(chords, intensities.bass, complexities.bass),
-      drums: generateBossaDrums(chords, measures, intensities.drums, complexities.drums, drumFills),
     };
   }
   // eslint-disable-next-line no-console

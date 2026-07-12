@@ -39,6 +39,14 @@ function mapDrumPitch(pitch: number): number {
   if (pitch === 46) return DRUM_PITCHES.hihat_open;
   // Cymbals: 49 crash, 51 ride, 52 china, 53 ride bell, 55 splash, 57 crash 2, 59 ride 2
   if (pitch === 49 || pitch === 51 || pitch === 52 || pitch === 53 || pitch === 55 || pitch === 57 || pitch === 59) return DRUM_PITCHES.ride;
+  // Hi bongo — bright percussive accent
+  if (pitch === 60) return DRUM_PITCHES.hihat_open;
+  // Low bongo — pitched drum accent
+  if (pitch === 61) return DRUM_PITCHES.tom1;
+  // Cabasa / shaker — continuous shimmer/texture
+  if (pitch === 69 || pitch === 82) return DRUM_PITCHES.hihat_pedal;
+  // Maracas — secondary shimmer, kept off hi-hat to avoid overload
+  if (pitch === 70) return DRUM_PITCHES.ride;
   // Anything else → snare fallback
   return DRUM_PITCHES.snare;
 }
