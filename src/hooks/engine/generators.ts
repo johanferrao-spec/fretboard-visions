@@ -1160,6 +1160,237 @@ function generateJazzPianoComp(
   return notes;
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+ * BOSSA NOVA — genre 'Latin', groove 1.
+ *   • Bass: root on beat 1, fifth on beat 3, ~50% anticipation of next chord
+ *     a half-beat early. Straight (no swing).
+ *   • Piano: chord-tone voicings anchored on son-clave 3-side hits
+ *     (steps 0, 6, 12 of 16 = beats 0, 1.5, 3.0). Straight, no swing.
+ *   • Drums: surdo kick on beats 1 & 3, hi-hat as clave-accented straight 8ths.
+ * ════════════════════════════════════════════════════════════════════════ */
+function generateBossaBass(
+  chords: TimelineChord[],
+  intensity: number,
+  complexity: number,
+): MidiNote[] {
+  const notes: MidiNote[] = [];
+  const push = (beat: number, pitch: number, vel: number, dur: number) => {
+    notes.push({
+      id: newId('b'),
+      startBeat: jitterTime(beat, 0.012),
+      duration: dur,
+      pitch,
+      velocity: jitterVelocity(vel, 8),
+    });
+  };
+
+  for (let ci = 0; ci < chords.length; ci++) {
+    const chord = chords[ci];
+    const rIdx = NOTE_NAMES.indexOf(chord.root as any);
+    if (rIdx < 0) continue;
+    let root = 36 + rIdx;
+    if (chord.bassNote) {
+      const bIdx = NOTE_NAMES.indexOf(chord.bassNote as any);
+      if (bIdx >= 0) root = 36 + bIdx;
+    }
+    const fifth = root + 7;
+
+    const next = chords[ci + 1];
+    const nextRoot = next ? 36 + Math.max(0, NOTE_NAMES.indexOf(next.root as any)) : null;
+    const dur = chord.duration;
+    const endBeat = chord.startBeat + dur;
+
+    // Beat 1: root
+    push(chord.startBeat, root, 95 + intensity * 5, Math.min(1.9, Math.max(0.3, dur - 0.05)));
+
+    // Beat 3: fifth (only if chord lasts long enough)
+    if (dur >= 3) {
+      const beat3 = chord.startBeat + 2;
+      const fifthDur = Math.min(1.9, endBeat - beat3 - 0.05);
+      if (fifthDur > 0.2) push(beat3, fifth, 85 + intensity * 5, fifthDur);
+    }
+
+    // Anticipation into next chord — half-beat early on ~50% of transitions.
+    if (next && nextRoot !== null && dur >= 1 && chance(0.5)) {
+      push(endBeat - 0.5, nextRoot, 90 + intensity * 5, 0.55);
+    }
+  }
+
+  return notes;
+}
+
+function generateBossaPiano(
+  chords: TimelineChord[],
+  intensity: number,
+  complexity: number,
+): MidiNote[] {
+  const notes: MidiNote[] = [];
+  // Son-clave 3-side hits within a bar (steps 0, 6, 12 out of 16).
+  const CLAVE_HITS = [0, 1.5, 3.0];
+
+  let prevVoicing: number[] | null = null;
+
+  for (let ci = 0; ci < chords.length; ci++) {
+    const chord = chords[ci];
+    let pitches = chordPitches(chord.root, chord.chordType, 4);
+    if (!pitches.length) continue;
+
+    // Rootless upper-structure at higher complexity
+    if (complexity > 0.55 && pitches.length >= 4 && chance(0.6)) {
+      pitches = pitches.slice(1);
+    }
+    let voicing = pitches.slice(0, 4).map(p => {
+      while (p < 55) p += 12;
+      while (p > 78) p -= 12;
+      return p;
+    }).sort((a, b) => a - b);
+
+    // Smooth voice leading vs previous
+    if (prevVoicing && prevVoicing.length) {
+      const prev = prevVoicing;
+      voicing = voicing.map(p => {
+        const cands = [p - 12, p, p + 12].filter(x => x >= 55 && x <= 80);
+        let best = p, bestD = Infinity;
+        for (const c of cands) {
+          let d = Infinity;
+          for (const q of prev) d = Math.min(d, Math.abs(c - q));
+          if (d < bestD) { bestD = d; best = c; }
+        }
+        return best;
+      }).sort((a, b) => a - b);
+    }
+    prevVoicing = voicing;
+
+    const bars = Math.max(1, Math.ceil(chord.duration / 4));
+    const endBeat = chord.startBeat + chord.duration;
+
+    for (let bar = 0; bar < bars; bar++) {
+      const barStart = chord.startBeat + bar * 4;
+
+      // How many of the 3 clave anchor points to hit this bar (1..3)
+      const target = intensity * 0.5 + complexity * 0.5;
+      const numHits = 1 + (chance(0.4 + target * 0.5) ? 1 : 0) + (chance(target) ? 1 : 0);
+      const shuffled = [...CLAVE_HITS].sort(() => rand() - 0.5);
+      const chosen = shuffled.slice(0, Math.min(3, numHits)).sort((a, b) => a - b);
+
+      for (let hi = 0; hi < chosen.length; hi++) {
+        const off = chosen[hi];
+        const beat = barStart + off;
+        if (beat >= endBeat) continue;
+
+        // Anticipation into next chord on the last hit of the region
+        const isLastHit = bar === bars - 1 && hi === chosen.length - 1;
+        let v = voicing;
+        if (isLastHit && ci < chords.length - 1 && chance(0.5)) {
+          const nextRaw = chordPitches(chords[ci + 1].root, chords[ci + 1].chordType, 4);
+          if (nextRaw.length) {
+            v = nextRaw.slice(0, 4).map(p => {
+              while (p < 55) p += 12;
+              while (p > 78) p -= 12;
+              return p;
+            }).sort((a, b) => a - b);
+          }
+        }
+
+        // Short-to-medium staccato; no swing
+        const dur = 0.35 + Math.random() * 0.3;
+        const baseVel = off === 0 ? 78 : 68;
+        const vel = jitterVelocity(baseVel + intensity * 8, 9);
+        for (const p of v) {
+          notes.push({
+            id: newId('p'),
+            startBeat: jitterTime(beat, 0.012),
+            duration: dur,
+            pitch: p,
+            velocity: vel,
+          });
+        }
+      }
+    }
+  }
+
+  return notes;
+}
+
+function generateBossaDrums(
+  chords: TimelineChord[],
+  measures: number,
+  intensity: number,
+  complexity: number,
+  fills: DrumFill[],
+): MidiNote[] {
+  const notes: MidiNote[] = [];
+  const pushNote = (beat: number, pitch: number, vel: number, dur = 0.2) => {
+    notes.push({
+      id: newId('d'),
+      startBeat: jitterTime(beat, 0.008),
+      duration: dur,
+      pitch,
+      velocity: jitterVelocity(Math.max(8, Math.min(127, vel)), 6),
+    });
+  };
+
+  const fillByStartBar = new Map<number, DrumFill>();
+  const coveredBars = new Set<number>();
+  for (const f of fills) {
+    fillByStartBar.set(f.startBar, f);
+    for (let i = 0; i < f.lengthBars; i++) coveredBars.add(f.startBar + i);
+  }
+
+  const phraseLen = measures >= 8 ? 4 : Math.min(4, measures);
+  const autoFillsAllowed = fills.length === 0;
+
+  // Hi-hat: straight 8ths, clave accents on steps 0, 6, 12.
+  const HAT_STEPS = [0, 2, 4, 6, 8, 10, 12, 14];
+  const CLAVE_ACCENTS = new Set([0, 6, 12]);
+
+  for (let m = 0; m < measures; m++) {
+    const fill = fillByStartBar.get(m);
+    if (fill) {
+      generateUserFill(m * 4, fill.lengthBars, intensity, pushNote);
+      continue;
+    }
+    if (coveredBars.has(m)) continue;
+
+    const base = m * 4;
+    const phrasePos = m % phraseLen;
+    const isPhraseEnd = phrasePos === phraseLen - 1;
+    // Bossa: sparser auto-fills — only late in phrase at higher intensity.
+    const autoFill = autoFillsAllowed && isPhraseEnd && chance(intensity * 0.45);
+
+    // SURDO KICK — beats 1 and 3
+    pushNote(base + 0, DRUM_PITCHES.kick, 100 + intensity * 10, 0.25);
+    pushNote(base + 2, DRUM_PITCHES.kick, 100 + intensity * 10, 0.25);
+
+    // Optional ghost kicks (push into beats 3 and 1)
+    if (complexity > 0.4 && chance(0.4 + complexity * 0.3)) {
+      pushNote(base + 7 / 4, DRUM_PITCHES.kick, 32 + complexity * 10, 0.12);
+    }
+    if (complexity > 0.4 && chance(0.4 + complexity * 0.3)) {
+      pushNote(base + 15 / 4, DRUM_PITCHES.kick, 32 + complexity * 10, 0.12);
+    }
+
+    // HI-HAT — cabasa/clave hybrid
+    for (const s of HAT_STEPS) {
+      if (autoFill && s >= 12) continue; // clear tail for fill
+      const isAccent = CLAVE_ACCENTS.has(s);
+      const vel = isAccent ? 100 + intensity * 10 : 55 + intensity * 10;
+      pushNote(base + s / 4, DRUM_PITCHES.hihat_closed, vel, isAccent ? 0.14 : 0.08);
+    }
+
+    // Occasional crash at phrase start
+    if (m === 0 || (m > 0 && (m - 1) % phraseLen === phraseLen - 1 && chance(0.5))) {
+      pushNote(base, DRUM_PITCHES.crash, 90 + intensity * 15, 0.5);
+    }
+
+    if (autoFill) {
+      generateFill(base, 1, intensity * 0.7, complexity, pushNote);
+    }
+  }
+
+  return notes;
+}
+
 export function generateAllTracks(
   chords: TimelineChord[],
   measures: number,
@@ -1175,18 +1406,25 @@ export function generateAllTracks(
     return generateAllFromGroove(GROOVE_FUNK_1, chords, measures, intensities, complexities);
   }
   if (genre === 'Rock' && groove === 1) {
-    // Rock · "Driving 8s" — kick on 1&3 with driving variations, snare backbeat,
-    // straight 8th hats with open-hat lifts, tom fill on bar 4.
+    // Rock · "Driving 8s"
     return generateAllFromGroove(GROOVE_ROCK_DRIVING_8S, chords, measures, intensities, complexities);
   }
   if (genre === 'Jazz' && groove === 1) {
     // eslint-disable-next-line no-console
     console.log('[generators] → Jazz groove 1 path (walking bass + rootless comping)');
-    // Dedicated jazz behaviour: walking bass + rootless comping + jazz drums.
     return {
       piano: generateJazzPianoComp(chords, intensities.piano, complexities.piano),
       bass:  generateJazzWalkingBass(chords, intensities.bass, complexities.bass),
       drums: generateDrums(chords, measures, intensities.drums, complexities.drums, genre, drumFills),
+    };
+  }
+  if (genre === 'Latin' && groove === 1) {
+    // eslint-disable-next-line no-console
+    console.log('[generators] → Latin groove 1 path (Bossa Nova)');
+    return {
+      piano: generateBossaPiano(chords, intensities.piano, complexities.piano),
+      bass:  generateBossaBass(chords, intensities.bass, complexities.bass),
+      drums: generateBossaDrums(chords, measures, intensities.drums, complexities.drums, drumFills),
     };
   }
   // eslint-disable-next-line no-console

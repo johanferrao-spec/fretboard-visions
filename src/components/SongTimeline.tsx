@@ -672,20 +672,24 @@ export default function SongTimeline({
           <select
             value={groove}
             onChange={e => setGroove(Number(e.target.value) as GrooveId)}
-            disabled={genre !== 'Funk' && genre !== 'Rock'}
+            disabled={genre !== 'Funk' && genre !== 'Rock' && genre !== 'Jazz' && genre !== 'Latin'}
             className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
             title={
               genre === 'Funk' ? 'Pick a groove preset' :
               genre === 'Rock' ? 'Pick a groove preset' :
-              'Grooves are available for the Funk and Rock genres'
+              genre === 'Jazz' ? 'Pick a groove preset' :
+              genre === 'Latin' ? 'Pick a Latin groove (Bossa Nova, more coming)' :
+              'Grooves are available for Funk, Rock, Jazz and Latin genres'
             }
           >
             {genre === 'Rock'
               ? <option value={1}>Driving 8s</option>
               : genre === 'Jazz'
                 ? <option value={1}>Walking Swing</option>
-                : <option value={1}>1</option>}
+                : genre === 'Latin'
+                  ? <option value={1}>Bossa Nova</option>
+                  : <option value={1}>1</option>}
           </select>
         </div>
 
