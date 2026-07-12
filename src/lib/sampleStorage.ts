@@ -121,6 +121,8 @@ export async function deleteSample(id: string): Promise<void> {
     tx.onerror = () => reject(tx.error);
   });
   db.close();
+  // Fire-and-forget: remove the durable copy too.
+  import('./cloudSamples').then(m => m.deleteSampleFromCloud(id)).catch(() => {});
 }
 
 export async function putBassIcon(icon: StoredBassIcon): Promise<void> {
