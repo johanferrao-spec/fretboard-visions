@@ -1431,7 +1431,7 @@ export default function Fretboard({
 
                 {/* String line */}
                 {!isDisabled && (
-                  <div className="absolute bg-fretboard-string" style={{ height: thickness, top: '50%', transform: 'translateY(-50%)', opacity: 0.5, left: 28, right: 0 }} />
+                  <div className="absolute bg-fretboard-string" style={{ height: thickness, top: '50%', transform: 'translateY(-50%)', opacity: 0.65, left: 28, right: 0 }} />
                 )}
 
                 {/* Fret cells */}
@@ -1452,7 +1452,7 @@ export default function Fretboard({
 
                     return (
                       <div key={fret} className="flex items-center justify-center relative" style={{ width: `${widths[fret]}%`, height: stringH }}>
-                        {fret > 0 && <div className="absolute left-0 top-0 bottom-0 bg-fretboard-fret" style={{ width: 2, opacity: 0.6 }} />}
+                    {fret > 0 && <div className="absolute left-0 top-0 bottom-0 bg-fretboard-fret" style={{ width: 2, opacity: 0.7 }} />}
                         {fret === 0 && <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-fretboard-nut" />}
 
                         {/* In identify mode or arp add mode, always render a clickable/hoverable target */}
