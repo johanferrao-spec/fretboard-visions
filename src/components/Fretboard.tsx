@@ -1431,7 +1431,7 @@ export default function Fretboard({
 
                 {/* String line */}
                 {!isDisabled && (
-                  <div className="absolute bg-fretboard-string" style={{ height: thickness, top: '50%', transform: 'translateY(-50%)', opacity: 0.9, left: 28, right: 0, boxShadow: '0 0 3px hsl(var(--fretboard-string) / 0.45)' }} />
+                  <div className="absolute bg-fretboard-string z-[5]" style={{ height: thickness, top: '50%', transform: 'translateY(-50%)', opacity: 0.9, left: 28, right: 0, boxShadow: '0 0 3px hsl(var(--fretboard-string) / 0.45)' }} />
                 )}
 
                 {/* Fret cells */}
