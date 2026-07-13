@@ -1366,7 +1366,12 @@ function ScaleViewPanel({
     const chord = diatonicLabels[degreeFilter];
     if (!chord) return [];
     if (dropMode === 'drop2') {
-      return generate7thInversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
+      const invs = generate7thInversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
+      // D string root (upper) shows only the 4 true inversions — drop the stacked voicing
+      if (inversionStringGroup === 'upper') {
+        return invs.filter(v => v.inversionNumber !== -1);
+      }
+      return invs;
     }
     if (dropMode === 'drop3' && (inversionStringGroup === 'lower' || inversionStringGroup === 'mid')) {
       return generateDrop3Inversions(chord.root, chord.chordType7, inversionStringGroup, tuning);
