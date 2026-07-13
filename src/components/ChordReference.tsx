@@ -1145,14 +1145,14 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick, tuni
       </div>
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="flex-1">
         <text x={4} y={topPad + 10} fontSize={9} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
-        {/* Draw all 6 strings */}
-        {Array.from({ length: numStrings }, (_, si) => (
-          <line key={`s${si}`} x1={leftPad + si * cellW} y1={topPad} x2={leftPad + si * cellW} y2={topPad + numFrets * cellH}
-            stroke="hsl(var(--fretboard-string))" strokeWidth={0.75} strokeOpacity={activeStrings.has(si) ? 0.9 : 0.15} strokeLinecap="round" />
-        ))}
+        {/* Draw frets first so strings render on top */}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
           <line key={`f${i}`} x1={leftPad} y1={topPad + i * cellH} x2={leftPad + (numStrings - 1) * cellW} y2={topPad + i * cellH}
             stroke="hsl(var(--fretboard-fret))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.55} />
+        ))}
+        {Array.from({ length: numStrings }, (_, si) => (
+          <line key={`s${si}`} x1={leftPad + si * cellW} y1={topPad} x2={leftPad + si * cellW} y2={topPad + numFrets * cellH}
+            stroke="hsl(var(--fretboard-string))" strokeWidth={0.75} strokeOpacity={activeStrings.has(si) ? 0.9 : 0.15} strokeLinecap="round" />
         ))}
         {/* Muted string indicators */}
         {Array.from({ length: numStrings }, (_, si) => {
@@ -1240,13 +1240,14 @@ function VoiceLeadingDiagram({ voicing, color, onClick, isActive = false }: {
       </div>
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
         <text x={4} y={topPad + 10} fontSize={9} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
-        {Array.from({ length: numStrings }, (_, si) => (
-          <line key={`s${si}`} x1={leftPad + si * cellW} y1={topPad} x2={leftPad + si * cellW} y2={topPad + numFrets * cellH}
-            stroke="hsl(var(--fretboard-string))" strokeWidth={0.75} strokeOpacity={0.9} strokeLinecap="round" />
-        ))}
+        {/* Draw frets first so strings render on top */}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
           <line key={`f${i}`} x1={leftPad} y1={topPad + i * cellH} x2={leftPad + (numStrings - 1) * cellW} y2={topPad + i * cellH}
             stroke="hsl(var(--fretboard-fret))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.55} />
+        ))}
+        {Array.from({ length: numStrings }, (_, si) => (
+          <line key={`s${si}`} x1={leftPad + si * cellW} y1={topPad} x2={leftPad + si * cellW} y2={topPad + numFrets * cellH}
+            stroke="hsl(var(--fretboard-string))" strokeWidth={0.75} strokeOpacity={0.9} strokeLinecap="round" />
         ))}
         {Array.from({ length: numStrings }, (_, si) => {
           if (voicing.frets[si] === -1) {
