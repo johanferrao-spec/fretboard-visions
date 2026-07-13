@@ -1148,11 +1148,11 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick, tuni
         {/* Draw all 6 strings */}
         {Array.from({ length: numStrings }, (_, si) => (
           <line key={`s${si}`} x1={leftPad + si * cellW} y1={topPad} x2={leftPad + si * cellW} y2={topPad + numFrets * cellH}
-            stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={activeStrings.has(si) ? 0.5 : 0.15} />
+            stroke="hsl(var(--fretboard-string))" strokeWidth={0.5} strokeOpacity={activeStrings.has(si) ? 0.65 : 0.15} />
         ))}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
           <line key={`f${i}`} x1={leftPad} y1={topPad + i * cellH} x2={leftPad + (numStrings - 1) * cellW} y2={topPad + i * cellH}
-            stroke="hsl(var(--muted-foreground))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.5} />
+            stroke="hsl(var(--fretboard-fret))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.65} />
         ))}
         {/* Muted string indicators */}
         {Array.from({ length: numStrings }, (_, si) => {
@@ -1242,11 +1242,11 @@ function VoiceLeadingDiagram({ voicing, color, onClick, isActive = false }: {
         <text x={4} y={topPad + 10} fontSize={9} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
         {Array.from({ length: numStrings }, (_, si) => (
           <line key={`s${si}`} x1={leftPad + si * cellW} y1={topPad} x2={leftPad + si * cellW} y2={topPad + numFrets * cellH}
-            stroke="hsl(var(--muted-foreground))" strokeWidth={0.5} strokeOpacity={0.5} />
+            stroke="hsl(var(--fretboard-string))" strokeWidth={0.5} strokeOpacity={0.65} />
         ))}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
           <line key={`f${i}`} x1={leftPad} y1={topPad + i * cellH} x2={leftPad + (numStrings - 1) * cellW} y2={topPad + i * cellH}
-            stroke="hsl(var(--muted-foreground))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.5} />
+            stroke="hsl(var(--fretboard-fret))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.65} />
         ))}
         {Array.from({ length: numStrings }, (_, si) => {
           if (voicing.frets[si] === -1) {
@@ -3027,10 +3027,10 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
           <line x1={stringSpacing} y1={5} x2={stringSpacing * 6} y2={5} stroke="hsl(var(--fretboard-nut))" strokeWidth={2} />
         )}
         {Array.from({ length: numFrets + 1 }, (_, i) => (
-          <line key={i} x1={stringSpacing} y1={5 + i * fretSpacing} x2={stringSpacing * 6} y2={5 + i * fretSpacing} stroke="hsl(var(--border))" strokeWidth={0.5} />
+          <line key={i} x1={stringSpacing} y1={5 + i * fretSpacing} x2={stringSpacing * 6} y2={5 + i * fretSpacing} stroke="hsl(var(--fretboard-fret))" strokeWidth={0.5} />
         ))}
         {[1, 2, 3, 4, 5, 6].map(s => (
-          <line key={s} x1={s * stringSpacing} y1={5} x2={s * stringSpacing} y2={5 + numFrets * fretSpacing} stroke="hsl(var(--fretboard-string))" strokeWidth={0.5} opacity={0.5} />
+          <line key={s} x1={s * stringSpacing} y1={5} x2={s * stringSpacing} y2={5 + numFrets * fretSpacing} stroke="hsl(var(--fretboard-string))" strokeWidth={0.5} opacity={0.65} />
         ))}
         {voicing.barreFrom != null && voicing.barreTo != null && voicing.barreFret != null && (
           <rect
@@ -3685,10 +3685,10 @@ function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition;
     <div className="flex justify-center">
       <svg width={w} height={h + 6} className="shrink-0">
         {Array.from({ length: numFrets + 1 }, (_, i) => (
-          <line key={i} x1={stringSpacing} y1={5 + i * fretSpacing} x2={stringSpacing * 6} y2={5 + i * fretSpacing} stroke="hsl(var(--border))" strokeWidth={0.5} />
+          <line key={i} x1={stringSpacing} y1={5 + i * fretSpacing} x2={stringSpacing * 6} y2={5 + i * fretSpacing} stroke="hsl(var(--fretboard-fret))" strokeWidth={0.5} />
         ))}
         {[1, 2, 3, 4, 5, 6].map(s => (
-          <line key={s} x1={s * stringSpacing} y1={5} x2={s * stringSpacing} y2={5 + numFrets * fretSpacing} stroke="hsl(var(--fretboard-string))" strokeWidth={0.5} opacity={0.5} />
+          <line key={s} x1={s * stringSpacing} y1={5} x2={s * stringSpacing} y2={5 + numFrets * fretSpacing} stroke="hsl(var(--fretboard-string))" strokeWidth={0.5} opacity={0.65} />
         ))}
         {startFret > 0 && (
           <text x={1} y={5 + fretSpacing * 0.6} fontSize={large ? 8 : 4} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
