@@ -1691,6 +1691,7 @@ export function generateDrop2Voicings(root: NoteName, chordType: string): ChordV
         if (!valid) continue;
         if (frets.some(f => f === 0)) continue; // No open strings in drop 2
         if (frets.length > 1 && Math.max(...frets) - Math.min(...frets) > 4) continue;
+        if (!isPhysicallyPlayable(voicing)) continue;
         const key = voicing.join(',');
         const candidate = { frets: [...voicing] };
         if (!voicingContainsRequiredTones(candidate, root, chordType, 'drop2')) continue;
