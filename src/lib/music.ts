@@ -2965,11 +2965,12 @@ const UPPER_E_ROOT_TEMPLATES: Record<string, Record<string, string>> = {
   },
   'm7b5': {
     Root: 'XX2333',
-    '1st': 'XX5545',
+    '1st': 'XX5756',
     '2nd': 'XX89810',
     '3rd': 'XX12121112',
     Stack: 'XX14121110',
   },
+
 };
 
 // Mid strings: C-root, strings A D G B (indices 1,2,3,4)
