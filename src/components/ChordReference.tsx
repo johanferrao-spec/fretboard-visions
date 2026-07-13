@@ -1915,6 +1915,30 @@ function reverseChordType(chordType: string | null): { quality: ChordQuality; ex
   return { quality: 'Maj', exts: empty };
 }
 
+function computeNextExts(prev: Set<ChordExtension>, e: ChordExtension): Set<ChordExtension> {
+  const next = new Set(prev);
+  const turningOn = !next.has(e);
+  if (turningOn) next.add(e); else next.delete(e);
+
+  const seventh: ChordExtension = next.has('maj7') ? 'maj7' : '7';
+  const stackOrder: ChordExtension[] = [seventh, '9', '11', '13'];
+  if (turningOn) {
+    if (e === '13') { next.add(seventh); next.add('9'); if (!next.has('#11')) next.add('11'); }
+    else if (e === '11' || e === '#11') { next.add(seventh); next.add('9'); }
+    else if (e === '9') { next.add(seventh); }
+    else if (e === '♭9' || e === '#9') { next.add(seventh); }
+    else if (e === '♭13') { next.add(seventh); if (!next.has('9') && !next.has('♭9') && !next.has('#9')) next.add('9'); }
+  } else {
+    const idx = stackOrder.indexOf(e);
+    if (idx >= 0) for (let i = idx + 1; i < stackOrder.length; i++) next.delete(stackOrder[i]);
+    if (e === '7' || e === 'maj7') { next.delete('9'); next.delete('11'); next.delete('#11'); next.delete('13'); next.delete('♭13'); next.delete('♭9'); next.delete('#9'); }
+  }
+
+  const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
+  for (const [a, b] of pairs) if (next.has(a) && next.has(b)) next.delete(a === e ? b : a);
+  return next;
+}
+
 function ChordBuilder({
   selectedRoot, selectedChord, handleSelectChord, getChordCellLabel, handleRenameChord,
 }: {
@@ -1948,16 +1972,12 @@ function ChordBuilder({
   }, [resolved]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleExt = (e: ChordExtension) => {
-    setExts(prev => {
-      const next = new Set(prev);
-      if (next.has(e)) next.delete(e);
-      else next.add(e);
-      // Enforce mutually-exclusive pairs
-      const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
-      for (const [a, b] of pairs) if (next.has(a) && next.has(b)) next.delete(a === e ? b : a);
-      return next;
-    });
+    setExts(prev => computeNextExts(prev, e));
   };
+
+
+
+
 
   const label = resolved ? getChordCellLabel(resolved) : '—';
 
@@ -2019,11 +2039,7 @@ function ChordBuilder({
         <div className="grid grid-cols-4 gap-0.5">
           {CHORD_EXTENSIONS.map(e => {
             const active = exts.has(e);
-            // Probe if adding this extension yields a valid chord
-            const probe = new Set(exts);
-            if (active) probe.delete(e); else probe.add(e);
-            const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
-            for (const [a, b] of pairs) if (probe.has(a) && probe.has(b)) probe.delete(a === e ? b : a);
+            const probe = computeNextExts(exts, e);
             const wouldResolve = resolveChordType(quality, probe);
             const disabled = !wouldResolve;
             return (
