@@ -1301,14 +1301,20 @@ function ScaleViewPanel({
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
-  const degreeColorByPc = useMemo(() => {
+
+  // Map absolute pitch-class → scale-degree color, relative to a given chord root.
+  // Semitones are collapsed to the nearest diatonic degree so that chord tones
+  // (R, 3, 5, 7) get the R/3/5/7 palette regardless of quality (b3/b5/b7 use the
+  // same colour as their natural sibling).
+  const SEMI_TO_DEG = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6];
+  const buildDegreeColorMap = (chordRootPc: number) => {
     const m = new Map<number, string>();
-    diatonicChords.forEach((c, i) => {
-      const pc = NOTE_NAMES.indexOf(c.root as NoteName);
-      if (pc >= 0) m.set(pc, SCALE_DEGREE_COLORS[i]);
-    });
+    for (let s = 0; s < 12; s++) {
+      m.set((chordRootPc + s) % 12, SCALE_DEGREE_COLORS[SEMI_TO_DEG[s]]);
+    }
     return m;
-  }, [diatonicChords]);
+  };
+
 
 
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
@@ -1579,7 +1585,7 @@ function ScaleViewPanel({
                           color={activeColor || '0, 0%, 60%'}
                           onClick={() => setCurrentInvIdx(idx)}
                           tuning={tuning}
-                          degreeColorByPc={degreeColorByPc}
+                          degreeColorByPc={buildDegreeColorMap(NOTE_NAMES.indexOf(inv.notes[0] ? (diatonicLabels[degreeFilter!]?.root as NoteName) : 'C'))}
                         />
                       ))}
                     </div>
