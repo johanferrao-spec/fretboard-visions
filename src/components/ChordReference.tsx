@@ -1950,14 +1950,34 @@ function ChordBuilder({
   const toggleExt = (e: ChordExtension) => {
     setExts(prev => {
       const next = new Set(prev);
-      if (next.has(e)) next.delete(e);
-      else next.add(e);
+      const turningOn = !next.has(e);
+      if (turningOn) next.add(e); else next.delete(e);
+
+      // Tertian stacking: higher extensions imply lower ones (7 → 9 → 11 → 13).
+      // Respect maj7 vs 7 choice: if maj7 already present, stack under maj7; otherwise use dominant 7.
+      const seventh: ChordExtension = next.has('maj7') ? 'maj7' : '7';
+      const stackOrder: ChordExtension[] = [seventh, '9', '11', '13'];
+      if (turningOn) {
+        if (e === '13') { next.add(seventh); next.add('9'); if (!next.has('#11')) next.add('11'); }
+        else if (e === '11' || e === '#11') { next.add(seventh); next.add('9'); }
+        else if (e === '9') { next.add(seventh); }
+        else if (e === '♭9' || e === '#9') { next.add(seventh); }
+        else if (e === '♭13') { next.add(seventh); if (!next.has('9') && !next.has('♭9') && !next.has('#9')) next.add('9'); }
+      } else {
+        // Turning off a lower degree removes the higher ones above it in the stack
+        const idx = stackOrder.indexOf(e);
+        if (idx >= 0) for (let i = idx + 1; i < stackOrder.length; i++) next.delete(stackOrder[i]);
+        if (e === '7' || e === 'maj7') { next.delete('9'); next.delete('11'); next.delete('#11'); next.delete('13'); next.delete('♭13'); next.delete('♭9'); next.delete('#9'); }
+      }
+
       // Enforce mutually-exclusive pairs
       const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
       for (const [a, b] of pairs) if (next.has(a) && next.has(b)) next.delete(a === e ? b : a);
       return next;
     });
   };
+
+
 
   const label = resolved ? getChordCellLabel(resolved) : '—';
 
