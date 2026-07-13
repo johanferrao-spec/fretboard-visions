@@ -2039,11 +2039,7 @@ function ChordBuilder({
         <div className="grid grid-cols-4 gap-0.5">
           {CHORD_EXTENSIONS.map(e => {
             const active = exts.has(e);
-            // Probe if adding this extension yields a valid chord
-            const probe = new Set(exts);
-            if (active) probe.delete(e); else probe.add(e);
-            const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
-            for (const [a, b] of pairs) if (probe.has(a) && probe.has(b)) probe.delete(a === e ? b : a);
+            const probe = computeNextExts(exts, e);
             const wouldResolve = resolveChordType(quality, probe);
             const disabled = !wouldResolve;
             return (
