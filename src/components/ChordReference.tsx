@@ -1829,8 +1829,229 @@ function formatCompactTab(frets: number[]): string {
 }
 
 // ============================================================
+// CHORD BUILDER (Logic Pro-style quality + extensions)
+// ============================================================
+
+type ChordQuality = 'Maj' | 'Min' | 'Sus2' | 'Sus4' | '5' | 'Aug' | 'Dim';
+const CHORD_QUALITIES: ChordQuality[] = ['Maj', 'Min', 'Sus2', 'Sus4', '5', 'Aug', 'Dim'];
+const CHORD_EXTENSIONS = ['♭5', '#5', '6', '7', 'maj7', '♭9', '9', '#9', '11', '#11', '♭13', '13'] as const;
+type ChordExtension = typeof CHORD_EXTENSIONS[number];
+
+function resolveChordType(quality: ChordQuality, exts: Set<ChordExtension>): string | null {
+  const has = (e: ChordExtension) => exts.has(e);
+  let name: string | null = null;
+  if (quality === '5') name = 'Power (5)';
+  else if (quality === 'Sus2') name = has('4' as ChordExtension) ? 'Sus2Sus4' : 'Sus2';
+  else if (quality === 'Sus4') {
+    if (has('7') && has('♭9')) name = '7sus4♭9';
+    else if (has('7')) name = '7sus4';
+    else name = 'Sus4';
+  } else if (quality === 'Aug') name = has('7') ? 'Aug 7' : 'Augmented';
+  else if (quality === 'Dim') name = has('7') ? 'Dim 7' : 'Diminished';
+  else if (quality === 'Min') {
+    if (has('♭5') && has('7')) name = 'Half-Dim 7';
+    else if (has('♭5')) name = 'Dim5';
+    else if (has('#5') && has('7')) name = 'm7#5';
+    else if (has('maj7')) name = has('9') ? 'mMaj9' : 'Min/Maj 7';
+    else if (has('13')) name = 'Minor 13';
+    else if (has('11')) name = 'Minor 11';
+    else if (has('7') && has('9')) name = 'Minor 9';
+    else if (has('6') && has('9')) name = 'm6add9';
+    else if (has('6')) name = 'Minor 6';
+    else if (has('9')) name = 'Madd9';
+    else if (has('7')) name = 'Minor 7';
+    else name = 'Minor';
+  } else {
+    // Maj
+    if (has('maj7')) {
+      if (has('#11') && has('13')) name = 'Maj13#11';
+      else if (has('#11') && has('9')) name = 'Maj9#11';
+      else if (has('13')) name = 'Maj13';
+      else if (has('11')) name = 'Maj11';
+      else if (has('9')) name = 'Major 9';
+      else if (has('♭5')) name = 'Major 7♭5';
+      else if (has('#5')) name = 'Major 7#5';
+      else name = 'Major 7';
+    } else if (has('7')) {
+      const f5 = has('♭5'), s5 = has('#5'), f9 = has('♭9'), s9 = has('#9');
+      if (f5 && f9) name = '7(♭5,♭9)';
+      else if (f5 && s9) name = '7(♭5,#9)';
+      else if (s5 && f9) name = '7(#5,♭9)';
+      else if (s5 && s9) name = '7(#5,#9)';
+      else if (has('13') && has('#11')) name = '13#11';
+      else if (has('13') && has('♭9')) name = '13♭9';
+      else if (has('11') && has('♭9')) name = '11♭9';
+      else if (has('13')) name = '13';
+      else if (has('11')) name = '11';
+      else if (has('9') && f5) name = '9♭5';
+      else if (has('9') && s5) name = '9#5';
+      else if (has('9')) name = 'Dominant 9';
+      else if (f9) name = '7♭9';
+      else if (s9) name = '7#9';
+      else if (f5) name = '7♭5';
+      else if (s5) name = '7#5';
+      else name = 'Dominant 7';
+    } else if (has('6') && has('9')) name = '6add9';
+    else if (has('6')) name = 'Major 6';
+    else if (has('9')) name = 'Add9';
+    else name = 'Major';
+  }
+  if (name && CHORD_FORMULAS[name]) return name;
+  return null;
+}
+
+function reverseChordType(chordType: string | null): { quality: ChordQuality; exts: Set<ChordExtension> } {
+  const empty = new Set<ChordExtension>();
+  if (!chordType) return { quality: 'Maj', exts: empty };
+  // Brute-force search all combinations for a match
+  const extList = CHORD_EXTENSIONS;
+  for (const q of CHORD_QUALITIES) {
+    for (let mask = 0; mask < (1 << extList.length); mask++) {
+      const exts = new Set<ChordExtension>();
+      for (let i = 0; i < extList.length; i++) if (mask & (1 << i)) exts.add(extList[i]);
+      if (resolveChordType(q, exts) === chordType) return { quality: q, exts };
+    }
+  }
+  return { quality: 'Maj', exts: empty };
+}
+
+function ChordBuilder({
+  selectedRoot, selectedChord, handleSelectChord, getChordCellLabel, handleRenameChord,
+}: {
+  selectedRoot: NoteName;
+  selectedChord: string | null;
+  handleSelectChord: (ct: string) => void;
+  getChordCellLabel: (ct: string) => string;
+  handleRenameChord: (ct: string) => void;
+}) {
+  const initial = useMemo(() => reverseChordType(selectedChord), []);
+  const [quality, setQuality] = useState<ChordQuality>(initial.quality);
+  const [exts, setExts] = useState<Set<ChordExtension>>(initial.exts);
+  const lastEmittedRef = useRef<string | null>(selectedChord);
+
+  // Sync from external selectedChord changes (e.g. clicking a diatonic chord elsewhere)
+  useEffect(() => {
+    if (selectedChord === lastEmittedRef.current) return;
+    const parsed = reverseChordType(selectedChord);
+    setQuality(parsed.quality);
+    setExts(parsed.exts);
+    lastEmittedRef.current = selectedChord;
+  }, [selectedChord]);
+
+  const resolved = resolveChordType(quality, exts);
+
+  useEffect(() => {
+    if (resolved && resolved !== selectedChord) {
+      lastEmittedRef.current = resolved;
+      handleSelectChord(resolved);
+    }
+  }, [resolved]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleExt = (e: ChordExtension) => {
+    setExts(prev => {
+      const next = new Set(prev);
+      if (next.has(e)) next.delete(e);
+      else next.add(e);
+      // Enforce mutually-exclusive pairs
+      const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
+      for (const [a, b] of pairs) if (next.has(a) && next.has(b)) next.delete(a === e ? b : a);
+      return next;
+    });
+  };
+
+  const label = resolved ? getChordCellLabel(resolved) : '—';
+
+  return (
+    <div className="flex flex-col gap-1.5 h-full">
+      {/* Resolved chord display */}
+      <div className="flex items-center justify-between bg-secondary/30 rounded px-2 py-1 border border-border/40">
+        <div className="flex items-baseline gap-1 min-w-0">
+          <span className="text-[9px] font-mono uppercase text-muted-foreground shrink-0">Chord</span>
+          <button
+            draggable={!!resolved}
+            onDragStart={(e) => {
+              if (!resolved) return;
+              e.dataTransfer.setData('application/chord', JSON.stringify({ root: selectedRoot, chordType: resolved }));
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
+            onDoubleClick={() => resolved && handleRenameChord(resolved)}
+            className={`text-sm font-mono font-bold truncate ${resolved ? 'text-primary cursor-grab active:cursor-grabbing' : 'text-destructive'}`}
+            title={resolved ? 'Drag to timeline · double-click to rename' : 'Not available'}
+          >{selectedRoot}{label === 'Major' ? '' : label}</button>
+        </div>
+        {!resolved && (
+          <span className="text-[8px] font-mono text-destructive">unavailable</span>
+        )}
+      </div>
+
+      {/* Quality */}
+      <div>
+        <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 font-bold">Quality</div>
+        <div className="grid grid-cols-4 gap-0.5">
+          {CHORD_QUALITIES.map(q => {
+            const active = quality === q;
+            return (
+              <button
+                key={q}
+                onClick={() => setQuality(q)}
+                className={`px-1 py-1 rounded border text-[10px] font-mono transition-all ${
+                  active
+                    ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)] font-bold'
+                    : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted'
+                }`}
+              >{q}</button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Extensions */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider font-bold">Extensions</div>
+          {exts.size > 0 && (
+            <button
+              onClick={() => setExts(new Set())}
+              className="text-[8px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+            >clear</button>
+          )}
+        </div>
+        <div className="grid grid-cols-4 gap-0.5">
+          {CHORD_EXTENSIONS.map(e => {
+            const active = exts.has(e);
+            // Probe if adding this extension yields a valid chord
+            const probe = new Set(exts);
+            if (active) probe.delete(e); else probe.add(e);
+            const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
+            for (const [a, b] of pairs) if (probe.has(a) && probe.has(b)) probe.delete(a === e ? b : a);
+            const wouldResolve = resolveChordType(quality, probe);
+            const disabled = !wouldResolve;
+            return (
+              <button
+                key={e}
+                onClick={() => toggleExt(e)}
+                disabled={disabled && !active}
+                className={`px-1 py-1 rounded border text-[10px] font-mono transition-all ${
+                  active
+                    ? 'bg-accent text-accent-foreground border-accent font-bold shadow-[0_0_4px_hsl(var(--accent)/0.4)]'
+                    : disabled
+                      ? 'bg-muted/20 border-border/20 text-muted-foreground/40 cursor-not-allowed'
+                      : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted'
+                }`}
+              >{e}</button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // CHORD LIBRARY PANEL
 // ============================================================
+
+
 
 function ChordLibraryPanel({
   selectedRoot, setSelectedRoot, selectedChord, handleSelectChord,
@@ -2227,47 +2448,14 @@ function ChordLibraryPanel({
 
       {/* Main layout */}
       <div className="flex gap-1.5" style={{ minHeight: 0 }}>
-        <div className="flex gap-px shrink-0" style={{ width: '48%' }}>
-          {CHORD_COLUMNS.map((col, ci) => {
-            const isOther = col.label === 'Other';
-            const [col1, col2] = isOther ? [col.types, []] : splitIntoColumns(col.types);
-            return (
-              <div key={col.label} className={`min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5 flex flex-col`} style={{ flex: isOther ? 0.6 : 1 }}>
-                <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">{col.label}</div>
-                <div className={`flex gap-px ${isOther ? 'justify-center' : ''} overflow-y-auto flex-1`} style={{ maxHeight: '35vh' }}>
-                  {[col1, ...(col2.length > 0 ? [col2] : [])].map((types, sci) => (
-                    <div key={sci} className={`${isOther ? 'w-full' : 'flex-1'} space-y-px`}>
-                      {types.map(ct => {
-                        if (!CHORD_FORMULAS[ct]) return null;
-                        const isSelected = selectedChord === ct;
-                        return (
-                          <button
-                            key={ct}
-                            onClick={() => handleSelectChord(ct)}
-                            onDoubleClick={(e) => {
-                              e.stopPropagation();
-                              handleRenameChord(ct);
-                            }}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData('application/chord', JSON.stringify({ root: selectedRoot, chordType: ct }));
-                              e.dataTransfer.effectAllowed = 'copy';
-                            }}
-                            className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
-                              isSelected
-                                ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]'
-                                : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
-                            }`}
-                            title={`${getChordCellLabel(ct)} — drag to timeline`}
-                          >{getChordCellLabel(ct)}</button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+        <div className="shrink-0" style={{ width: '48%' }}>
+          <ChordBuilder
+            selectedRoot={selectedRoot}
+            selectedChord={selectedChord}
+            handleSelectChord={handleSelectChord}
+            getChordCellLabel={getChordCellLabel}
+            handleRenameChord={handleRenameChord}
+          />
         </div>
 
         <div className="w-14 shrink-0 flex flex-col">
