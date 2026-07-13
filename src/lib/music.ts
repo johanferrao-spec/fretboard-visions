@@ -1598,30 +1598,6 @@ export function isPhysicallyPlayable(frets: number[], maxSpan = 4): boolean {
   return true;
 }
 
-/**
- * For generators that intentionally skip strings (e.g. [0,1,3]), verify each
- * skipped string within the played span can actually be muted — either it's
- * adjacent to a valid same-fret barre or the surrounding shape leaves it
- * mutable per the general physical-playability rules.
- */
-function skippedStringsAreMutable(voicing: number[], playedStrings: number[]): boolean {
-  const lo = Math.min(...playedStrings);
-  const hi = Math.max(...playedStrings);
-  for (let s = lo + 1; s < hi; s++) {
-    if (playedStrings.includes(s)) continue;
-    // this string is skipped; mark it muted for the check
-    if (voicing[s] !== -1) continue; // already fretted somehow — not a skip
-    const leftF = voicing[s - 1];
-    const rightF = voicing[s + 1];
-    // OK if either neighbour is unfretted/open
-    if (leftF <= 0 || rightF <= 0) continue;
-    // OK if both neighbours are on the same fret (barre-mutable)
-    if (leftF === rightF) continue;
-    // Otherwise a muted string is trapped between two different frets — not mutable cleanly
-    return false;
-  }
-  return true;
-}
 
 /** Rank playable voicings: fewest fingers, then smallest span, then lowest position. */
 function scorePlayableVoicings(voicings: ChordVoicing[]): ChordVoicing[] {
