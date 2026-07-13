@@ -1888,13 +1888,12 @@ export function noteAtFret(stringIndex: number, fret: number, tuning: number[] =
   return NOTE_NAMES[(openNote + fret) % 12];
 }
 
-/** Check if a chord voicing is playable in a given tuning by verifying notes match expected chord tones */
-export function isVoicingPlayableInTuning(voicing: ChordVoicing, root: NoteName, chordType: string, tuning: number[]): boolean {
+/** Check if a chord voicing is tonally valid in a given tuning — every fretted note is a chord tone. Pitch-content only, not physical playability. */
+export function isVoicingTonallyValid(voicing: ChordVoicing, root: NoteName, chordType: string, tuning: number[]): boolean {
   const formula = CHORD_FORMULAS[chordType];
   if (!formula) return false;
   const rootIdx = NOTE_NAMES.indexOf(root);
   const chordTones = new Set(formula.map(i => (rootIdx + i) % 12));
-  
   for (let s = 0; s < 6; s++) {
     const f = voicing.frets[s];
     if (f >= 0) {
@@ -1904,6 +1903,9 @@ export function isVoicingPlayableInTuning(voicing: ChordVoicing, root: NoteName,
   }
   return true;
 }
+
+/** @deprecated Use isVoicingTonallyValid + isPhysicallyPlayable. Kept as alias for back-compat. */
+export const isVoicingPlayableInTuning = isVoicingTonallyValid;
 
 export function getScaleNotes(root: NoteName, scaleName: string): NoteName[] {
   const rootIndex = NOTE_NAMES.indexOf(root);
