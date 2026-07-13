@@ -2967,6 +2967,7 @@ const UPPER_E_ROOT_TEMPLATES: Record<string, Record<string, string>> = {
     Root: 'XX2333',
     '1st': 'XX5545',
     '2nd': 'XX89810',
+    '3rd': 'XX12121112',
     Stack: 'XX14121110',
   },
 };
