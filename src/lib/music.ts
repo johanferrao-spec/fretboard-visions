@@ -1467,6 +1467,7 @@ export function generateTriadVoicings(root: NoteName, chordType: string): ChordV
         if (!valid) continue;
         const fretted = playedFrets.filter(f => f > 0);
         if (fretted.length > 1 && Math.max(...fretted) - Math.min(...fretted) > 4) continue;
+        if (!isPhysicallyPlayable(voicing)) continue;
         const key = voicing.join(',');
         if (!seen.has(key)) {
           seen.add(key);
@@ -1498,40 +1499,163 @@ export function generateTriadVoicings(root: NoteName, chordType: string): ChordV
 // ============================================================
 
 export function getVoicingsForChord(root: NoteName, chordType: string, source: 'full' | 'shell' | 'drop2' | 'drop3' | 'triads'): ChordVoicing[] {
-  if (source === 'triads') return sortByStretchAscending(deduplicateVoicings12(generateTriadVoicings(root, chordType)));
+  if (source === 'triads') return scorePlayableVoicings(deduplicateVoicings12(generateTriadVoicings(root, chordType)));
   if (source === 'full') {
     const curated = CURATED_VOICINGS[root]?.[chordType];
     const filtered = curated && curated.length > 0
       ? curated.filter(voicing => {
           if (!voicingStartsOnRoot(voicing, root)) return false;
           if (!voicingContainsRequiredTones(voicing, root, chordType, 'full')) return false;
-          const played = voicing.frets.filter(f => f >= 0);
-          if (played.length > 1 && Math.max(...played) - Math.min(...played) > 4) return false;
+          if (!isPhysicallyPlayable(voicing.frets)) return false;
           return true;
         })
       : [];
-    return sortByStretchAscending(deduplicateVoicings12(filtered));
+    return scorePlayableVoicings(deduplicateVoicings12(filtered));
   }
-  if (source === 'shell') return sortByStretchAscending(deduplicateVoicings12(generateShellVoicings(root, chordType)));
-  if (source === 'drop2') return sortByStretchAscending(deduplicateVoicings12(generateDrop2Voicings(root, chordType)));
-  if (source === 'drop3') return sortByStretchAscending(deduplicateVoicings12(generateDrop3Voicings(root, chordType)));
+  if (source === 'shell') return scorePlayableVoicings(deduplicateVoicings12(generateShellVoicings(root, chordType)));
+  if (source === 'drop2') return scorePlayableVoicings(deduplicateVoicings12(generateDrop2Voicings(root, chordType)));
+  if (source === 'drop3') return scorePlayableVoicings(deduplicateVoicings12(generateDrop3Voicings(root, chordType)));
   return [];
 }
 
-/** Sort voicings so the biggest finger stretches appear last */
-function sortByStretchAscending(voicings: ChordVoicing[]): ChordVoicing[] {
-  return [...voicings].sort((a, b) => {
-    const aPlayed = a.frets.filter(f => f > 0);
-    const bPlayed = b.frets.filter(f => f > 0);
-    const aSpan = aPlayed.length > 1 ? Math.max(...aPlayed) - Math.min(...aPlayed) : 0;
-    const bSpan = bPlayed.length > 1 ? Math.max(...bPlayed) - Math.min(...bPlayed) : 0;
-    if (aSpan !== bSpan) return aSpan - bSpan;
-    // Tie-break: lower position first
-    const aMin = aPlayed.length ? Math.min(...aPlayed) : 0;
-    const bMin = bPlayed.length ? Math.min(...bPlayed) : 0;
-    return aMin - bMin;
+/**
+ * Physical-playability gate. Rejects voicings that a human hand can't fret:
+ * - exceeds max span (tightened to 3 frets when the lowest fretted note is on frets 1–3)
+ * - requires more than 4 fingers (counting one barre as one finger only when valid)
+ * - has a muted string sandwiched between two fretted strings without a valid barre covering it
+ */
+export function isPhysicallyPlayable(frets: number[], maxSpan = 4): boolean {
+  const fretted: { s: number; f: number }[] = [];
+  for (let s = 0; s < frets.length; s++) {
+    if (frets[s] > 0) fretted.push({ s, f: frets[s] });
+  }
+  if (fretted.length === 0) return true;
+
+  // Span
+  const fs = fretted.map(x => x.f);
+  const minF = Math.min(...fs);
+  const maxF = Math.max(...fs);
+  const span = maxF - minF;
+  const effectiveMax = minF <= 3 ? Math.min(maxSpan, 3) : maxSpan;
+  if (span > effectiveMax) return false;
+
+  // Group fretted notes by fret to detect barre opportunities.
+  const byFret = new Map<number, number[]>();
+  for (const { s, f } of fretted) {
+    if (!byFret.has(f)) byFret.set(f, []);
+    byFret.get(f)!.push(s);
+  }
+
+  // A barre covers strings [minS..maxS] at fret F. It's valid only when every
+  // string strictly between the barred endpoints is open, muted, or fretted at
+  // fret >= F (so the barre finger isn't blocked by a lower fret).
+  const barreStringsCovered = new Set<number>(); // strings absorbed by a valid barre
+  let barreFingers = 0;
+  for (const [f, strings] of byFret.entries()) {
+    if (strings.length < 2) continue;
+    const lo = Math.min(...strings);
+    const hi = Math.max(...strings);
+    let barreOK = true;
+    for (let mid = lo + 1; mid < hi; mid++) {
+      const midFret = frets[mid];
+      if (midFret === 0 || midFret === -1) continue; // open/muted under a barre finger is fine
+      if (midFret >= f) continue; // higher or equal fret sits fine
+      barreOK = false;
+      break;
+    }
+    if (barreOK) {
+      barreFingers += 1;
+      for (const s of strings) barreStringsCovered.add(s);
+      // Sandwiched mutes/opens under a valid barre are allowed by this finger.
+    }
+  }
+
+  // Finger count: barres count as one; every other fretted note = one finger.
+  const nonBarreFingers = fretted.filter(({ s }) => !barreStringsCovered.has(s)).length;
+  const fingers = barreFingers + nonBarreFingers;
+  if (fingers > 4) return false;
+
+  // Sandwiched-mute check: a muted string (-1) trapped between two fretted
+  // strings is only OK when a valid barre covers both neighbors at the same fret.
+  const validBarreFrets = new Set<number>();
+  for (const [f, strings] of byFret.entries()) {
+    if (strings.length < 2) continue;
+    const lo = Math.min(...strings);
+    const hi = Math.max(...strings);
+    let ok = true;
+    for (let mid = lo + 1; mid < hi; mid++) {
+      const midFret = frets[mid];
+      if (midFret === 0 || midFret === -1) continue;
+      if (midFret >= f) continue;
+      ok = false; break;
+    }
+    if (ok) validBarreFrets.add(f);
+  }
+  for (let s = 1; s < frets.length - 1; s++) {
+    if (frets[s] !== -1) continue;
+    // find nearest fretted neighbours on either side
+    let left = -1, right = -1;
+    for (let i = s - 1; i >= 0; i--) if (frets[i] > 0) { left = i; break; }
+    for (let i = s + 1; i < frets.length; i++) if (frets[i] > 0) { right = i; break; }
+    if (left === -1 || right === -1) continue;
+    // OK if both neighbours are on the same fret covered by a valid barre
+    if (frets[left] === frets[right] && validBarreFrets.has(frets[left])) continue;
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * For generators that intentionally skip strings (e.g. [0,1,3]), verify each
+ * skipped string within the played span can actually be muted — either it's
+ * adjacent to a valid same-fret barre or the surrounding shape leaves it
+ * mutable per the general physical-playability rules.
+ */
+function skippedStringsAreMutable(voicing: number[], playedStrings: number[]): boolean {
+  const lo = Math.min(...playedStrings);
+  const hi = Math.max(...playedStrings);
+  for (let s = lo + 1; s < hi; s++) {
+    if (playedStrings.includes(s)) continue;
+    // this string is skipped; mark it muted for the check
+    if (voicing[s] !== -1) continue; // already fretted somehow — not a skip
+    const leftF = voicing[s - 1];
+    const rightF = voicing[s + 1];
+    // OK if either neighbour is unfretted/open
+    if (leftF <= 0 || rightF <= 0) continue;
+    // OK if both neighbours are on the same fret (barre-mutable)
+    if (leftF === rightF) continue;
+    // Otherwise a muted string is trapped between two different frets — not mutable cleanly
+    return false;
+  }
+  return true;
+}
+
+/** Rank playable voicings: fewest fingers, then smallest span, then lowest position. */
+function scorePlayableVoicings(voicings: ChordVoicing[]): ChordVoicing[] {
+  const playable = voicings.filter(v => isPhysicallyPlayable(v.frets));
+  const score = (v: ChordVoicing) => {
+    const fretted = v.frets.filter(f => f > 0);
+    const minF = fretted.length ? Math.min(...fretted) : 0;
+    const maxF = fretted.length ? Math.max(...fretted) : 0;
+    const span = fretted.length > 1 ? maxF - minF : 0;
+    // Rough finger count: barres collapse identical frets to one finger.
+    const uniqueFrets = new Set(fretted);
+    let fingers = 0;
+    for (const f of uniqueFrets) {
+      const strings = v.frets.map((ff, i) => ff === f ? i : -1).filter(i => i >= 0);
+      fingers += strings.length >= 2 ? 1 : strings.length;
+    }
+    return { fingers, span, minF };
+  };
+  return playable.sort((a, b) => {
+    const sa = score(a); const sb = score(b);
+    if (sa.fingers !== sb.fingers) return sa.fingers - sb.fingers;
+    if (sa.span !== sb.span) return sa.span - sb.span;
+    return sa.minF - sb.minF;
   });
 }
+
 
 /** Remove voicings that are identical to another voicing shifted up/down 12 frets — keep the lower one */
 function deduplicateVoicings12(voicings: ChordVoicing[]): ChordVoicing[] {
@@ -1592,6 +1716,7 @@ export function generateDrop2Voicings(root: NoteName, chordType: string): ChordV
         if (!valid) continue;
         if (frets.some(f => f === 0)) continue; // No open strings in drop 2
         if (frets.length > 1 && Math.max(...frets) - Math.min(...frets) > 4) continue;
+        if (!isPhysicallyPlayable(voicing)) continue;
         const key = voicing.join(',');
         const candidate = { frets: [...voicing] };
         if (!voicingContainsRequiredTones(candidate, root, chordType, 'drop2')) continue;
@@ -1630,6 +1755,9 @@ export function generateDrop3Voicings(root: NoteName, chordType: string): ChordV
         if (!valid) continue;
         if (frets.some(f => f === 0)) continue; // No open strings in drop 3
         if (frets.length > 1 && Math.max(...frets) - Math.min(...frets) > 4) continue;
+        // Skipped-string check: any string not played but between played strings must be genuinely mutable
+        if (!skippedStringsAreMutable(voicing, strings)) continue;
+        if (!isPhysicallyPlayable(voicing)) continue;
         const key = voicing.join(',');
         const candidate = { frets: [...voicing] };
         if (!voicingContainsRequiredTones(candidate, root, chordType, 'drop3')) continue;
@@ -1676,6 +1804,8 @@ export function generateShellVoicings(root: NoteName, chordType: string): ChordV
         if (!valid) continue;
         if (frets.some(f => f === 0)) continue; // No open strings in shell voicings
         if (frets.length > 1 && Math.max(...frets) - Math.min(...frets) > 4) continue;
+        if (!skippedStringsAreMutable(voicing, strings)) continue;
+        if (!isPhysicallyPlayable(voicing)) continue;
         const candidate = { frets: [...voicing] };
         if (!voicingContainsRequiredTones(candidate, root, chordType, 'shell')) continue;
         const key = voicing.join(',');
@@ -1758,13 +1888,12 @@ export function noteAtFret(stringIndex: number, fret: number, tuning: number[] =
   return NOTE_NAMES[(openNote + fret) % 12];
 }
 
-/** Check if a chord voicing is playable in a given tuning by verifying notes match expected chord tones */
-export function isVoicingPlayableInTuning(voicing: ChordVoicing, root: NoteName, chordType: string, tuning: number[]): boolean {
+/** Check if a chord voicing is tonally valid in a given tuning — every fretted note is a chord tone. Pitch-content only, not physical playability. */
+export function isVoicingTonallyValid(voicing: ChordVoicing, root: NoteName, chordType: string, tuning: number[]): boolean {
   const formula = CHORD_FORMULAS[chordType];
   if (!formula) return false;
   const rootIdx = NOTE_NAMES.indexOf(root);
   const chordTones = new Set(formula.map(i => (rootIdx + i) % 12));
-  
   for (let s = 0; s < 6; s++) {
     const f = voicing.frets[s];
     if (f >= 0) {
@@ -1774,6 +1903,9 @@ export function isVoicingPlayableInTuning(voicing: ChordVoicing, root: NoteName,
   }
   return true;
 }
+
+/** @deprecated Use isVoicingTonallyValid + isPhysicallyPlayable. Kept as alias for back-compat. */
+export const isVoicingPlayableInTuning = isVoicingTonallyValid;
 
 export function getScaleNotes(root: NoteName, scaleName: string): NoteName[] {
   const rootIndex = NOTE_NAMES.indexOf(root);

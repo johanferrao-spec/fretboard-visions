@@ -8,7 +8,7 @@ import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
-  isVoicingPlayableInTuning, getTensionSuggestions, getChordTones,
+  isVoicingTonallyValid, isPhysicallyPlayable, getTensionSuggestions, getChordTones,
   analyzeProgression, identifyArpeggioFromNotes,
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
   getDiatonicChords, generate7thInversions, generateDrop3Inversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
@@ -802,7 +802,8 @@ export default function ChordReference({
     if (!selectedChord) return [];
     const all = getVoicingsForChord(selectedRoot, selectedChord, voicingTab);
     const isStandard = tuning.every((n, i) => n === STANDARD_TUNING[i]);
-    const filtered = isStandard ? all : all.filter(v => isVoicingPlayableInTuning(v, selectedRoot, selectedChord, tuning));
+    const filtered = (isStandard ? all : all.filter(v => isVoicingTonallyValid(v, selectedRoot, selectedChord, tuning)))
+      .filter(v => isPhysicallyPlayable(v.frets));
     // Normalize: if all fretted notes are past fret 12, shift down an octave
     return filtered.map(v => {
       const frettedNotes = v.frets.filter(f => f > 0);
