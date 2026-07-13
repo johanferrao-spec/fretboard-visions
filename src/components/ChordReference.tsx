@@ -2477,19 +2477,29 @@ function ChordLibraryPanel({
         <div className="w-14 shrink-0 flex flex-col">
           <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">Type</div>
           <div className="space-y-0.5">
-            {(['full', 'shell'] as VoicingTab[]).map(tab => (
-              <button
-                key={tab}
-                onClick={() => handleVoicingTabChange(tab)}
-                className={`w-full px-1 py-0.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-colors leading-tight ${
-                  voicingTab === tab ? 'bg-accent text-accent-foreground font-bold border-accent' : 'text-muted-foreground border-border/40 hover:bg-muted/30'
-                }`}
-              >{tab === 'full' ? 'Standard' : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
-            ))}
+            {(['full', 'shell', 'drop2', 'drop3', 'triads'] as VoicingTab[]).map(tab => {
+              const label = tab === 'full' ? 'Standard'
+                : tab === 'shell' ? 'Shell'
+                : tab === 'drop2' ? 'Drop 2'
+                : tab === 'drop3' ? 'Drop 3'
+                : 'Triads';
+              return (
+                <button
+                  key={tab}
+                  onClick={() => handleVoicingTabChange(tab)}
+                  className={`w-full px-1 py-0.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-colors leading-tight ${
+                    voicingTab === tab ? 'bg-accent text-accent-foreground font-bold border-accent' : 'text-muted-foreground border-border/40 hover:bg-muted/30'
+                  }`}
+                >{label}</button>
+              );
+            })}
           </div>
           <div className="text-[7px] font-mono text-muted-foreground mt-1.5 text-center leading-tight">
             {voicingTab === 'full' && 'Curated shapes'}
             {voicingTab === 'shell' && 'R, 3, 7'}
+            {voicingTab === 'drop2' && '2nd voice dropped'}
+            {voicingTab === 'drop3' && '3rd voice dropped'}
+            {voicingTab === 'triads' && '3-note shapes'}
           </div>
         </div>
 
