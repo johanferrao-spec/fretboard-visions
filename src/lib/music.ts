@@ -1467,6 +1467,7 @@ export function generateTriadVoicings(root: NoteName, chordType: string): ChordV
         if (!valid) continue;
         const fretted = playedFrets.filter(f => f > 0);
         if (fretted.length > 1 && Math.max(...fretted) - Math.min(...fretted) > 4) continue;
+        if (!isPhysicallyPlayable(voicing)) continue;
         const key = voicing.join(',');
         if (!seen.has(key)) {
           seen.add(key);
