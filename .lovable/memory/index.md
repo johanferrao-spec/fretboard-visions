@@ -11,6 +11,7 @@
 - Position Focus acts as an absolute filter across all modes.
 - Backing Track mode expands the bottom area smoothly to reveal a Logic-Pro DAW; piano roll is a separate floating window.
 - Courses tab opens a separate full-screen page (slides in from right). Educators create interactive tab lessons with mic-based pitch detection. Auth required.
+- NO SCROLLING RULE: no window/panel in the app may require scrolling. All content must fit visibly. Never use overflow-y-auto/scroll on panels; size content to fit instead.
 
 ## Memories
 - [Aesthetic & Styling](mem://style/aesthetic) — Visual theme, Fredoka font, glowing indicators, element sizes
