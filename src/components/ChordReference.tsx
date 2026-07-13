@@ -902,7 +902,7 @@ export default function ChordReference({
     }
     if (tab === 'scaleview') {
       setActiveChord(null);
-      setDegreeColors(false);
+      setDegreeColors(true);
     }
     if (tab === 'chords') {
       setActiveChord(null);
@@ -1100,12 +1100,14 @@ export default function ChordReference({
 // ============================================================
 
 // Mini chord diagram for inversion voicings — always shows all 6 strings, uniform sizing
-function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
+function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick, tuning, degreeColorByPc }: {
   voicing: InversionVoicing;
   stringGroup: StringGroup;
   isActive: boolean;
   color: string;
   onClick: () => void;
+  tuning?: number[];
+  degreeColorByPc?: Map<number, string>;
 }) {
   const config = STRING_GROUP_CONFIG[stringGroup];
   const activeStrings = new Set(config.strings);
@@ -1172,13 +1174,19 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
           if (fret <= 0) return null;
           const fretPos = fret - startFret;
           if (fretPos < 0 || fretPos >= numFrets) return null;
+          let dotColor = color;
+          if (tuning && degreeColorByPc) {
+            const pc = ((tuning[si] + fret) % 12 + 12) % 12;
+            const dc = degreeColorByPc.get(pc);
+            if (dc) dotColor = dc;
+          }
           return (
             <circle key={`n${si}`}
               cx={leftPad + si * cellW}
               cy={topPad + fretPos * cellH + cellH / 2}
               r={6}
-              fill={`hsl(${color})`}
-              opacity={0.9}
+              fill={`hsl(${dotColor})`}
+              opacity={0.95}
             />
           );
         })}
@@ -1293,6 +1301,15 @@ function ScaleViewPanel({
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
+  const degreeColorByPc = useMemo(() => {
+    const m = new Map<number, string>();
+    diatonicChords.forEach((c, i) => {
+      const pc = NOTE_NAMES.indexOf(c.root as NoteName);
+      if (pc >= 0) m.set(pc, SCALE_DEGREE_COLORS[i]);
+    });
+    return m;
+  }, [diatonicChords]);
+
 
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
 
@@ -1561,6 +1578,8 @@ function ScaleViewPanel({
                           isActive={currentInvIdx === idx}
                           color={activeColor || '0, 0%, 60%'}
                           onClick={() => setCurrentInvIdx(idx)}
+                          tuning={tuning}
+                          degreeColorByPc={degreeColorByPc}
                         />
                       ))}
                     </div>
