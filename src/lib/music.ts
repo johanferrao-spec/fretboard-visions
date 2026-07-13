@@ -1730,6 +1730,9 @@ export function generateDrop3Voicings(root: NoteName, chordType: string): ChordV
         if (!valid) continue;
         if (frets.some(f => f === 0)) continue; // No open strings in drop 3
         if (frets.length > 1 && Math.max(...frets) - Math.min(...frets) > 4) continue;
+        // Skipped-string check: any string not played but between played strings must be genuinely mutable
+        if (!skippedStringsAreMutable(voicing, strings)) continue;
+        if (!isPhysicallyPlayable(voicing)) continue;
         const key = voicing.join(',');
         const candidate = { frets: [...voicing] };
         if (!voicingContainsRequiredTones(candidate, root, chordType, 'drop3')) continue;
