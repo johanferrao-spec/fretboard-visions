@@ -1578,6 +1578,8 @@ function ScaleViewPanel({
                           isActive={currentInvIdx === idx}
                           color={activeColor || '0, 0%, 60%'}
                           onClick={() => setCurrentInvIdx(idx)}
+                          tuning={tuning}
+                          degreeColorByPc={degreeColorByPc}
                         />
                       ))}
                     </div>
