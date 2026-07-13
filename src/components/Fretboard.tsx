@@ -587,10 +587,10 @@ export default function Fretboard({
         return null;
       }
       
-      // Use the chord root for degree colors in inversion mode
-      const chordRoot = inversionVoicing.notes.length > 0
-        ? noteAtFret(inversionVoicing.notes[0].stringIndex, inversionVoicing.notes[0].fret, tuning)
-        : primaryScale.root;
+      // Use the actual chord root for degree colors (not the bass note of the inversion).
+      // slashName is e.g. "Gmaj7/B" — the letters before any suffix/slash are the root.
+      const rootMatch = (inversionVoicing.slashName || '').match(/^([A-G][#b]?)/);
+      const chordRoot = (rootMatch ? rootMatch[1] : primaryScale.root) as NoteName;
       
       let bg = inversionDegreeColor ? `hsl(${inversionDegreeColor})` : pColor;
       if (degreeColors) {

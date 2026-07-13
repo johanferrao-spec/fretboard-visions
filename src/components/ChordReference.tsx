@@ -1161,10 +1161,16 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick, tuni
               <text key={`m${si}`} x={leftPad + si * cellW} y={topPad - 4} fontSize={9} fill="hsl(var(--muted-foreground))" textAnchor="middle" fontFamily="monospace" opacity={0.5}>✕</text>
             );
           }
-          // Open string ring
+          // Open string ring — coloured by chord-relative degree
           if (voicing.frets[si] === 0) {
+            let ringColor = 'hsl(var(--foreground))';
+            if (tuning && degreeColorByPc) {
+              const pc = ((tuning[si]) % 12 + 12) % 12;
+              const dc = degreeColorByPc.get(pc);
+              if (dc) ringColor = `hsl(${dc})`;
+            }
             return (
-              <circle key={`o${si}`} cx={leftPad + si * cellW} cy={topPad - 6} r={4} fill="none" stroke="hsl(var(--foreground))" strokeWidth={1.5} />
+              <circle key={`o${si}`} cx={leftPad + si * cellW} cy={topPad - 6} r={4.5} fill={ringColor} stroke={ringColor} strokeWidth={1.5} />
             );
           }
           return null;
