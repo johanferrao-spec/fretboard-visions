@@ -2866,7 +2866,7 @@ export function generateThreeNpsPattern(
 
 export function scaleToKeyMode(scaleName: string): KeyMode {
   const map: Record<string, KeyMode> = {
-    'Major (Ionian)': 'major',
+    'Major (Ionian)': 'ionian',
     'Natural Minor (Aeolian)': 'minor',
     'Dorian': 'dorian',
     'Phrygian': 'phrygian',
