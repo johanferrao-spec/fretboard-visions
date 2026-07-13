@@ -673,9 +673,11 @@ const Index = () => {
                   fb.setPrimaryScale({ mode: 'scale', root: preset.root, scale: preset.scale });
                   fb.setActiveChord(null);
                   fb.setArpeggioPosition(null);
-                  fb.setShowFretBox(true);
-                  fb.setFretBoxStart(preset.fretBoxStart);
-                  fb.setFretBoxSize(preset.fretBoxSize);
+                   fb.setShowFretBox(true);
+                   fb.setFretBoxStart(preset.fretBoxStart);
+                   fb.setFretBoxSize(preset.fretBoxSize);
+                   fb.setFretBoxStringStart(0);
+                   fb.setFretBoxStringSize(6);
                   fb.setDegreeColors(true);
                   fb.setDisplayMode('degrees');
                   // Disable all degrees except root
