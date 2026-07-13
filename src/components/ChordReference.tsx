@@ -1301,6 +1301,15 @@ function ScaleViewPanel({
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
+  const degreeColorByPc = useMemo(() => {
+    const m = new Map<number, string>();
+    diatonicChords.forEach((c, i) => {
+      const pc = NOTE_NAMES.indexOf(c.root as NoteName);
+      if (pc >= 0) m.set(pc, SCALE_DEGREE_COLORS[i]);
+    });
+    return m;
+  }, [diatonicChords]);
+
 
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
 
