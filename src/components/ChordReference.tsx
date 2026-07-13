@@ -1100,12 +1100,14 @@ export default function ChordReference({
 // ============================================================
 
 // Mini chord diagram for inversion voicings — always shows all 6 strings, uniform sizing
-function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick }: {
+function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick, tuning, degreeColorByPc }: {
   voicing: InversionVoicing;
   stringGroup: StringGroup;
   isActive: boolean;
   color: string;
   onClick: () => void;
+  tuning?: number[];
+  degreeColorByPc?: Map<number, string>;
 }) {
   const config = STRING_GROUP_CONFIG[stringGroup];
   const activeStrings = new Set(config.strings);
