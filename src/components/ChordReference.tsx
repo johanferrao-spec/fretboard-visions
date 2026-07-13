@@ -317,37 +317,37 @@ function CompactScaleSlot({
       className={`relative rounded-lg border transition-colors flex flex-col ${borderClass}`}
     >
       {/* Header: label left, color right */}
-      <div className="flex items-center justify-between px-2 pt-1.5 pb-1">
-        <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+      <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
+        <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
           Slot {index + 1}
           {linked && (
             <span className="text-accent" title="Linked (dual scale)">🔗</span>
           )}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {linked && (
-            <button onClick={onUnlink} className="text-[8px] font-mono text-muted-foreground hover:text-foreground uppercase">Unlink</button>
+            <button onClick={onUnlink} className="text-[9px] font-mono text-muted-foreground hover:text-foreground uppercase">Unlink</button>
           )}
-          <button onClick={onClear} className="text-[10px] font-mono text-muted-foreground/60 hover:text-destructive transition-colors leading-none px-1" title="Clear slot">×</button>
+          <button onClick={onClear} className="text-sm font-mono text-muted-foreground/60 hover:text-destructive transition-colors leading-none px-1" title="Clear slot">×</button>
           <ColorDropdown color={color} onColorChange={() => { /* fixed per slot */ }} />
         </div>
       </div>
 
       {/* Root selector + Scale/Arp toggle on the same line */}
-      <div className="px-2 pb-1 flex items-end gap-1.5">
+      <div className="px-3 pb-2 flex items-end gap-2">
         <div className="flex-1 min-w-0">
           <ScaleRootSelector selectedRoot={slot.root} onSelect={(n) => onChange({ ...slot, root: n })} />
         </div>
-        <div className="flex flex-col gap-0.5 shrink-0">
+        <div className="flex flex-col gap-1 shrink-0">
           <button
             onClick={() => { onChange({ ...slot, mode: 'scale', scale: 'Major (Ionian)' }); setOpenCategory(null); }}
-            className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+            className={`px-3 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
               slot.mode === 'scale' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
             }`}
           >Scale</button>
           <button
             onClick={() => { onChange({ ...slot, mode: 'arpeggio', scale: 'Major' }); setOpenCategory(null); }}
-            className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+            className={`px-3 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
               slot.mode === 'arpeggio' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
             }`}
           >Arp</button>
@@ -355,20 +355,20 @@ function CompactScaleSlot({
       </div>
 
       {/* Current selection display */}
-      <div className="mx-2 mb-1 text-[9px] font-mono font-bold rounded px-1.5 py-0.5 border truncate" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 8px hsl(270, 80%, 65%, 0.3)' }}>
+      <div className="mx-3 mb-2 text-[11px] font-mono font-bold rounded px-2.5 py-1.5 border truncate" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 8px hsl(270, 80%, 65%, 0.3)' }}>
         ♪ {slot.root} {slot.mode === 'arpeggio' ? `${slot.scale} (Arp)` : slot.scale}
       </div>
 
-      {/* Category grid — 2 columns, very compact */}
-      <div className="flex-1 px-2 pb-1 overflow-y-auto" style={{ maxHeight: 140 }}>
+      {/* Category grid — 2 columns, roomy */}
+      <div className="flex-1 px-3 pb-2 overflow-y-auto">
         {slot.mode === 'arpeggio' ? (
           openCategory === null ? (
-            <div className="grid grid-cols-2 gap-0.5">
+            <div className="grid grid-cols-2 gap-1.5">
               {ARPEGGIO_CATEGORIES.map(cat => (
                 <button
                   key={cat.label}
                   onClick={() => setOpenCategory(cat.label)}
-                  className="text-left px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-all bg-muted text-foreground/80 hover:bg-muted/80"
+                  className="text-left px-2.5 py-2 rounded-md text-[11px] font-mono uppercase tracking-wider transition-all bg-muted text-foreground/80 hover:bg-muted/80"
                 >{cat.label} →</button>
               ))}
             </div>
@@ -376,16 +376,16 @@ function CompactScaleSlot({
             <div className="animate-fade-in">
               <button
                 onClick={() => setOpenCategory(null)}
-                className="text-[8px] font-mono text-muted-foreground hover:text-foreground mb-0.5 flex items-center gap-0.5 transition-colors"
+                className="text-[10px] font-mono text-muted-foreground hover:text-foreground mb-1.5 flex items-center gap-0.5 transition-colors"
               >← Back</button>
-              <div className="grid grid-cols-1 gap-px">
+              <div className="grid grid-cols-2 gap-1">
                 {ARPEGGIO_CATEGORIES.find(c => c.label === openCategory)?.types
                   ?.filter(t => ARPEGGIO_FORMULAS[t])
                   .map(s => (
                   <button
                     key={s}
                     onClick={() => { onChange({ ...slot, scale: s }); setOpenCategory(null); }}
-                    className={`text-left px-1.5 py-0.5 rounded text-[9px] font-mono transition-all border ${
+                    className={`text-left px-2 py-1.5 rounded text-[10px] font-mono transition-all border ${
                       slot.scale === s
                         ? 'bg-primary/20 text-primary border-primary/60 shadow-[0_0_6px_hsl(var(--primary)/0.3)] font-bold'
                         : 'bg-muted/50 text-foreground/80 hover:bg-muted hover:text-foreground border-transparent'
@@ -397,7 +397,7 @@ function CompactScaleSlot({
           )
         ) : (
           openCategory === null ? (
-            <div className="grid grid-cols-2 gap-0.5">
+            <div className="grid grid-cols-2 gap-1.5">
               {SCALE_CATEGORIES.map(cat => {
                 const isDirect = cat.label === 'Major' || cat.label === 'Minor';
                 return (
@@ -410,9 +410,9 @@ function CompactScaleSlot({
                         setOpenCategory(cat.label);
                       }
                     }}
-                    className={`text-left px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-all ${
+                    className={`text-left px-2.5 py-2 rounded-md text-[11px] font-mono uppercase tracking-wider transition-all ${
                       cat.isModesGroup
-                        ? 'bg-accent/15 text-foreground/50 hover:bg-accent/30'
+                        ? 'bg-accent/15 text-foreground/70 hover:bg-accent/30'
                         : 'bg-muted text-foreground/80 hover:bg-muted/80'
                     }`}
                   >
@@ -425,16 +425,16 @@ function CompactScaleSlot({
             <div className="animate-fade-in">
               <button
                 onClick={() => setOpenCategory(null)}
-                className="text-[8px] font-mono text-muted-foreground hover:text-foreground mb-0.5 flex items-center gap-0.5 transition-colors"
+                className="text-[10px] font-mono text-muted-foreground hover:text-foreground mb-1.5 flex items-center gap-0.5 transition-colors"
               >← Back</button>
-              <div className="grid grid-cols-1 gap-px">
+              <div className="grid grid-cols-1 gap-1">
                 {SCALE_CATEGORIES.find(c => c.label === openCategory)?.scales?.map(s => (
                   <button
                     key={s}
                     onClick={() => handleSelectScale(s)}
                     onMouseEnter={() => setHoveredScale(s)}
                     onMouseLeave={() => setHoveredScale(null)}
-                    className={`text-left px-1.5 py-0.5 rounded text-[9px] font-mono transition-all border ${
+                    className={`text-left px-2.5 py-1.5 rounded text-[11px] font-mono transition-all border ${
                       slot.scale === s
                         ? 'bg-primary/20 text-primary border-primary/60 shadow-[0_0_6px_hsl(var(--primary)/0.3)] font-bold'
                         : 'bg-muted/50 text-foreground/80 hover:bg-muted hover:text-foreground border-transparent'
@@ -450,7 +450,7 @@ function CompactScaleSlot({
       {/* Activation button at bottom — clearly separated from color */}
       <button
         onClick={onActivate}
-        className="mx-2 mb-1.5 mt-0.5 flex items-center justify-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-all border"
+        className="mx-3 mb-2.5 mt-1 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md text-[10px] font-mono uppercase tracking-wider transition-all border"
         style={{
           backgroundColor: active ? `${color.replace(')', ', 0.15)')}` : 'transparent',
           borderColor: active ? color : 'hsl(var(--border))',
@@ -458,6 +458,7 @@ function CompactScaleSlot({
           boxShadow: active ? `0 0 8px ${color}` : 'none',
         }}
       >
+
         <span
           className="w-2.5 h-2.5 rounded-full border"
           style={{
