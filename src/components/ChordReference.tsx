@@ -1174,13 +1174,19 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick, tuni
           if (fret <= 0) return null;
           const fretPos = fret - startFret;
           if (fretPos < 0 || fretPos >= numFrets) return null;
+          let dotColor = color;
+          if (tuning && degreeColorByPc) {
+            const pc = ((tuning[si] + fret) % 12 + 12) % 12;
+            const dc = degreeColorByPc.get(pc);
+            if (dc) dotColor = dc;
+          }
           return (
             <circle key={`n${si}`}
               cx={leftPad + si * cellW}
               cy={topPad + fretPos * cellH + cellH / 2}
               r={6}
-              fill={`hsl(${color})`}
-              opacity={0.9}
+              fill={`hsl(${dotColor})`}
+              opacity={0.95}
             />
           );
         })}
