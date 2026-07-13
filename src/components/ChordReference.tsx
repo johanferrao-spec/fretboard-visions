@@ -1585,7 +1585,7 @@ function ScaleViewPanel({
                           color={activeColor || '0, 0%, 60%'}
                           onClick={() => setCurrentInvIdx(idx)}
                           tuning={tuning}
-                          degreeColorByPc={degreeColorByPc}
+                          degreeColorByPc={buildDegreeColorMap(NOTE_NAMES.indexOf(inv.notes[0] ? (diatonicLabels[degreeFilter!]?.root as NoteName) : 'C'))}
                         />
                       ))}
                     </div>
