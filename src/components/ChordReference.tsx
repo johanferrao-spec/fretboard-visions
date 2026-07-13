@@ -2227,47 +2227,14 @@ function ChordLibraryPanel({
 
       {/* Main layout */}
       <div className="flex gap-1.5" style={{ minHeight: 0 }}>
-        <div className="flex gap-px shrink-0" style={{ width: '48%' }}>
-          {CHORD_COLUMNS.map((col, ci) => {
-            const isOther = col.label === 'Other';
-            const [col1, col2] = isOther ? [col.types, []] : splitIntoColumns(col.types);
-            return (
-              <div key={col.label} className={`min-w-0 ${ci < CHORD_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5 flex flex-col`} style={{ flex: isOther ? 0.6 : 1 }}>
-                <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">{col.label}</div>
-                <div className={`flex gap-px ${isOther ? 'justify-center' : ''} overflow-y-auto flex-1`} style={{ maxHeight: '35vh' }}>
-                  {[col1, ...(col2.length > 0 ? [col2] : [])].map((types, sci) => (
-                    <div key={sci} className={`${isOther ? 'w-full' : 'flex-1'} space-y-px`}>
-                      {types.map(ct => {
-                        if (!CHORD_FORMULAS[ct]) return null;
-                        const isSelected = selectedChord === ct;
-                        return (
-                          <button
-                            key={ct}
-                            onClick={() => handleSelectChord(ct)}
-                            onDoubleClick={(e) => {
-                              e.stopPropagation();
-                              handleRenameChord(ct);
-                            }}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData('application/chord', JSON.stringify({ root: selectedRoot, chordType: ct }));
-                              e.dataTransfer.effectAllowed = 'copy';
-                            }}
-                            className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
-                              isSelected
-                                ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]'
-                                : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
-                            }`}
-                            title={`${getChordCellLabel(ct)} — drag to timeline`}
-                          >{getChordCellLabel(ct)}</button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+        <div className="shrink-0" style={{ width: '48%' }}>
+          <ChordBuilder
+            selectedRoot={selectedRoot}
+            selectedChord={selectedChord}
+            handleSelectChord={handleSelectChord}
+            getChordCellLabel={getChordCellLabel}
+            handleRenameChord={handleRenameChord}
+          />
         </div>
 
         <div className="w-14 shrink-0 flex flex-col">
