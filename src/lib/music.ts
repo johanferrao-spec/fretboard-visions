@@ -1477,21 +1477,15 @@ export function generateTriadVoicings(root: NoteName, chordType: string): ChordV
     }
   }
 
-  // Sort: root in bass first, then by lowest fret
-  results.sort((a, b) => {
-    const aFirst = a.frets.findIndex(f => f >= 0);
-    const bFirst = b.frets.findIndex(f => f >= 0);
-    const aNote = aFirst >= 0 ? (STANDARD_TUNING[aFirst] + a.frets[aFirst]) % 12 : -1;
-    const bNote = bFirst >= 0 ? (STANDARD_TUNING[bFirst] + b.frets[bFirst]) % 12 : -1;
-    const aHasRoot = aNote === rootIdx % 12;
-    const bHasRoot = bNote === rootIdx % 12;
-    if (aHasRoot !== bHasRoot) return aHasRoot ? -1 : 1;
+  // Root position only, then sort by lowest fret.
+  const rootOnly = results.filter(v => voicingStartsOnRoot(v, root));
+  rootOnly.sort((a, b) => {
     const aMin = Math.min(...a.frets.filter(f => f >= 0));
     const bMin = Math.min(...b.frets.filter(f => f >= 0));
     return aMin - bMin;
   });
 
-  return results.slice(0, 24);
+  return rootOnly.slice(0, 24);
 }
 
 // ============================================================
