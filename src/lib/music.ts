@@ -1492,7 +1492,7 @@ export function generateTriadVoicings(root: NoteName, chordType: string): ChordV
 // VOICING GETTERS - curated only (no algorithmic fallback for full)
 // ============================================================
 
-export function getVoicingsForChord(root: NoteName, chordType: string, source: 'full' | 'shell' | 'drop2' | 'drop3' | 'triads'): ChordVoicing[] {
+export function getVoicingsForChord(root: NoteName, chordType: string, source: 'full' | 'shell' | 'triads'): ChordVoicing[] {
   if (source === 'triads') return scorePlayableVoicings(deduplicateVoicings12(generateTriadVoicings(root, chordType)));
   if (source === 'full') {
     const curated = CURATED_VOICINGS[root]?.[chordType];
@@ -1507,8 +1507,6 @@ export function getVoicingsForChord(root: NoteName, chordType: string, source: '
     return scorePlayableVoicings(deduplicateVoicings12(filtered));
   }
   if (source === 'shell') return scorePlayableVoicings(deduplicateVoicings12(generateShellVoicings(root, chordType)));
-  if (source === 'drop2') return scorePlayableVoicings(deduplicateVoicings12(generateDrop2Voicings(root, chordType)));
-  if (source === 'drop3') return scorePlayableVoicings(deduplicateVoicings12(generateDrop3Voicings(root, chordType)));
   return [];
 }
 
