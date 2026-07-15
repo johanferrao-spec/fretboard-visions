@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { Power } from 'lucide-react';
 import {
   noteAtFret, isNoteInSelection, getIntervalName, getExtendedIntervalName, getDiatonicChord,
   NoteName, NOTE_NAMES, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND, INTERVAL_TO_POSITION,
@@ -1042,36 +1043,47 @@ export default function Fretboard({
             const isOff = disabledDegrees.has(posKey);
             const isHidden = hiddenDegrees.has(posKey);
             return (
-              <button
-                key={d.label}
-                onClick={() => {
-                  if (isHidden) {
-                    setHiddenDegrees(prev => { const next = new Set(prev); next.delete(posKey); return next; });
-                  } else {
-                    toggleDegree(posKey);
-                  }
-                }}
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  if (!isHidden) {
-                    setHiddenDegrees(prev => { const next = new Set(prev); next.add(posKey); return next; });
-                  }
-                }}
-                className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${isHidden ? 'opacity-100' : isOff ? 'opacity-30' : 'opacity-100'}`}
-                title={isHidden ? `Click to restore ${d.label}` : `Click to toggle, double-click to hide ${d.label}`}
-              >
-                {isHidden ? (
-                  <>
-                    <div className="w-3 h-3 rounded-full flex items-center justify-center text-[7px] font-bold" style={{ backgroundColor: `hsl(${d.color})`, color: '#000' }}>✕</div>
-                    <span className="text-[8px] font-mono text-destructive line-through">{d.label}</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${d.color})` }} />
-                    <span className="text-[8px] font-mono text-muted-foreground">{d.label}</span>
-                  </>
-                )}
-              </button>
+              <div key={d.label} className="flex flex-col items-center gap-0.5">
+                <button
+                  onClick={() => {
+                    if (isHidden) {
+                      setHiddenDegrees(prev => { const next = new Set(prev); next.delete(posKey); return next; });
+                    } else {
+                      toggleDegree(posKey);
+                    }
+                  }}
+                  className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${isHidden ? 'opacity-100' : isOff ? 'opacity-30' : 'opacity-100'}`}
+                  title={isHidden ? `Click to restore ${d.label}` : `Click to toggle ${d.label}`}
+                >
+                  {isHidden ? (
+                    <>
+                      <div className="w-3 h-3 rounded-full flex items-center justify-center text-[7px] font-bold" style={{ backgroundColor: `hsl(${d.color})`, color: '#000' }}>✕</div>
+                      <span className="text-[8px] font-mono text-destructive line-through">{d.label}</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${d.color})` }} />
+                      <span className="text-[8px] font-mono text-muted-foreground">{d.label}</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setHiddenDegrees(prev => {
+                      const next = new Set(prev);
+                      if (next.has(posKey)) next.delete(posKey);
+                      else next.add(posKey);
+                      return next;
+                    });
+                  }}
+                  className={`transition-colors ${isHidden ? 'text-destructive' : 'text-muted-foreground/50 hover:text-foreground'}`}
+                  title={isHidden ? `Show ${d.label} on fretboard` : `Hide ${d.label} from fretboard`}
+                  aria-label={isHidden ? `Show ${d.label}` : `Hide ${d.label}`}
+                >
+                  <Power size={8} strokeWidth={2.5} />
+                </button>
+              </div>
             );
           })}
           {/* Degrees Active / Disable All toggle */}
