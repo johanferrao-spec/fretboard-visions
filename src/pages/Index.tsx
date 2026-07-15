@@ -587,7 +587,7 @@ const Index = () => {
           </div>
 
           {/* Chords panel — below (horizontal) or right side (vertical) */}
-          <div className={`border-${isVertical ? 'l' : 't'} border-border shrink-0 overflow-y-auto ${isVertical ? 'w-72' : 'max-h-[45vh]'}`}>
+          <div className={`border-${isVertical ? 'l' : 't'} border-border shrink-0 overflow-y-auto ${isVertical ? 'w-72' : 'max-h-[65vh]'}`}>
             <ChordReference
               activeChord={fb.activeChord}
               setActiveChord={fb.setActiveChord}
