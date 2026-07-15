@@ -187,7 +187,12 @@ export const CHORD_FORMULAS: Record<string, number[]> = {
   '7(#5,#9)': [0, 4, 8, 10, 15],
   'Sus2Sus4': [0, 2, 5, 7],
   'Dim5': [0, 3, 6],
+  'Add11': [0, 4, 7, 17],
+  'Add13': [0, 4, 7, 21],
+  'Madd11': [0, 3, 7, 17],
+  'Madd13': [0, 3, 7, 21],
 };
+
 
 export const ARPEGGIO_FORMULAS: Record<string, number[]> = {
   'Major': [0, 4, 7],
@@ -240,7 +245,12 @@ export const ARPEGGIO_FORMULAS: Record<string, number[]> = {
   '7(#5,#9)': [0, 4, 8, 10, 15],
   'Sus2Sus4': [0, 2, 5, 7],
   'Dim5': [0, 3, 6],
+  'Add11': [0, 4, 7, 17],
+  'Add13': [0, 4, 7, 21],
+  'Madd11': [0, 3, 7, 17],
+  'Madd13': [0, 3, 7, 21],
 };
+
 
 // ============================================================
 // ARPEGGIO POSITION GENERATOR ENGINE

@@ -1854,14 +1854,17 @@ function resolveChordType(quality: ChordQuality, exts: Set<ChordExtension>): str
     else if (has('♭5')) name = 'Dim5';
     else if (has('#5') && has('7')) name = 'm7#5';
     else if (has('maj7')) name = has('9') ? 'mMaj9' : 'Min/Maj 7';
-    else if (has('13')) name = 'Minor 13';
-    else if (has('11')) name = 'Minor 11';
+    else if (has('13') && has('7')) name = 'Minor 13';
+    else if (has('11') && has('7')) name = 'Minor 11';
     else if (has('7') && has('9')) name = 'Minor 9';
     else if (has('6') && has('9')) name = 'm6add9';
     else if (has('6')) name = 'Minor 6';
+    else if (has('13')) name = 'Madd13';
+    else if (has('11')) name = 'Madd11';
     else if (has('9')) name = 'Madd9';
     else if (has('7')) name = 'Minor 7';
     else name = 'Minor';
+
   } else {
     // Maj
     if (has('maj7')) {
@@ -1894,8 +1897,11 @@ function resolveChordType(quality: ChordQuality, exts: Set<ChordExtension>): str
       else name = 'Dominant 7';
     } else if (has('6') && has('9')) name = '6add9';
     else if (has('6')) name = 'Major 6';
+    else if (has('13')) name = 'Add13';
+    else if (has('11')) name = 'Add11';
     else if (has('9')) name = 'Add9';
     else name = 'Major';
+
   }
   if (name && CHORD_FORMULAS[name]) return name;
   return null;
@@ -1930,10 +1936,12 @@ function computeNextExts(prev: Set<ChordExtension>, e: ChordExtension): Set<Chor
     else if (e === '♭9' || e === '#9') { next.add(seventh); }
     else if (e === '♭13') { next.add(seventh); if (!next.has('9') && !next.has('♭9') && !next.has('#9')) next.add('9'); }
   } else {
-    const idx = stackOrder.indexOf(e);
-    if (idx >= 0) for (let i = idx + 1; i < stackOrder.length; i++) next.delete(stackOrder[i]);
-    if (e === '7' || e === 'maj7') { next.delete('9'); next.delete('11'); next.delete('#11'); next.delete('13'); next.delete('♭13'); next.delete('♭9'); next.delete('#9'); }
+    // Turning off an extension is independent — do NOT cascade-delete higher
+    // extensions. e.g. E Maj9 → toggle off maj7 → E Add9 (keeps the 9).
+    // The resolver picks the best name for whatever combination remains; if
+    // no valid name exists, the toggle button is disabled upstream.
   }
+
 
   const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
   for (const [a, b] of pairs) if (next.has(a) && next.has(b)) next.delete(a === e ? b : a);
