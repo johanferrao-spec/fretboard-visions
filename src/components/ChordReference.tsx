@@ -2006,7 +2006,7 @@ function ChordBuilder({
             onDoubleClick={() => resolved && handleRenameChord(resolved)}
             className={`text-sm font-mono font-bold truncate ${resolved ? 'text-primary cursor-grab active:cursor-grabbing' : 'text-destructive'}`}
             title={resolved ? 'Drag to timeline · double-click to rename' : 'Not available'}
-          >{selectedRoot}{label === 'Major' ? '' : label}</button>
+          >{selectedRoot}{label === 'Major' ? '' : ` ${label}`}</button>
         </div>
         {!resolved && (
           <span className="text-[8px] font-mono text-destructive">unavailable</span>
