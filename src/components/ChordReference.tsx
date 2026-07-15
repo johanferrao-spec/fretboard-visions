@@ -2198,8 +2198,15 @@ function ChordLibraryPanel({
     const key = `${selectedRoot}::${selectedChord}::${voicingTab}`;
     const hidden = new Set(hiddenVoicings[key] || []);
     if (hidden.size === 0) return currentVoicings.map((v, i) => ({ v, origIdx: i }));
-    return currentVoicings.map((v, i) => ({ v, origIdx: i })).filter(({ origIdx }) => !hidden.has(origIdx));
+    const kept = currentVoicings.map((v, i) => ({ v, origIdx: i })).filter(({ origIdx }) => !hidden.has(origIdx));
+    // Safety net: if hiding would empty the panel entirely, ignore hidden set
+    // (prevents stale/cross-origin localStorage from making all voicings invisible).
+    if (kept.length === 0 && currentVoicings.length > 0) {
+      return currentVoicings.map((v, i) => ({ v, origIdx: i }));
+    }
+    return kept;
   }, [currentVoicings, selectedRoot, selectedChord, voicingTab, hiddenVoicings]);
+
 
   const mergedEntries = useMemo(() => [
     ...filteredCuratedMap.map(({ v, origIdx }) => ({ kind: 'curated' as const, voicing: v, origIdx })),
