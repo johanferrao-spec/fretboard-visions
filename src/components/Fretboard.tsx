@@ -1376,7 +1376,7 @@ export default function Fretboard({
 
             const mutedDim = (isChordMuted || isArpAddMuted) && !identifyMode;
             return (
-              <div key={stringIdx} className="flex items-center relative" style={{ height: stringH, opacity: mutedDim ? 0.4 : 1 }}>
+              <div key={stringIdx} className="flex items-center relative" style={{ height: stringH }}>
                 {/* String label */}
                 <button
                   onDoubleClick={(e) => { e.stopPropagation(); if (!identifyMode && !arpAddMode) onToggleString(stringIdx); }}
