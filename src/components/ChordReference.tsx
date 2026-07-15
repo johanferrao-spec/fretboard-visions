@@ -1159,7 +1159,8 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick, tuni
         {Array.from({ length: numStrings }, (_, si) => {
           if (voicing.frets[si] === -1) {
             return (
-              <text key={`m${si}`} x={leftPad + si * cellW} y={topPad - 4} fontSize={9} fill="hsl(var(--muted-foreground))" textAnchor="middle" fontFamily="monospace" opacity={0.5}>✕</text>
+              <text key={`m${si}`} x={leftPad + si * cellW} y={topPad - 4} fontSize={10} fill="hsl(var(--destructive))" textAnchor="middle" fontFamily="monospace" fontWeight="bold">✕</text>
+
             );
           }
           // Open string ring — coloured by chord-relative degree
