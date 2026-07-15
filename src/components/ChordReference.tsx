@@ -1930,10 +1930,12 @@ function computeNextExts(prev: Set<ChordExtension>, e: ChordExtension): Set<Chor
     else if (e === '♭9' || e === '#9') { next.add(seventh); }
     else if (e === '♭13') { next.add(seventh); if (!next.has('9') && !next.has('♭9') && !next.has('#9')) next.add('9'); }
   } else {
-    const idx = stackOrder.indexOf(e);
-    if (idx >= 0) for (let i = idx + 1; i < stackOrder.length; i++) next.delete(stackOrder[i]);
-    if (e === '7' || e === 'maj7') { next.delete('9'); next.delete('11'); next.delete('#11'); next.delete('13'); next.delete('♭13'); next.delete('♭9'); next.delete('#9'); }
+    // Turning off an extension is independent — do NOT cascade-delete higher
+    // extensions. e.g. E Maj9 → toggle off maj7 → E Add9 (keeps the 9).
+    // The resolver picks the best name for whatever combination remains; if
+    // no valid name exists, the toggle button is disabled upstream.
   }
+
 
   const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
   for (const [a, b] of pairs) if (next.has(a) && next.has(b)) next.delete(a === e ? b : a);
