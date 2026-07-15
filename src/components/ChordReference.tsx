@@ -2482,10 +2482,8 @@ function ChordLibraryPanel({
         <div className="w-14 shrink-0 flex flex-col">
           <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">Type</div>
           <div className="space-y-0.5">
-            {(['full', 'shell', 'triads'] as VoicingTab[]).map(tab => {
-              const label = tab === 'full' ? 'Standard'
-                : tab === 'shell' ? 'Shell'
-                : 'Triads';
+            {(['full', 'shell'] as VoicingTab[]).map(tab => {
+              const label = tab === 'full' ? 'Standard' : 'Shell';
               return (
                 <button
                   key={tab}
@@ -2500,7 +2498,6 @@ function ChordLibraryPanel({
           <div className="text-[7px] font-mono text-muted-foreground mt-1.5 text-center leading-tight">
             {voicingTab === 'full' && 'Curated shapes'}
             {voicingTab === 'shell' && 'R, 3, 7'}
-            {voicingTab === 'triads' && '3-note shapes'}
           </div>
         </div>
 
