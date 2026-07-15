@@ -1897,8 +1897,11 @@ function resolveChordType(quality: ChordQuality, exts: Set<ChordExtension>): str
       else name = 'Dominant 7';
     } else if (has('6') && has('9')) name = '6add9';
     else if (has('6')) name = 'Major 6';
+    else if (has('13')) name = 'Add13';
+    else if (has('11')) name = 'Add11';
     else if (has('9')) name = 'Add9';
     else name = 'Major';
+
   }
   if (name && CHORD_FORMULAS[name]) return name;
   return null;
