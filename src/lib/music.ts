@@ -1428,72 +1428,14 @@ for (const root of ALL_ROOTS) {
 }
 
 // ============================================================
-// TRIAD VOICING GENERATOR (3 adjacent strings, ≤4 fret span)
+// VOICING GETTERS - curated only (no algorithmic fallback for full)
 // ============================================================
-
-export function generateTriadVoicings(root: NoteName, chordType: string): ChordVoicing[] {
-  const formula = CHORD_FORMULAS[chordType];
-  if (!formula || formula.length < 3) return [];
-  const rootIdx = NOTE_NAMES.indexOf(root);
-  const tones = formula.slice(0, 3).map(i => (rootIdx + i) % 12);
-  const results: ChordVoicing[] = [];
-  const seen = new Set<string>();
-
-  // Try all groups of 3 adjacent strings
-  for (let startStr = 0; startStr <= 3; startStr++) {
-    const strings = [startStr, startStr + 1, startStr + 2];
-    // Try all inversions
-    for (let inv = 0; inv < 3; inv++) {
-      const invTones = [...tones.slice(inv), ...tones.slice(0, inv)];
-      for (let baseFret = 0; baseFret <= 14; baseFret++) {
-        const voicing: number[] = [-1, -1, -1, -1, -1, -1];
-        let valid = true;
-        const playedFrets: number[] = [];
-        for (let i = 0; i < 3; i++) {
-          const s = strings[i];
-          const target = invTones[i];
-          let found = false;
-          for (let f = Math.max(0, baseFret); f <= baseFret + 4; f++) {
-            if (f > 24) break;
-            if ((STANDARD_TUNING[s] + f) % 12 === target) {
-              voicing[s] = f;
-              playedFrets.push(f);
-              found = true;
-              break;
-            }
-          }
-          if (!found) { valid = false; break; }
-        }
-        if (!valid) continue;
-        const fretted = playedFrets.filter(f => f > 0);
-        if (fretted.length > 1 && Math.max(...fretted) - Math.min(...fretted) > 4) continue;
-        if (!isPhysicallyPlayable(voicing)) continue;
-        const key = voicing.join(',');
-        if (!seen.has(key)) {
-          seen.add(key);
-          results.push({ frets: voicing });
-        }
-      }
-    }
-  }
-
-  // Root position only, then sort by lowest fret.
-  const rootOnly = results.filter(v => voicingStartsOnRoot(v, root));
-  rootOnly.sort((a, b) => {
-    const aMin = Math.min(...a.frets.filter(f => f >= 0));
-    const bMin = Math.min(...b.frets.filter(f => f >= 0));
-    return aMin - bMin;
-  });
-
-  return rootOnly.slice(0, 24);
-}
 
 // ============================================================
 // VOICING GETTERS - curated only (no algorithmic fallback for full)
 // ============================================================
 
-export function getVoicingsForChord(root: NoteName, chordType: string, source: 'full' | 'shell' | 'triads'): ChordVoicing[] {
-  if (source === 'triads') return scorePlayableVoicings(deduplicateVoicings12(generateTriadVoicings(root, chordType)));
+export function getVoicingsForChord(root: NoteName, chordType: string, source: 'full' | 'shell'): ChordVoicing[] {
   if (source === 'full') {
     const curated = CURATED_VOICINGS[root]?.[chordType];
     const filtered = curated && curated.length > 0

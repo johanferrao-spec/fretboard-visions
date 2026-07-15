@@ -15,7 +15,7 @@ export interface ChordSelection {
   root: NoteName;
   chordType: string;
   voicingIndex: number;
-  voicingSource: 'full' | 'shell' | 'triads';
+  voicingSource: 'full' | 'shell';
 }
 
 export interface NoteColors {

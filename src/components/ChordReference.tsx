@@ -102,7 +102,7 @@ interface ChordReferenceProps {
   setArpAddReferenceNotes?: (notes: { stringIndex: number; fret: number }[]) => void;
 }
 
-type VoicingTab = 'full' | 'shell' | 'triads';
+type VoicingTab = 'full' | 'shell';
 type MainTab = 'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tabvis' | null;
 type OctaveRange = 1 | 2 | 3;
 
