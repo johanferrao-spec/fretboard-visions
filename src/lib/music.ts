@@ -1438,28 +1438,128 @@ for (const root of ALL_ROOTS) {
 }
 
 // ============================================================
-// VOICING GETTERS - curated only (no algorithmic fallback for full)
-// ============================================================
-
-// ============================================================
-// VOICING GETTERS - curated only (no algorithmic fallback for full)
+// VOICING GETTERS — curated first, then rule-based generator fills the gaps
 // ============================================================
 
 export function getVoicingsForChord(root: NoteName, chordType: string, source: 'full' | 'shell'): ChordVoicing[] {
   if (source === 'full') {
-    const curated = CURATED_VOICINGS[root]?.[chordType];
-    const filtered = curated && curated.length > 0
-      ? curated.filter(voicing => {
-          if (!voicingStartsOnRoot(voicing, root)) return false;
-          if (!voicingContainsRequiredTones(voicing, root, chordType, 'full')) return false;
-          if (!isPhysicallyPlayable(voicing.frets)) return false;
-          return true;
-        })
-      : [];
-    return scorePlayableVoicings(deduplicateVoicings12(filtered));
+    const curated = CURATED_VOICINGS[root]?.[chordType] ?? [];
+    const filteredCurated = curated.filter(voicing => {
+      if (!voicingStartsOnRoot(voicing, root)) return false;
+      if (!voicingContainsRequiredTones(voicing, root, chordType, 'full')) return false;
+      if (!isPhysicallyPlayable(voicing.frets)) return false;
+      return true;
+    });
+    // Always run the rule-based generator too so chord types with no (or few)
+    // hand-curated shapes still surface playable options for the user.
+    const generated = generateFullVoicings(root, chordType);
+    const merged = [...filteredCurated, ...generated];
+    const ranked = scorePlayableVoicings(deduplicateVoicings12(merged));
+    return ranked.slice(0, 12);
   }
   if (source === 'shell') return scorePlayableVoicings(deduplicateVoicings12(generateShellVoicings(root, chordType)));
   return [];
+}
+
+/**
+ * Rule Set B — required pitch classes for a voicing.
+ *  - root is always required
+ *  - every non-root, non-plain-5 formula tone is required
+ *  - the plain perfect 5 (interval 7) is droppable ONLY when the chord already
+ *    has ≥2 other non-root/non-5 tones to establish its identity
+ */
+function getEssentialIntervals(chordType: string): Set<number> {
+  const formula = CHORD_FORMULAS[chordType];
+  if (!formula) return new Set();
+  const pcs = new Set<number>(formula.map(i => ((i % 12) + 12) % 12));
+  if (pcs.has(7)) {
+    const otherTones = [...pcs].filter(p => p !== 0 && p !== 7);
+    if (otherTones.length >= 2) pcs.delete(7);
+  }
+  return pcs;
+}
+
+/**
+ * Rule-based full-voicing generator implementing chord-voicing-rules.md.
+ * Searches the fretboard for shapes satisfying both rule sets: playability
+ * (span, fingers, barres, no orphan mutes, root-in-bass) and note completeness
+ * (all required tones present, only chord tones used, only root/plain-5 doubled).
+ */
+export function generateFullVoicings(root: NoteName, chordType: string): ChordVoicing[] {
+  const formula = CHORD_FORMULAS[chordType];
+  if (!formula) return [];
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  const rootPc = rootIdx;
+  const fifthPc = (rootIdx + 7) % 12;
+  const allowedPcs = new Set<number>(formula.map(i => (rootIdx + ((i % 12) + 12) % 12) % 12));
+  const essentialPcs = new Set<number>([...getEssentialIntervals(chordType)].map(i => (rootIdx + i) % 12));
+  if (essentialPcs.size === 0) return [];
+
+  const results: ChordVoicing[] = [];
+  const seenKeys = new Set<string>();
+  const SPAN = 4;
+
+  for (let rootString = 0; rootString <= 2; rootString++) {
+    for (let rootFret = 0; rootFret <= 12; rootFret++) {
+      if ((STANDARD_TUNING[rootString] + rootFret) % 12 !== rootPc) continue;
+
+      const stringChoices: number[][] = [];
+      for (let s = 0; s < 6; s++) {
+        if (s < rootString) { stringChoices.push([-1]); continue; }
+        if (s === rootString) { stringChoices.push([rootFret]); continue; }
+        const choices: number[] = [-1];
+        // Open string is allowed if its pitch fits and it sits within the span window
+        if (rootFret <= SPAN - 1) {
+          const openPc = STANDARD_TUNING[s] % 12;
+          if (allowedPcs.has(openPc)) choices.push(0);
+        }
+        const lo = Math.max(1, rootFret);
+        const hi = rootFret + (SPAN - 1);
+        for (let f = lo; f <= hi; f++) {
+          const pc = (STANDARD_TUNING[s] + f) % 12;
+          if (allowedPcs.has(pc)) choices.push(f);
+        }
+        stringChoices.push(choices);
+      }
+
+      const walk = (si: number, cur: number[]) => {
+        if (results.length > 400) return;
+        if (si === 6) {
+          const firstPlayed = cur.findIndex(f => f >= 0);
+          if (firstPlayed !== rootString) return;
+          const sounded = cur.filter(f => f >= 0).length;
+          if (sounded < Math.max(3, essentialPcs.size)) return;
+
+          const pcCounts = new Map<number, number>();
+          for (let s = 0; s < 6; s++) {
+            if (cur[s] < 0) continue;
+            const pc = (STANDARD_TUNING[s] + cur[s]) % 12;
+            pcCounts.set(pc, (pcCounts.get(pc) || 0) + 1);
+          }
+          for (const p of essentialPcs) if (!pcCounts.has(p)) return;
+          for (const [pc, count] of pcCounts) {
+            if (count > 1 && pc !== rootPc && pc !== fifthPc) return;
+          }
+          if (!isPhysicallyPlayable(cur)) return;
+
+          const key = cur.join(',');
+          if (seenKeys.has(key)) return;
+          seenKeys.add(key);
+          results.push({ frets: [...cur] });
+          return;
+        }
+        for (const f of stringChoices[si]) {
+          cur.push(f);
+          walk(si + 1, cur);
+          cur.pop();
+        }
+      };
+      walk(0, []);
+      if (results.length > 400) break;
+    }
+    if (results.length > 400) break;
+  }
+  return results;
 }
 
 /**
