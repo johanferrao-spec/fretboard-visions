@@ -3249,9 +3249,23 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
         {Array.from({ length: numFrets + 1 }, (_, i) => (
           <line key={i} x1={stringSpacing} y1={5 + i * fretSpacing} x2={stringSpacing * 6} y2={5 + i * fretSpacing} stroke="hsl(var(--fretboard-fret))" strokeWidth={0.5} strokeOpacity={0.55} />
         ))}
-        {[1, 2, 3, 4, 5, 6].map(s => (
-          <line key={s} x1={s * stringSpacing} y1={5} x2={s * stringSpacing} y2={5 + numFrets * fretSpacing} stroke="hsl(var(--fretboard-string))" strokeWidth={0.75} opacity={0.9} strokeLinecap="round" />
-        ))}
+        {[1, 2, 3, 4, 5, 6].map(s => {
+          const stringIdx = s - 1;
+          const isMuted = voicing.frets[stringIdx] === -1;
+          return (
+            <line
+              key={s}
+              x1={s * stringSpacing}
+              y1={5}
+              x2={s * stringSpacing}
+              y2={5 + numFrets * fretSpacing}
+              stroke="hsl(var(--fretboard-string))"
+              strokeWidth={0.75}
+              opacity={isMuted ? 0.2 : 0.9}
+              strokeLinecap="round"
+            />
+          );
+        })}
         {voicing.barreFrom != null && voicing.barreTo != null && voicing.barreFret != null && (
           <rect
             x={(voicing.barreFrom + 1) * stringSpacing - 2}
@@ -3265,8 +3279,9 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
         )}
         {voicing.frets.map((fret, i) => {
           const x = (i + 1) * stringSpacing;
-          if (fret === -1) return <text key={i} x={x} y={3} fontSize={5} textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="monospace">×</text>;
+          if (fret === -1) return <text key={i} x={x} y={4} fontSize={10} fontWeight="bold" textAnchor="middle" fill="hsl(var(--destructive))" fontFamily="monospace">✕</text>;
           if (fret === 0) return <circle key={i} cx={x} cy={3} r={1.5} fill="none" stroke="hsl(var(--foreground))" strokeWidth={0.5} />;
+
           const y = 5 + (fret - startFret + 0.5) * fretSpacing;
           const note = noteAtFret(i, fret);
           const interval = showDegrees ? getIntervalName(root, note) : getExtendedIntervalName(root, note);
