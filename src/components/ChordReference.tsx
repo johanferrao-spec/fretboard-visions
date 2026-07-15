@@ -1854,14 +1854,17 @@ function resolveChordType(quality: ChordQuality, exts: Set<ChordExtension>): str
     else if (has('♭5')) name = 'Dim5';
     else if (has('#5') && has('7')) name = 'm7#5';
     else if (has('maj7')) name = has('9') ? 'mMaj9' : 'Min/Maj 7';
-    else if (has('13')) name = 'Minor 13';
-    else if (has('11')) name = 'Minor 11';
+    else if (has('13') && has('7')) name = 'Minor 13';
+    else if (has('11') && has('7')) name = 'Minor 11';
     else if (has('7') && has('9')) name = 'Minor 9';
     else if (has('6') && has('9')) name = 'm6add9';
     else if (has('6')) name = 'Minor 6';
+    else if (has('13')) name = 'Madd13';
+    else if (has('11')) name = 'Madd11';
     else if (has('9')) name = 'Madd9';
     else if (has('7')) name = 'Minor 7';
     else name = 'Minor';
+
   } else {
     // Maj
     if (has('maj7')) {
