@@ -2042,7 +2042,11 @@ function ChordBuilder({
             const active = exts.has(e);
             const probe = computeNextExts(exts, e);
             const wouldResolve = resolveChordType(quality, probe);
-            const disabled = !wouldResolve;
+            // Disable if toggling produces no valid chord, OR (when turning on)
+            // the resolver ignores the extension entirely (e.g. Sus2 + 13 → Sus2).
+            const currentResolved = resolveChordType(quality, exts);
+            const noOp = !active && wouldResolve === currentResolved;
+            const disabled = !wouldResolve || noOp;
             return (
               <button
                 key={e}
