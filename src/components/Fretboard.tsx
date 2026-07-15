@@ -1374,8 +1374,9 @@ export default function Fretboard({
             // In arp add mode, strings without notes show as muted (X)
             const isArpAddMuted = arpAddMode && !activeChord && (!arpeggioPosition || !arpeggioPosition.frets || (arpeggioPosition.frets as (number | -1)[])[stringIdx] === -1);
 
+            const mutedDim = (isChordMuted || isArpAddMuted) && !identifyMode;
             return (
-              <div key={stringIdx} className="flex items-center relative" style={{ height: stringH }}>
+              <div key={stringIdx} className="flex items-center relative" style={{ height: stringH, opacity: mutedDim ? 0.4 : 1 }}>
                 {/* String label */}
                 <button
                   onDoubleClick={(e) => { e.stopPropagation(); if (!identifyMode && !arpAddMode) onToggleString(stringIdx); }}
