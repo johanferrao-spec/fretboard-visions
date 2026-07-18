@@ -60,7 +60,7 @@ interface SongTimelineProps {
 
 export default function SongTimeline({
   chords, measures, setMeasures, bpm, setBpm,
-  genre, setGenre, groove, setGroove, snap, setSnap,
+  genre, setGenre, groove, setGroove, swing, setSwing, snap, setSnap,
   isPlaying, currentBeat, panelHeight, setPanelHeight,
   onPlay, onStop, onAddChord, onMoveChord, onCommitMove, onResizeChord, onResizeChordRange, onRemoveChord, onClearTimeline, onTrimOverlaps,
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
