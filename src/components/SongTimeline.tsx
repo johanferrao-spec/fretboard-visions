@@ -9,6 +9,7 @@ import {
 } from '@/lib/music';
 import CellGridView from './ChordCellGrid';
 import { supabase } from '@/integrations/supabase/client';
+import * as Tone from 'tone';
 
 
 interface SongTimelineProps {
@@ -21,6 +22,8 @@ interface SongTimelineProps {
   setGenre: (v: Genre) => void;
   groove: GrooveId;
   setGroove: (v: GrooveId) => void;
+  swing: number;
+  setSwing: (v: number) => void;
   snap: SnapValue;
   setSnap: (v: SnapValue) => void;
   isPlaying: boolean;
@@ -58,7 +61,7 @@ interface SongTimelineProps {
 
 export default function SongTimeline({
   chords, measures, setMeasures, bpm, setBpm,
-  genre, setGenre, groove, setGroove, snap, setSnap,
+  genre, setGenre, groove, setGroove, swing, setSwing, snap, setSnap,
   isPlaying, currentBeat, panelHeight, setPanelHeight,
   onPlay, onStop, onAddChord, onMoveChord, onCommitMove, onResizeChord, onResizeChordRange, onRemoveChord, onClearTimeline, onTrimOverlaps,
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
@@ -202,6 +205,15 @@ export default function SongTimeline({
   // Drag move — preserves the cursor's grab-offset within the region so the
   // region doesn't snap its start to the cursor. Hold Z to force the moved
   // region to a full bar (4 beats) duration. Hold X to convert it to dom7.
+  // Sync swing amount to Tone.Transport (0–1 range; 0.5 = triplet feel).
+  useEffect(() => {
+    try {
+      const t = Tone.getTransport();
+      t.swing = Math.max(0, Math.min(1, swing / 100)) * 0.5;
+      t.swingSubdivision = '8n';
+    } catch { /* Tone not ready */ }
+  }, [swing]);
+
   useEffect(() => {
     if (!dragChord) return;
     const onMove = (e: MouseEvent) => {
@@ -699,6 +711,22 @@ export default function SongTimeline({
                     : <option value={1}>1</option>}
           </select>
         </div>
+
+        <div className="flex items-center gap-1.5" title="Swing amount: 0 = straight, 100 = triplet feel">
+          <span className="text-[10px] font-mono text-muted-foreground uppercase">Swing</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={swing}
+            onChange={e => setSwing(Number(e.target.value))}
+            className="w-20 accent-primary cursor-pointer"
+          />
+          <span className="text-[9px] font-mono text-muted-foreground w-7 text-right">{swing}%</span>
+        </div>
+
+
 
 
         <div className="flex items-center gap-1">
