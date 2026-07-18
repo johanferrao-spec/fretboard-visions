@@ -205,6 +205,15 @@ export default function SongTimeline({
   // Drag move — preserves the cursor's grab-offset within the region so the
   // region doesn't snap its start to the cursor. Hold Z to force the moved
   // region to a full bar (4 beats) duration. Hold X to convert it to dom7.
+  // Sync swing amount to Tone.Transport (0–1 range; 0.5 = triplet feel).
+  useEffect(() => {
+    try {
+      const t = Tone.getTransport();
+      t.swing = Math.max(0, Math.min(1, swing / 100)) * 0.5;
+      t.swingSubdivision = '8n';
+    } catch { /* Tone not ready */ }
+  }, [swing]);
+
   useEffect(() => {
     if (!dragChord) return;
     const onMove = (e: MouseEvent) => {
