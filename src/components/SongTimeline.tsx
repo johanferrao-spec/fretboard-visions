@@ -9,6 +9,7 @@ import {
 } from '@/lib/music';
 import CellGridView from './ChordCellGrid';
 import { supabase } from '@/integrations/supabase/client';
+import * as Tone from 'tone';
 
 
 interface SongTimelineProps {
