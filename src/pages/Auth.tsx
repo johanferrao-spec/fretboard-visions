@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable';
 import { Button } from '@/components/ui/button';
@@ -8,8 +8,16 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 
+// Only accept same-origin relative paths as `next` targets.
+function safeNext(next: string | null): string {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/courses';
+  return next;
+}
+
 export default function AuthPage() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  const next = useMemo(() => safeNext(params.get('next')), [params]);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,10 +25,11 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { if (data.session) nav('/courses'); });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { if (s) nav('/courses'); });
+    const isReal = (s: any) => s?.user && s.user.is_anonymous === false;
+    supabase.auth.getSession().then(({ data }) => { if (isReal(data.session)) nav(next); });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { if (isReal(s)) nav(next); });
     return () => sub.subscription.unsubscribe();
-  }, [nav]);
+  }, [nav, next]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +39,7 @@ export default function AuthPage() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/courses`,
+          emailRedirectTo: `${window.location.origin}${next}`,
           data: { display_name: displayName || email.split('@')[0] },
         },
       });
@@ -46,7 +55,7 @@ export default function AuthPage() {
   };
 
   const onGoogle = async () => {
-    const result = await lovable.auth.signInWithOAuth('google', { redirect_uri: `${window.location.origin}/courses` });
+    const result = await lovable.auth.signInWithOAuth('google', { redirect_uri: `${window.location.origin}${next}` });
     if (result.error) toast.error('Google sign-in failed');
   };
 
