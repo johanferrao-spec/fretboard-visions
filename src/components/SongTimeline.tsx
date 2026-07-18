@@ -21,6 +21,8 @@ interface SongTimelineProps {
   setGenre: (v: Genre) => void;
   groove: GrooveId;
   setGroove: (v: GrooveId) => void;
+  swing: number;
+  setSwing: (v: number) => void;
   snap: SnapValue;
   setSnap: (v: SnapValue) => void;
   isPlaying: boolean;
