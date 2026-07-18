@@ -703,6 +703,22 @@ export default function SongTimeline({
           </select>
         </div>
 
+        <div className="flex items-center gap-1.5" title="Swing amount: 0 = straight, 100 = triplet feel">
+          <span className="text-[10px] font-mono text-muted-foreground uppercase">Swing</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={swing}
+            onChange={e => setSwing(Number(e.target.value))}
+            className="w-20 accent-primary cursor-pointer"
+          />
+          <span className="text-[9px] font-mono text-muted-foreground w-7 text-right">{swing}%</span>
+        </div>
+
+
+
 
         <div className="flex items-center gap-1">
           <span className="text-[10px] font-mono text-muted-foreground uppercase">Snap</span>
