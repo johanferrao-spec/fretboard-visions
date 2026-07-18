@@ -9,6 +9,8 @@ import Courses from "./pages/Courses.tsx";
 import CourseDetail from "./pages/CourseDetail.tsx";
 import CourseCreator from "./pages/CourseCreator.tsx";
 import CoursePlayer from "./pages/CoursePlayer.tsx";
+import AuthPage from "./pages/Auth.tsx";
+import OAuthConsent from "./pages/OAuthConsent.tsx";
 import { SampleLibraryProvider } from "@/hooks/SampleLibraryContext";
 
 const queryClient = new QueryClient();
@@ -26,6 +28,8 @@ const App = () => (
           <Route path="/courses/:courseId" element={<CourseDetail />} />
           <Route path="/courses/:courseId/lessons/:tabId/edit" element={<CourseCreator />} />
           <Route path="/courses/:courseId/lessons/:tabId" element={<CoursePlayer />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "sdk_version": "0.23.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://cfpadpfgmuqxvoqmaztb.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "fretboard-visions-mcp",
+      "version": "0.1.0",
+      "title": "Fretboard Visions"
+    },
+    "tools": [
+      {
+        "name": "list_courses",
+        "title": "List courses",
+        "description": "List all courses owned by the signed-in user, including title, description, key, tempo, and time signature.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_course",
+        "title": "Get course with lessons",
+        "description": "Fetch a single course by id along with the ordered list of its lessons (course tabs).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "course_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The course id."
+            }
+          },
+          "required": [
+            "course_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_course",
+        "title": "Create course",
+        "description": "Create a new empty course for the signed-in user. Returns the new course id.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "Course title."
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Optional description."
+            },
+            "key_root": {
+              "type": "string",
+              "maxLength": 4,
+              "description": "Optional key root, e.g. 'G'."
+            },
+            "key_quality": {
+              "type": "string",
+              "maxLength": 32,
+              "description": "Optional key quality, e.g. 'ionian'."
+            },
+            "tempo": {
+              "type": "integer",
+              "minimum": 20,
+              "maximum": 400,
+              "description": "Optional tempo BPM."
+            }
+          },
+          "required": [
+            "title"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
