@@ -176,6 +176,7 @@ export function useSongTimeline() {
     bpm, setBpm,
     genre, setGenre,
     groove, setGroove,
+    swing, setSwing,
     snap, setSnap,
     isPlaying, setIsPlaying,
     currentBeat, setCurrentBeat,
