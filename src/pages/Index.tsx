@@ -737,6 +737,8 @@ const Index = () => {
             setGenre={timeline.setGenre}
             groove={timeline.groove}
             setGroove={timeline.setGroove}
+            swing={timeline.swing}
+            setSwing={timeline.setSwing}
             snap={timeline.snap}
             setSnap={timeline.setSnap}
             isPlaying={timeline.isPlaying}
