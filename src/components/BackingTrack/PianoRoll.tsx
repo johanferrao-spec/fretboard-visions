@@ -621,7 +621,9 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
       <div
         className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
         onMouseDown={(e) => {
+          manualResizeRef.current = true;
           dragRef.current = { kind: 'resize-window', offsetX: 0, offsetY: 0 };
+
           e.stopPropagation();
           e.preventDefault();
         }}
