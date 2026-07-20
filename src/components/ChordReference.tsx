@@ -1951,12 +1951,17 @@ function computeNextExts(prev: Set<ChordExtension>, e: ChordExtension): Set<Chor
 
 function ChordBuilder({
   selectedRoot, selectedChord, handleSelectChord, getChordCellLabel, handleRenameChord,
+  isTypeAvailable, draggable = true, headerLabel = 'Chord', unavailableTitle = 'No voicings available',
 }: {
   selectedRoot: NoteName;
   selectedChord: string | null;
   handleSelectChord: (ct: string) => void;
   getChordCellLabel: (ct: string) => string;
-  handleRenameChord: (ct: string) => void;
+  handleRenameChord?: (ct: string) => void;
+  isTypeAvailable?: (chordType: string) => boolean;
+  draggable?: boolean;
+  headerLabel?: string;
+  unavailableTitle?: string;
 }) {
   const initial = useMemo(() => reverseChordType(selectedChord), []);
   const [quality, setQuality] = useState<ChordQuality>(initial.quality);
@@ -1973,6 +1978,8 @@ function ChordBuilder({
   }, [selectedChord]);
 
   const resolved = resolveChordType(quality, exts);
+  const typeOk = (t: string | null): boolean => !!t && (!isTypeAvailable || isTypeAvailable(t));
+  const resolvedAvailable = typeOk(resolved);
 
   useEffect(() => {
     if (resolved && resolved !== selectedChord) {
@@ -1985,9 +1992,20 @@ function ChordBuilder({
     setExts(prev => computeNextExts(prev, e));
   };
 
-
-
-
+  // Precompute which qualities have at least one available resolution
+  const qualityAvailable = useMemo(() => {
+    const s = new Set<ChordQuality>();
+    if (!isTypeAvailable) { for (const q of CHORD_QUALITIES) s.add(q); return s; }
+    for (const q of CHORD_QUALITIES) {
+      const empty = resolveChordType(q, new Set());
+      if (empty && isTypeAvailable(empty)) { s.add(q); continue; }
+      for (const e of CHORD_EXTENSIONS) {
+        const r = resolveChordType(q, new Set([e]));
+        if (r && isTypeAvailable(r)) { s.add(q); break; }
+      }
+    }
+    return s;
+  }, [isTypeAvailable]);
 
   const label = resolved ? getChordCellLabel(resolved) : '—';
 
@@ -1996,20 +2014,28 @@ function ChordBuilder({
       {/* Resolved chord display */}
       <div className="flex items-center justify-between bg-secondary/30 rounded px-2 py-1 border border-border/40">
         <div className="flex items-baseline gap-1 min-w-0">
-          <span className="text-[9px] font-mono uppercase text-muted-foreground shrink-0">Chord</span>
+          <span className="text-[9px] font-mono uppercase text-muted-foreground shrink-0">{headerLabel}</span>
           <button
-            draggable={!!resolved}
+            draggable={draggable && !!resolved && resolvedAvailable}
             onDragStart={(e) => {
-              if (!resolved) return;
+              if (!draggable || !resolved || !resolvedAvailable) return;
               e.dataTransfer.setData('application/chord', JSON.stringify({ root: selectedRoot, chordType: resolved }));
               e.dataTransfer.effectAllowed = 'copy';
             }}
-            onDoubleClick={() => resolved && handleRenameChord(resolved)}
-            className={`text-sm font-mono font-bold truncate ${resolved ? 'text-primary cursor-grab active:cursor-grabbing' : 'text-destructive'}`}
-            title={resolved ? 'Drag to timeline · double-click to rename' : 'Not available'}
+            onDoubleClick={() => resolved && handleRenameChord?.(resolved)}
+            className={`text-sm font-mono font-bold truncate ${
+              resolvedAvailable
+                ? (draggable ? 'text-primary cursor-grab active:cursor-grabbing' : 'text-primary')
+                : 'text-destructive'
+            }`}
+            title={
+              resolvedAvailable
+                ? (draggable ? 'Drag to timeline · double-click to rename' : (handleRenameChord ? 'Double-click to rename' : ''))
+                : unavailableTitle
+            }
           >{selectedRoot}{label === 'Major' ? '' : ` ${label}`}</button>
         </div>
-        {!resolved && (
+        {!resolvedAvailable && (
           <span className="text-[8px] font-mono text-destructive">unavailable</span>
         )}
       </div>
@@ -2020,14 +2046,19 @@ function ChordBuilder({
         <div className="grid grid-cols-4 gap-0.5">
           {CHORD_QUALITIES.map(q => {
             const active = quality === q;
+            const disabled = !qualityAvailable.has(q);
             return (
               <button
                 key={q}
                 onClick={() => setQuality(q)}
+                disabled={disabled && !active}
+                title={disabled ? unavailableTitle : ''}
                 className={`px-1 py-1 rounded border text-[10px] font-mono transition-all ${
                   active
                     ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)] font-bold'
-                    : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted'
+                    : disabled
+                      ? 'bg-muted/20 border-border/20 text-muted-foreground/40 cursor-not-allowed'
+                      : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted'
                 }`}
               >{q}</button>
             );
@@ -2052,15 +2083,18 @@ function ChordBuilder({
             const probe = computeNextExts(exts, e);
             const wouldResolve = resolveChordType(quality, probe);
             // Disable if toggling produces no valid chord, OR (when turning on)
-            // the resolver ignores the extension entirely (e.g. Sus2 + 13 → Sus2).
+            // the resolver ignores the extension entirely (e.g. Sus2 + 13 → Sus2),
+            // OR the resulting chord type has no voicings/positions available.
             const currentResolved = resolveChordType(quality, exts);
             const noOp = !active && wouldResolve === currentResolved;
-            const disabled = !wouldResolve || noOp;
+            const notAvailable = !!wouldResolve && !typeOk(wouldResolve);
+            const disabled = !wouldResolve || noOp || notAvailable;
             return (
               <button
                 key={e}
                 onClick={() => toggleExt(e)}
                 disabled={disabled && !active}
+                title={notAvailable ? unavailableTitle : ''}
                 className={`px-1 py-1 rounded border text-[10px] font-mono transition-all ${
                   active
                     ? 'bg-accent text-accent-foreground border-accent font-bold shadow-[0_0_4px_hsl(var(--accent)/0.4)]'
@@ -2160,6 +2194,20 @@ function ChordLibraryPanel({
     setChordNameOverrides(updated);
     localStorage.setItem('mf-chord-name-overrides', JSON.stringify(updated));
   }, [chordNameOverrides, defaultChordLabels, getChordCellLabel]);
+
+  // Cache voicing-availability per (root, chordType) for the shared builder.
+  const libAvailCacheRef = useRef<Map<string, boolean>>(new Map());
+  useEffect(() => { libAvailCacheRef.current = new Map(); }, [selectedRoot]);
+  const libraryTypeAvailable = useCallback((chordType: string): boolean => {
+    if (!CHORD_FORMULAS[chordType]) return false;
+    const key = `${selectedRoot}::${chordType}`;
+    const cached = libAvailCacheRef.current.get(key);
+    if (cached !== undefined) return cached;
+    const has = getVoicingsForChord(selectedRoot, chordType, 'full').length > 0
+      || getVoicingsForChord(selectedRoot, chordType, 'shell').length > 0;
+    libAvailCacheRef.current.set(key, has);
+    return has;
+  }, [selectedRoot]);
 
   const handleHideCurated = (origIdx: number) => {
     if (!selectedChord) return;
@@ -2497,7 +2545,10 @@ function ChordLibraryPanel({
             handleSelectChord={handleSelectChord}
             getChordCellLabel={getChordCellLabel}
             handleRenameChord={handleRenameChord}
+            isTypeAvailable={libraryTypeAvailable}
+            draggable
           />
+
         </div>
 
         <div className="w-14 shrink-0 flex flex-col">
@@ -3348,10 +3399,7 @@ function ArpeggioPositionsPanel({
   });
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'static' | 'transit'>('all');
   const [dragOverCategory, setDragOverCategory] = useState<'static' | 'transit' | null>(null);
-  const [hiddenArpTypes, setHiddenArpTypes] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('mf-hidden-arp-types') || '[]'); } catch { return []; }
-  });
-  const [showRestoreArpTypes, setShowRestoreArpTypes] = useState(false);
+
 
   const saveCustom = useCallback((data: Record<string, (ArpeggioPosition & { refRoot: NoteName })[]>) => {
     setCustomArpPositions(data);
@@ -3650,25 +3698,26 @@ function ArpeggioPositionsPanel({
 
   const splitIntoColumns = (types: string[]) => { const mid = Math.ceil(types.length / 2); return [types.slice(0, mid), types.slice(mid)]; };
 
-  const handleHideArpType = (type: string) => {
-    const next = [...hiddenArpTypes, type];
-    setHiddenArpTypes(next);
-    localStorage.setItem('mf-hidden-arp-types', JSON.stringify(next));
-    if (selectedArp === type) { setSelectedArp(null); onSetArpeggioPosition?.(null); }
-  };
+  // Availability cache for the shared ChordBuilder in this panel.
+  const arpAvailCacheRef = useRef<Map<string, boolean>>(new Map());
+  useEffect(() => { arpAvailCacheRef.current = new Map(); }, [tuning]);
+  const isArpTypeAvailable = useCallback((chordType: string): boolean => {
+    if (!ARPEGGIO_FORMULAS[chordType]) return false;
+    const key = `${selectedRoot}::${chordType}::${octaveRange}`;
+    const cached = arpAvailCacheRef.current.get(key);
+    if (cached !== undefined) return cached;
+    const has = generateArpeggioPositions(selectedRoot, chordType, octaveRange, tuning).length > 0;
+    arpAvailCacheRef.current.set(key, has);
+    return has;
+  }, [selectedRoot, octaveRange, tuning]);
 
-  const handleRestoreArpType = (type: string) => {
-    const next = hiddenArpTypes.filter(t => t !== type);
-    setHiddenArpTypes(next);
-    localStorage.setItem('mf-hidden-arp-types', JSON.stringify(next));
-  };
+  const handleBuilderSelectArp = useCallback((ct: string) => {
+    setSelectedArp(ct);
+    setSelectedPosIdx(0);
+    setArpPage(0);
+    onApplyScale(selectedRoot, ct, 'arpeggio');
+  }, [selectedRoot, onApplyScale]);
 
-  const ARPEGGIO_COLUMNS = useMemo(() => {
-    return DEFAULT_ARPEGGIO_COLUMNS.map(col => ({
-      ...col,
-      types: col.types.filter(t => !hiddenArpTypes.includes(t)),
-    }));
-  }, [hiddenArpTypes]);
 
   const handleDragStartCat = (e: React.DragEvent, catKey: string) => { e.dataTransfer.setData('text/plain', catKey); };
   const handleDropOnCategory = (cat: 'static' | 'transit', e: React.DragEvent) => {
@@ -3753,57 +3802,20 @@ function ArpeggioPositionsPanel({
       )}
 
       <div className="flex gap-1">
-        {/* Arpeggio type columns */}
-        <div className="flex gap-px shrink-0" style={{ width: '35%' }}>
-          {ARPEGGIO_COLUMNS.map((col, ci) => {
-            const isSus = col.label === 'Sus';
-            const [col1, col2] = isSus ? [col.types, []] : splitIntoColumns(col.types);
-            return (
-              <div key={col.label} className={`min-w-0 ${ci < ARPEGGIO_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5`} style={{ flex: isSus ? 0.5 : 1 }}>
-                <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">{col.label}</div>
-                <div className={`flex gap-px ${isSus ? 'justify-center' : ''}`}>
-                  {[col1, ...(col2.length > 0 ? [col2] : [])].map((types, sci) => (
-                    <div key={sci} className={`${isSus ? 'w-full' : 'flex-1'} space-y-px`}>
-                      {types.map(ct => {
-                        if (!ARPEGGIO_FORMULAS[ct]) return null;
-                        const isSelected = selectedArp === ct;
-                        return (
-                          <div key={ct} className="relative group">
-                            <button onClick={() => handleSelectArp(ct)}
-                              className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
-                                isSelected ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]' : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
-                              }`}
-                            >{ct}</button>
-                            <button onClick={(e) => { e.stopPropagation(); handleHideArpType(ct); }}
-                              className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-destructive text-destructive-foreground text-[7px] items-center justify-center hover:brightness-110 z-10 hidden group-hover:flex">×</button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-          {hiddenArpTypes.length > 0 && (
-            <div className="mt-0.5">
-              <button onClick={() => setShowRestoreArpTypes(!showRestoreArpTypes)}
-                className="text-[7px] font-mono text-muted-foreground hover:text-foreground transition-colors">
-                {showRestoreArpTypes ? '▾' : '▸'} {hiddenArpTypes.length} hidden
-              </button>
-              {showRestoreArpTypes && (
-                <div className="flex flex-wrap gap-0.5 mt-0.5">
-                  {hiddenArpTypes.map(t => (
-                    <button key={t} onClick={() => handleRestoreArpType(t)}
-                      className="px-1 py-0.5 rounded text-[7px] font-mono bg-muted/40 text-muted-foreground hover:bg-muted border border-border/30 transition-colors">
-                      + {t}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        {/* Arpeggio Quality + Extensions builder (shared with chord library) */}
+        <div className="shrink-0" style={{ width: '35%' }}>
+          <ChordBuilder
+            selectedRoot={selectedRoot}
+            selectedChord={selectedArp}
+            handleSelectChord={handleBuilderSelectArp}
+            getChordCellLabel={(ct) => ct}
+            isTypeAvailable={isArpTypeAvailable}
+            draggable={false}
+            headerLabel="Arp"
+            unavailableTitle="No arpeggio positions available"
+          />
         </div>
+
 
 
         <div className="flex-1 min-w-0">
