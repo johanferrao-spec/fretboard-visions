@@ -189,9 +189,10 @@ function chooseCell(cells: DrumCell[], complexity: number): DrumCell {
   return pickWeighted(cells, weights.map(w => Math.max(0.05, w)));
 }
 
-function swingOffset(step: number, genre: Genre, amount: number) {
-  if (genre !== 'Jazz' || step % 2 === 0) return 0;
-  return 0.1 + amount * 0.12;
+function swingOffset(_step: number, _genre: Genre, _amount: number) {
+  // MIDI is generated straight; Tone.Transport.swing (driven by the UI slider)
+  // applies the shuffle so users can dial it from 0 → full triplet feel.
+  return 0;
 }
 
 // ─── FILLS — composed by length and intensity ──────────────────────
