@@ -172,7 +172,9 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
 
 
   const rowHeight = isDrums ? 28 : 14;
-  const gridWidth = (size.width - 80) * zoom; // sidebar width, scaled by zoom
+  const sidebarWidth = isDrums ? 108 : 80;
+  const gridWidth = (size.width - sidebarWidth) * zoom;
+
 
   // Tone.Transport.swing is (swing/100) * 0.5 with subdivision '8n'.
   // The offbeat 8th is shifted from 0.5 toward 2/3 of the beat.
