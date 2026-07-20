@@ -1,8 +1,15 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { X, Minus, ZoomIn } from 'lucide-react';
 
-import type { MidiNote, TrackId } from '@/lib/backingTrackTypes';
+import type { MidiNote, TrackId, DrumPart } from '@/lib/backingTrackTypes';
 import { TRACK_COLORS, TRACK_LABELS, DRUM_PITCHES } from '@/lib/backingTrackTypes';
+import { useSharedSampleLibrary } from '@/hooks/SampleLibraryContext';
+import {
+  KIT_COLORS,
+  KIT_CYMBAL_COLORS,
+  CYMBAL_PARTS,
+  type DrumKitGenre,
+} from '@/lib/builtInKits';
 
 interface PianoRollProps {
   trackId: TrackId;
@@ -23,6 +30,19 @@ const NOTE_LETTERS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#'
 const isBlackKey = (pitch: number) => [1, 3, 6, 8, 10].includes(pitch % 12);
 const pitchLabel = (p: number) => `${NOTE_LETTERS[p % 12]}${Math.floor(p / 12) - 1}`;
 
+const PITCH_TO_PART: Record<number, DrumPart> = {
+  [DRUM_PITCHES.kick]: 'kick',
+  [DRUM_PITCHES.snare]: 'snare',
+  [DRUM_PITCHES.hihat_closed]: 'hihat_closed',
+  [DRUM_PITCHES.hihat_pedal]: 'hihat_pedal',
+  [DRUM_PITCHES.hihat_open]: 'hihat_open',
+  [DRUM_PITCHES.ride]: 'ride',
+  [DRUM_PITCHES.crash]: 'crash',
+  [DRUM_PITCHES.tom1]: 'tom1',
+  [DRUM_PITCHES.tom3]: 'tom3',
+  [DRUM_PITCHES.tom2]: 'tom2',
+};
+
 const DRUM_LABELS: Record<number, string> = {
   [DRUM_PITCHES.kick]: 'Kick',
   [DRUM_PITCHES.snare]: 'Snare',
@@ -31,9 +51,62 @@ const DRUM_LABELS: Record<number, string> = {
   [DRUM_PITCHES.hihat_open]: 'Open Hat',
   [DRUM_PITCHES.ride]: 'Ride',
   [DRUM_PITCHES.crash]: 'Crash',
-  [DRUM_PITCHES.tom1]: 'Tom 1',
+  [DRUM_PITCHES.tom1]: 'Rack Tom 1',
+  [DRUM_PITCHES.tom3]: 'Rack Tom 2',
   [DRUM_PITCHES.tom2]: 'Floor Tom',
 };
+
+/** Small kit-piece icon (18x18) rendered next to each drum row label. */
+function DrumPartIcon({ part, kit }: { part: DrumPart; kit: DrumKitGenre | null }) {
+  const shell = kit ? `hsl(${KIT_COLORS[kit]})` : 'hsl(220 10% 45%)';
+  const cymbal = kit ? `hsl(${KIT_CYMBAL_COLORS[kit]})` : 'hsl(45 30% 55%)';
+  const skin = 'hsl(45 40% 88%)';
+  const stroke = 'hsl(220 15% 15%)';
+
+  if (CYMBAL_PARTS.has(part)) {
+    // Cymbal: side profile ellipse + stand
+    const isOpen = part === 'hihat_open';
+    const isPair = part === 'hihat_closed' || part === 'hihat_pedal';
+    return (
+      <svg viewBox="0 0 24 24" width={20} height={20}>
+        {isPair && (
+          <ellipse cx="12" cy={isOpen ? 8 : 10} rx="9" ry="1.6" fill={cymbal} stroke={stroke} strokeWidth="0.6" />
+        )}
+        <ellipse cx="12" cy={isPair ? 12 : 11} rx="10" ry={part === 'ride' || part === 'crash' ? 2.4 : 1.8} fill={cymbal} stroke={stroke} strokeWidth="0.6" />
+        <circle cx="12" cy={isPair ? 12 : 11} r="0.9" fill={stroke} />
+        <rect x="11.5" y={isPair ? 13 : 12} width="1" height="8" fill={stroke} />
+      </svg>
+    );
+  }
+
+  if (part === 'kick') {
+    return (
+      <svg viewBox="0 0 24 24" width={20} height={20}>
+        <circle cx="12" cy="12" r="9" fill={shell} stroke={stroke} strokeWidth="0.8" />
+        <circle cx="12" cy="12" r="6.5" fill={skin} stroke={stroke} strokeWidth="0.4" />
+        <circle cx="12" cy="12" r="1.2" fill={stroke} />
+      </svg>
+    );
+  }
+
+  // Snare / toms — side view of a shell
+  const isSnare = part === 'snare';
+  const isFloor = part === 'tom2';
+  const width = isFloor ? 18 : isSnare ? 20 : part === 'tom1' ? 16 : 17;
+  const height = isFloor ? 16 : isSnare ? 10 : 13;
+  const x = (24 - width) / 2;
+  const y = (24 - height) / 2;
+  return (
+    <svg viewBox="0 0 24 24" width={20} height={20}>
+      <rect x={x} y={y} width={width} height={height} rx="1.5" fill={shell} stroke={stroke} strokeWidth="0.6" />
+      <ellipse cx="12" cy={y + 0.5} rx={width / 2} ry="1.4" fill={skin} stroke={stroke} strokeWidth="0.5" />
+      {isSnare && (
+        <line x1={x} y1={y + height - 1.5} x2={x + width} y2={y + height - 1.5} stroke={stroke} strokeWidth="0.4" />
+      )}
+    </svg>
+  );
+}
+
 
 let nextNoteId = 1;
 const newNoteId = () => `pr-${Date.now()}-${nextNoteId++}`;
@@ -63,8 +136,9 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
         DRUM_PITCHES.hihat_open,
         DRUM_PITCHES.hihat_pedal,
         DRUM_PITCHES.hihat_closed,
-        DRUM_PITCHES.tom1,
-        DRUM_PITCHES.tom2,
+        DRUM_PITCHES.tom1, // Rack Tom 1 (45)
+        DRUM_PITCHES.tom3, // Rack Tom 2 (48)
+        DRUM_PITCHES.tom2, // Floor Tom (47)
         DRUM_PITCHES.snare,
         DRUM_PITCHES.kick,
       ].sort((a, b) => b - a)
@@ -74,8 +148,33 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
         return range;
       })();
 
+  // Look up the active kit per drum part (built-in kit id encoded as
+  // `kit:<kit>:<part>`; user samples carry their own `.kit`).
+  const library = useSharedSampleLibrary();
+  const kitForPart = useMemo(() => {
+    const map: Partial<Record<DrumPart, DrumKitGenre>> = {};
+    if (!isDrums) return map;
+    for (const [pitchStr, part] of Object.entries(PITCH_TO_PART)) {
+      const slot = `drums:${part}`;
+      const activeId = library.active?.[slot];
+      if (!activeId) continue;
+      if (activeId.startsWith('kit:')) {
+        const kit = activeId.split(':')[1];
+        const cap = kit ? (kit.charAt(0).toUpperCase() + kit.slice(1)) as DrumKitGenre : null;
+        if (cap) map[part] = cap;
+      } else {
+        const sample = library.samples?.find(s => s.id === activeId);
+        if (sample?.kit) map[part] = sample.kit as DrumKitGenre;
+      }
+    }
+    return map;
+  }, [isDrums, library.active, library.samples]);
+
+
   const rowHeight = isDrums ? 28 : 14;
-  const gridWidth = (size.width - 80) * zoom; // sidebar width, scaled by zoom
+  const sidebarWidth = isDrums ? 108 : 80;
+  const gridWidth = (size.width - sidebarWidth) * zoom;
+
 
   // Tone.Transport.swing is (swing/100) * 0.5 with subdivision '8n'.
   // The offbeat 8th is shifted from 0.5 toward 2/3 of the beat.
@@ -352,23 +451,33 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
 
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar — pitch labels */}
-        <div className="w-20 border-r border-border overflow-y-auto bg-secondary/20 shrink-0" style={{ scrollbarWidth: 'none' }}>
-          {visiblePitches.map(p => (
-            <div
-              key={p}
-              className="border-b border-border/30 flex items-center px-2 text-[9px] font-mono"
-              style={{
-                height: rowHeight,
-                backgroundColor: isDrums
-                  ? 'transparent'
-                  : isBlackKey(p) ? 'hsl(220, 15%, 12%)' : 'hsl(220, 15%, 18%)',
-                color: isDrums ? 'hsl(var(--foreground))' : isBlackKey(p) ? 'hsl(220, 10%, 50%)' : 'hsl(220, 10%, 75%)',
-              }}
-            >
-              {isDrums ? (DRUM_LABELS[p] || pitchLabel(p)) : pitchLabel(p)}
-            </div>
-          ))}
+        <div
+          className="border-r border-border overflow-y-auto bg-secondary/20 shrink-0"
+          style={{ width: sidebarWidth, scrollbarWidth: 'none' }}
+        >
+          {visiblePitches.map(p => {
+            const part = PITCH_TO_PART[p];
+            return (
+              <div
+                key={p}
+                className="border-b border-border/30 flex items-center gap-1.5 px-2 text-[9px] font-mono"
+                style={{
+                  height: rowHeight,
+                  backgroundColor: isDrums
+                    ? 'transparent'
+                    : isBlackKey(p) ? 'hsl(220, 15%, 12%)' : 'hsl(220, 15%, 18%)',
+                  color: isDrums ? 'hsl(var(--foreground))' : isBlackKey(p) ? 'hsl(220, 10%, 50%)' : 'hsl(220, 10%, 75%)',
+                }}
+              >
+                {isDrums && part && (
+                  <DrumPartIcon part={part} kit={kitForPart[part] ?? null} />
+                )}
+                <span className="truncate">{isDrums ? (DRUM_LABELS[p] || pitchLabel(p)) : pitchLabel(p)}</span>
+              </div>
+            );
+          })}
         </div>
+
 
         {/* Grid */}
         <div className="flex-1 overflow-auto relative" onClick={() => { if (justFinishedMarqueeRef.current) return; setSelectedId(null); setSelectedIds(new Set()); }}>
