@@ -369,12 +369,12 @@ function rollJazzBar(intensity: number, complexity: number): JazzBar {
     // Feathered downbeat — soft
     kick.push({ beat: 0, vel: 22 + rand() * 30 + intensity * 8 });
   }
-  // Occasional anticipations: & of 2 (1.75) or 16th-before-1 (3.95)
+  // Occasional anticipations on the straight grid: & of 2 (1.5) or 16th-before-1 (3.75)
   if (chance(0.12 + complexity * 0.18)) {
-    kick.push({ beat: 1.75, vel: 18 + rand() * 25 });
+    kick.push({ beat: 1.5, vel: 18 + rand() * 25 });
   }
   if (chance(0.08 + complexity * 0.15)) {
-    kick.push({ beat: 3.95, vel: 30 + rand() * 35 + intensity * 10 });
+    kick.push({ beat: 3.75, vel: 30 + rand() * 35 + intensity * 10 });
   }
 
   return { ride, snare: ghosts, kick };
