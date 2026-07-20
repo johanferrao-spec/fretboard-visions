@@ -1944,7 +1944,7 @@ function computeNextExts(prev: Set<ChordExtension>, e: ChordExtension): Set<Chor
   }
 
 
-  const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
+  const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['9', '♭9'], ['9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
   for (const [a, b] of pairs) if (next.has(a) && next.has(b)) next.delete(a === e ? b : a);
   return next;
 }
@@ -3243,9 +3243,8 @@ function getChordTypeDescription(suffix: string): string {
 function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean }) {
   const positiveFrets = voicing.frets.filter(f => f > 0);
   const maxFret = positiveFrets.length > 0 ? Math.max(...positiveFrets) : 1;
-  const minFret = positiveFrets.length > 0 ? Math.min(...positiveFrets) : 1;
-  const startFret = minFret <= 4 ? 1 : minFret;
-  const numFrets = Math.max(4, maxFret - startFret + 1);
+  const numFrets = 5;
+  const startFret = maxFret <= numFrets ? 1 : Math.max(1, maxFret - (numFrets - 1));
   const w = 90;
   const h = 110;
   const stringSpacing = w / 7;
