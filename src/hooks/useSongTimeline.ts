@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { NoteName } from '@/lib/music';
 
 export type SnapValue = '1/4' | '1/8' | '1/16';
