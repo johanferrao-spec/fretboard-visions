@@ -117,7 +117,23 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pos, setPos] = useState({ x: 80, y: 80 });
-  const [size, setSize] = useState({ width: 800, height: 420 });
+  const [size, setSize] = useState(() => ({
+    width: 800,
+    height: typeof window !== 'undefined' ? Math.max(320, window.innerHeight - 80 - 16) : 420,
+  }));
+  // Auto-fit height to the viewport bottom on mount + resize (until the user
+  // manually resizes the window — resize handle sets a manual flag).
+  const manualResizeRef = useRef(false);
+  useEffect(() => {
+    const fit = () => {
+      if (manualResizeRef.current) return;
+      setSize(s => ({ ...s, height: Math.max(320, window.innerHeight - pos.y - 16) }));
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [pos.y]);
+
   const [minimized, setMinimized] = useState(false);
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const dragRef = useRef<{ kind: 'window' | 'note' | 'resize-note' | 'resize-window' | 'marquee' | null; offsetX: number; offsetY: number; noteId?: string; origStart?: number; origPitch?: number; origDuration?: number; gridX?: number; gridY?: number } | null>(null);
@@ -169,6 +185,42 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
     }
     return map;
   }, [isDrums, library.active, library.samples]);
+
+  // Object-URL cache for user-dropped instrument icons keyed by
+  // `drums:<part>|<Kit>` (matches InstrumentSamplers' key format).
+  const iconUrlCacheRef = useRef<Map<string, { blob: Blob; url: string }>>(new Map());
+  const iconUrls = useMemo(() => {
+    const cache = iconUrlCacheRef.current;
+    const out: Record<string, string> = {};
+    const live = new Set<string>();
+    for (const [key, icon] of Object.entries(library.instrumentIcons ?? {})) {
+      if (!key.startsWith('drums:')) continue;
+      live.add(key);
+      const cached = cache.get(key);
+      if (cached && cached.blob === icon.blob) {
+        out[key] = cached.url;
+      } else {
+        if (cached) { try { URL.revokeObjectURL(cached.url); } catch { /* noop */ } }
+        const url = URL.createObjectURL(icon.blob);
+        cache.set(key, { blob: icon.blob, url });
+        out[key] = url;
+      }
+    }
+    for (const key of Array.from(cache.keys())) {
+      if (!live.has(key)) {
+        const entry = cache.get(key);
+        if (entry) { try { URL.revokeObjectURL(entry.url); } catch { /* noop */ } }
+        cache.delete(key);
+      }
+    }
+    return out;
+  }, [library.instrumentIcons]);
+  useEffect(() => () => {
+    const cache = iconUrlCacheRef.current;
+    cache.forEach(({ url }) => { try { URL.revokeObjectURL(url); } catch { /* noop */ } });
+    cache.clear();
+  }, []);
+
 
 
   const rowHeight = isDrums ? 28 : 14;
@@ -469,9 +521,21 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
                   color: isDrums ? 'hsl(var(--foreground))' : isBlackKey(p) ? 'hsl(220, 10%, 50%)' : 'hsl(220, 10%, 75%)',
                 }}
               >
-                {isDrums && part && (
-                  <DrumPartIcon part={part} kit={kitForPart[part] ?? null} />
-                )}
+                {isDrums && part && (() => {
+                  const kit = kitForPart[part];
+                  const url = kit ? iconUrls[`drums:${part}|${kit}`] : undefined;
+                  return url ? (
+                    <img
+                      src={url}
+                      alt=""
+                      draggable={false}
+                      style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }}
+                    />
+                  ) : (
+                    <DrumPartIcon part={part} kit={kit ?? null} />
+                  );
+                })()}
+
                 <span className="truncate">{isDrums ? (DRUM_LABELS[p] || pitchLabel(p)) : pitchLabel(p)}</span>
               </div>
             );
@@ -605,7 +669,9 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
       <div
         className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
         onMouseDown={(e) => {
+          manualResizeRef.current = true;
           dragRef.current = { kind: 'resize-window', offsetX: 0, offsetY: 0 };
+
           e.stopPropagation();
           e.preventDefault();
         }}
