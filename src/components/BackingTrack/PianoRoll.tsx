@@ -117,7 +117,23 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pos, setPos] = useState({ x: 80, y: 80 });
-  const [size, setSize] = useState({ width: 800, height: 420 });
+  const [size, setSize] = useState(() => ({
+    width: 800,
+    height: typeof window !== 'undefined' ? Math.max(320, window.innerHeight - 80 - 16) : 420,
+  }));
+  // Auto-fit height to the viewport bottom on mount + resize (until the user
+  // manually resizes the window — resize handle sets a manual flag).
+  const manualResizeRef = useRef(false);
+  useEffect(() => {
+    const fit = () => {
+      if (manualResizeRef.current) return;
+      setSize(s => ({ ...s, height: Math.max(320, window.innerHeight - pos.y - 16) }));
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [pos.y]);
+
   const [minimized, setMinimized] = useState(false);
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const dragRef = useRef<{ kind: 'window' | 'note' | 'resize-note' | 'resize-window' | 'marquee' | null; offsetX: number; offsetY: number; noteId?: string; origStart?: number; origPitch?: number; origDuration?: number; gridX?: number; gridY?: number } | null>(null);
