@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Minus } from 'lucide-react';
+import { X, Minus, ZoomIn } from 'lucide-react';
+
 import type { MidiNote, TrackId } from '@/lib/backingTrackTypes';
 import { TRACK_COLORS, TRACK_LABELS, DRUM_PITCHES } from '@/lib/backingTrackTypes';
 
@@ -9,11 +10,14 @@ interface PianoRollProps {
   measures: number;
   currentBeat: number;
   isPlaying: boolean;
+  /** Swing % 0-100 — visualizes how offbeat 8ths are pushed toward triplet feel. */
+  swing?: number;
   onChange: (notes: MidiNote[]) => void;
   onClose: () => void;
   /** Optional preview callback — when provided, clicking/adding a note plays it. */
   onPreviewNote?: (trackId: TrackId, pitch: number, velocity: number) => void;
 }
+
 
 const NOTE_LETTERS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const isBlackKey = (pitch: number) => [1, 3, 6, 8, 10].includes(pitch % 12);
@@ -34,8 +38,9 @@ const DRUM_LABELS: Record<number, string> = {
 let nextNoteId = 1;
 const newNoteId = () => `pr-${Date.now()}-${nextNoteId++}`;
 
-export default function PianoRoll({ trackId, notes, measures, currentBeat, isPlaying, onChange, onClose, onPreviewNote }: PianoRollProps) {
+export default function PianoRoll({ trackId, notes, measures, currentBeat, isPlaying, swing = 0, onChange, onClose, onPreviewNote }: PianoRollProps) {
   const [snap, setSnap] = useState<1 | 0.5 | 0.25>(0.25);
+  const [zoom, setZoom] = useState(1); // 1× – 4× horizontal zoom
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pos, setPos] = useState({ x: 80, y: 80 });
@@ -43,6 +48,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
   const [minimized, setMinimized] = useState(false);
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const dragRef = useRef<{ kind: 'window' | 'note' | 'resize-note' | 'resize-window' | 'marquee' | null; offsetX: number; offsetY: number; noteId?: string; origStart?: number; origPitch?: number; origDuration?: number; gridX?: number; gridY?: number } | null>(null);
+
 
 
   const totalBeats = measures * 4;
@@ -69,11 +75,25 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
       })();
 
   const rowHeight = isDrums ? 28 : 14;
-  const gridWidth = size.width - 80; // sidebar width
+  const gridWidth = (size.width - 80) * zoom; // sidebar width, scaled by zoom
 
-  const beatToX = (beat: number) => (beat / totalBeats) * gridWidth;
+  // Tone.Transport.swing is (swing/100) * 0.5 with subdivision '8n'.
+  // The offbeat 8th is shifted from 0.5 toward 2/3 of the beat.
+  // shiftedOffset = 0.5 + toneSwing * (2/3 - 0.5) = 0.5 + toneSwing/6.
+  const toneSwing = Math.max(0, Math.min(1, swing / 100)) * 0.5;
+  const swingedBeat = (beat: number) => {
+    const whole = Math.floor(beat);
+    const frac = beat - whole;
+    // Only the mid-beat (offbeat 8th) shifts; other subdivisions ride along
+    // linearly between anchor points 0, offbeat, 1 to preserve local grid feel.
+    const off = 0.5 + toneSwing / 6;
+    if (frac <= 0.5) return whole + (frac / 0.5) * off;
+    return whole + off + ((frac - 0.5) / 0.5) * (1 - off);
+  };
+  const beatToX = (beat: number) => (swingedBeat(beat) / totalBeats) * gridWidth;
   const xToBeat = (x: number) => Math.max(0, Math.min(totalBeats, (x / gridWidth) * totalBeats));
   const snapBeat = (beat: number) => Math.round(beat / snap) * snap;
+
 
   // Window drag
   useEffect(() => {
@@ -305,6 +325,22 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
               }`}
             >{s === 1 ? '1/4' : s === 0.5 ? '1/8' : '1/16'}</button>
           ))}
+          <div className="flex items-center gap-1 pl-2 ml-1 border-l border-border/50" onMouseDown={(e) => e.stopPropagation()}>
+            <ZoomIn size={11} className="text-muted-foreground" />
+            <input
+              type="range"
+              min={1}
+              max={4}
+
+              step={0.1}
+              value={zoom}
+              onChange={(e) => setZoom(parseFloat(e.target.value))}
+              className="w-20 h-1 accent-primary cursor-pointer"
+              title={`Zoom ${zoom.toFixed(1)}×`}
+            />
+            <span className="text-[9px] font-mono text-muted-foreground w-8 text-right">{zoom.toFixed(1)}×</span>
+          </div>
+
           <button onClick={() => setMinimized(true)} className="text-muted-foreground hover:text-foreground" title="Minimize">
             <Minus size={14} />
           </button>
@@ -396,7 +432,8 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
                   style={{
                     left: beatToX(n.startBeat),
                     top: noteTop,
-                    width: Math.max(6, beatToX(n.duration)),
+                    width: Math.max(6, beatToX(n.startBeat + n.duration) - beatToX(n.startBeat)),
+
                     height: noteH,
                     backgroundColor: `hsl(${color} / ${0.6 + (n.velocity / 127) * 0.4})`,
                     border: isSel ? '2px solid hsl(var(--primary))' : `1px solid hsl(${color})`,

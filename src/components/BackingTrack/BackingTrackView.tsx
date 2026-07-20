@@ -15,6 +15,8 @@ interface BackingTrackViewProps {
   bpm: number;
   genre: Genre;
   groove: GrooveId;
+  /** Swing % 0-100 from the main timeline (drives Tone.Transport.swing). */
+  swing?: number;
   /** Volume from main timeline */
   volume: number;
   /** External play state (driven by main timeline play button now) */
@@ -36,8 +38,9 @@ interface BackingTrackViewProps {
 }
 
 export default function BackingTrackView({
-  chords, measures, bpm, genre, groove, volume, isPlaying, currentBeat, registerHandlers,
+  chords, measures, bpm, genre, groove, swing = 0, volume, isPlaying, currentBeat, registerHandlers,
 }: BackingTrackViewProps) {
+
   const bt = useBackingTrack();
   const { resolveSlot: resolveUserSample } = useSharedSampleLibrary();
   const [openClip, setOpenClip] = useState<{ trackId: TrackId; clipId: string } | null>(null);
@@ -262,10 +265,12 @@ export default function BackingTrackView({
           measures={Math.max(1, Math.ceil(openClipNotes.duration / 4))}
           currentBeat={Math.max(0, currentBeat - openClipNotes.startBeat)}
           isPlaying={isPlaying}
+          swing={swing}
           onChange={(notes) => bt.setClipNotes(openClip.trackId, openClip.clipId, notes)}
           onClose={() => setOpenClip(null)}
           onPreviewNote={(tid, pitch, velocity) => bt.previewNote(tid, pitch, velocity, genre, resolveUserSample)}
         />
+
       )}
     </div>
   );
