@@ -1641,13 +1641,17 @@ export function isPhysicallyPlayable(frets: number[], maxSpan = 4): boolean {
   }
   for (let s = 1; s < frets.length - 1; s++) {
     if (frets[s] !== -1) continue;
-    // find nearest fretted neighbours on either side
+    // find nearest SOUNDED neighbours (open OR fretted) on either side
     let left = -1, right = -1;
-    for (let i = s - 1; i >= 0; i--) if (frets[i] > 0) { left = i; break; }
-    for (let i = s + 1; i < frets.length; i++) if (frets[i] > 0) { right = i; break; }
+    for (let i = s - 1; i >= 0; i--) if (frets[i] >= 0) { left = i; break; }
+    for (let i = s + 1; i < frets.length; i++) if (frets[i] >= 0) { right = i; break; }
     if (left === -1 || right === -1) continue;
-    // OK if both neighbours are on the same fret covered by a valid barre
-    if (frets[left] === frets[right] && validBarreFrets.has(frets[left])) continue;
+    // Exception (a): both fretted neighbours share a fret covered by a valid barre
+    if (frets[left] > 0 && frets[right] > 0 && frets[left] === frets[right] && validBarreFrets.has(frets[left])) continue;
+    // Exception (b): directly adjacent above a fretted bass-side string —
+    // the fretting finger can mute the next (treble-side) string. In this
+    // array, index 0 = low E (bass), so "bass-side" = lower index.
+    if (left === s - 1 && frets[left] > 0) continue;
     return false;
   }
 
