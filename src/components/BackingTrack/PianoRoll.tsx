@@ -38,8 +38,9 @@ const DRUM_LABELS: Record<number, string> = {
 let nextNoteId = 1;
 const newNoteId = () => `pr-${Date.now()}-${nextNoteId++}`;
 
-export default function PianoRoll({ trackId, notes, measures, currentBeat, isPlaying, onChange, onClose, onPreviewNote }: PianoRollProps) {
+export default function PianoRoll({ trackId, notes, measures, currentBeat, isPlaying, swing = 0, onChange, onClose, onPreviewNote }: PianoRollProps) {
   const [snap, setSnap] = useState<1 | 0.5 | 0.25>(0.25);
+  const [zoom, setZoom] = useState(1); // 0.5x – 4x horizontal zoom
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pos, setPos] = useState({ x: 80, y: 80 });
@@ -47,6 +48,7 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
   const [minimized, setMinimized] = useState(false);
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const dragRef = useRef<{ kind: 'window' | 'note' | 'resize-note' | 'resize-window' | 'marquee' | null; offsetX: number; offsetY: number; noteId?: string; origStart?: number; origPitch?: number; origDuration?: number; gridX?: number; gridY?: number } | null>(null);
+
 
 
   const totalBeats = measures * 4;
