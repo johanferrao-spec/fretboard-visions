@@ -1513,7 +1513,7 @@ export function generateFullVoicings(root: NoteName, chordType: string): ChordVo
           const openPc = STANDARD_TUNING[s] % 12;
           if (allowedPcs.has(openPc)) choices.push(0);
         }
-        const lo = Math.max(1, rootFret);
+        const lo = Math.max(1, rootFret - (SPAN - 1));
         const hi = rootFret + (SPAN - 1);
         for (let f = lo; f <= hi; f++) {
           const pc = (STANDARD_TUNING[s] + f) % 12;
