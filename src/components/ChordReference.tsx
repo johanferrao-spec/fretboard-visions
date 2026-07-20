@@ -2531,7 +2531,10 @@ function ChordLibraryPanel({
             handleSelectChord={handleSelectChord}
             getChordCellLabel={getChordCellLabel}
             handleRenameChord={handleRenameChord}
+            isTypeAvailable={libraryTypeAvailable}
+            draggable
           />
+
         </div>
 
         <div className="w-14 shrink-0 flex flex-col">
