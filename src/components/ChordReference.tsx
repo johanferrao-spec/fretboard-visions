@@ -3698,25 +3698,26 @@ function ArpeggioPositionsPanel({
 
   const splitIntoColumns = (types: string[]) => { const mid = Math.ceil(types.length / 2); return [types.slice(0, mid), types.slice(mid)]; };
 
-  const handleHideArpType = (type: string) => {
-    const next = [...hiddenArpTypes, type];
-    setHiddenArpTypes(next);
-    localStorage.setItem('mf-hidden-arp-types', JSON.stringify(next));
-    if (selectedArp === type) { setSelectedArp(null); onSetArpeggioPosition?.(null); }
-  };
+  // Availability cache for the shared ChordBuilder in this panel.
+  const arpAvailCacheRef = useRef<Map<string, boolean>>(new Map());
+  useEffect(() => { arpAvailCacheRef.current = new Map(); }, [tuning]);
+  const isArpTypeAvailable = useCallback((chordType: string): boolean => {
+    if (!ARPEGGIO_FORMULAS[chordType]) return false;
+    const key = `${selectedRoot}::${chordType}::${octaveRange}`;
+    const cached = arpAvailCacheRef.current.get(key);
+    if (cached !== undefined) return cached;
+    const has = generateArpeggioPositions(selectedRoot, chordType, octaveRange, tuning).length > 0;
+    arpAvailCacheRef.current.set(key, has);
+    return has;
+  }, [selectedRoot, octaveRange, tuning]);
 
-  const handleRestoreArpType = (type: string) => {
-    const next = hiddenArpTypes.filter(t => t !== type);
-    setHiddenArpTypes(next);
-    localStorage.setItem('mf-hidden-arp-types', JSON.stringify(next));
-  };
+  const handleBuilderSelectArp = useCallback((ct: string) => {
+    setSelectedArp(ct);
+    setSelectedPosIdx(0);
+    setArpPage(0);
+    onApplyScale(selectedRoot, ct, 'arpeggio');
+  }, [selectedRoot, onApplyScale]);
 
-  const ARPEGGIO_COLUMNS = useMemo(() => {
-    return DEFAULT_ARPEGGIO_COLUMNS.map(col => ({
-      ...col,
-      types: col.types.filter(t => !hiddenArpTypes.includes(t)),
-    }));
-  }, [hiddenArpTypes]);
 
   const handleDragStartCat = (e: React.DragEvent, catKey: string) => { e.dataTransfer.setData('text/plain', catKey); };
   const handleDropOnCategory = (cat: 'static' | 'transit', e: React.DragEvent) => {
