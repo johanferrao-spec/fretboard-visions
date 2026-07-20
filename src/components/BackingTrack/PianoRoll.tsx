@@ -75,11 +75,25 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
       })();
 
   const rowHeight = isDrums ? 28 : 14;
-  const gridWidth = size.width - 80; // sidebar width
+  const gridWidth = (size.width - 80) * zoom; // sidebar width, scaled by zoom
 
-  const beatToX = (beat: number) => (beat / totalBeats) * gridWidth;
+  // Tone.Transport.swing is (swing/100) * 0.5 with subdivision '8n'.
+  // The offbeat 8th is shifted from 0.5 toward 2/3 of the beat.
+  // shiftedOffset = 0.5 + toneSwing * (2/3 - 0.5) = 0.5 + toneSwing/6.
+  const toneSwing = Math.max(0, Math.min(1, swing / 100)) * 0.5;
+  const swingedBeat = (beat: number) => {
+    const whole = Math.floor(beat);
+    const frac = beat - whole;
+    // Only the mid-beat (offbeat 8th) shifts; other subdivisions ride along
+    // linearly between anchor points 0, offbeat, 1 to preserve local grid feel.
+    const off = 0.5 + toneSwing / 6;
+    if (frac <= 0.5) return whole + (frac / 0.5) * off;
+    return whole + off + ((frac - 0.5) / 0.5) * (1 - off);
+  };
+  const beatToX = (beat: number) => (swingedBeat(beat) / totalBeats) * gridWidth;
   const xToBeat = (x: number) => Math.max(0, Math.min(totalBeats, (x / gridWidth) * totalBeats));
   const snapBeat = (beat: number) => Math.round(beat / snap) * snap;
+
 
   // Window drag
   useEffect(() => {
