@@ -1380,7 +1380,7 @@ export default function Fretboard({
 
           {stringOrder.map((stringIdx, row) => {
             const isDisabled = disabledStrings.has(stringIdx);
-            const thickness = Math.max(1, 3.5 - stringIdx * 0.5);
+            const thickness = 2.5;
             const isGlowing = glowStrings.has(stringIdx);
             const isChordMuted = activeChord && chordVoicing && chordVoicing[stringIdx] === -1;
             // In arp add mode, strings without notes show as muted (X)
@@ -1444,7 +1444,7 @@ export default function Fretboard({
 
                 {/* String line */}
                 {!isDisabled && (
-                  <div className="absolute bg-fretboard-string z-[5]" style={{ height: thickness, top: '50%', transform: 'translateY(-50%)', opacity: mutedDim ? 0.25 : 0.9, left: 28, right: 0, boxShadow: mutedDim ? 'none' : '0 0 3px hsl(var(--fretboard-string) / 0.45)' }} />
+                  <div className="absolute bg-fretboard-string z-[5]" style={{ height: thickness, top: '50%', transform: 'translateY(-50%)', opacity: mutedDim ? 0.25 : 0.9, left: 28, right: 0 }} />
                 )}
 
                 {/* Fret cells */}
