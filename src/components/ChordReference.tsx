@@ -2163,8 +2163,11 @@ function ChordLibraryPanel({
 
   const handleHideCurated = (origIdx: number) => {
     if (!selectedChord) return;
-    const key = `${selectedRoot}::${selectedChord}::${voicingTab}`;
+    // Root-agnostic key: hiding a voicing removes it for every key
+    // (curated voicings share the same index across all transpositions).
+    const key = `${selectedChord}::${voicingTab}`;
     const existing = hiddenVoicings[key] || [];
+    if (existing.includes(origIdx)) return;
     const updated = { ...hiddenVoicings, [key]: [...existing, origIdx] };
     setHiddenVoicings(updated);
     localStorage.setItem('mf-hidden-voicings', JSON.stringify(updated));
