@@ -620,7 +620,8 @@ export function generatePiano(
   genre: Genre,
 ): MidiNote[] {
   const notes: MidiNote[] = [];
-  const jazzSwing = genre === 'Jazz' ? 0.12 + complexity * 0.08 : 0;
+  // Piano is quantised straight; swing is applied by Tone.Transport at playback time.
+  const jazzSwing = 0;
 
   for (let ci = 0; ci < chords.length; ci++) {
     const chord = chords[ci];
