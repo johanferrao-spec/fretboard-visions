@@ -1944,7 +1944,7 @@ function computeNextExts(prev: Set<ChordExtension>, e: ChordExtension): Set<Chor
   }
 
 
-  const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
+  const pairs: [ChordExtension, ChordExtension][] = [['♭5', '#5'], ['♭9', '#9'], ['9', '♭9'], ['9', '#9'], ['7', 'maj7'], ['11', '#11'], ['♭13', '13']];
   for (const [a, b] of pairs) if (next.has(a) && next.has(b)) next.delete(a === e ? b : a);
   return next;
 }
