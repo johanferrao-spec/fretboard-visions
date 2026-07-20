@@ -1453,12 +1453,38 @@ export function getVoicingsForChord(root: NoteName, chordType: string, source: '
     // Always run the rule-based generator too so chord types with no (or few)
     // hand-curated shapes still surface playable options for the user.
     const generated = generateFullVoicings(root, chordType);
-    const merged = [...filteredCurated, ...generated];
+    const merged = pruneSubsetVoicings([...filteredCurated, ...generated]);
     const ranked = scorePlayableVoicings(deduplicateVoicings12(merged));
     return ranked.slice(0, 12);
   }
   if (source === 'shell') return scorePlayableVoicings(deduplicateVoicings12(generateShellVoicings(root, chordType)));
   return [];
+}
+
+/**
+ * Remove voicings that are strict subsets of another voicing in the list.
+ * A is pruned when some B sounds every string A sounds at the identical fret
+ * AND B sounds at least one additional string. "Sounds" means fret >= 0.
+ */
+function pruneSubsetVoicings(voicings: ChordVoicing[]): ChordVoicing[] {
+  const soundedCount = (v: ChordVoicing) => v.frets.reduce((n, f) => n + (f >= 0 ? 1 : 0), 0);
+  const isSubsetOf = (a: ChordVoicing, b: ChordVoicing) => {
+    for (let s = 0; s < a.frets.length; s++) {
+      if (a.frets[s] < 0) continue;
+      if (b.frets[s] !== a.frets[s]) return false;
+    }
+    return true;
+  };
+  return voicings.filter((a, i) => {
+    const aCount = soundedCount(a);
+    for (let j = 0; j < voicings.length; j++) {
+      if (i === j) continue;
+      const b = voicings[j];
+      if (soundedCount(b) <= aCount) continue;
+      if (isSubsetOf(a, b)) return false;
+    }
+    return true;
+  });
 }
 
 /**
@@ -1498,10 +1524,13 @@ export function generateFullVoicings(root: NoteName, chordType: string): ChordVo
   const results: ChordVoicing[] = [];
   const seenKeys = new Set<string>();
   const SPAN = 4;
+  const PAIR_CAP = 60;
+  const GLOBAL_CAP = 800;
 
   for (let rootString = 0; rootString <= 2; rootString++) {
     for (let rootFret = 0; rootFret <= 12; rootFret++) {
       if ((STANDARD_TUNING[rootString] + rootFret) % 12 !== rootPc) continue;
+      const pairStart = results.length;
 
       const stringChoices: number[][] = [];
       for (let s = 0; s < 6; s++) {
@@ -1513,7 +1542,7 @@ export function generateFullVoicings(root: NoteName, chordType: string): ChordVo
           const openPc = STANDARD_TUNING[s] % 12;
           if (allowedPcs.has(openPc)) choices.push(0);
         }
-        const lo = Math.max(1, rootFret);
+        const lo = Math.max(1, rootFret - (SPAN - 1));
         const hi = rootFret + (SPAN - 1);
         for (let f = lo; f <= hi; f++) {
           const pc = (STANDARD_TUNING[s] + f) % 12;
@@ -1523,7 +1552,8 @@ export function generateFullVoicings(root: NoteName, chordType: string): ChordVo
       }
 
       const walk = (si: number, cur: number[]) => {
-        if (results.length > 400) return;
+        if (results.length >= GLOBAL_CAP) return;
+        if (results.length - pairStart >= PAIR_CAP) return;
         if (si === 6) {
           const firstPlayed = cur.findIndex(f => f >= 0);
           if (firstPlayed !== rootString) return;
@@ -1555,9 +1585,9 @@ export function generateFullVoicings(root: NoteName, chordType: string): ChordVo
         }
       };
       walk(0, []);
-      if (results.length > 400) break;
+      if (results.length >= GLOBAL_CAP) break;
     }
-    if (results.length > 400) break;
+    if (results.length >= GLOBAL_CAP) break;
   }
   return results;
 }
@@ -1637,13 +1667,17 @@ export function isPhysicallyPlayable(frets: number[], maxSpan = 4): boolean {
   }
   for (let s = 1; s < frets.length - 1; s++) {
     if (frets[s] !== -1) continue;
-    // find nearest fretted neighbours on either side
+    // find nearest SOUNDED neighbours (open OR fretted) on either side
     let left = -1, right = -1;
-    for (let i = s - 1; i >= 0; i--) if (frets[i] > 0) { left = i; break; }
-    for (let i = s + 1; i < frets.length; i++) if (frets[i] > 0) { right = i; break; }
+    for (let i = s - 1; i >= 0; i--) if (frets[i] >= 0) { left = i; break; }
+    for (let i = s + 1; i < frets.length; i++) if (frets[i] >= 0) { right = i; break; }
     if (left === -1 || right === -1) continue;
-    // OK if both neighbours are on the same fret covered by a valid barre
-    if (frets[left] === frets[right] && validBarreFrets.has(frets[left])) continue;
+    // Exception (a): both fretted neighbours share a fret covered by a valid barre
+    if (frets[left] > 0 && frets[right] > 0 && frets[left] === frets[right] && validBarreFrets.has(frets[left])) continue;
+    // Exception (b): directly adjacent above a fretted bass-side string —
+    // the fretting finger can mute the next (treble-side) string. In this
+    // array, index 0 = low E (bass), so "bass-side" = lower index.
+    if (left === s - 1 && frets[left] > 0) continue;
     return false;
   }
 
