@@ -1498,6 +1498,8 @@ export function generateFullVoicings(root: NoteName, chordType: string): ChordVo
   const results: ChordVoicing[] = [];
   const seenKeys = new Set<string>();
   const SPAN = 4;
+  const PAIR_CAP = 60;
+  const GLOBAL_CAP = 800;
 
   for (let rootString = 0; rootString <= 2; rootString++) {
     for (let rootFret = 0; rootFret <= 12; rootFret++) {
