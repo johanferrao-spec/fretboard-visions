@@ -223,7 +223,14 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
 
 
 
-  const rowHeight = isDrums ? 28 : 14;
+  // Fill available vertical space so the last row sits flush with the window bottom.
+  // Title bar ≈ 37px, footer ≈ 23px, borders ≈ 2px → reserve 62px of chrome.
+  const CHROME_H = 62;
+  const minRowH = isDrums ? 28 : 14;
+  const rowHeight = Math.max(
+    minRowH,
+    Math.floor((size.height - CHROME_H) / visiblePitches.length),
+  );
   const sidebarWidth = isDrums ? 108 : 80;
   const gridWidth = (size.width - sidebarWidth) * zoom;
 
