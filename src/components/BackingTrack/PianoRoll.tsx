@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Minus } from 'lucide-react';
+import { X, Minus, ZoomIn } from 'lucide-react';
+
 import type { MidiNote, TrackId } from '@/lib/backingTrackTypes';
 import { TRACK_COLORS, TRACK_LABELS, DRUM_PITCHES } from '@/lib/backingTrackTypes';
 
