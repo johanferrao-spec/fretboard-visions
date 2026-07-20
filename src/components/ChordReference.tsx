@@ -1951,12 +1951,17 @@ function computeNextExts(prev: Set<ChordExtension>, e: ChordExtension): Set<Chor
 
 function ChordBuilder({
   selectedRoot, selectedChord, handleSelectChord, getChordCellLabel, handleRenameChord,
+  isTypeAvailable, draggable = true, headerLabel = 'Chord', unavailableTitle = 'No voicings available',
 }: {
   selectedRoot: NoteName;
   selectedChord: string | null;
   handleSelectChord: (ct: string) => void;
   getChordCellLabel: (ct: string) => string;
-  handleRenameChord: (ct: string) => void;
+  handleRenameChord?: (ct: string) => void;
+  isTypeAvailable?: (chordType: string) => boolean;
+  draggable?: boolean;
+  headerLabel?: string;
+  unavailableTitle?: string;
 }) {
   const initial = useMemo(() => reverseChordType(selectedChord), []);
   const [quality, setQuality] = useState<ChordQuality>(initial.quality);
@@ -1973,6 +1978,8 @@ function ChordBuilder({
   }, [selectedChord]);
 
   const resolved = resolveChordType(quality, exts);
+  const typeOk = (t: string | null): boolean => !!t && (!isTypeAvailable || isTypeAvailable(t));
+  const resolvedAvailable = typeOk(resolved);
 
   useEffect(() => {
     if (resolved && resolved !== selectedChord) {
@@ -1985,9 +1992,20 @@ function ChordBuilder({
     setExts(prev => computeNextExts(prev, e));
   };
 
-
-
-
+  // Precompute which qualities have at least one available resolution
+  const qualityAvailable = useMemo(() => {
+    const s = new Set<ChordQuality>();
+    if (!isTypeAvailable) { for (const q of CHORD_QUALITIES) s.add(q); return s; }
+    for (const q of CHORD_QUALITIES) {
+      const empty = resolveChordType(q, new Set());
+      if (empty && isTypeAvailable(empty)) { s.add(q); continue; }
+      for (const e of CHORD_EXTENSIONS) {
+        const r = resolveChordType(q, new Set([e]));
+        if (r && isTypeAvailable(r)) { s.add(q); break; }
+      }
+    }
+    return s;
+  }, [isTypeAvailable]);
 
   const label = resolved ? getChordCellLabel(resolved) : '—';
 
@@ -1996,20 +2014,28 @@ function ChordBuilder({
       {/* Resolved chord display */}
       <div className="flex items-center justify-between bg-secondary/30 rounded px-2 py-1 border border-border/40">
         <div className="flex items-baseline gap-1 min-w-0">
-          <span className="text-[9px] font-mono uppercase text-muted-foreground shrink-0">Chord</span>
+          <span className="text-[9px] font-mono uppercase text-muted-foreground shrink-0">{headerLabel}</span>
           <button
-            draggable={!!resolved}
+            draggable={draggable && !!resolved && resolvedAvailable}
             onDragStart={(e) => {
-              if (!resolved) return;
+              if (!draggable || !resolved || !resolvedAvailable) return;
               e.dataTransfer.setData('application/chord', JSON.stringify({ root: selectedRoot, chordType: resolved }));
               e.dataTransfer.effectAllowed = 'copy';
             }}
-            onDoubleClick={() => resolved && handleRenameChord(resolved)}
-            className={`text-sm font-mono font-bold truncate ${resolved ? 'text-primary cursor-grab active:cursor-grabbing' : 'text-destructive'}`}
-            title={resolved ? 'Drag to timeline · double-click to rename' : 'Not available'}
+            onDoubleClick={() => resolved && handleRenameChord?.(resolved)}
+            className={`text-sm font-mono font-bold truncate ${
+              resolvedAvailable
+                ? (draggable ? 'text-primary cursor-grab active:cursor-grabbing' : 'text-primary')
+                : 'text-destructive'
+            }`}
+            title={
+              resolvedAvailable
+                ? (draggable ? 'Drag to timeline · double-click to rename' : (handleRenameChord ? 'Double-click to rename' : ''))
+                : unavailableTitle
+            }
           >{selectedRoot}{label === 'Major' ? '' : ` ${label}`}</button>
         </div>
-        {!resolved && (
+        {!resolvedAvailable && (
           <span className="text-[8px] font-mono text-destructive">unavailable</span>
         )}
       </div>
@@ -2020,14 +2046,19 @@ function ChordBuilder({
         <div className="grid grid-cols-4 gap-0.5">
           {CHORD_QUALITIES.map(q => {
             const active = quality === q;
+            const disabled = !qualityAvailable.has(q);
             return (
               <button
                 key={q}
                 onClick={() => setQuality(q)}
+                disabled={disabled && !active}
+                title={disabled ? unavailableTitle : ''}
                 className={`px-1 py-1 rounded border text-[10px] font-mono transition-all ${
                   active
                     ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)] font-bold'
-                    : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted'
+                    : disabled
+                      ? 'bg-muted/20 border-border/20 text-muted-foreground/40 cursor-not-allowed'
+                      : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted'
                 }`}
               >{q}</button>
             );
@@ -2052,15 +2083,18 @@ function ChordBuilder({
             const probe = computeNextExts(exts, e);
             const wouldResolve = resolveChordType(quality, probe);
             // Disable if toggling produces no valid chord, OR (when turning on)
-            // the resolver ignores the extension entirely (e.g. Sus2 + 13 → Sus2).
+            // the resolver ignores the extension entirely (e.g. Sus2 + 13 → Sus2),
+            // OR the resulting chord type has no voicings/positions available.
             const currentResolved = resolveChordType(quality, exts);
             const noOp = !active && wouldResolve === currentResolved;
-            const disabled = !wouldResolve || noOp;
+            const notAvailable = !!wouldResolve && !typeOk(wouldResolve);
+            const disabled = !wouldResolve || noOp || notAvailable;
             return (
               <button
                 key={e}
                 onClick={() => toggleExt(e)}
                 disabled={disabled && !active}
+                title={notAvailable ? unavailableTitle : ''}
                 className={`px-1 py-1 rounded border text-[10px] font-mono transition-all ${
                   active
                     ? 'bg-accent text-accent-foreground border-accent font-bold shadow-[0_0_4px_hsl(var(--accent)/0.4)]'
