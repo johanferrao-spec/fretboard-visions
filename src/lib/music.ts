@@ -1462,6 +1462,32 @@ export function getVoicingsForChord(root: NoteName, chordType: string, source: '
 }
 
 /**
+ * Remove voicings that are strict subsets of another voicing in the list.
+ * A is pruned when some B sounds every string A sounds at the identical fret
+ * AND B sounds at least one additional string. "Sounds" means fret >= 0.
+ */
+function pruneSubsetVoicings(voicings: ChordVoicing[]): ChordVoicing[] {
+  const soundedCount = (v: ChordVoicing) => v.frets.reduce((n, f) => n + (f >= 0 ? 1 : 0), 0);
+  const isSubsetOf = (a: ChordVoicing, b: ChordVoicing) => {
+    for (let s = 0; s < a.frets.length; s++) {
+      if (a.frets[s] < 0) continue;
+      if (b.frets[s] !== a.frets[s]) return false;
+    }
+    return true;
+  };
+  return voicings.filter((a, i) => {
+    const aCount = soundedCount(a);
+    for (let j = 0; j < voicings.length; j++) {
+      if (i === j) continue;
+      const b = voicings[j];
+      if (soundedCount(b) <= aCount) continue;
+      if (isSubsetOf(a, b)) return false;
+    }
+    return true;
+  });
+}
+
+/**
  * Rule Set B — required pitch classes for a voicing.
  *  - root is always required
  *  - every non-root, non-plain-5 formula tone is required
