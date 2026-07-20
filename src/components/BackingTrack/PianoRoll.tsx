@@ -325,6 +325,21 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
               }`}
             >{s === 1 ? '1/4' : s === 0.5 ? '1/8' : '1/16'}</button>
           ))}
+          <div className="flex items-center gap-1 pl-2 ml-1 border-l border-border/50" onMouseDown={(e) => e.stopPropagation()}>
+            <ZoomIn size={11} className="text-muted-foreground" />
+            <input
+              type="range"
+              min={0.5}
+              max={4}
+              step={0.1}
+              value={zoom}
+              onChange={(e) => setZoom(parseFloat(e.target.value))}
+              className="w-20 h-1 accent-primary cursor-pointer"
+              title={`Zoom ${zoom.toFixed(1)}×`}
+            />
+            <span className="text-[9px] font-mono text-muted-foreground w-8 text-right">{zoom.toFixed(1)}×</span>
+          </div>
+
           <button onClick={() => setMinimized(true)} className="text-muted-foreground hover:text-foreground" title="Minimize">
             <Minus size={14} />
           </button>
