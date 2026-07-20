@@ -36,9 +36,14 @@ export function useSongTimeline() {
   const [bpm, setBpm] = useState(120);
   const [genre, setGenre] = useState<Genre>('Jazz');
   const [groove, setGroove] = useState<GrooveId>(1);
-  // Default 50% so the Jazz groove (default genre) has its classic swung feel.
-  // The MIDI itself is quantised straight; Tone.Transport.swing supplies the shuffle.
-  const [swing, setSwing] = useState(50); // 0-100 %
+  // Swing % (0 = straight, 100 = full triplet). Only Jazz needs baked-in swing;
+  // Rock/Pop/Funk/Latin patterns are written on a straight grid and would sound
+  // out of time if the Transport shuffled their 8th offbeats.
+  const [swing, setSwing] = useState<number>(genre === 'Jazz' ? 50 : 0);
+  // When the user switches genre, reset the swing default (Jazz → 50, else 0).
+  useEffect(() => {
+    setSwing(genre === 'Jazz' ? 50 : 0);
+  }, [genre]);
   const [snap, setSnap] = useState<SnapValue>('1/4');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
