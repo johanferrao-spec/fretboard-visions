@@ -36,7 +36,9 @@ export function useSongTimeline() {
   const [bpm, setBpm] = useState(120);
   const [genre, setGenre] = useState<Genre>('Jazz');
   const [groove, setGroove] = useState<GrooveId>(1);
-  const [swing, setSwing] = useState(0); // 0-100 %
+  // Default 50% so the Jazz groove (default genre) has its classic swung feel.
+  // The MIDI itself is quantised straight; Tone.Transport.swing supplies the shuffle.
+  const [swing, setSwing] = useState(50); // 0-100 %
   const [snap, setSnap] = useState<SnapValue>('1/4');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
