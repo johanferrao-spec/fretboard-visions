@@ -416,7 +416,8 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
                   style={{
                     left: beatToX(n.startBeat),
                     top: noteTop,
-                    width: Math.max(6, beatToX(n.duration)),
+                    width: Math.max(6, beatToX(n.startBeat + n.duration) - beatToX(n.startBeat)),
+
                     height: noteH,
                     backgroundColor: `hsl(${color} / ${0.6 + (n.velocity / 127) * 0.4})`,
                     border: isSel ? '2px solid hsl(var(--primary))' : `1px solid hsl(${color})`,
