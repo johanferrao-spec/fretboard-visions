@@ -136,8 +136,9 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
         DRUM_PITCHES.hihat_open,
         DRUM_PITCHES.hihat_pedal,
         DRUM_PITCHES.hihat_closed,
-        DRUM_PITCHES.tom1,
-        DRUM_PITCHES.tom2,
+        DRUM_PITCHES.tom1, // Rack Tom 1 (45)
+        DRUM_PITCHES.tom3, // Rack Tom 2 (48)
+        DRUM_PITCHES.tom2, // Floor Tom (47)
         DRUM_PITCHES.snare,
         DRUM_PITCHES.kick,
       ].sort((a, b) => b - a)
@@ -146,6 +147,29 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
         for (let p = 84; p >= 36; p--) range.push(p);
         return range;
       })();
+
+  // Look up the active kit per drum part (built-in kit id encoded as
+  // `kit:<kit>:<part>`; user samples carry their own `.kit`).
+  const library = useSharedSampleLibrary();
+  const kitForPart = useMemo(() => {
+    const map: Partial<Record<DrumPart, DrumKitGenre>> = {};
+    if (!isDrums) return map;
+    for (const [pitchStr, part] of Object.entries(PITCH_TO_PART)) {
+      const slot = `drums:${part}`;
+      const activeId = library.active?.[slot];
+      if (!activeId) continue;
+      if (activeId.startsWith('kit:')) {
+        const kit = activeId.split(':')[1];
+        const cap = kit ? (kit.charAt(0).toUpperCase() + kit.slice(1)) as DrumKitGenre : null;
+        if (cap) map[part] = cap;
+      } else {
+        const sample = library.samples?.find(s => s.id === activeId);
+        if (sample?.kit) map[part] = sample.kit as DrumKitGenre;
+      }
+    }
+    return map;
+  }, [isDrums, library.active, library.samples]);
+
 
   const rowHeight = isDrums ? 28 : 14;
   const gridWidth = (size.width - 80) * zoom; // sidebar width, scaled by zoom
