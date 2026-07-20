@@ -43,6 +43,10 @@ export function useSongTimeline() {
   // When the user switches genre, reset the swing default (Jazz → 50, else 0).
   useEffect(() => {
     setSwing(genre === 'Jazz' ? 50 : 0);
+    if (genre === 'Funk') {
+      setGroove(2);
+      setBpm(85);
+    }
   }, [genre]);
   const [snap, setSnap] = useState<SnapValue>('1/4');
   const [isPlaying, setIsPlaying] = useState(false);

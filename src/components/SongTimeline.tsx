@@ -707,10 +707,7 @@ export default function SongTimeline({
                 : genre === 'Latin'
                   ? <option value={1}>Bossa Nova</option>
                   : genre === 'Funk'
-                    ? <>
-                        <option value={1}>Groove 1</option>
-                        <option value={2}>Funky 16s</option>
-                      </>
+                    ? <option value={2}>Funky 16s</option>
                     : <option value={1}>1</option>}
           </select>
         </div>
