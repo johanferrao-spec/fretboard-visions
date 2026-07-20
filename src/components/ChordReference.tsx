@@ -3802,57 +3802,20 @@ function ArpeggioPositionsPanel({
       )}
 
       <div className="flex gap-1">
-        {/* Arpeggio type columns */}
-        <div className="flex gap-px shrink-0" style={{ width: '35%' }}>
-          {ARPEGGIO_COLUMNS.map((col, ci) => {
-            const isSus = col.label === 'Sus';
-            const [col1, col2] = isSus ? [col.types, []] : splitIntoColumns(col.types);
-            return (
-              <div key={col.label} className={`min-w-0 ${ci < ARPEGGIO_COLUMNS.length - 1 ? 'border-r border-border/40' : ''} px-0.5`} style={{ flex: isSus ? 0.5 : 1 }}>
-                <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1 font-bold">{col.label}</div>
-                <div className={`flex gap-px ${isSus ? 'justify-center' : ''}`}>
-                  {[col1, ...(col2.length > 0 ? [col2] : [])].map((types, sci) => (
-                    <div key={sci} className={`${isSus ? 'w-full' : 'flex-1'} space-y-px`}>
-                      {types.map(ct => {
-                        if (!ARPEGGIO_FORMULAS[ct]) return null;
-                        const isSelected = selectedArp === ct;
-                        return (
-                          <div key={ct} className="relative group">
-                            <button onClick={() => handleSelectArp(ct)}
-                              className={`w-full text-left px-1 py-0.5 rounded border text-[9px] font-mono transition-all truncate leading-tight ${
-                                isSelected ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)]' : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted hover:border-border/60'
-                              }`}
-                            >{ct}</button>
-                            <button onClick={(e) => { e.stopPropagation(); handleHideArpType(ct); }}
-                              className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-destructive text-destructive-foreground text-[7px] items-center justify-center hover:brightness-110 z-10 hidden group-hover:flex">×</button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-          {hiddenArpTypes.length > 0 && (
-            <div className="mt-0.5">
-              <button onClick={() => setShowRestoreArpTypes(!showRestoreArpTypes)}
-                className="text-[7px] font-mono text-muted-foreground hover:text-foreground transition-colors">
-                {showRestoreArpTypes ? '▾' : '▸'} {hiddenArpTypes.length} hidden
-              </button>
-              {showRestoreArpTypes && (
-                <div className="flex flex-wrap gap-0.5 mt-0.5">
-                  {hiddenArpTypes.map(t => (
-                    <button key={t} onClick={() => handleRestoreArpType(t)}
-                      className="px-1 py-0.5 rounded text-[7px] font-mono bg-muted/40 text-muted-foreground hover:bg-muted border border-border/30 transition-colors">
-                      + {t}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        {/* Arpeggio Quality + Extensions builder (shared with chord library) */}
+        <div className="shrink-0" style={{ width: '35%' }}>
+          <ChordBuilder
+            selectedRoot={selectedRoot}
+            selectedChord={selectedArp}
+            handleSelectChord={handleBuilderSelectArp}
+            getChordCellLabel={(ct) => ct}
+            isTypeAvailable={isArpTypeAvailable}
+            draggable={false}
+            headerLabel="Arp"
+            unavailableTitle="No arpeggio positions available"
+          />
         </div>
+
 
 
         <div className="flex-1 min-w-0">
