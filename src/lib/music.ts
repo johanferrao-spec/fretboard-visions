@@ -1526,7 +1526,8 @@ export function generateFullVoicings(root: NoteName, chordType: string): ChordVo
       }
 
       const walk = (si: number, cur: number[]) => {
-        if (results.length > 400) return;
+        if (results.length >= GLOBAL_CAP) return;
+        if (results.length - pairStart >= PAIR_CAP) return;
         if (si === 6) {
           const firstPlayed = cur.findIndex(f => f >= 0);
           if (firstPlayed !== rootString) return;
@@ -1558,9 +1559,9 @@ export function generateFullVoicings(root: NoteName, chordType: string): ChordVo
         }
       };
       walk(0, []);
-      if (results.length > 400) break;
+      if (results.length >= GLOBAL_CAP) break;
     }
-    if (results.length > 400) break;
+    if (results.length >= GLOBAL_CAP) break;
   }
   return results;
 }
