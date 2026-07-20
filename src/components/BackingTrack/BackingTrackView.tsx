@@ -265,10 +265,12 @@ export default function BackingTrackView({
           measures={Math.max(1, Math.ceil(openClipNotes.duration / 4))}
           currentBeat={Math.max(0, currentBeat - openClipNotes.startBeat)}
           isPlaying={isPlaying}
+          swing={swing}
           onChange={(notes) => bt.setClipNotes(openClip.trackId, openClip.clipId, notes)}
           onClose={() => setOpenClip(null)}
           onPreviewNote={(tid, pitch, velocity) => bt.previewNote(tid, pitch, velocity, genre, resolveUserSample)}
         />
+
       )}
     </div>
   );
