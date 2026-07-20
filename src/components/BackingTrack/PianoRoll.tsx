@@ -150,19 +150,20 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
         DRUM_PITCHES.crash,
         DRUM_PITCHES.ride,
         DRUM_PITCHES.hihat_open,
-        DRUM_PITCHES.hihat_pedal,
         DRUM_PITCHES.hihat_closed,
-        DRUM_PITCHES.tom1, // Rack Tom 1 (45)
-        DRUM_PITCHES.tom3, // Rack Tom 2 (48)
-        DRUM_PITCHES.tom2, // Floor Tom (47)
+        DRUM_PITCHES.hihat_pedal,
+        DRUM_PITCHES.tom1, // Rack Tom 1
+        DRUM_PITCHES.tom3, // Rack Tom 2
+        DRUM_PITCHES.tom2, // Floor Tom
         DRUM_PITCHES.snare,
         DRUM_PITCHES.kick,
-      ].sort((a, b) => b - a)
+      ]
     : (() => {
         const range: number[] = [];
         for (let p = 84; p >= 36; p--) range.push(p);
         return range;
       })();
+
 
   // Look up the active kit per drum part (built-in kit id encoded as
   // `kit:<kit>:<part>`; user samples carry their own `.kit`).
