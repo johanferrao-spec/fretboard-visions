@@ -1504,6 +1504,7 @@ export function generateFullVoicings(root: NoteName, chordType: string): ChordVo
   for (let rootString = 0; rootString <= 2; rootString++) {
     for (let rootFret = 0; rootFret <= 12; rootFret++) {
       if ((STANDARD_TUNING[rootString] + rootFret) % 12 !== rootPc) continue;
+      const pairStart = results.length;
 
       const stringChoices: number[][] = [];
       for (let s = 0; s < 6; s++) {
