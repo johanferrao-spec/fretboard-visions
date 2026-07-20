@@ -1380,7 +1380,7 @@ export default function Fretboard({
 
           {stringOrder.map((stringIdx, row) => {
             const isDisabled = disabledStrings.has(stringIdx);
-            const thickness = Math.max(1, 3.5 - stringIdx * 0.5);
+            const thickness = 2.5;
             const isGlowing = glowStrings.has(stringIdx);
             const isChordMuted = activeChord && chordVoicing && chordVoicing[stringIdx] === -1;
             // In arp add mode, strings without notes show as muted (X)
