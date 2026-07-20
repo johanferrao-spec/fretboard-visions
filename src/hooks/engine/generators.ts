@@ -1351,9 +1351,6 @@ export function generateAllTracks(
 ): Record<TrackId, MidiNote[]> {
   // eslint-disable-next-line no-console
   console.log('[generators] generateAllTracks genre=', genre, 'groove=', groove, 'chords=', chords.length);
-  if (genre === 'Funk' && groove === 1) {
-    return generateAllFromGroove(GROOVE_FUNK_1, chords, measures, intensities, complexities);
-  }
   if (genre === 'Funk' && groove === 2) {
     console.log('[generators] → Funk groove 2 path (Funky 16s)');
     return generateFunky16s(chords, measures, intensities, complexities);
