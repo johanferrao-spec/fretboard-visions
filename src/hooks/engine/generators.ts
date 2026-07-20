@@ -3,7 +3,7 @@ import type { MidiNote, TrackId, DrumFill } from '@/lib/backingTrackTypes';
 import { DRUM_PITCHES } from '@/lib/backingTrackTypes';
 import { NOTE_NAMES, CHORD_FORMULAS } from '@/lib/music';
 import { jitterTime, jitterVelocity } from './humanize';
-import { GROOVE_FUNK_1 } from './groove1';
+
 import { GROOVE_ROCK_DRIVING_8S } from './grooveRockDriving8s';
 import { GROOVE_BOSSA_1 } from './grooveBossa1';
 import { generateAllFromGroove } from './grooveGenerator';
