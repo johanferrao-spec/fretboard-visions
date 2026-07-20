@@ -1453,7 +1453,7 @@ export function getVoicingsForChord(root: NoteName, chordType: string, source: '
     // Always run the rule-based generator too so chord types with no (or few)
     // hand-curated shapes still surface playable options for the user.
     const generated = generateFullVoicings(root, chordType);
-    const merged = [...filteredCurated, ...generated];
+    const merged = pruneSubsetVoicings([...filteredCurated, ...generated]);
     const ranked = scorePlayableVoicings(deduplicateVoicings12(merged));
     return ranked.slice(0, 12);
   }
