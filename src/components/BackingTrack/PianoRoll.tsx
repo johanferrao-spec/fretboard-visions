@@ -10,11 +10,14 @@ interface PianoRollProps {
   measures: number;
   currentBeat: number;
   isPlaying: boolean;
+  /** Swing % 0-100 — visualizes how offbeat 8ths are pushed toward triplet feel. */
+  swing?: number;
   onChange: (notes: MidiNote[]) => void;
   onClose: () => void;
   /** Optional preview callback — when provided, clicking/adding a note plays it. */
   onPreviewNote?: (trackId: TrackId, pitch: number, velocity: number) => void;
 }
+
 
 const NOTE_LETTERS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const isBlackKey = (pitch: number) => [1, 3, 6, 8, 10].includes(pitch % 12);
