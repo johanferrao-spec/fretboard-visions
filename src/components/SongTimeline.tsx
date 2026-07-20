@@ -715,8 +715,38 @@ export default function SongTimeline({
           </select>
         </div>
 
-        <div className="flex items-center gap-1.5" title="Swing amount: 0 = straight, 100 = triplet feel">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Swing</span>
+        <div
+          className="flex items-center gap-1.5"
+          title={`Swing (${swingSubdivision === '8n' ? '8th' : '16th'} notes): 0 = straight, 100 = triplet feel`}
+        >
+          <div
+            className="relative"
+            onMouseEnter={() => setSwingMenuOpen(true)}
+            onMouseLeave={() => setSwingMenuOpen(false)}
+          >
+            <button
+              type="button"
+              className="text-[10px] font-mono text-muted-foreground uppercase px-1.5 py-0.5 rounded hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              Swing
+              <span className="text-[8px] opacity-70">{swingSubdivision === '8n' ? '8th' : '16th'}</span>
+            </button>
+            {swingMenuOpen && (
+              <div className="absolute top-full left-0 mt-0.5 z-50 bg-popover border border-border rounded shadow-lg py-0.5 min-w-[92px]">
+                {([['8n', '8th note'], ['16n', '16th note']] as const).map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => { setSwingSubdivision(val); setSwingMenuOpen(false); }}
+                    className={`w-full text-left px-2 py-1 text-[10px] font-mono hover:bg-secondary transition-colors ${
+                      swingSubdivision === val ? 'text-primary' : 'text-foreground'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <input
             type="range"
             min={0}
