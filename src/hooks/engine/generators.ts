@@ -333,20 +333,21 @@ function rollJazzBar(intensity: number, complexity: number): JazzBar {
   // ── RIDE ──
   // Spine: 4 quarter-note hits (with tiny humanization on 2 & 4 due to swing).
   const ride: number[] = [0, 1, 2, 3];
-  // Add &-of-X hits stochastically (swung positions ~0.65, 1.65, 2.65, 3.65).
-  // More likely as complexity rises.
-  const swingPos = [0.66, 1.66, 2.66, 3.66];
+  // Add &-of-X hits stochastically on the STRAIGHT 8th grid (0.5, 1.5, 2.5, 3.5).
+  // The swing feel comes from Tone.Transport.swing at playback time, not the
+  // notated positions — so the slider can dial swing from 0 → full triplet.
+  const swingPos = [0.5, 1.5, 2.5, 3.5];
   for (const p of swingPos) {
     // Each spot independently — biased so ride averages 4–6 hits
     if (chance(0.25 + complexity * 0.4)) ride.push(p);
   }
-  // Occasional "pickup" 16th-before-1 (i.e. position 3.95) — sparingly.
-  if (chance(0.10 + intensity * 0.10)) ride.push(3.95);
+  // Occasional "pickup" 16th-before-1 (straight 16th at 3.75).
+  if (chance(0.10 + intensity * 0.10)) ride.push(3.75);
   ride.sort((a, b) => a - b);
 
   // ── SNARE GHOSTS ──
-  // Pool of swung positions where snare ghosts/comments tend to fall.
-  const snarePool = [0.66, 1.0, 1.66, 2.0, 2.66, 3.0, 3.66];
+  // Pool of straight 8th positions where snare ghosts tend to fall.
+  const snarePool = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5];
   const ghosts: { beat: number; vel: number }[] = [];
   // Pick 2–4 positions (more if complexity is higher), shuffled
   const numGhosts = 1 + Math.floor(rand() * 2 + complexity * 2.5); // 1..4
