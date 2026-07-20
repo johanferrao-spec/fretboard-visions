@@ -3243,9 +3243,8 @@ function getChordTypeDescription(suffix: string): string {
 function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean }) {
   const positiveFrets = voicing.frets.filter(f => f > 0);
   const maxFret = positiveFrets.length > 0 ? Math.max(...positiveFrets) : 1;
-  const minFret = positiveFrets.length > 0 ? Math.min(...positiveFrets) : 1;
-  const startFret = minFret <= 4 ? 1 : minFret;
-  const numFrets = Math.max(4, maxFret - startFret + 1);
+  const numFrets = 5;
+  const startFret = maxFret <= numFrets ? 1 : Math.max(1, maxFret - (numFrets - 1));
   const w = 90;
   const h = 110;
   const stringSpacing = w / 7;
