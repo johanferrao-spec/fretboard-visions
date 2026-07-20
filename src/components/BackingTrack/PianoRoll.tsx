@@ -186,6 +186,42 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
     return map;
   }, [isDrums, library.active, library.samples]);
 
+  // Object-URL cache for user-dropped instrument icons keyed by
+  // `drums:<part>|<Kit>` (matches InstrumentSamplers' key format).
+  const iconUrlCacheRef = useRef<Map<string, { blob: Blob; url: string }>>(new Map());
+  const iconUrls = useMemo(() => {
+    const cache = iconUrlCacheRef.current;
+    const out: Record<string, string> = {};
+    const live = new Set<string>();
+    for (const [key, icon] of Object.entries(library.instrumentIcons ?? {})) {
+      if (!key.startsWith('drums:')) continue;
+      live.add(key);
+      const cached = cache.get(key);
+      if (cached && cached.blob === icon.blob) {
+        out[key] = cached.url;
+      } else {
+        if (cached) { try { URL.revokeObjectURL(cached.url); } catch { /* noop */ } }
+        const url = URL.createObjectURL(icon.blob);
+        cache.set(key, { blob: icon.blob, url });
+        out[key] = url;
+      }
+    }
+    for (const key of Array.from(cache.keys())) {
+      if (!live.has(key)) {
+        const entry = cache.get(key);
+        if (entry) { try { URL.revokeObjectURL(entry.url); } catch { /* noop */ } }
+        cache.delete(key);
+      }
+    }
+    return out;
+  }, [library.instrumentIcons]);
+  useEffect(() => () => {
+    const cache = iconUrlCacheRef.current;
+    cache.forEach(({ url }) => { try { URL.revokeObjectURL(url); } catch { /* noop */ } });
+    cache.clear();
+  }, []);
+
+
 
   const rowHeight = isDrums ? 28 : 14;
   const sidebarWidth = isDrums ? 108 : 80;
