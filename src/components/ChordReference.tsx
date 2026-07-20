@@ -2195,6 +2195,20 @@ function ChordLibraryPanel({
     localStorage.setItem('mf-chord-name-overrides', JSON.stringify(updated));
   }, [chordNameOverrides, defaultChordLabels, getChordCellLabel]);
 
+  // Cache voicing-availability per (root, chordType) for the shared builder.
+  const libAvailCacheRef = useRef<Map<string, boolean>>(new Map());
+  useEffect(() => { libAvailCacheRef.current = new Map(); }, [selectedRoot]);
+  const libraryTypeAvailable = useCallback((chordType: string): boolean => {
+    if (!CHORD_FORMULAS[chordType]) return false;
+    const key = `${selectedRoot}::${chordType}`;
+    const cached = libAvailCacheRef.current.get(key);
+    if (cached !== undefined) return cached;
+    const has = getVoicingsForChord(selectedRoot, chordType, 'full').length > 0
+      || getVoicingsForChord(selectedRoot, chordType, 'shell').length > 0;
+    libAvailCacheRef.current.set(key, has);
+    return has;
+  }, [selectedRoot]);
+
   const handleHideCurated = (origIdx: number) => {
     if (!selectedChord) return;
     // Root-agnostic key: hiding a voicing removes it for every key
