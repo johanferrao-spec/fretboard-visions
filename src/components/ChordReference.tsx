@@ -2163,8 +2163,11 @@ function ChordLibraryPanel({
 
   const handleHideCurated = (origIdx: number) => {
     if (!selectedChord) return;
-    const key = `${selectedRoot}::${selectedChord}::${voicingTab}`;
+    // Root-agnostic key: hiding a voicing removes it for every key
+    // (curated voicings share the same index across all transpositions).
+    const key = `${selectedChord}::${voicingTab}`;
     const existing = hiddenVoicings[key] || [];
+    if (existing.includes(origIdx)) return;
     const updated = { ...hiddenVoicings, [key]: [...existing, origIdx] };
     setHiddenVoicings(updated);
     localStorage.setItem('mf-hidden-voicings', JSON.stringify(updated));
@@ -2204,10 +2207,12 @@ function ChordLibraryPanel({
   // Track original indices so delete/hide targets the correct voicing
   const filteredCuratedMap = useMemo(() => {
     if (!selectedChord) return currentVoicings.map((v, i) => ({ v, origIdx: i }));
-    const key = `${selectedRoot}::${selectedChord}::${voicingTab}`;
-    const hidden = new Set(hiddenVoicings[key] || []);
-    if (hidden.size === 0) return currentVoicings.map((v, i) => ({ v, origIdx: i }));
-    const kept = currentVoicings.map((v, i) => ({ v, origIdx: i })).filter(({ origIdx }) => !hidden.has(origIdx));
+    const key = `${selectedChord}::${voicingTab}`;
+    // Migrate legacy per-root hidden entries into the shared root-agnostic key
+    const legacyKey = `${selectedRoot}::${selectedChord}::${voicingTab}`;
+    const merged = new Set([...(hiddenVoicings[key] || []), ...(hiddenVoicings[legacyKey] || [])]);
+    if (merged.size === 0) return currentVoicings.map((v, i) => ({ v, origIdx: i }));
+    const kept = currentVoicings.map((v, i) => ({ v, origIdx: i })).filter(({ origIdx }) => !merged.has(origIdx));
     // Safety net: if hiding would empty the panel entirely, ignore hidden set
     // (prevents stale/cross-origin localStorage from making all voicings invisible).
     if (kept.length === 0 && currentVoicings.length > 0) {
