@@ -521,9 +521,21 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
                   color: isDrums ? 'hsl(var(--foreground))' : isBlackKey(p) ? 'hsl(220, 10%, 50%)' : 'hsl(220, 10%, 75%)',
                 }}
               >
-                {isDrums && part && (
-                  <DrumPartIcon part={part} kit={kitForPart[part] ?? null} />
-                )}
+                {isDrums && part && (() => {
+                  const kit = kitForPart[part];
+                  const url = kit ? iconUrls[`drums:${part}|${kit}`] : undefined;
+                  return url ? (
+                    <img
+                      src={url}
+                      alt=""
+                      draggable={false}
+                      style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }}
+                    />
+                  ) : (
+                    <DrumPartIcon part={part} kit={kit ?? null} />
+                  );
+                })()}
+
                 <span className="truncate">{isDrums ? (DRUM_LABELS[p] || pitchLabel(p)) : pitchLabel(p)}</span>
               </div>
             );
