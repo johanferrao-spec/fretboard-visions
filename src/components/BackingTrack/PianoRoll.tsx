@@ -329,8 +329,9 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
             <ZoomIn size={11} className="text-muted-foreground" />
             <input
               type="range"
-              min={0.5}
+              min={1}
               max={4}
+
               step={0.1}
               value={zoom}
               onChange={(e) => setZoom(parseFloat(e.target.value))}
