@@ -451,23 +451,33 @@ export default function PianoRoll({ trackId, notes, measures, currentBeat, isPla
 
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar — pitch labels */}
-        <div className="w-20 border-r border-border overflow-y-auto bg-secondary/20 shrink-0" style={{ scrollbarWidth: 'none' }}>
-          {visiblePitches.map(p => (
-            <div
-              key={p}
-              className="border-b border-border/30 flex items-center px-2 text-[9px] font-mono"
-              style={{
-                height: rowHeight,
-                backgroundColor: isDrums
-                  ? 'transparent'
-                  : isBlackKey(p) ? 'hsl(220, 15%, 12%)' : 'hsl(220, 15%, 18%)',
-                color: isDrums ? 'hsl(var(--foreground))' : isBlackKey(p) ? 'hsl(220, 10%, 50%)' : 'hsl(220, 10%, 75%)',
-              }}
-            >
-              {isDrums ? (DRUM_LABELS[p] || pitchLabel(p)) : pitchLabel(p)}
-            </div>
-          ))}
+        <div
+          className="border-r border-border overflow-y-auto bg-secondary/20 shrink-0"
+          style={{ width: sidebarWidth, scrollbarWidth: 'none' }}
+        >
+          {visiblePitches.map(p => {
+            const part = PITCH_TO_PART[p];
+            return (
+              <div
+                key={p}
+                className="border-b border-border/30 flex items-center gap-1.5 px-2 text-[9px] font-mono"
+                style={{
+                  height: rowHeight,
+                  backgroundColor: isDrums
+                    ? 'transparent'
+                    : isBlackKey(p) ? 'hsl(220, 15%, 12%)' : 'hsl(220, 15%, 18%)',
+                  color: isDrums ? 'hsl(var(--foreground))' : isBlackKey(p) ? 'hsl(220, 10%, 50%)' : 'hsl(220, 10%, 75%)',
+                }}
+              >
+                {isDrums && part && (
+                  <DrumPartIcon part={part} kit={kitForPart[part] ?? null} />
+                )}
+                <span className="truncate">{isDrums ? (DRUM_LABELS[p] || pitchLabel(p)) : pitchLabel(p)}</span>
+              </div>
+            );
+          })}
         </div>
+
 
         {/* Grid */}
         <div className="flex-1 overflow-auto relative" onClick={() => { if (justFinishedMarqueeRef.current) return; setSelectedId(null); setSelectedIds(new Set()); }}>
