@@ -2011,7 +2011,7 @@ export function getMidiNote(stringIndex: number, fret: number): number {
 // ============================================================
 
 // Position-based degree colors:
-// 1st (Root) = green, 2nd = grey, 3rd = red, 4th = pink, 5th = blue, 6th = turquoise, 7th = orange
+// 1st (Root) = green, 2nd = grey, 3rd = red, 4th = pink, 5th = blue, 6th = turquoise, 7th = dark orange
 export const DEGREE_COLORS: Record<string, string> = {
   'R':  '130 70% 45%',   // green
   '♭2': '0 0% 65%',      // grey (chromatic 2nd variant)
@@ -2023,8 +2023,8 @@ export const DEGREE_COLORS: Record<string, string> = {
   '5':  '215 85% 55%',   // blue
   '♭6': '175 75% 50%',   // turquoise (chromatic 6th variant)
   '6':  '175 75% 50%',   // turquoise
-  '♭7': '280 75% 60%',    // magenta/violet (minor 7th = same color as 7th position)
-  '7':  '280 75% 60%',    // magenta/violet
+  '♭7': '24 85% 45%',    // dark orange (minor 7th = same color as 7th position)
+  '7':  '24 85% 45%',    // dark orange
   '9':  '0 0% 65%',      // grey (= 2nd)
   '♭9': '0 0% 65%',      // grey
   '11': '330 75% 60%',   // pink (= 4th)
