@@ -1654,11 +1654,11 @@ export default function Fretboard({
                                 <span
                                   className="absolute font-mono font-black leading-none pointer-events-none"
                                   style={{
-                                    right: -Math.max(3, noteMarkerSize * 0.16),
-                                    top: -Math.max(3, noteMarkerSize * 0.16),
-                                    fontSize: Math.max(7, noteMarkerSize * 0.34),
+                                    right: -Math.max(4, noteMarkerSize * 0.22),
+                                    top: -Math.max(4, noteMarkerSize * 0.22),
+                                    fontSize: Math.max(11, noteMarkerSize * 0.55),
                                     color: 'hsl(var(--foreground))',
-                                    textShadow: '0 1px 2px hsl(var(--background) / 0.9)',
+                                    textShadow: '0 1px 3px hsl(var(--background) / 0.95)',
                                   }}
                                 >
                                   {(style as { accidental?: '' | '♯' | '♭' }).accidental}
