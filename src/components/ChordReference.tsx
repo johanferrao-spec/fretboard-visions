@@ -3332,8 +3332,8 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false, formula, 
   const rootPc = NOTE_NAMES.indexOf(root);
 
   return (
-    <div className="flex justify-center">
-      <svg width={w} height={h + 6} className="shrink-0">
+    <div className={`flex items-center justify-center ${fit ? 'w-full h-full' : 'justify-center'}`}>
+      <svg width={w} height={h + 6} viewBox={`0 0 ${w} ${h + 6}`} className={fit ? 'w-full h-full' : 'shrink-0'} preserveAspectRatio="xMidYMid meet">
         {startFret > 1 && (
           <text x={2} y={fretSpacing + 7} fontSize={8} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
         )}
