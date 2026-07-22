@@ -2091,7 +2091,9 @@ function ChordBuilder({
             const currentResolved = resolveChordType(quality, exts);
             const noOp = !active && wouldResolve === currentResolved;
             const notAvailable = !!wouldResolve && !typeOk(wouldResolve);
-            const disabled = !wouldResolve || noOp || notAvailable;
+            const notAllowed = !active && isExtensionAllowed ? !isExtensionAllowed(e, exts) : false;
+            const disabled = !wouldResolve || noOp || notAvailable || notAllowed;
+
             return (
               <button
                 key={e}
