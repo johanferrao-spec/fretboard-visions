@@ -993,16 +993,7 @@ export default function Fretboard({
       const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
       return getIntervalName(activeRoot, note);
     }
-    if (displayMode === 'fingers' && activeChord) {
-      const voicings = getVoicingsForChord(activeChord.root, activeChord.chordType, activeChord.voicingSource);
-      const v = voicings[activeChord.voicingIndex];
-      if (v?.fingers) {
-        const f = v.fingers[stringIndex];
-        if (f === 0) return 'O';
-        if (f === 'B') return 'B';
-        return String(f);
-      }
-    }
+    if (displayMode === 'none') return '';
     return note;
   };
 

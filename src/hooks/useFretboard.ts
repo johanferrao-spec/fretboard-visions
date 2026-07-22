@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { NoteName, NOTE_NAMES, STANDARD_TUNING, TUNING_PRESETS, type TuningPreset, type ArpeggioPosition } from '@/lib/music';
 
 export type ScaleMode = 'scale' | 'arpeggio';
-export type DisplayMode = 'notes' | 'degrees' | 'fingers';
+export type DisplayMode = 'notes' | 'degrees' | 'none';
 export type Orientation = 'horizontal' | 'vertical';
 
 export interface ScaleSelection {
