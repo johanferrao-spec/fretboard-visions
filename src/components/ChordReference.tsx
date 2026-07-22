@@ -263,11 +263,13 @@ function ModesHoverDropdown({
   scales,
   currentScale,
   onSelect,
+  accent = false,
 }: {
   label: string;
   scales: string[];
   currentScale: string;
   onSelect: (s: string) => void;
+  accent?: boolean;
 }) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -284,6 +286,10 @@ function ModesHoverDropdown({
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
     closeTimer.current = window.setTimeout(() => setOpen(false), 180);
   };
+
+  const bgClass = accent
+    ? 'bg-accent/20 text-foreground/80 hover:bg-accent/35'
+    : 'bg-muted text-foreground/80 hover:bg-muted/80';
 
   return (
     <>
