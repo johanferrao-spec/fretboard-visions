@@ -16,7 +16,6 @@ import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibrar
 import { ensureToneAudioContext } from '@/hooks/engine/audioContext';
 import { ChevronUp } from 'lucide-react';
 import type { NoteName } from '@/lib/music';
-import type { TabNote, TabData } from '@/components/TabVisualiser';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
@@ -45,11 +44,7 @@ const Index = () => {
   const [selectedSinkId, setSelectedSinkId] = useState<string>('default');
   const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
   const [keyMode, setKeyMode] = useState<KeyMode>(() => scaleToKeyMode(fb.primaryScale.scale));
-  const [activeTab, setActiveTab] = useState<'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tabvis' | null>(null);
-  const [tabVisNotes, setTabVisNotes] = useState<{ current: Array<{string: number; fret: number}>; upcoming: Array<{string: number; fret: number}[]> } | null>(null);
-  const [tabVisHasOpened, setTabVisHasOpened] = useState(false);
-  const [tabVisData, setTabVisData] = useState<TabData | null>(null);
-  const [tabVisPlayhead, setTabVisPlayhead] = useState(0);
+  const [activeTab, setActiveTab] = useState<'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | null>(null);
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
   const [dropMode, setDropMode] = useState<'drop2' | 'drop3' | null>(null);
@@ -578,9 +573,8 @@ const Index = () => {
                  inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
                  chordAddRootNote={chordAddRoot}
                  chordAddHasNotes={chordAddHasNotes}
-               suppressScaleNotes={activeTab === 'chords'}
-                 tabVisNotes={activeTab === 'tabvis' ? (tabVisNotes || { current: [], upcoming: [] }) : null}
-                  chordOctaveShift={chordOctaveShift}
+                  suppressScaleNotes={activeTab === 'chords'}
+                   chordOctaveShift={chordOctaveShift}
                   threeNpsNotes={threeNpsData?.notes}
                   threeNpsColor={threeNpsData?.color}
             />
@@ -698,13 +692,6 @@ const Index = () => {
                     fb.setIdentifyRoot(note);
                   }
                 }}
-                onTabNotes={(current, upcoming) => {
-                  setTabVisNotes({ current, upcoming });
-                }}
-                tabVisData={tabVisData}
-                setTabVisData={setTabVisData}
-                tabVisPlayhead={tabVisPlayhead}
-                setTabVisPlayhead={setTabVisPlayhead}
                 setShowFretBox={fb.setShowFretBox}
                 setFretBoxStart={fb.setFretBoxStart}
                 setFretBoxSize={fb.setFretBoxSize}

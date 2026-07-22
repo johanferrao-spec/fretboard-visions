@@ -86,15 +86,6 @@ export default function CoursePlayer() {
   const restart = () => { setCurrentNoteIdx(0); setHits(new Set()); };
   const finished = sortedGroups.length > 0 && currentNoteIdx >= sortedGroups.length;
 
-  // tabVisNotes for the Fretboard: only show CURRENT group + an upcoming preview
-  const tabVisNotes = useMemo(() => {
-    if (finished || currentGroup.length === 0) return null;
-    const current = currentGroup.map(n => ({ string: 5 - n.stringIndex, fret: n.fret })); // Fretboard uses string 0=high e
-    const upcoming = sortedGroups.slice(currentNoteIdx + 1, currentNoteIdx + 4)
-      .map(g => g.map(n => ({ string: 5 - n.stringIndex, fret: n.fret })));
-    return { current, upcoming };
-  }, [currentGroup, sortedGroups, currentNoteIdx, finished]);
-
   if (loading) return <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">Loading…</div>;
   if (!tab) return <div className="fixed inset-0 z-50 bg-background flex items-center justify-center text-muted-foreground">Lesson not found</div>;
 
@@ -165,7 +156,6 @@ export default function CoursePlayer() {
           arpOverlayOpacity={fb.arpOverlayOpacity}
           ghostNoteOpacity={fb.ghostNoteOpacity}
           arpPathVisible={false}
-          tabVisNotes={tabVisNotes}
           suppressScaleNotes={true}
         />
 
