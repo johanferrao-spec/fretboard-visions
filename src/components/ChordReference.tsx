@@ -2647,12 +2647,14 @@ function ChordLibraryPanel({
                               handleSelectCustomVoicing(v);
                             }
                           }}
-                          className={`w-full rounded p-1 transition-all border flex flex-col items-center justify-center ${
+                          className={`w-full aspect-square rounded p-0.5 transition-all border flex flex-col items-center justify-between overflow-hidden ${
                             isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
                           }`}
                         >
-                          <MiniChordVoicingDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} formula={selectedChord ? CHORD_FORMULAS[selectedChord] : undefined} />
-                          <div className="flex items-center justify-center gap-0.5">
+                          <div className="flex-1 min-h-0 w-full flex items-center justify-center">
+                            <MiniChordVoicingDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} formula={selectedChord ? CHORD_FORMULAS[selectedChord] : undefined} fit />
+                          </div>
+                          <div className="flex shrink-0 items-center justify-center gap-0.5">
                             <span className="text-[7px] font-mono text-muted-foreground">
                               {formatCompactTab(v.frets)}
                             </span>
