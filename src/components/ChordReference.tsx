@@ -401,7 +401,7 @@ function CompactScaleSlot({
             <button onClick={onUnlink} className="text-[9px] font-mono text-muted-foreground hover:text-foreground uppercase">Unlink</button>
           )}
           <button onClick={onClear} className="text-sm font-mono text-muted-foreground/60 hover:text-destructive transition-colors leading-none px-1" title="Clear slot">×</button>
-          <ColorDropdown color={color} onColorChange={() => { /* fixed per slot */ }} />
+          <ColorDropdown color={color} onColorChange={(c) => onChange({ ...slot, customColor: c })} />
         </div>
       </div>
 
