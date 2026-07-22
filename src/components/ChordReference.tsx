@@ -2109,11 +2109,11 @@ function ChordBuilder({
       {showTitle && (
         <div
           className="bg-secondary/30 border-2 rounded px-2 py-1"
-          style={{ borderColor: 'hsl(var(--beginner-orange))' }}
+          style={{ borderColor: 'hsl(var(--accent))' }}
         >
           <div
             className="text-[11px] font-mono font-bold truncate"
-            style={{ color: 'hsl(var(--beginner-yellow))' }}
+            style={{ color: 'hsl(var(--accent))' }}
           >
             {resolved ? `${selectedRoot} ${getChordCellLabel(resolved)}${titleSuffix ? ` ${titleSuffix}` : ''}` : '—'}
           </div>
