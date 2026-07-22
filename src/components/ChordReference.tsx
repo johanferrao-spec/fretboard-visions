@@ -366,7 +366,7 @@ function CompactScaleSlot({
 }) {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [hoveredScale, setHoveredScale] = useState<string | null>(null);
-  const color = SLOT_COLORS[index];
+  const color = slot.customColor || SLOT_COLORS[index];
 
   const handleSelectScale = (scaleName: string) => {
     onChange({ ...slot, mode: 'scale', scale: scaleName });
@@ -401,7 +401,7 @@ function CompactScaleSlot({
             <button onClick={onUnlink} className="text-[9px] font-mono text-muted-foreground hover:text-foreground uppercase">Unlink</button>
           )}
           <button onClick={onClear} className="text-sm font-mono text-muted-foreground/60 hover:text-destructive transition-colors leading-none px-1" title="Clear slot">×</button>
-          <ColorDropdown color={color} onColorChange={() => { /* fixed per slot */ }} />
+          <ColorDropdown color={color} onColorChange={(c) => onChange({ ...slot, customColor: c })} />
         </div>
       </div>
 
@@ -607,9 +607,9 @@ function ScalesPanel({
   useEffect(() => {
     const s = slots[activeIdx];
     if (s) onApplyScale(s.root, s.scale, s.mode);
-    onApplyPrimaryColor?.(SLOT_COLORS[activeIdx]);
+    onApplyPrimaryColor?.(slots[activeIdx]?.customColor || SLOT_COLORS[activeIdx]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeIdx]);
+  }, [activeIdx, slots[activeIdx]?.customColor]);
 
   // Mirror linked slot into secondary scale + color
   useEffect(() => {
@@ -619,7 +619,7 @@ function ScalesPanel({
       const s = slots[linkedIdx];
       if (s) {
         onApplySecondaryScale?.(s);
-        onApplySecondaryColor?.(SLOT_COLORS[linkedIdx]);
+        onApplySecondaryColor?.(s.customColor || SLOT_COLORS[linkedIdx]);
       } else {
         onApplySecondaryScale?.(null);
       }
@@ -711,7 +711,7 @@ function ScalesPanel({
       const y2 = br.bottom - cr.top;
       const dy = Math.max(40, Math.abs(x2 - x1) * 0.35);
       const d = `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 + dy}, ${x2} ${y2}`;
-      setCurve({ d, color: SLOT_COLORS[activeIdx] });
+      setCurve({ d, color: slots[activeIdx]?.customColor || SLOT_COLORS[activeIdx] });
     };
     compute();
     const ro = new ResizeObserver(compute);
@@ -768,14 +768,14 @@ function ScalesPanel({
         {/* Dynamic scale description (replaces 4th slot) */}
         <div
           className="relative rounded-lg border min-h-[230px] p-3 flex flex-col bg-card/30"
-          style={{ borderColor: activeSlot ? `${SLOT_COLORS[activeIdx]}66` : 'hsl(var(--border))' }}
+          style={{ borderColor: activeSlot ? `${activeSlot.customColor || SLOT_COLORS[activeIdx]}66` : 'hsl(var(--border))' }}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground/70">About Scale</span>
             {activeSlot && (
               <span
                 className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded"
-                style={{ color: SLOT_COLORS[activeIdx], backgroundColor: `${SLOT_COLORS[activeIdx]}1a` }}
+                style={{ color: activeSlot.customColor || SLOT_COLORS[activeIdx], backgroundColor: `${activeSlot.customColor || SLOT_COLORS[activeIdx]}1a` }}
               >
                 Slot {activeIdx + 1}
               </span>
@@ -783,7 +783,7 @@ function ScalesPanel({
           </div>
           {activeSlot ? (
             <>
-              <div className="text-sm font-semibold mb-1" style={{ color: SLOT_COLORS[activeIdx] }}>
+              <div className="text-sm font-semibold mb-1" style={{ color: activeSlot.customColor || SLOT_COLORS[activeIdx] }}>
                 {activeSlot.root} {activeSlot.scale}
               </div>
               <p className="text-xs text-muted-foreground/90 leading-relaxed">
