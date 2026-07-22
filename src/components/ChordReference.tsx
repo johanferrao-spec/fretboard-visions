@@ -3815,6 +3815,12 @@ function ArpeggioPositionsPanel({
             handleSelectChord={handleBuilderSelectArp}
             getChordCellLabel={(ct) => ct}
             isTypeAvailable={isArpTypeAvailable}
+            isExtensionAllowed={(ext, current) => {
+              // In arpeggio positions, #9 cannot combine with higher extensions.
+              if (current.has('#9') && (ext === '11' || ext === '#11' || ext === '♭13' || ext === '13')) return false;
+              return true;
+            }}
+
             draggable={false}
             headerLabel="Arp"
             unavailableTitle="No arpeggio positions available"
