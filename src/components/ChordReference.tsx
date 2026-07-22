@@ -711,7 +711,7 @@ function ScalesPanel({
       const y2 = br.bottom - cr.top;
       const dy = Math.max(40, Math.abs(x2 - x1) * 0.35);
       const d = `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 + dy}, ${x2} ${y2}`;
-      setCurve({ d, color: SLOT_COLORS[activeIdx] });
+      setCurve({ d, color: slots[activeIdx]?.customColor || SLOT_COLORS[activeIdx] });
     };
     compute();
     const ro = new ResizeObserver(compute);
