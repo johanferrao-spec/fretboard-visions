@@ -2019,7 +2019,9 @@ function ChordBuilder({
       {/* Resolved chord display */}
       <div className="flex items-center justify-between bg-secondary/30 rounded px-2 py-1 border border-border/40">
         <div className="flex items-baseline gap-1 min-w-0">
-          <span className="text-[9px] font-mono uppercase text-muted-foreground shrink-0">{headerLabel}</span>
+          {headerLabel && (
+            <span className="text-[9px] font-mono uppercase text-muted-foreground shrink-0">{headerLabel}</span>
+          )}
           <button
             draggable={draggable && !!resolved && resolvedAvailable}
             onDragStart={(e) => {
