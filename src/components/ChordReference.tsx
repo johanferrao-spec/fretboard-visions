@@ -286,6 +286,16 @@ function ModesHoverDropdown({
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
     closeTimer.current = window.setTimeout(() => setOpen(false), 180);
   };
+  const closeNow = () => {
+    if (closeTimer.current) { window.clearTimeout(closeTimer.current); closeTimer.current = null; }
+    setOpen(false);
+  };
+  const handleBtnLeave = (e: React.MouseEvent) => {
+    const r = btnRef.current?.getBoundingClientRect();
+    // Only allow the grace period when the mouse is heading downward toward the dropdown.
+    if (r && e.clientY >= r.bottom - 1) scheduleClose();
+    else closeNow();
+  };
 
   const bgClass = accent
     ? 'bg-accent/20 text-foreground/80 hover:bg-accent/35'
@@ -296,7 +306,7 @@ function ModesHoverDropdown({
       <button
         ref={btnRef}
         onMouseEnter={show}
-        onMouseLeave={scheduleClose}
+        onMouseLeave={handleBtnLeave}
         onClick={show}
         className={`w-full text-left px-2 py-1.5 rounded text-[9px] font-mono uppercase tracking-wider transition-all whitespace-nowrap ${bgClass}`}
       >
