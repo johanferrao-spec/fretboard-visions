@@ -1002,7 +1002,7 @@ export default function Fretboard({
         const rootPc = NOTE_NAMES.indexOf(activeChord.root);
         const notePc = NOTE_NAMES.indexOf(note);
         const info = pcMap.get((notePc - rootPc + 12) % 12);
-        if (info) return info.label;
+        if (info) return info.accidental ? info.label.slice(1) : info.label;
       }
       return getExtendedIntervalName(activeChord.root, note);
     }
