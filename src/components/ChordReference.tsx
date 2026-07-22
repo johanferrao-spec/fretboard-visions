@@ -1952,6 +1952,7 @@ function computeNextExts(prev: Set<ChordExtension>, e: ChordExtension): Set<Chor
 function ChordBuilder({
   selectedRoot, selectedChord, handleSelectChord, getChordCellLabel, handleRenameChord,
   isTypeAvailable, draggable = true, headerLabel = 'Chord', unavailableTitle = 'No voicings available',
+  isExtensionAllowed,
 }: {
   selectedRoot: NoteName;
   selectedChord: string | null;
@@ -1962,7 +1963,9 @@ function ChordBuilder({
   draggable?: boolean;
   headerLabel?: string;
   unavailableTitle?: string;
+  isExtensionAllowed?: (ext: string, currentExts: Set<string>) => boolean;
 }) {
+
   const initial = useMemo(() => reverseChordType(selectedChord), []);
   const [quality, setQuality] = useState<ChordQuality>(initial.quality);
   const [exts, setExts] = useState<Set<ChordExtension>>(initial.exts);
