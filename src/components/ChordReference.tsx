@@ -493,15 +493,24 @@ function CompactScaleSlot({
                   );
                 }
                 const directActive = cat.scales?.includes(slot.scale) ?? false;
+                const directText = directActive ? (isLightColor(color) ? '#0a0a0a' : '#ffffff') : undefined;
                 return (
                   <button
                     key={cat.label}
                     onClick={() => { if (cat.scales) handleSelectScale(cat.scales[0]); }}
                     className={`w-full text-left px-2 py-1.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-all whitespace-nowrap ${
                       directActive
-                        ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)] font-bold'
-                        : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted'
+                        ? 'font-bold'
+                        : 'bg-muted/60 border-border/30 text-foreground hover:bg-muted'
                     }`}
+                    style={directActive
+                      ? {
+                          backgroundColor: color,
+                          color: directText,
+                          borderColor: color,
+                          boxShadow: `0 0 6px ${color}66`,
+                        }
+                      : undefined}
                   >
                     {cat.label}
                   </button>
