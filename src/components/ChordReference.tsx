@@ -2106,6 +2106,13 @@ function ChordBuilder({
 
   return (
     <div className="flex flex-col gap-1.5 h-full">
+      {showTitle && (
+        <div className="bg-secondary/30 border border-border/30 rounded px-2 py-1">
+          <div className="text-[11px] font-mono font-bold text-foreground truncate">
+            {resolved ? `${selectedRoot} ${getChordCellLabel(resolved)}${titleSuffix ? ` ${titleSuffix}` : ''}` : '—'}
+          </div>
+        </div>
+      )}
       {/* Quality */}
       <div>
         <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 font-bold">Quality</div>
