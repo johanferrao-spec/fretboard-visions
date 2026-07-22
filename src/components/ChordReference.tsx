@@ -2041,6 +2041,8 @@ function ChordBuilder({
   isTypeAvailable, draggable = true, unavailableTitle = 'No voicings available',
   isExtensionAllowed,
   isExtensionHidden,
+  showTitle = false,
+  titleSuffix,
 }: {
   selectedRoot: NoteName;
   selectedChord: string | null;
@@ -2052,6 +2054,8 @@ function ChordBuilder({
   unavailableTitle?: string;
   isExtensionAllowed?: (ext: string, currentExts: Set<string>) => boolean;
   isExtensionHidden?: (ext: string, currentExts: Set<string>) => boolean;
+  showTitle?: boolean;
+  titleSuffix?: string;
 }) {
 
   const initial = useMemo(() => reverseChordType(selectedChord), []);
