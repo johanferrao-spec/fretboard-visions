@@ -677,6 +677,10 @@ const Index = () => {
                 onChordAddStateChange={(root, hasNotes) => { setChordAddRoot(root); setChordAddHasNotes(hasNotes); }}
                 chordOctaveShift={chordOctaveShift}
                 setChordOctaveShift={setChordOctaveShift}
+                tuningName={fb.tuningName}
+                onSetTuning={fb.setTuning}
+                customTunings={fb.customTunings}
+                setCustomTunings={fb.setCustomTunings}
             />
           </div>
         </main>
