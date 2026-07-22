@@ -768,14 +768,14 @@ function ScalesPanel({
         {/* Dynamic scale description (replaces 4th slot) */}
         <div
           className="relative rounded-lg border min-h-[230px] p-3 flex flex-col bg-card/30"
-          style={{ borderColor: activeSlot ? `${SLOT_COLORS[activeIdx]}66` : 'hsl(var(--border))' }}
+          style={{ borderColor: activeSlot ? `${activeSlot.customColor || SLOT_COLORS[activeIdx]}66` : 'hsl(var(--border))' }}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground/70">About Scale</span>
             {activeSlot && (
               <span
                 className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded"
-                style={{ color: SLOT_COLORS[activeIdx], backgroundColor: `${SLOT_COLORS[activeIdx]}1a` }}
+                style={{ color: activeSlot.customColor || SLOT_COLORS[activeIdx], backgroundColor: `${activeSlot.customColor || SLOT_COLORS[activeIdx]}1a` }}
               >
                 Slot {activeIdx + 1}
               </span>
@@ -783,7 +783,7 @@ function ScalesPanel({
           </div>
           {activeSlot ? (
             <>
-              <div className="text-sm font-semibold mb-1" style={{ color: SLOT_COLORS[activeIdx] }}>
+              <div className="text-sm font-semibold mb-1" style={{ color: activeSlot.customColor || SLOT_COLORS[activeIdx] }}>
                 {activeSlot.root} {activeSlot.scale}
               </div>
               <p className="text-xs text-muted-foreground/90 leading-relaxed">
