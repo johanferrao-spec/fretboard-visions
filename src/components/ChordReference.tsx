@@ -2083,7 +2083,7 @@ function ChordBuilder({
           )}
         </div>
         <div className="grid grid-cols-4 gap-0.5">
-          {CHORD_EXTENSIONS.map(e => {
+          {CHORD_EXTENSIONS.filter(e => !isExtensionHidden || !isExtensionHidden(e, exts)).map(e => {
             const active = exts.has(e);
             const probe = computeNextExts(exts, e);
             const wouldResolve = resolveChordType(quality, probe);
