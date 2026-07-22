@@ -890,6 +890,7 @@ export default function ChordReference({
   onChordAddStateChange,
   chordOctaveShift, setChordOctaveShift,
   setArpAddReferenceNotes,
+  tuningName, onSetTuning, customTunings, setCustomTunings,
 }: ChordReferenceProps) {
   const navigate = useNavigate();
   const [selectedRoot, setSelectedRoot] = useState<NoteName>('E');
