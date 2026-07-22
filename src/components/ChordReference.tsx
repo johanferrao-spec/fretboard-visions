@@ -263,11 +263,13 @@ function ModesHoverDropdown({
   scales,
   currentScale,
   onSelect,
+  accent = false,
 }: {
   label: string;
   scales: string[];
   currentScale: string;
   onSelect: (s: string) => void;
+  accent?: boolean;
 }) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -285,6 +287,10 @@ function ModesHoverDropdown({
     closeTimer.current = window.setTimeout(() => setOpen(false), 180);
   };
 
+  const bgClass = accent
+    ? 'bg-accent/20 text-foreground/80 hover:bg-accent/35'
+    : 'bg-muted text-foreground/80 hover:bg-muted/80';
+
   return (
     <>
       <button
@@ -292,7 +298,7 @@ function ModesHoverDropdown({
         onMouseEnter={show}
         onMouseLeave={scheduleClose}
         onClick={show}
-        className="w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all bg-accent/20 text-foreground/80 hover:bg-accent/35"
+        className={`w-full text-left px-2 py-1.5 rounded text-[9px] font-mono uppercase tracking-wider transition-all whitespace-nowrap ${bgClass}`}
       >
         {label} ▾
       </button>
@@ -456,8 +462,7 @@ function CompactScaleSlot({
             <div className="grid grid-cols-2 gap-1">
               {SCALE_CATEGORIES.map(cat => {
                 const isDirect = cat.label === 'Major' || cat.label === 'Minor';
-                const isModes = !!cat.isModesGroup;
-                if (isModes && cat.scales) {
+                if (!isDirect && cat.scales) {
                   return (
                     <ModesHoverDropdown
                       key={cat.label}
@@ -465,19 +470,17 @@ function CompactScaleSlot({
                       scales={cat.scales}
                       currentScale={slot.scale}
                       onSelect={handleSelectScale}
+                      accent={!!cat.isModesGroup}
                     />
                   );
                 }
                 return (
                   <button
                     key={cat.label}
-                    onClick={() => {
-                      if (isDirect && cat.scales) handleSelectScale(cat.scales[0]);
-                      else setOpenCategory(cat.label);
-                    }}
-                    className="w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all bg-muted text-foreground/80 hover:bg-muted/80"
+                    onClick={() => { if (cat.scales) handleSelectScale(cat.scales[0]); }}
+                    className="w-full text-left px-2 py-1.5 rounded text-[9px] font-mono uppercase tracking-wider transition-all bg-muted text-foreground/80 hover:bg-muted/80 whitespace-nowrap"
                   >
-                    {cat.label} {!isDirect && '→'}
+                    {cat.label}
                   </button>
                 );
               })}
