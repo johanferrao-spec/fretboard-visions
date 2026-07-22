@@ -6,7 +6,7 @@ import type { TabNote } from './TabVisualiser';
 
 import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
-  getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
+  getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS, buildFormulaPcMap,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
   isVoicingTonallyValid, isPhysicallyPlayable, getTensionSuggestions, getChordTones,
   analyzeProgression, identifyArpeggioFromNotes,
@@ -2648,7 +2648,7 @@ function ChordLibraryPanel({
                             isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
                           }`}
                         >
-                          <MiniChordVoicingDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} />
+                          <MiniChordVoicingDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} formula={selectedChord ? CHORD_FORMULAS[selectedChord] : undefined} />)
                           <div className="flex items-center justify-center gap-0.5">
                             <span className="text-[7px] font-mono text-muted-foreground">
                               {formatCompactTab(v.frets)}
