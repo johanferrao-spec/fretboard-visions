@@ -2072,7 +2072,7 @@ function ChordBuilder({
                 onClick={() => setQuality(q)}
                 disabled={disabled && !active}
                 title={disabled ? unavailableTitle : ''}
-                className={`px-1 py-1 rounded border text-[10px] font-mono transition-all ${
+                className={`px-0.5 py-0.5 rounded border text-[9px] font-mono transition-all ${
                   active
                     ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)] font-bold'
                     : disabled
