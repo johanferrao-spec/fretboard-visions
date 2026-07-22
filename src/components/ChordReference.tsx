@@ -3809,7 +3809,7 @@ function ArpeggioPositionsPanel({
 
   return (
     <>
-      <div className="grid grid-cols-[35%_1fr] gap-1">
+      <div className="grid grid-cols-[48%_3.5rem_1fr] gap-1.5">
         {/* Left column: controls, mode UIs, builder */}
         <div className="flex flex-col gap-1 min-w-0">
           {/* Root selector + controls in one horizontal row */}
