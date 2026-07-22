@@ -2108,8 +2108,8 @@ function ChordBuilder({
     <div className="flex flex-col gap-1.5 h-full">
       {showTitle && (
         <div
-          className="bg-secondary/30 border rounded px-2 py-1"
-          style={{ borderColor: 'hsl(var(--beginner-yellow))' }}
+          className="bg-secondary/30 border-2 rounded px-2 py-1"
+          style={{ borderColor: 'hsl(var(--beginner-orange))' }}
         >
           <div
             className="text-[11px] font-mono font-bold truncate"
