@@ -428,7 +428,7 @@ function CompactScaleSlot({
 
       {/* Current selection display */}
       <div className="mx-2 mb-1 text-[10px] font-mono font-bold rounded px-2 py-1 border truncate" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 8px hsl(270, 80%, 65%, 0.3)' }}>
-        ♪ {slot.root} {slot.mode === 'arpeggio' ? `${slot.scale} (Arp)` : slot.scale}
+        ♪ {slot.rootDisplay || slot.root} {slot.mode === 'arpeggio' ? `${slot.scale} (Arp)` : slot.scale}
       </div>
 
       {/* Category grid — 2 columns, fills available space, no scroll */}
