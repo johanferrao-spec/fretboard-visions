@@ -3909,29 +3909,10 @@ function ArpeggioPositionsPanel({
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-0.5 mb-1">
-                    <button
-                      onClick={() => setCategoryFilter(categoryFilter === 'static' ? 'all' : 'static')}
-                      onDragOver={(e) => { e.preventDefault(); setDragOverCategory('static'); }}
-                      onDragLeave={() => setDragOverCategory(null)}
-                      onDrop={(e) => handleDropOnCategory('static', e)}
-                      style={{
-                        backgroundColor: categoryFilter === 'static' ? `hsl(${STATIC_COLOR})` : `hsl(${STATIC_COLOR} / 0.15)`,
-                        color: categoryFilter === 'static' ? '#fff' : `hsl(${STATIC_COLOR})`,
-                        borderColor: categoryFilter === 'static' ? `hsl(${STATIC_COLOR})` : `hsl(${STATIC_COLOR} / 0.4)`,
-                      }}
-                      className="flex-1 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-all border-2 hover:brightness-110">▪ Static</button>
-                    <button
-                      onClick={() => setCategoryFilter(categoryFilter === 'transit' ? 'all' : 'transit')}
-                      onDragOver={(e) => { e.preventDefault(); setDragOverCategory('transit'); }}
-                      onDragLeave={() => setDragOverCategory(null)}
-                      onDrop={(e) => handleDropOnCategory('transit', e)}
-                      style={{
-                        backgroundColor: categoryFilter === 'transit' ? `hsl(${TRANSIT_COLOR})` : `hsl(${TRANSIT_COLOR} / 0.15)`,
-                        color: categoryFilter === 'transit' ? '#fff' : `hsl(${TRANSIT_COLOR})`,
-                        borderColor: categoryFilter === 'transit' ? `hsl(${TRANSIT_COLOR})` : `hsl(${TRANSIT_COLOR} / 0.4)`,
-                      }}
-                      className="flex-1 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-all border-2 hover:brightness-110">↗ Transit</button>
+                  <div className="mb-1">
+                    <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-center py-0.5 rounded bg-muted/50 text-foreground">
+                      {octaveRange === 1 ? 'Single octave arpeggios' : `${octaveRange} octave arpeggios`}
+                    </div>
                   </div>
                   <div className="grid grid-cols-4 gap-1">
                     {pagedEntries.map((entry, i) => {
