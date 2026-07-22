@@ -607,9 +607,9 @@ function ScalesPanel({
   useEffect(() => {
     const s = slots[activeIdx];
     if (s) onApplyScale(s.root, s.scale, s.mode);
-    onApplyPrimaryColor?.(SLOT_COLORS[activeIdx]);
+    onApplyPrimaryColor?.(slots[activeIdx]?.customColor || SLOT_COLORS[activeIdx]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeIdx]);
+  }, [activeIdx, slots[activeIdx]?.customColor]);
 
   // Mirror linked slot into secondary scale + color
   useEffect(() => {
@@ -619,7 +619,7 @@ function ScalesPanel({
       const s = slots[linkedIdx];
       if (s) {
         onApplySecondaryScale?.(s);
-        onApplySecondaryColor?.(SLOT_COLORS[linkedIdx]);
+        onApplySecondaryColor?.(s.customColor || SLOT_COLORS[linkedIdx]);
       } else {
         onApplySecondaryScale?.(null);
       }
