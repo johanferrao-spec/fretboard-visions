@@ -464,11 +464,16 @@ function CompactScaleSlot({
                     />
                   );
                 }
+                const directActive = cat.scales?.includes(slot.scale) ?? false;
                 return (
                   <button
                     key={cat.label}
                     onClick={() => { if (cat.scales) handleSelectScale(cat.scales[0]); }}
-                    className="w-full text-left px-2 py-1.5 rounded text-[9px] font-mono uppercase tracking-wider transition-all bg-muted text-foreground/80 hover:bg-muted/80 whitespace-nowrap"
+                    className={`w-full text-left px-2 py-1.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-all whitespace-nowrap ${
+                      directActive
+                        ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)] font-bold'
+                        : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted'
+                    }`}
                   >
                     {cat.label}
                   </button>
