@@ -3319,7 +3319,7 @@ function getChordTypeDescription(suffix: string): string {
   return descriptions[suffix] || '';
 }
 
-function MiniChordVoicingDiagram({ voicing, root, showDegrees = false, formula }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean; formula?: number[] }) {
+function MiniChordVoicingDiagram({ voicing, root, showDegrees = false, formula, fit }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean; formula?: number[]; fit?: boolean }) {
   const positiveFrets = voicing.frets.filter(f => f > 0);
   const maxFret = positiveFrets.length > 0 ? Math.max(...positiveFrets) : 1;
   const numFrets = 5;
