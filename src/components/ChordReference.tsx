@@ -4010,8 +4010,8 @@ function MiniArpDiagram({ position, root, large, fit }: { position: ArpeggioPosi
   }
 
   return (
-    <div className="flex justify-center">
-      <svg width={w} height={h + 6} className="shrink-0">
+    <div className={`flex items-center justify-center ${fit ? 'w-full h-full' : 'justify-center'}`}>
+      <svg width={w} height={h + 6} viewBox={`0 0 ${w} ${h + 6}`} className={fit ? 'w-full h-full' : 'shrink-0'} preserveAspectRatio="xMidYMid meet">
         {Array.from({ length: numFrets + 1 }, (_, i) => (
           <line key={i} x1={stringSpacing} y1={5 + i * fretSpacing} x2={stringSpacing * 6} y2={5 + i * fretSpacing} stroke="hsl(var(--fretboard-fret))" strokeWidth={0.5} strokeOpacity={0.55} />
         ))}
