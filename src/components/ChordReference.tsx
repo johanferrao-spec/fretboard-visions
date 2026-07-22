@@ -258,6 +258,67 @@ function EmptyScaleSlot({
   );
 }
 
+function ModesHoverDropdown({
+  label,
+  scales,
+  currentScale,
+  onSelect,
+}: {
+  label: string;
+  scales: string[];
+  currentScale: string;
+  onSelect: (s: string) => void;
+}) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ left: number; top: number; width: number } | null>(null);
+  const closeTimer = useRef<number | null>(null);
+
+  const show = () => {
+    if (closeTimer.current) { window.clearTimeout(closeTimer.current); closeTimer.current = null; }
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) setPos({ left: r.left, top: r.bottom, width: r.width });
+    setOpen(true);
+  };
+  const scheduleClose = () => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setOpen(false), 180);
+  };
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onMouseEnter={show}
+        onMouseLeave={scheduleClose}
+        onClick={show}
+        className="w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all bg-accent/20 text-foreground/80 hover:bg-accent/35"
+      >
+        {label} ▾
+      </button>
+      {open && pos && createPortal(
+        <div
+          onMouseEnter={show}
+          onMouseLeave={scheduleClose}
+          style={{ position: 'fixed', left: pos.left, top: pos.top, minWidth: pos.width, zIndex: 9999 }}
+          className="mt-0.5 w-max max-w-[240px] bg-popover border border-border rounded-md shadow-xl py-0.5"
+        >
+          {scales.map(s => (
+            <button
+              key={s}
+              onClick={() => { onSelect(s); setOpen(false); }}
+              className={`block w-full text-left px-2 py-1 text-[10px] font-mono transition-colors ${
+                currentScale === s ? 'bg-primary/20 text-primary font-bold' : 'text-foreground/80 hover:bg-muted'
+              }`}
+            >{s}</button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
 function CompactScaleSlot({
   slot,
   index,
