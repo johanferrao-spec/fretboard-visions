@@ -2041,6 +2041,8 @@ function ChordBuilder({
   isTypeAvailable, draggable = true, unavailableTitle = 'No voicings available',
   isExtensionAllowed,
   isExtensionHidden,
+  showTitle = false,
+  titleSuffix,
 }: {
   selectedRoot: NoteName;
   selectedChord: string | null;
@@ -2052,6 +2054,8 @@ function ChordBuilder({
   unavailableTitle?: string;
   isExtensionAllowed?: (ext: string, currentExts: Set<string>) => boolean;
   isExtensionHidden?: (ext: string, currentExts: Set<string>) => boolean;
+  showTitle?: boolean;
+  titleSuffix?: string;
 }) {
 
   const initial = useMemo(() => reverseChordType(selectedChord), []);
@@ -2102,6 +2106,13 @@ function ChordBuilder({
 
   return (
     <div className="flex flex-col gap-1.5 h-full">
+      {showTitle && (
+        <div className="bg-secondary/30 border border-border/30 rounded px-2 py-1">
+          <div className="text-[11px] font-mono font-bold text-foreground truncate">
+            {resolved ? `${selectedRoot} ${getChordCellLabel(resolved)}${titleSuffix ? ` ${titleSuffix}` : ''}` : '—'}
+          </div>
+        </div>
+      )}
       {/* Quality */}
       <div>
         <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 font-bold">Quality</div>
@@ -2614,6 +2625,7 @@ function ChordLibraryPanel({
             handleRenameChord={handleRenameChord}
             isTypeAvailable={libraryTypeAvailable}
             draggable
+            showTitle
           />
 
         </div>
@@ -2673,6 +2685,29 @@ function ChordLibraryPanel({
                       title="Move shape up 12 frets"
                     >+12</button>
                   )}
+                  {mergedEntries.length > 1 && (() => {
+                    const currentIdx = mergedEntries.findIndex(en => en.kind === 'curated' && activeChord?.voicingSource === voicingTab && en.origIdx === activeChord?.voicingIndex);
+                    const stepTo = (idx: number) => {
+                      const wrapped = ((idx % mergedEntries.length) + mergedEntries.length) % mergedEntries.length;
+                      const target = mergedEntries[wrapped];
+                      setVoicingPage(Math.floor(wrapped / VOICINGS_PER_PAGE));
+                      if (target.kind === 'curated' && selectedChord) {
+                        setActiveChord({ root: selectedRoot, chordType: selectedChord, voicingIndex: target.origIdx, voicingSource: voicingTab });
+                        onSetArpeggioPosition?.(null);
+                      } else if (target.kind === 'custom') {
+                        handleSelectCustomVoicing(target.voicing);
+                      }
+                    };
+                    const base = currentIdx >= 0 ? currentIdx : 0;
+                    return (
+                      <>
+                        <button onClick={() => stepTo(base - 1)}
+                          className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-secondary text-secondary-foreground hover:bg-muted transition-colors">◀ Prev</button>
+                        <button onClick={() => stepTo(base + 1)}
+                          className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-secondary text-secondary-foreground hover:bg-muted transition-colors">Next ▶</button>
+                      </>
+                    );
+                  })()}
                   {mergedTotalPages > 1 && (
                     <>
                       <button onClick={() => setVoicingPage(Math.max(0, voicingPage - 1))} disabled={voicingPage === 0}
@@ -3931,10 +3966,12 @@ function ArpeggioPositionsPanel({
               selectedRoot={selectedRoot}
               selectedChord={selectedArp}
               handleSelectChord={handleBuilderSelectArp}
-              getChordCellLabel={(ct) => `${ct} arpeggio`}
+              getChordCellLabel={(ct) => `${ct}`}
               isTypeAvailable={isArpTypeAvailable}
               draggable={false}
               unavailableTitle="No arpeggio positions available"
+              showTitle
+              titleSuffix="arpeggio"
             />
           </div>
         </div>
