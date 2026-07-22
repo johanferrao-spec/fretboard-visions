@@ -269,6 +269,7 @@ export interface ArpeggioPosition {
   // Legacy compat — derived from notes
   frets: (number | -1)[];
   root?: NoteName;
+  chordType?: string;
   showPath?: boolean;
   barreFrom?: number;
   barreTo?: number;
@@ -2090,9 +2091,9 @@ export const DEGREE_LEGEND: { label: string; color: string; position: number }[]
 // Map any interval name to its scale position (1-7)
 export const INTERVAL_TO_POSITION: Record<string, number> = {
   'R': 1, '♭2': 2, '2': 2, '♭3': 3, '3': 3,
-  '4': 4, '♭5': 5, '5': 5, '♭6': 6, '6': 6,
-  '♭7': 7, '7': 7, '9': 2, '♭9': 2, '11': 4,
-  '♭13': 6, '13': 6,
+  '4': 4, '♭5': 5, '♯5': 5, '5': 5, '♭6': 6, '6': 6,
+  '♭7': 7, '7': 7, '9': 2, '♭9': 2, '♯9': 2, '11': 4,
+  '♯11': 4, '♭13': 6, '13': 6,
 };
 
 // ============================================================
