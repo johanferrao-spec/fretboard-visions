@@ -1184,6 +1184,13 @@ export default function ChordReference({
           chordOctaveShift={chordOctaveShift}
           setChordOctaveShift={setChordOctaveShift}
         />
+      ) : activeTab === 'tuning' ? (
+        <TuningPanel
+          tuningName={tuningName}
+          onSetTuning={onSetTuning}
+          customTunings={customTunings}
+          setCustomTunings={setCustomTunings}
+        />
       ) : null}
     </div>
   );
