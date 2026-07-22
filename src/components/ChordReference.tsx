@@ -298,7 +298,7 @@ function ModesHoverDropdown({
         onMouseEnter={show}
         onMouseLeave={scheduleClose}
         onClick={show}
-        className="w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all bg-accent/20 text-foreground/80 hover:bg-accent/35"
+        className={`w-full text-left px-2 py-1.5 rounded text-[9px] font-mono uppercase tracking-wider transition-all whitespace-nowrap ${bgClass}`}
       >
         {label} ▾
       </button>
