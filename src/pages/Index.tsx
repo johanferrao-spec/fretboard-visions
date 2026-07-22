@@ -44,7 +44,7 @@ const Index = () => {
   const [selectedSinkId, setSelectedSinkId] = useState<string>('default');
   const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
   const [keyMode, setKeyMode] = useState<KeyMode>(() => scaleToKeyMode(fb.primaryScale.scale));
-  const [activeTab, setActiveTab] = useState<'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | null>(null);
+  const [activeTab, setActiveTab] = useState<'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tuning' | null>(null);
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
   const [dropMode, setDropMode] = useState<'drop2' | 'drop3' | null>(null);
@@ -432,28 +432,7 @@ const Index = () => {
               {fb.displayMode === 'notes' ? '♪ Notes' : fb.displayMode === 'degrees' ? '° Degrees' : '✋ Fingers'}
             </button>
 
-            {/* Tuning dropdown */}
-            <div className="relative">
-              <select
-                value={fb.tuningName}
-                onChange={e => {
-                  const name = e.target.value;
-                  if (name === '__custom__') {
-                    setShowCustomTuning(true);
-                    return;
-                  }
-                  const allTunings = [...TUNING_PRESETS, ...fb.customTunings];
-                  const preset = allTunings.find(t => t.name === name);
-                  if (preset) fb.setTuning(preset);
-                }}
-                className="text-secondary-foreground text-[10px] font-mono uppercase tracking-wider rounded-md px-2 py-1 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
-              >
-                {[...TUNING_PRESETS, ...fb.customTunings].map(t => (
-                  <option key={t.name} value={t.name}>{t.name}</option>
-                ))}
-                <option value="__custom__">+ Custom...</option>
-              </select>
-            </div>
+            {/* Tuning tab moved to ChordReference */}
 
             {/* Marker size slider */}
             <div className="flex items-center gap-1">
@@ -698,6 +677,10 @@ const Index = () => {
                 onChordAddStateChange={(root, hasNotes) => { setChordAddRoot(root); setChordAddHasNotes(hasNotes); }}
                 chordOctaveShift={chordOctaveShift}
                 setChordOctaveShift={setChordOctaveShift}
+                tuningName={fb.tuningName}
+                onSetTuning={fb.setTuning}
+                customTunings={fb.customTunings}
+                setCustomTunings={fb.setCustomTunings}
             />
           </div>
         </main>
