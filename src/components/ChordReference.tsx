@@ -263,13 +263,13 @@ function ModesHoverDropdown({
   scales,
   currentScale,
   onSelect,
-  accent = false,
+  color,
 }: {
   label: string;
   scales: string[];
   currentScale: string;
   onSelect: (s: string) => void;
-  accent?: boolean;
+  color: string;
 }) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -298,9 +298,6 @@ function ModesHoverDropdown({
   };
 
   const active = scales.includes(currentScale);
-  const bgClass = active
-    ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)] font-bold'
-    : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted';
 
   return (
     <>
@@ -309,7 +306,20 @@ function ModesHoverDropdown({
         onMouseEnter={show}
         onMouseLeave={handleBtnLeave}
         onClick={show}
-        className={`w-full text-left px-2 py-1.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-all whitespace-nowrap ${bgClass}`}
+        className="w-full text-left px-2 py-1.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-all whitespace-nowrap"
+        style={active
+          ? {
+              backgroundColor: color,
+              color: '#fff',
+              borderColor: color,
+              boxShadow: `0 0 6px ${color}66`,
+              fontWeight: 700,
+            }
+          : {
+              backgroundColor: 'hsl(var(--muted) / 0.6)',
+              color: 'hsl(var(--foreground) / 0.8)',
+              borderColor: 'hsl(var(--border) / 0.3)',
+            }}
       >
         {label} ▾
       </button>
@@ -325,8 +335,9 @@ function ModesHoverDropdown({
               key={s}
               onClick={() => { onSelect(s); setOpen(false); }}
               className={`block w-full text-left px-2 py-1 text-[10px] font-mono transition-colors ${
-                currentScale === s ? 'bg-primary/20 text-primary font-bold' : 'text-foreground/80 hover:bg-muted'
+                currentScale === s ? 'font-bold' : 'text-foreground/80 hover:bg-muted'
               }`}
+              style={currentScale === s ? { backgroundColor: `${color}33`, color } : undefined}
             >{s}</button>
           ))}
         </div>,
