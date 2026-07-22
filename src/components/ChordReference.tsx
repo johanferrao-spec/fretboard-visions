@@ -471,7 +471,7 @@ function CompactScaleSlot({
                       scales={cat.scales}
                       currentScale={slot.scale}
                       onSelect={handleSelectScale}
-                      accent={!!cat.isModesGroup}
+                      color={color}
                     />
                   );
                 }
