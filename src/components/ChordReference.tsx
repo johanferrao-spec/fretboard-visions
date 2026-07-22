@@ -2116,7 +2116,7 @@ function ChordBuilder({
                 onClick={() => toggleExt(e)}
                 disabled={disabled && !active}
                 title={notAvailable ? unavailableTitle : ''}
-                className={`px-1 py-1 rounded border text-[10px] font-mono transition-all ${
+                className={`px-0.5 py-0.5 rounded border text-[9px] font-mono transition-all ${
                   active
                     ? 'bg-accent text-accent-foreground border-accent font-bold shadow-[0_0_4px_hsl(var(--accent)/0.4)]'
                     : disabled
