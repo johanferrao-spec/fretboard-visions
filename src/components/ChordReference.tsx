@@ -2872,24 +2872,33 @@ function IdentifyPanel({
         Click notes on the fretboard to identify a chord. Drag across a fret for barre chords.
       </div>
       {/* Manual fret input */}
-      <div className="flex gap-1 mb-2">
-        {frets.map((f, i) => (
-          <div key={i} className="flex flex-col items-center gap-0.5">
-            <span className="text-[8px] font-mono text-muted-foreground">{tuningLabels[i]}</span>
-            <input
-              type="text"
-              value={f === -1 ? 'X' : f.toString()}
-              onChange={(e) => {
-                const val = e.target.value.trim();
-                const newFrets = [...frets];
-                if (val === '' || val.toLowerCase() === 'x') newFrets[i] = -1;
-                else if (!isNaN(Number(val))) newFrets[i] = Math.max(0, Math.min(24, Number(val)));
-                setFrets(newFrets);
-              }}
-              className="w-7 h-6 text-center text-[10px] font-mono rounded border border-border bg-muted text-foreground"
-            />
-          </div>
-        ))}
+      <div className="flex items-end gap-2 mb-2">
+        <div className="flex gap-1">
+          {frets.map((f, i) => (
+            <div key={i} className="flex flex-col items-center gap-0.5">
+              <span className="text-[8px] font-mono text-muted-foreground">{tuningLabels[i]}</span>
+              <input
+                type="text"
+                value={f === -1 ? 'X' : f.toString()}
+                onChange={(e) => {
+                  const val = e.target.value.trim();
+                  const newFrets = [...frets];
+                  if (val === '' || val.toLowerCase() === 'x') newFrets[i] = -1;
+                  else if (!isNaN(Number(val))) newFrets[i] = Math.max(0, Math.min(24, Number(val)));
+                  setFrets(newFrets);
+                }}
+                className="w-7 h-6 text-center text-[10px] font-mono rounded border border-border bg-muted text-foreground"
+              />
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={handleCopyTab}
+          className="h-6 px-2 text-[8px] font-mono rounded border border-border bg-muted text-foreground hover:bg-muted/80 transition-colors"
+          title="Copy tab"
+        >
+          {copiedTab ? 'Copied!' : 'Copy Tab'}
+        </button>
       </div>
       {/* Results as individual chord cells — 3 per row */}
       {allChords.length > 0 ? (
