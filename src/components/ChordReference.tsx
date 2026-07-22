@@ -634,7 +634,10 @@ function ScalesPanel({
 
   const activateSlot = (idx: number) => {
     if (slots[idx] == null) return;
-    if (linkedIdx === idx) setLinkedIdx(null); // can't have same slot active & linked
+    // If clicking the currently linked slot, swap active <-> linked to preserve the link
+    if (linkedIdx === idx) {
+      setLinkedIdx(activeIdx);
+    }
     setActiveIdx(idx);
     const s = slots[idx];
     if (s) onApplyScale(s.root, s.scale, s.mode);
