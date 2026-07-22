@@ -1953,6 +1953,7 @@ function ChordBuilder({
   selectedRoot, selectedChord, handleSelectChord, getChordCellLabel, handleRenameChord,
   isTypeAvailable, draggable = true, headerLabel = 'Chord', unavailableTitle = 'No voicings available',
   isExtensionAllowed,
+  isExtensionHidden,
 }: {
   selectedRoot: NoteName;
   selectedChord: string | null;
@@ -1964,6 +1965,7 @@ function ChordBuilder({
   headerLabel?: string;
   unavailableTitle?: string;
   isExtensionAllowed?: (ext: string, currentExts: Set<string>) => boolean;
+  isExtensionHidden?: (ext: string, currentExts: Set<string>) => boolean;
 }) {
 
   const initial = useMemo(() => reverseChordType(selectedChord), []);
