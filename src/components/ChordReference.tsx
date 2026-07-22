@@ -396,36 +396,28 @@ function CompactScaleSlot({
               {SCALE_CATEGORIES.map(cat => {
                 const isDirect = cat.label === 'Major' || cat.label === 'Minor';
                 const isModes = !!cat.isModesGroup;
+                if (isModes && cat.scales) {
+                  return (
+                    <ModesHoverDropdown
+                      key={cat.label}
+                      label={cat.label}
+                      scales={cat.scales}
+                      currentScale={slot.scale}
+                      onSelect={handleSelectScale}
+                    />
+                  );
+                }
                 return (
-                  <div key={cat.label} className="relative group">
-                    <button
-                      onClick={() => {
-                        if (isDirect && cat.scales) {
-                          handleSelectScale(cat.scales[0]);
-                        } else if (!isModes) {
-                          setOpenCategory(cat.label);
-                        }
-                      }}
-                      className="w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all bg-muted text-foreground/80 hover:bg-muted/80"
-                    >
-                      {cat.label} {!isDirect && (isModes ? '▾' : '→')}
-                    </button>
-                    {isModes && cat.scales && (
-                      <div className="absolute left-0 top-full mt-0.5 z-50 hidden group-hover:block min-w-full w-max max-w-[220px] bg-popover border border-border rounded-md shadow-lg py-0.5">
-                        {cat.scales.map(s => (
-                          <button
-                            key={s}
-                            onClick={() => handleSelectScale(s)}
-                            className={`block w-full text-left px-2 py-1 text-[10px] font-mono transition-colors ${
-                              slot.scale === s
-                                ? 'bg-primary/20 text-primary font-bold'
-                                : 'text-foreground/80 hover:bg-muted'
-                            }`}
-                          >{s}</button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <button
+                    key={cat.label}
+                    onClick={() => {
+                      if (isDirect && cat.scales) handleSelectScale(cat.scales[0]);
+                      else setOpenCategory(cat.label);
+                    }}
+                    className="w-full text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all bg-muted text-foreground/80 hover:bg-muted/80"
+                  >
+                    {cat.label} {!isDirect && '→'}
+                  </button>
                 );
               })}
             </div>
