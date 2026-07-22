@@ -4,6 +4,7 @@ import {
   noteAtFret, isNoteInSelection, getIntervalName, getExtendedIntervalName, getDiatonicChord,
   NoteName, NOTE_NAMES, STANDARD_TUNING, DEGREE_COLORS, DEGREE_LEGEND, INTERVAL_TO_POSITION,
   getVoicingsForChord, getArpeggioSequence, getDiatonicArpeggioType, getMidiNote, findNotePositions,
+  CHORD_FORMULAS, buildFormulaPcMap,
   type ChordVoicing, type ArpeggioPosition,
 } from '@/lib/music';
 import type { ScaleSelection, ChordSelection, DisplayMode, Orientation } from '@/hooks/useFretboard';
@@ -324,6 +325,19 @@ export default function Fretboard({
     const degColor = DEGREE_COLORS[interval];
     if (degColor) return `hsl(${degColor})`;
     return null;
+  }
+
+  function getFormulaDegreeStyle(root: NoteName, chordType: string, note: NoteName): { color: string | null; accidental: '' | '♯' | '♭' } {
+    const formula = CHORD_FORMULAS[chordType];
+    if (!formula) return { color: getDegreeColor(root, note), accidental: '' };
+    const pcMap = buildFormulaPcMap(formula);
+    const rootPc = NOTE_NAMES.indexOf(root);
+    const notePc = NOTE_NAMES.indexOf(note);
+    const info = pcMap.get((notePc - rootPc + 12) % 12);
+    if (!info) return { color: getDegreeColor(root, note), accidental: '' };
+    const position = INTERVAL_TO_POSITION[info.label];
+    if (position !== undefined && disabledDegrees.has(String(position))) return { color: null, accidental: '' };
+    return { color: `hsl(${info.color})`, accidental: info.accidental };
   }
 
   // Check if a note's degree is hidden (completely removed from fretboard)
@@ -675,11 +689,14 @@ export default function Fretboard({
     if (activeChord) {
       if (!chordNoteSet.has(`${stringIndex}-${fret}`)) return null;
       let bg = pColor;
+      let accidental: '' | '♯' | '♭' = '';
       if (degreeColors) {
-        const dc = getDegreeColor(activeChord.root, note);
+        const degreeStyle = getFormulaDegreeStyle(activeChord.root, activeChord.chordType, note);
+        const dc = degreeStyle.color;
         if (dc) bg = dc;
+        accidental = degreeStyle.accidental;
       }
-      return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false };
+      return { backgroundColor: bg, opacity: 1, ring: false, ringColor: '', greyed: false, accidental };
     }
 
     if (suppressScaleNotes) return null;
@@ -968,7 +985,17 @@ export default function Fretboard({
 
   const getChordLabel = (note: NoteName, fret: number, stringIndex: number): string => {
     if (identifyMode && identifyRoot && displayMode === 'degrees') return getIntervalName(identifyRoot, note);
-    if (activeChord && displayMode !== 'notes') return getExtendedIntervalName(activeChord.root, note);
+    if (activeChord && displayMode !== 'notes') {
+      const formula = CHORD_FORMULAS[activeChord.chordType];
+      if (formula) {
+        const pcMap = buildFormulaPcMap(formula);
+        const rootPc = NOTE_NAMES.indexOf(activeChord.root);
+        const notePc = NOTE_NAMES.indexOf(note);
+        const info = pcMap.get((notePc - rootPc + 12) % 12);
+        if (info) return info.label;
+      }
+      return getExtendedIntervalName(activeChord.root, note);
+    }
     if (displayMode === 'degrees') {
       const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
       return getIntervalName(activeRoot, note);
@@ -1592,7 +1619,7 @@ export default function Fretboard({
                             }}
                           >
                             <div
-                              className={`rounded-full flex items-center justify-center font-mono font-bold shadow-md ${
+                              className={`relative rounded-full flex items-center justify-center font-mono font-bold shadow-md ${
                                 style.ring ? 'ring-2' : ''
                               } ${identifyMode && (identifyFrets[stringIdx] === fret || (identifyBarre && fret === identifyBarre.fret && stringIdx >= identifyBarre.from && stringIdx <= identifyBarre.to)) ? 'ring-2 ring-primary' : ''}`}
                               style={{
@@ -1613,6 +1640,20 @@ export default function Fretboard({
                               }}
                             >
                               {label}
+                              {(style as { accidental?: '' | '♯' | '♭' }).accidental && (
+                                <span
+                                  className="absolute font-mono font-black leading-none pointer-events-none"
+                                  style={{
+                                    right: -Math.max(3, noteMarkerSize * 0.16),
+                                    top: -Math.max(3, noteMarkerSize * 0.16),
+                                    fontSize: Math.max(7, noteMarkerSize * 0.34),
+                                    color: 'hsl(var(--foreground))',
+                                    textShadow: '0 1px 2px hsl(var(--background) / 0.9)',
+                                  }}
+                                >
+                                  {(style as { accidental?: '' | '♯' | '♭' }).accidental}
+                                </span>
+                              )}
                             </div>
                           </button>
                         )}
