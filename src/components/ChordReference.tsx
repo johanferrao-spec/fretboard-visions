@@ -2107,8 +2107,14 @@ function ChordBuilder({
   return (
     <div className="flex flex-col gap-1.5 h-full">
       {showTitle && (
-        <div className="bg-secondary/30 border border-border/30 rounded px-2 py-1">
-          <div className="text-[11px] font-mono font-bold text-foreground truncate">
+        <div
+          className="bg-secondary/30 border rounded px-2 py-1"
+          style={{ borderColor: 'hsl(var(--beginner-yellow))' }}
+        >
+          <div
+            className="text-[11px] font-mono font-bold truncate"
+            style={{ color: 'hsl(var(--beginner-yellow))' }}
+          >
             {resolved ? `${selectedRoot} ${getChordCellLabel(resolved)}${titleSuffix ? ` ${titleSuffix}` : ''}` : '—'}
           </div>
         </div>
@@ -2170,7 +2176,7 @@ function ChordBuilder({
                 onClick={() => toggleExt(e)}
                 disabled={disabled && !active}
                 title={notAvailable ? unavailableTitle : ''}
-                className={`px-0.5 py-0.5 rounded border text-[9px] font-mono transition-all ${
+                className={`px-1 py-1 rounded border text-[10px] font-mono transition-all ${
                   active
                     ? 'bg-accent text-accent-foreground border-accent font-bold shadow-[0_0_4px_hsl(var(--accent)/0.4)]'
                     : disabled
