@@ -929,7 +929,6 @@ export default function ChordReference({
           { key: 'identify' as MainTab, label: "What's This?" },
           { key: 'changes' as MainTab, label: 'Progression Analyser' },
           { key: 'backing' as MainTab, label: '🎹 Backing Track' },
-          { key: 'tabvis' as MainTab, label: 'Tab Visualiser' },
         ]).map(tab => (
           <button
             key={tab.key}
@@ -1073,16 +1072,6 @@ export default function ChordReference({
           onChordAddStateChange={onChordAddStateChange}
           chordOctaveShift={chordOctaveShift}
           setChordOctaveShift={setChordOctaveShift}
-        />
-      ) : activeTab === 'tabvis' ? (
-        <TabVisualiser
-          tuning={tuning}
-          tuningLabels={tuningLabels}
-          onTabNotes={onTabNotes}
-          tabData={tabVisData}
-          setTabData={setTabVisData}
-          playheadPos={tabVisPlayhead}
-          setPlayheadPos={setTabVisPlayhead}
         />
       ) : null}
     </div>
