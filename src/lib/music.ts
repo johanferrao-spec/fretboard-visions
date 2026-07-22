@@ -269,6 +269,7 @@ export interface ArpeggioPosition {
   // Legacy compat — derived from notes
   frets: (number | -1)[];
   root?: NoteName;
+  chordType?: string;
   showPath?: boolean;
   barreFrom?: number;
   barreTo?: number;
@@ -2041,14 +2042,14 @@ const FORMULA_SEMI_TO_DEGREE: Record<number, FormulaDegreeInfo> = {
   0:  { label: 'R',   color: DEGREE_COLORS['R'], accidental: '' },
   1:  { label: '♭2',  color: DEGREE_COLORS['2'], accidental: '♭' },
   2:  { label: '2',   color: DEGREE_COLORS['2'], accidental: '' },
-  3:  { label: '♭3',  color: DEGREE_COLORS['3'], accidental: '♭' },
+  3:  { label: '♭3',  color: DEGREE_COLORS['3'], accidental: '' },
   4:  { label: '3',   color: DEGREE_COLORS['3'], accidental: '' },
   5:  { label: '4',   color: DEGREE_COLORS['4'], accidental: '' },
   6:  { label: '♭5',  color: DEGREE_COLORS['5'], accidental: '♭' },
   7:  { label: '5',   color: DEGREE_COLORS['5'], accidental: '' },
-  8:  { label: '♭6',  color: DEGREE_COLORS['6'], accidental: '♭' },
+  8:  { label: '♯5',  color: DEGREE_COLORS['5'], accidental: '♯' },
   9:  { label: '6',   color: DEGREE_COLORS['6'], accidental: '' },
-  10: { label: '♭7',  color: DEGREE_COLORS['7'], accidental: '♭' },
+  10: { label: '♭7',  color: DEGREE_COLORS['7'], accidental: '' },
   11: { label: '7',   color: DEGREE_COLORS['7'], accidental: '' },
   13: { label: '♭9',  color: DEGREE_COLORS['2'], accidental: '♭' },
   14: { label: '9',   color: DEGREE_COLORS['2'], accidental: '' },
@@ -2090,9 +2091,9 @@ export const DEGREE_LEGEND: { label: string; color: string; position: number }[]
 // Map any interval name to its scale position (1-7)
 export const INTERVAL_TO_POSITION: Record<string, number> = {
   'R': 1, '♭2': 2, '2': 2, '♭3': 3, '3': 3,
-  '4': 4, '♭5': 5, '5': 5, '♭6': 6, '6': 6,
-  '♭7': 7, '7': 7, '9': 2, '♭9': 2, '11': 4,
-  '♭13': 6, '13': 6,
+  '4': 4, '♭5': 5, '♯5': 5, '5': 5, '♭6': 6, '6': 6,
+  '♭7': 7, '7': 7, '9': 2, '♭9': 2, '♯9': 2, '11': 4,
+  '♯11': 4, '♭13': 6, '13': 6,
 };
 
 // ============================================================

@@ -2285,7 +2285,7 @@ function ChordLibraryPanel({
   const mergedTotalPages = Math.ceil(mergedEntries.length / VOICINGS_PER_PAGE);
   const mergedPagedEntries = mergedEntries.slice(voicingPage * VOICINGS_PER_PAGE, (voicingPage + 1) * VOICINGS_PER_PAGE);
 
-  const buildStaticVoicingPosition = useCallback((frets: (number | -1)[], label: string, barre: { from: number; to: number; fret: number } | null) => {
+  const buildStaticVoicingPosition = useCallback((frets: (number | -1)[], label: string, barre: { from: number; to: number; fret: number } | null, chordType?: string) => {
     // Fill in barre for intermediate strings
     const effectiveFrets = [...frets];
     if (barre) {
@@ -2304,9 +2304,11 @@ function ChordLibraryPanel({
       type: 'static' as const,
       showPath: false,
       frets: [...frets] as (number | -1)[],
+      root: selectedRoot,
+      ...(chordType ? { chordType } : {}),
       ...(barre ? { barreFrom: barre.from, barreTo: barre.to, barreFret: barre.fret } : {}),
     };
-  }, []);
+  }, [selectedRoot]);
 
   // Register click handler for add mode
   useEffect(() => {
@@ -2367,7 +2369,7 @@ function ChordLibraryPanel({
     if (chordAddMode) {
       const hasNotes = addingFrets.some(f => f >= 0);
       onChordAddStateChange?.(selectedRoot, hasNotes);
-      const preview = buildStaticVoicingPosition(addingFrets, 'Adding...', addingBarre);
+      const preview = buildStaticVoicingPosition(addingFrets, 'Adding...', addingBarre, selectedChord ?? undefined);
       if (preview) {
         onSetArpeggioPosition?.(preview);
       } else {
@@ -2457,6 +2459,7 @@ function ChordLibraryPanel({
       voicing.barreFrom != null && voicing.barreTo != null && voicing.barreFret != null
         ? { from: voicing.barreFrom, to: voicing.barreTo, fret: voicing.barreFret }
         : null,
+      selectedChord ?? undefined,
     );
     if (position) {
       onSetArpeggioPosition?.(position);
@@ -2495,6 +2498,7 @@ function ChordLibraryPanel({
       firstCustom.barreFrom != null && firstCustom.barreTo != null && firstCustom.barreFret != null
         ? { from: firstCustom.barreFrom, to: firstCustom.barreTo, fret: firstCustom.barreFret }
         : null,
+      selectedChord ?? undefined,
     );
     if (position) onSetArpeggioPosition?.(position);
   }, [selectedRoot, selectedChord, voicingTab, chordAddMode, filteredCuratedMap, customDisplayEntries, buildStaticVoicingPosition, onSetArpeggioPosition, setActiveChord]);
