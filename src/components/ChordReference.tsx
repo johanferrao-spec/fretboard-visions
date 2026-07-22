@@ -1,8 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BeginnerModePanel from './BeginnerMode';
-import TabVisualiser from './TabVisualiser';
-import type { TabNote } from './TabVisualiser';
+
 
 import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
@@ -88,11 +87,6 @@ interface ChordReferenceProps {
   setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
-  onTabNotes?: (current: TabNote[], upcoming: TabNote[][]) => void;
-  tabVisData: import('./TabVisualiser').TabData | null;
-  setTabVisData: (d: import('./TabVisualiser').TabData | null) => void;
-  tabVisPlayhead: number;
-  setTabVisPlayhead: (p: number | ((prev: number) => number)) => void;
   setShowFretBox?: (v: boolean) => void;
   setFretBoxStart?: (v: number) => void;
   setFretBoxSize?: (v: number) => void;
@@ -103,7 +97,7 @@ interface ChordReferenceProps {
 }
 
 type VoicingTab = 'full' | 'shell';
-type MainTab = 'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tabvis' | null;
+type MainTab = 'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | null;
 type OctaveRange = 1 | 2 | 3;
 
 const DEFAULT_ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
@@ -782,8 +776,7 @@ export default function ChordReference({
   dropMode, setDropMode,
   threeNpsMode, setThreeNpsMode,
   voiceLeadingMode, setVoiceLeadingMode, voiceLeadingMelody, setVoiceLeadingMelody,
-  onApplyBeginnerPreset, onApplyOpenChord, onTabNotes,
-  tabVisData, setTabVisData, tabVisPlayhead, setTabVisPlayhead,
+  onApplyBeginnerPreset, onApplyOpenChord,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
   onChordAddStateChange,
   chordOctaveShift, setChordOctaveShift,
