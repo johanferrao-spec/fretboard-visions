@@ -366,7 +366,7 @@ function CompactScaleSlot({
 }) {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [hoveredScale, setHoveredScale] = useState<string | null>(null);
-  const color = SLOT_COLORS[index];
+  const color = slot.customColor || SLOT_COLORS[index];
 
   const handleSelectScale = (scaleName: string) => {
     onChange({ ...slot, mode: 'scale', scale: scaleName });
