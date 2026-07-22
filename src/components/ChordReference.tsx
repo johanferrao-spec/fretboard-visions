@@ -3943,7 +3943,7 @@ function ArpeggioPositionsPanel({
                             onDragStart={(e) => handleDragStartCat(e, entry.catKey)}
                             onClick={() => handleSelectPosition(filteredEntries.indexOf(entry))}
                             onDoubleClick={(e) => { e.stopPropagation(); handleStartEditing(globalIdx); }}
-                            className={`w-full rounded p-1 transition-all border flex flex-col items-center justify-center ${
+                            className={`w-full aspect-square rounded p-0.5 transition-all border flex flex-col items-center justify-between overflow-hidden ${
                               isActive ? 'shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'hover:bg-muted/50'
                             }`}
                             style={{
@@ -3953,8 +3953,10 @@ function ArpeggioPositionsPanel({
                                 : (posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.2)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.2)` : undefined),
                             }}
                           >
-                            <MiniArpDiagram position={entry.pos} root={selectedRoot} large />
-                            <div className="flex items-center justify-center gap-0.5">
+                            <div className="flex-1 min-h-0 w-full flex items-center justify-center">
+                              <MiniArpDiagram position={entry.pos} root={selectedRoot} large fit />
+                            </div>
+                            <div className="flex shrink-0 items-center justify-center gap-0.5">
                               {isRenaming ? (
                                 <input autoFocus value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
                                   onBlur={() => handleRenameSubmit(globalIdx)}
