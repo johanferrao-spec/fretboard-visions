@@ -1951,7 +1951,7 @@ function computeNextExts(prev: Set<ChordExtension>, e: ChordExtension): Set<Chor
 
 function ChordBuilder({
   selectedRoot, selectedChord, handleSelectChord, getChordCellLabel, handleRenameChord,
-  isTypeAvailable, draggable = true, headerLabel = 'Chord', unavailableTitle = 'No voicings available',
+  isTypeAvailable, draggable = true, unavailableTitle = 'No voicings available',
   isExtensionAllowed,
   isExtensionHidden,
 }: {
@@ -1962,7 +1962,6 @@ function ChordBuilder({
   handleRenameChord?: (ct: string) => void;
   isTypeAvailable?: (chordType: string) => boolean;
   draggable?: boolean;
-  headerLabel?: string;
   unavailableTitle?: string;
   isExtensionAllowed?: (ext: string, currentExts: Set<string>) => boolean;
   isExtensionHidden?: (ext: string, currentExts: Set<string>) => boolean;
