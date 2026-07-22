@@ -2685,6 +2685,29 @@ function ChordLibraryPanel({
                       title="Move shape up 12 frets"
                     >+12</button>
                   )}
+                  {mergedEntries.length > 1 && (() => {
+                    const currentIdx = mergedEntries.findIndex(en => en.kind === 'curated' && activeChord?.voicingSource === voicingTab && en.origIdx === activeChord?.voicingIndex);
+                    const stepTo = (idx: number) => {
+                      const wrapped = ((idx % mergedEntries.length) + mergedEntries.length) % mergedEntries.length;
+                      const target = mergedEntries[wrapped];
+                      setVoicingPage(Math.floor(wrapped / VOICINGS_PER_PAGE));
+                      if (target.kind === 'curated' && selectedChord) {
+                        setActiveChord({ root: selectedRoot, chordType: selectedChord, voicingIndex: target.origIdx, voicingSource: voicingTab });
+                        onSetArpeggioPosition?.(null);
+                      } else if (target.kind === 'custom') {
+                        handleSelectCustomVoicing(target.voicing);
+                      }
+                    };
+                    const base = currentIdx >= 0 ? currentIdx : 0;
+                    return (
+                      <>
+                        <button onClick={() => stepTo(base - 1)}
+                          className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-secondary text-secondary-foreground hover:bg-muted transition-colors">◀ Prev</button>
+                        <button onClick={() => stepTo(base + 1)}
+                          className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-secondary text-secondary-foreground hover:bg-muted transition-colors">Next ▶</button>
+                      </>
+                    );
+                  })()}
                   {mergedTotalPages > 1 && (
                     <>
                       <button onClick={() => setVoicingPage(Math.max(0, voicingPage - 1))} disabled={voicingPage === 0}
