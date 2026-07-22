@@ -2031,6 +2031,52 @@ export const DEGREE_COLORS: Record<string, string> = {
   '13': '175 75% 50%',   // turquoise
 };
 
+// Formula-aware degree labelling.
+// A chord voicing colours each note by its NATURAL scale-degree family
+// (2/9, 3, 4/11, 5, 6/13, 7) and marks altered tones with an accidental.
+// Example: in a 7#9 chord, the 15-semitone tone is a #9 → grey (2 family) + ♯.
+export interface FormulaDegreeInfo { label: string; color: string; accidental: '' | '♯' | '♭' }
+
+const FORMULA_SEMI_TO_DEGREE: Record<number, FormulaDegreeInfo> = {
+  0:  { label: 'R',   color: DEGREE_COLORS['R'], accidental: '' },
+  1:  { label: '♭2',  color: DEGREE_COLORS['2'], accidental: '♭' },
+  2:  { label: '2',   color: DEGREE_COLORS['2'], accidental: '' },
+  3:  { label: '♭3',  color: DEGREE_COLORS['3'], accidental: '♭' },
+  4:  { label: '3',   color: DEGREE_COLORS['3'], accidental: '' },
+  5:  { label: '4',   color: DEGREE_COLORS['4'], accidental: '' },
+  6:  { label: '♭5',  color: DEGREE_COLORS['5'], accidental: '♭' },
+  7:  { label: '5',   color: DEGREE_COLORS['5'], accidental: '' },
+  8:  { label: '♭6',  color: DEGREE_COLORS['6'], accidental: '♭' },
+  9:  { label: '6',   color: DEGREE_COLORS['6'], accidental: '' },
+  10: { label: '♭7',  color: DEGREE_COLORS['7'], accidental: '♭' },
+  11: { label: '7',   color: DEGREE_COLORS['7'], accidental: '' },
+  13: { label: '♭9',  color: DEGREE_COLORS['2'], accidental: '♭' },
+  14: { label: '9',   color: DEGREE_COLORS['2'], accidental: '' },
+  15: { label: '♯9',  color: DEGREE_COLORS['2'], accidental: '♯' },
+  17: { label: '11',  color: DEGREE_COLORS['4'], accidental: '' },
+  18: { label: '♯11', color: DEGREE_COLORS['4'], accidental: '♯' },
+  20: { label: '♭13', color: DEGREE_COLORS['6'], accidental: '♭' },
+  21: { label: '13',  color: DEGREE_COLORS['6'], accidental: '' },
+};
+
+export function formulaSemitoneToDegree(s: number): FormulaDegreeInfo {
+  return FORMULA_SEMI_TO_DEGREE[s] ?? { label: '?', color: DEGREE_COLORS['R'], accidental: '' };
+}
+
+/** Build a pitch-class → degree info map from a chord formula (semitones from root). */
+export function buildFormulaPcMap(formula: number[]): Map<number, FormulaDegreeInfo> {
+  const m = new Map<number, FormulaDegreeInfo>();
+  for (const s of formula) {
+    const info = formulaSemitoneToDegree(s);
+    const pc = ((s % 12) + 12) % 12;
+    // Prefer the entry whose raw semitone matches this pc — extensions (s>=12) win
+    // over any natural equivalent already stored only when the formula itself lists
+    // both, which effectively never happens. First-write wins keeps things stable.
+    if (!m.has(pc)) m.set(pc, info);
+  }
+  return m;
+}
+
 export const DEGREE_LEGEND: { label: string; color: string; position: number }[] = [
   { label: 'R',   color: DEGREE_COLORS['R'], position: 1 },
   { label: '2',   color: DEGREE_COLORS['2'], position: 2 },
