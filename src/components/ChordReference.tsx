@@ -408,7 +408,7 @@ function CompactScaleSlot({
       {/* Root selector + Scale/Arp toggle on the same line */}
       <div className="px-2 pb-1 flex items-end gap-1.5">
         <div className="flex-1 min-w-0">
-          <ScaleRootSelector selectedRoot={slot.root} onSelect={(n) => onChange({ ...slot, root: n })} />
+          <ScaleRootSelector selectedRoot={slot.root} onSelect={(n, display) => onChange({ ...slot, root: n, rootDisplay: display })} />
         </div>
         <div className="flex flex-col gap-0.5 shrink-0">
           <button
