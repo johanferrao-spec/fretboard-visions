@@ -3887,6 +3887,9 @@ function ArpeggioPositionsPanel({
           </div>
         </div>
 
+        {/* Middle spacer — matches chord library Type column so the cells line up */}
+        <div className="min-w-0" />
+
         {/* Right column: arpeggio positions window — top aligned with controls/Next button */}
         <div className="min-w-0">
           {selectedArp ? (
