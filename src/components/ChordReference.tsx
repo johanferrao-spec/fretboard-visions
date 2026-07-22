@@ -4192,3 +4192,136 @@ function CAGEDPanel({
     </div>
   );
 }
+
+// ============================================================
+// ALTERNATE TUNING PANEL
+// ============================================================
+function TuningPanel({
+  tuningName,
+  onSetTuning,
+  customTunings,
+  setCustomTunings,
+}: {
+  tuningName: string;
+  onSetTuning: (preset: TuningPreset) => void;
+  customTunings: TuningPreset[];
+  setCustomTunings: (t: TuningPreset[]) => void;
+}) {
+  const [customName, setCustomName] = useState('');
+  const [customNotes, setCustomNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
+  const [showCustom, setShowCustom] = useState(false);
+
+  const all = [...TUNING_PRESETS, ...customTunings];
+
+  const saveCustom = () => {
+    const name = customName.trim();
+    if (!name) return;
+    const labels = customNotes.map((n, i) => (i === 5 ? NOTE_NAMES[n].toLowerCase() : NOTE_NAMES[n]));
+    const preset: TuningPreset = { name, notes: [...customNotes], labels };
+    setCustomTunings([...customTunings, preset]);
+    onSetTuning(preset);
+    setCustomName('');
+    setShowCustom(false);
+  };
+
+  const removeCustom = (name: string) => {
+    setCustomTunings(customTunings.filter(t => t.name !== name));
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2">
+          Presets
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {all.map(preset => {
+            const isActive = preset.name === tuningName;
+            const isCustom = customTunings.some(c => c.name === preset.name);
+            return (
+              <button
+                key={preset.name}
+                onClick={() => onSetTuning(preset)}
+                className={`relative group rounded-lg p-2 text-left transition-all border-2 ${
+                  isActive
+                    ? 'bg-primary/20 border-primary text-foreground'
+                    : 'bg-secondary/40 border-border/40 text-secondary-foreground hover:border-primary/60'
+                }`}
+              >
+                <div className="text-[11px] font-mono font-bold mb-1 truncate">{preset.name}</div>
+                <div className="flex gap-0.5 text-[9px] font-mono text-muted-foreground">
+                  {preset.labels.map((l, i) => (
+                    <span key={i} className="px-1 py-0.5 rounded bg-background/60">{l}</span>
+                  ))}
+                </div>
+                {isCustom && (
+                  <span
+                    onClick={(e) => { e.stopPropagation(); removeCustom(preset.name); }}
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove custom tuning"
+                  >×</span>
+                )}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setShowCustom(v => !v)}
+            className={`rounded-lg p-2 text-[11px] font-mono border-2 border-dashed transition-all ${
+              showCustom
+                ? 'bg-primary/10 border-primary text-primary'
+                : 'bg-secondary/20 border-border/50 text-muted-foreground hover:border-primary/60 hover:text-foreground'
+            }`}
+          >
+            + Custom
+          </button>
+        </div>
+      </div>
+
+      {showCustom && (
+        <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-2">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+            New Custom Tuning
+          </div>
+          <input
+            type="text"
+            placeholder="Tuning name"
+            value={customName}
+            onChange={e => setCustomName(e.target.value)}
+            className="w-full bg-muted text-foreground text-sm rounded-md px-2 py-1.5 border border-border font-mono"
+          />
+          <div className="grid grid-cols-6 gap-1">
+            {['6th', '5th', '4th', '3rd', '2nd', '1st'].map((label, i) => (
+              <div key={i} className="text-center">
+                <div className="text-[9px] font-mono text-muted-foreground mb-0.5">{label}</div>
+                <select
+                  value={customNotes[i]}
+                  onChange={e => {
+                    const next = [...customNotes];
+                    next[i] = Number(e.target.value);
+                    setCustomNotes(next);
+                  }}
+                  className="w-full bg-muted text-foreground text-[10px] rounded border border-border font-mono px-0.5 py-1"
+                >
+                  {NOTE_NAMES.map((n, ni) => (
+                    <option key={n} value={ni}>{n}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={saveCustom}
+              disabled={!customName.trim()}
+              className="flex-1 px-3 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >Save & Apply</button>
+            <button
+              onClick={() => { setShowCustom(false); setCustomName(''); }}
+              className="px-3 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+            >Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
