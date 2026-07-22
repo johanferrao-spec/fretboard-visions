@@ -2057,34 +2057,6 @@ function ChordBuilder({
 
   return (
     <div className="flex flex-col gap-1.5 h-full">
-      {/* Resolved chord display */}
-      <div className="flex items-center justify-between bg-secondary/30 rounded px-2 py-1 border border-border/40">
-        <div className="flex items-baseline gap-1 min-w-0">
-          <button
-            draggable={draggable && !!resolved && resolvedAvailable}
-            onDragStart={(e) => {
-              if (!draggable || !resolved || !resolvedAvailable) return;
-              e.dataTransfer.setData('application/chord', JSON.stringify({ root: selectedRoot, chordType: resolved }));
-              e.dataTransfer.effectAllowed = 'copy';
-            }}
-            onDoubleClick={() => resolved && handleRenameChord?.(resolved)}
-            className={`text-sm font-mono font-bold truncate ${
-              resolvedAvailable
-                ? (draggable ? 'text-primary cursor-grab active:cursor-grabbing' : 'text-primary')
-                : 'text-destructive'
-            }`}
-            title={
-              resolvedAvailable
-                ? (draggable ? 'Drag to timeline · double-click to rename' : (handleRenameChord ? 'Double-click to rename' : ''))
-                : unavailableTitle
-            }
-          >{selectedRoot}{label === 'Major' ? '' : ` ${label}`}</button>
-        </div>
-        {!resolvedAvailable && (
-          <span className="text-[8px] font-mono text-destructive">unavailable</span>
-        )}
-      </div>
-
       {/* Quality */}
       <div>
         <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 font-bold">Quality</div>
