@@ -3876,14 +3876,13 @@ function ArpeggioPositionsPanel({
               selectedRoot={selectedRoot}
               selectedChord={selectedArp}
               handleSelectChord={handleBuilderSelectArp}
-              getChordCellLabel={(ct) => ct}
+              getChordCellLabel={(ct) => `${ct} arpeggio`}
               isTypeAvailable={isArpTypeAvailable}
               isExtensionHidden={(ext) => {
                 // Arpeggio positions only support 7, 9, ♭9 and #9 extensions.
                 return ['11', '#11', '♭13', '13'].includes(ext);
               }}
               draggable={false}
-              headerLabel="Arp"
               unavailableTitle="No arpeggio positions available"
             />
           </div>
