@@ -1575,9 +1575,8 @@ export default function Fretboard({
                               } else if (identifyMode) {
                                 // Simple toggle like chord library — barre is preserved by useEffect
                                 applyIdentifySelection(stringIdx, fret, 'toggle');
-                              } else {
-                                onNoteClick(note);
                               }
+                              // Normal fretboard note clicks removed; notes are display-only
                             }}
                             onMouseDown={(e) => {
                               if (arpAddMode && onArpAddClick && fret > 0) {
