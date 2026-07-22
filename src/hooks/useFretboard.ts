@@ -10,6 +10,7 @@ export interface ScaleSelection {
   root: NoteName;
   scale: string;
   customColor?: string;
+  rootDisplay?: string;
 }
 
 export interface ChordSelection {

@@ -408,7 +408,7 @@ function CompactScaleSlot({
       {/* Root selector + Scale/Arp toggle on the same line */}
       <div className="px-2 pb-1 flex items-end gap-1.5">
         <div className="flex-1 min-w-0">
-          <ScaleRootSelector selectedRoot={slot.root} onSelect={(n) => onChange({ ...slot, root: n })} />
+          <ScaleRootSelector selectedRoot={slot.root} onSelect={(n, display) => onChange({ ...slot, root: n, rootDisplay: display })} />
         </div>
         <div className="flex flex-col gap-0.5 shrink-0">
           <button
@@ -428,7 +428,7 @@ function CompactScaleSlot({
 
       {/* Current selection display */}
       <div className="mx-2 mb-1 text-[10px] font-mono font-bold rounded px-2 py-1 border truncate" style={{ color: 'hsl(270, 80%, 65%)', backgroundColor: 'hsl(270, 80%, 65%, 0.1)', borderColor: 'hsl(270, 80%, 65%, 0.4)', boxShadow: '0 0 8px hsl(270, 80%, 65%, 0.3)' }}>
-        ♪ {slot.root} {slot.mode === 'arpeggio' ? `${slot.scale} (Arp)` : slot.scale}
+        ♪ {slot.rootDisplay || slot.root} {slot.mode === 'arpeggio' ? `${slot.scale} (Arp)` : slot.scale}
       </div>
 
       {/* Category grid — 2 columns, fills available space, no scroll */}
@@ -634,7 +634,10 @@ function ScalesPanel({
 
   const activateSlot = (idx: number) => {
     if (slots[idx] == null) return;
-    if (linkedIdx === idx) setLinkedIdx(null); // can't have same slot active & linked
+    // If clicking the currently linked slot, swap active <-> linked to preserve the link
+    if (linkedIdx === idx) {
+      setLinkedIdx(activeIdx);
+    }
     setActiveIdx(idx);
     const s = slots[idx];
     if (s) onApplyScale(s.root, s.scale, s.mode);
