@@ -1951,7 +1951,7 @@ function computeNextExts(prev: Set<ChordExtension>, e: ChordExtension): Set<Chor
 
 function ChordBuilder({
   selectedRoot, selectedChord, handleSelectChord, getChordCellLabel, handleRenameChord,
-  isTypeAvailable, draggable = true, headerLabel = 'Chord', unavailableTitle = 'No voicings available',
+  isTypeAvailable, draggable = true, unavailableTitle = 'No voicings available',
   isExtensionAllowed,
   isExtensionHidden,
 }: {
@@ -1962,7 +1962,6 @@ function ChordBuilder({
   handleRenameChord?: (ct: string) => void;
   isTypeAvailable?: (chordType: string) => boolean;
   draggable?: boolean;
-  headerLabel?: string;
   unavailableTitle?: string;
   isExtensionAllowed?: (ext: string, currentExts: Set<string>) => boolean;
   isExtensionHidden?: (ext: string, currentExts: Set<string>) => boolean;
@@ -2019,9 +2018,6 @@ function ChordBuilder({
       {/* Resolved chord display */}
       <div className="flex items-center justify-between bg-secondary/30 rounded px-2 py-1 border border-border/40">
         <div className="flex items-baseline gap-1 min-w-0">
-          {headerLabel && (
-            <span className="text-[9px] font-mono uppercase text-muted-foreground shrink-0">{headerLabel}</span>
-          )}
           <button
             draggable={draggable && !!resolved && resolvedAvailable}
             onDragStart={(e) => {
