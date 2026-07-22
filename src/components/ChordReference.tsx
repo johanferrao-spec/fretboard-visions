@@ -446,8 +446,9 @@ function CompactScaleSlot({
               unavailableTitle="No arpeggio available"
             />
           </div>
-
+        ) : (
           openCategory === null ? (
+
             <div className="grid grid-cols-2 gap-1">
               {SCALE_CATEGORIES.map(cat => {
                 const isDirect = cat.label === 'Major' || cat.label === 'Minor';
