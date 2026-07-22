@@ -45,8 +45,8 @@ export function useFretboard() {
   const [showFretBox, setShowFretBox] = useState(false);
   const [fretBoxStart, setFretBoxStart] = useState(1);
   const [fretBoxSize, setFretBoxSize] = useState(5);
-  const [fretBoxStringStart, setFretBoxStringStart] = useState(1); // 0-based row index in stringOrder
-  const [fretBoxStringSize, setFretBoxStringSize] = useState(4); // number of strings visible
+  const [fretBoxStringStart, setFretBoxStringStart] = useState(0); // 0-based row index in stringOrder
+  const [fretBoxStringSize, setFretBoxStringSize] = useState(6); // number of strings visible
   const [noteMarkerSize, setNoteMarkerSize] = useState(20);
   const [degreeColors, setDegreeColors] = useState(false);
   const [disabledDegrees, setDisabledDegrees] = useState<Set<string>>(new Set());
