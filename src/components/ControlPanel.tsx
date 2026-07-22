@@ -127,22 +127,21 @@ export default function ControlPanel({
 }
 
 export function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: NoteName; onSelect: (n: NoteName, display?: string) => void }) {
-  const [baseNote, setBaseNote] = useState<NoteName>(() => {
-    if (NATURAL_NOTES.includes(selectedRoot)) return selectedRoot;
+  const initial = (() => {
+    if (NATURAL_NOTES.includes(selectedRoot)) return { base: selectedRoot, acc: 'natural' as const };
     const idx = NOTE_NAMES.indexOf(selectedRoot);
-    const flatBase = NOTE_NAMES[(idx + 1) % 12];
-    if (NATURAL_NOTES.includes(flatBase as NoteName)) return flatBase as NoteName;
-    return 'E';
-  });
-  const [accidental, setAccidental] = useState<'natural' | 'sharp' | 'flat'>(() => {
-    if (NATURAL_NOTES.includes(selectedRoot)) return 'natural';
-    const idx = NOTE_NAMES.indexOf(selectedRoot);
-    for (const n of NATURAL_NOTES) {
-      const ni = NOTE_NAMES.indexOf(n);
-      if ((ni + 1) % 12 === idx) return 'sharp';
+    const flatBase = NOTE_NAMES[(idx + 1) % 12] as NoteName;   // spell as ♭ of note above
+    const sharpBase = NOTE_NAMES[(idx + 11) % 12] as NoteName; // spell as ♯ of note below
+    if (NATURAL_NOTES.includes(flatBase) && flatBase !== 'F' && flatBase !== 'C') {
+      return { base: flatBase, acc: 'flat' as const };
     }
-    return 'flat';
-  });
+    if (NATURAL_NOTES.includes(sharpBase) && sharpBase !== 'E' && sharpBase !== 'B') {
+      return { base: sharpBase, acc: 'sharp' as const };
+    }
+    return { base: 'E' as NoteName, acc: 'natural' as const };
+  })();
+  const [baseNote, setBaseNote] = useState<NoteName>(initial.base);
+  const [accidental, setAccidental] = useState<'natural' | 'sharp' | 'flat'>(initial.acc);
 
   const resolveNote = (base: NoteName, acc: 'natural' | 'sharp' | 'flat'): NoteName => {
     const idx = NOTE_NAMES.indexOf(base);
@@ -155,6 +154,12 @@ export function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: No
     if (acc === 'natural') return base;
     return `${base}${acc === 'sharp' ? '♯' : '♭'}`;
   };
+
+  // Emit initial display once so parent always has a proper spelling (e.g. "E♭" for D#).
+  useEffect(() => {
+    onSelect(resolveNote(baseNote, accidental), buildDisplay(baseNote, accidental));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleNoteClick = (n: NoteName) => {
     setBaseNote(n);
@@ -169,6 +174,7 @@ export function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: No
     setAccidental(newAcc);
     onSelect(resolveNote(baseNote, newAcc), buildDisplay(baseNote, newAcc));
   };
+
 
   return (
     <div className="mb-2">
