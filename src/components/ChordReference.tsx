@@ -3936,23 +3936,6 @@ function ArpeggioPositionsPanel({
 
               {filteredEntries.length > 0 ? (
                 <div>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <div className="text-[8px] font-mono text-muted-foreground">{filteredEntries.length} pos</div>
-                    {arpTotalPages > 1 && (
-                      <div className="flex items-center gap-0.5">
-                        <button onClick={() => setArpPage(Math.max(0, arpPage - 1))} disabled={arpPage === 0}
-                          className="px-1 py-0.5 rounded text-[9px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">◀</button>
-                        <span className="text-[7px] font-mono text-muted-foreground">{arpPage + 1}/{arpTotalPages}</span>
-                        <button onClick={() => setArpPage(Math.min(arpTotalPages - 1, arpPage + 1))} disabled={arpPage >= arpTotalPages - 1}
-                          className="px-1 py-0.5 rounded text-[9px] font-mono bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:opacity-30 transition-colors">▶</button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="mb-1">
-                    <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-center py-0.5 rounded bg-muted/50 text-foreground">
-                      {octaveRange === 1 ? 'Single octave arpeggios' : `${octaveRange} octave arpeggios`}
-                    </div>
-                  </div>
                   <div className="grid grid-cols-4 gap-1">
                     {pagedEntries.map((entry, i) => {
                       const globalIdx = positionEntries.indexOf(entry);
