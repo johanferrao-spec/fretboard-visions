@@ -258,6 +258,22 @@ function EmptyScaleSlot({
   );
 }
 
+function isLightColor(color: string): boolean {
+  // Quick luminance estimate from HSL/RGB/hex. Defaults to false on parse failure.
+  const hsl = color.match(/hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)/);
+  if (hsl) return parseFloat(hsl[3]) > 55;
+  const hex = color.match(/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/);
+  if (hex) {
+    let c = hex[1];
+    if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
+    const r = parseInt(c.slice(0, 2), 16);
+    const g = parseInt(c.slice(2, 4), 16);
+    const b = parseInt(c.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
+  }
+  return false;
+}
+
 function ModesHoverDropdown({
   label,
   scales,
@@ -298,6 +314,7 @@ function ModesHoverDropdown({
   };
 
   const active = scales.includes(currentScale);
+  const activeText = isLightColor(color) ? '#0a0a0a' : '#ffffff';
 
   return (
     <>
@@ -310,14 +327,14 @@ function ModesHoverDropdown({
         style={active
           ? {
               backgroundColor: color,
-              color: '#fff',
+              color: activeText,
               borderColor: color,
               boxShadow: `0 0 6px ${color}66`,
               fontWeight: 700,
             }
           : {
               backgroundColor: 'hsl(var(--muted) / 0.6)',
-              color: 'hsl(var(--foreground) / 0.8)',
+              color: 'hsl(var(--foreground))',
               borderColor: 'hsl(var(--border) / 0.3)',
             }}
       >
@@ -335,9 +352,9 @@ function ModesHoverDropdown({
               key={s}
               onClick={() => { onSelect(s); setOpen(false); }}
               className={`block w-full text-left px-2 py-1 text-[10px] font-mono transition-colors ${
-                currentScale === s ? 'font-bold' : 'text-foreground/80 hover:bg-muted'
+                currentScale === s ? 'font-bold' : 'text-foreground hover:bg-muted'
               }`}
-              style={currentScale === s ? { backgroundColor: `${color}33`, color } : undefined}
+              style={currentScale === s ? { backgroundColor: `${color}33`, color } : {}}
             >{s}</button>
           ))}
         </div>,
@@ -476,15 +493,24 @@ function CompactScaleSlot({
                   );
                 }
                 const directActive = cat.scales?.includes(slot.scale) ?? false;
+                const directText = directActive ? (isLightColor(color) ? '#0a0a0a' : '#ffffff') : undefined;
                 return (
                   <button
                     key={cat.label}
                     onClick={() => { if (cat.scales) handleSelectScale(cat.scales[0]); }}
                     className={`w-full text-left px-2 py-1.5 rounded border text-[9px] font-mono uppercase tracking-wider transition-all whitespace-nowrap ${
                       directActive
-                        ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_6px_hsl(var(--primary)/0.4)] font-bold'
-                        : 'bg-muted/60 border-border/30 text-foreground/80 hover:bg-muted'
+                        ? 'font-bold'
+                        : 'bg-muted/60 border-border/30 text-foreground hover:bg-muted'
                     }`}
+                    style={directActive
+                      ? {
+                          backgroundColor: color,
+                          color: directText,
+                          borderColor: color,
+                          boxShadow: `0 0 6px ${color}66`,
+                        }
+                      : undefined}
                   >
                     {cat.label}
                   </button>
