@@ -631,36 +631,46 @@ export default function Fretboard({
         if (!isInPosition) return null;
 
         let bg = pColor;
+        let accidental: '' | '♯' | '♭' = '';
         if (degreeColors) {
-          const arpRoot = (() => {
+          const arpRoot = arpeggioPosition.root ?? (() => {
             if (arpeggioPosition.notes && arpeggioPosition.notes.length > 0) {
               const lowest = arpeggioPosition.notes[0];
               return noteAtFret(lowest.stringIndex, lowest.fret, tuning);
             }
             return primaryScale.root;
           })();
-          const dc = getDegreeColor(arpRoot, note);
+          const degreeStyle = arpeggioPosition.chordType
+            ? getFormulaDegreeStyle(arpRoot, arpeggioPosition.chordType, note)
+            : { color: getDegreeColor(arpRoot, note), accidental: '' as const };
+          const dc = degreeStyle.color;
           if (dc) bg = dc;
+          accidental = degreeStyle.accidental;
         }
 
-        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false, accidental };
       }
 
       if (isInPosition) {
         // Selected position notes always full opacity
         let bg = pColor;
+        let accidental: '' | '♯' | '♭' = '';
         if (degreeColors) {
-          const arpRoot = (() => {
+          const arpRoot = arpeggioPosition.root ?? (() => {
             if (arpeggioPosition.notes && arpeggioPosition.notes.length > 0) {
               const lowest = arpeggioPosition.notes[0];
               return noteAtFret(lowest.stringIndex, lowest.fret, tuning);
             }
             return primaryScale.root;
           })();
-          const dc = getDegreeColor(arpRoot, note);
+          const degreeStyle = arpeggioPosition.chordType
+            ? getFormulaDegreeStyle(arpRoot, arpeggioPosition.chordType, note)
+            : { color: getDegreeColor(arpRoot, note), accidental: '' as const };
+          const dc = degreeStyle.color;
           if (dc) bg = dc;
+          accidental = degreeStyle.accidental;
         }
-        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false };
+        return { backgroundColor: bg, opacity: 1, ring: true, ringColor: 'hsl(var(--primary))', greyed: false, accidental };
       }
       // All other instances of arpeggio chord tones across fretboard
       if (isChordTone && arpOverlayOpacity > 0 && fret > 0) {
