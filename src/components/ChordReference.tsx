@@ -95,10 +95,14 @@ interface ChordReferenceProps {
   chordOctaveShift: number;
   setChordOctaveShift: (v: number) => void;
   setArpAddReferenceNotes?: (notes: { stringIndex: number; fret: number }[]) => void;
+  tuningName: string;
+  onSetTuning: (preset: TuningPreset) => void;
+  customTunings: TuningPreset[];
+  setCustomTunings: (t: TuningPreset[]) => void;
 }
 
 type VoicingTab = 'full' | 'shell';
-type MainTab = 'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | null;
+type MainTab = 'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tuning' | null;
 type OctaveRange = 1 | 2 | 3;
 
 const DEFAULT_ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
