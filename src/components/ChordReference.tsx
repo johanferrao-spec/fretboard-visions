@@ -2724,6 +2724,15 @@ function IdentifyPanel({
   onClearFretboard?: () => void;
 }) {
   const [hoveredChord, setHoveredChord] = useState<string | null>(null);
+  const [copiedTab, setCopiedTab] = useState(false);
+
+  const handleCopyTab = () => {
+    const tab = formatCompactTab(frets as number[]);
+    navigator.clipboard.writeText(tab).then(() => {
+      setCopiedTab(true);
+      setTimeout(() => setCopiedTab(false), 1500);
+    });
+  };
 
   // Get the parent/foundation chord for hover display
   const getParentChordInfo = useCallback((chordName: string) => {
