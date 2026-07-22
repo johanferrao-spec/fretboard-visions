@@ -2505,8 +2505,6 @@ function ChordLibraryPanel({
 
   return (
     <>
-      <RootSelector selectedRoot={selectedRoot} setSelectedRoot={setSelectedRoot} />
-
       {/* Add mode UI */}
       {chordAddMode && (
         <div className="bg-accent/10 border border-accent/30 rounded-lg p-2 mb-2">
@@ -2549,7 +2547,8 @@ function ChordLibraryPanel({
 
       {/* Main layout */}
       <div className="flex gap-1.5" style={{ minHeight: 0 }}>
-        <div className="shrink-0" style={{ width: '48%' }}>
+        <div className="shrink-0 flex flex-col gap-1.5" style={{ width: '48%' }}>
+          <RootSelector selectedRoot={selectedRoot} setSelectedRoot={setSelectedRoot} />
           <ChordBuilder
             selectedRoot={selectedRoot}
             selectedChord={selectedChord}
