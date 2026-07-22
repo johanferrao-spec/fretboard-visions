@@ -5,7 +5,7 @@ import BeginnerModePanel from './BeginnerMode';
 
 
 import {
-  NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
+  NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING, TUNING_PRESETS,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS, buildFormulaPcMap,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
   isVoicingTonallyValid, isPhysicallyPlayable, getTensionSuggestions, getChordTones,
@@ -16,7 +16,7 @@ import {
   generateVoiceLeadingVoicings,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
   type ArpeggioPosition, type StringGroup, type InversionVoicing,
-  type VoiceLeadingVoicing,
+  type VoiceLeadingVoicing, type TuningPreset,
 } from '@/lib/music';
 import type { ChordSelection, ScaleSelection } from '@/hooks/useFretboard';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
