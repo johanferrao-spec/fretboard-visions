@@ -6,7 +6,7 @@ import type { TabNote } from './TabVisualiser';
 
 import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING,
-  getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS,
+  getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS, buildFormulaPcMap,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
   isVoicingTonallyValid, isPhysicallyPlayable, getTensionSuggestions, getChordTones,
   analyzeProgression, identifyArpeggioFromNotes,
@@ -2648,7 +2648,7 @@ function ChordLibraryPanel({
                             isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
                           }`}
                         >
-                          <MiniChordVoicingDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} />
+                          <MiniChordVoicingDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} formula={selectedChord ? CHORD_FORMULAS[selectedChord] : undefined} />
                           <div className="flex items-center justify-center gap-0.5">
                             <span className="text-[7px] font-mono text-muted-foreground">
                               {formatCompactTab(v.frets)}
@@ -3316,7 +3316,7 @@ function getChordTypeDescription(suffix: string): string {
   return descriptions[suffix] || '';
 }
 
-function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean }) {
+function MiniChordVoicingDiagram({ voicing, root, showDegrees = false, formula }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean; formula?: number[] }) {
   const positiveFrets = voicing.frets.filter(f => f > 0);
   const maxFret = positiveFrets.length > 0 ? Math.max(...positiveFrets) : 1;
   const numFrets = 5;
@@ -3325,6 +3325,8 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
   const h = 110;
   const stringSpacing = w / 7;
   const fretSpacing = h / (numFrets + 1);
+  const pcMap = formula ? buildFormulaPcMap(formula) : null;
+  const rootPc = NOTE_NAMES.indexOf(root);
 
   return (
     <div className="flex justify-center">
@@ -3373,10 +3375,42 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false }: { voici
 
           const y = 5 + (fret - startFret + 0.5) * fretSpacing;
           const note = noteAtFret(i, fret);
-          const interval = showDegrees ? getIntervalName(root, note) : getExtendedIntervalName(root, note);
-          const degColor = DEGREE_COLORS[interval];
-          const fillColor = showDegrees && degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
-          return <circle key={i} cx={x} cy={y} r={5.5} fill={fillColor} />;
+          // Prefer formula-aware colouring so altered tones (e.g. #9 in 7#9) inherit
+          // the natural-degree colour of the interval family they belong to.
+          let fillColor = 'hsl(var(--primary))';
+          let accidental: '' | '♯' | '♭' = '';
+          if (showDegrees && pcMap) {
+            const rel = (NOTE_NAMES.indexOf(note) - rootPc + 12) % 12;
+            const info = pcMap.get(rel);
+            if (info) {
+              fillColor = `hsl(${info.color})`;
+              accidental = info.accidental;
+            } else {
+              const interval = getIntervalName(root, note);
+              const c = DEGREE_COLORS[interval];
+              if (c) fillColor = `hsl(${c})`;
+            }
+          } else {
+            const interval = showDegrees ? getIntervalName(root, note) : getExtendedIntervalName(root, note);
+            const degColor = DEGREE_COLORS[interval];
+            fillColor = showDegrees && degColor ? `hsl(${degColor})` : 'hsl(var(--primary))';
+          }
+          return (
+            <g key={i}>
+              <circle cx={x} cy={y} r={5.5} fill={fillColor} />
+              {accidental && (
+                <text
+                  x={x + 6}
+                  y={y - 4}
+                  fontSize={8}
+                  fontWeight="bold"
+                  fill="hsl(var(--foreground))"
+                  fontFamily="monospace"
+                  textAnchor="start"
+                >{accidental}</text>
+              )}
+            </g>
+          );
         })}
       </svg>
     </div>
