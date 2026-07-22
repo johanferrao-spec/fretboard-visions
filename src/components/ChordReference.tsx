@@ -1039,6 +1039,7 @@ export default function ChordReference({
           { key: 'identify' as MainTab, label: "What's This?" },
           { key: 'changes' as MainTab, label: 'Progression Analyser' },
           { key: 'backing' as MainTab, label: '🎹 Backing Track' },
+          { key: 'tuning' as MainTab, label: '🎸 Alternate Tuning' },
         ]).map(tab => (
           <button
             key={tab.key}
