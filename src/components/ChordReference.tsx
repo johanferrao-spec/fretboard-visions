@@ -2625,6 +2625,7 @@ function ChordLibraryPanel({
             handleRenameChord={handleRenameChord}
             isTypeAvailable={libraryTypeAvailable}
             draggable
+            showTitle
           />
 
         </div>
