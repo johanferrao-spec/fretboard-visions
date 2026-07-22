@@ -3752,87 +3752,89 @@ function ArpeggioPositionsPanel({
 
   return (
     <>
-      {/* Root selector + controls in one horizontal row */}
-      <div className="flex items-center gap-2 mb-1 flex-wrap">
-        <RootSelector selectedRoot={selectedRoot} setSelectedRoot={handleRootChange} />
-        <div className="flex items-center gap-1">
-          <div className="flex items-center gap-0.5 mr-1">
-            <span className="text-[8px] font-mono text-muted-foreground uppercase font-bold">Oct</span>
-            {([1, 2, 3] as OctaveRange[]).map(oct => (
-              <button key={oct} onClick={() => handleOctaveChange(oct)}
-                className={`px-1.5 py-1 rounded text-[9px] font-mono font-bold transition-colors ${
-                  octaveRange === oct ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
-                }`}
-              >{oct}</button>
-            ))}
+      <div className="grid grid-cols-[35%_1fr] gap-1">
+        {/* Left column: controls, mode UIs, builder */}
+        <div className="flex flex-col gap-1 min-w-0">
+          {/* Root selector + controls in one horizontal row */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <RootSelector selectedRoot={selectedRoot} setSelectedRoot={handleRootChange} />
+            <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 mr-1">
+                <span className="text-[8px] font-mono text-muted-foreground uppercase font-bold">Oct</span>
+                {([1, 2, 3] as OctaveRange[]).map(oct => (
+                  <button key={oct} onClick={() => handleOctaveChange(oct)}
+                    className={`px-1.5 py-1 rounded text-[9px] font-mono font-bold transition-colors ${
+                      octaveRange === oct ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
+                    }`}
+                  >{oct}</button>
+                ))}
+              </div>
+              <button onClick={() => handleStartEditing(selectedPosIdx)}
+                disabled={editingTarget !== null || addingMode || positionEntries.length === 0}
+                className="px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors bg-muted text-muted-foreground hover:bg-muted/80 disabled:opacity-30">Edit</button>
+              <button onClick={handleStartAdding}
+                className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${addingMode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Add</button>
+              <button onClick={() => setArpPathVisible(!arpPathVisible)}
+                className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${arpPathVisible ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Path</button>
+              <button onClick={handlePrevPosition} disabled={filteredEntries.length === 0}
+                className="px-2 py-1 rounded text-[9px] font-mono font-bold transition-colors bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30">◀ Prev</button>
+              <button onClick={handleNextPosition} disabled={filteredEntries.length === 0}
+                className="px-2 py-1 rounded text-[9px] font-mono font-bold transition-colors bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30">Next ▶</button>
+            </div>
           </div>
-          <button onClick={() => handleStartEditing(selectedPosIdx)}
-            disabled={editingTarget !== null || addingMode || positionEntries.length === 0}
-            className="px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors bg-muted text-muted-foreground hover:bg-muted/80 disabled:opacity-30">Edit</button>
-          <button onClick={handleStartAdding}
-            className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${addingMode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Add</button>
-          <button onClick={() => setArpPathVisible(!arpPathVisible)}
-            className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider font-bold transition-colors ${arpPathVisible ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>Path</button>
-          <button onClick={handlePrevPosition} disabled={filteredEntries.length === 0}
-            className="px-2 py-1 rounded text-[9px] font-mono font-bold transition-colors bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30">◀ Prev</button>
-          <button onClick={handleNextPosition} disabled={filteredEntries.length === 0}
-            className="px-2 py-1 rounded text-[9px] font-mono font-bold transition-colors bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-30">Next ▶</button>
-        </div>
-      </div>
 
-      {/* Adding mode UI */}
-      {addingMode && (
-        <div className="bg-accent/10 border border-accent/30 rounded p-1.5 mb-1">
-          <div className="text-[9px] font-mono text-foreground font-bold mb-0.5">🎸 Click chord tones to build shape</div>
-          <div className="text-[8px] font-mono text-muted-foreground mb-1">Applies to ALL keys via transposition.</div>
-          {detectedName && <div className="text-[9px] font-mono text-primary mb-1">Detected: <strong>{detectedRoot} {detectedName}</strong></div>}
-          <div className="flex gap-1">
-            <button onClick={handleSaveCustomPosition} disabled={addingNotes.length < 2}
-              className="px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-primary text-primary-foreground disabled:opacity-30 transition-colors">Save</button>
-            <button onClick={handleStartAdding}
-              className="px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground transition-colors">Cancel</button>
+          {/* Adding mode UI */}
+          {addingMode && (
+            <div className="bg-accent/10 border border-accent/30 rounded p-1.5">
+              <div className="text-[9px] font-mono text-foreground font-bold mb-0.5">🎸 Click chord tones to build shape</div>
+              <div className="text-[8px] font-mono text-muted-foreground mb-1">Applies to ALL keys via transposition.</div>
+              {detectedName && <div className="text-[9px] font-mono text-primary mb-1">Detected: <strong>{detectedRoot} {detectedName}</strong></div>}
+              <div className="flex gap-1">
+                <button onClick={handleSaveCustomPosition} disabled={addingNotes.length < 2}
+                  className="px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-primary text-primary-foreground disabled:opacity-30 transition-colors">Save</button>
+                <button onClick={handleStartAdding}
+                  className="px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground transition-colors">Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {/* Editing mode UI */}
+          {editingTarget !== null && (
+            <div className="bg-accent/10 border border-accent/30 rounded p-1.5">
+              <div className="text-[9px] font-mono text-foreground font-bold mb-0.5">✏️ Click to add/remove notes — replaces for ALL keys</div>
+              <div className="flex gap-1">
+                <button onClick={handleSaveEditing} disabled={editingNotes.length < 2}
+                  className="px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-primary text-primary-foreground disabled:opacity-30 transition-colors">Save</button>
+                <button onClick={handleCancelEditing}
+                  className="px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground transition-colors">Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {/* Arpeggio Quality + Extensions builder (shared with chord library) */}
+          <div className="shrink-0">
+            <ChordBuilder
+              selectedRoot={selectedRoot}
+              selectedChord={selectedArp}
+              handleSelectChord={handleBuilderSelectArp}
+              getChordCellLabel={(ct) => ct}
+              isTypeAvailable={isArpTypeAvailable}
+              isExtensionHidden={(ext, current) => {
+                // In arpeggio positions, #9 cannot combine with higher extensions.
+                if (current.has('#9') && (ext === '11' || ext === '#11' || ext === '♭13' || ext === '13')) return true;
+                return false;
+              }}
+              draggable={false}
+              headerLabel="Arp"
+              unavailableTitle="No arpeggio positions available"
+            />
           </div>
         </div>
-      )}
 
-      {/* Editing mode UI */}
-      {editingTarget !== null && (
-        <div className="bg-accent/10 border border-accent/30 rounded p-1.5 mb-1">
-          <div className="text-[9px] font-mono text-foreground font-bold mb-0.5">✏️ Click to add/remove notes — replaces for ALL keys</div>
-          <div className="flex gap-1">
-            <button onClick={handleSaveEditing} disabled={editingNotes.length < 2}
-              className="px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-primary text-primary-foreground disabled:opacity-30 transition-colors">Save</button>
-            <button onClick={handleCancelEditing}
-              className="px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground transition-colors">Cancel</button>
-          </div>
-        </div>
-      )}
-
-      <div className="flex gap-1">
-        {/* Arpeggio Quality + Extensions builder (shared with chord library) */}
-        <div className="shrink-0" style={{ width: '35%' }}>
-          <ChordBuilder
-            selectedRoot={selectedRoot}
-            selectedChord={selectedArp}
-            handleSelectChord={handleBuilderSelectArp}
-            getChordCellLabel={(ct) => ct}
-            isTypeAvailable={isArpTypeAvailable}
-            isExtensionHidden={(ext, current) => {
-              // In arpeggio positions, #9 cannot combine with higher extensions.
-              if (current.has('#9') && (ext === '11' || ext === '#11' || ext === '♭13' || ext === '13')) return true;
-              return false;
-            }}
-            draggable={false}
-            headerLabel="Arp"
-            unavailableTitle="No arpeggio positions available"
-          />
-        </div>
-
-
-
-        <div className="flex-1 min-w-0">
+        {/* Right column: arpeggio positions window — top aligned with controls/Next button */}
+        <div className="min-w-0">
           {selectedArp ? (
-            <div className="bg-secondary/20 rounded p-1">
+            <div className="bg-secondary/20 rounded p-1 h-full">
 
               {filteredEntries.length > 0 ? (
                 <div>
@@ -3925,7 +3927,7 @@ function ArpeggioPositionsPanel({
               )}
             </div>
           ) : (
-            <div className="text-[9px] font-mono text-muted-foreground text-center py-2">Select an arpeggio type.</div>
+            <div className="text-[9px] font-mono text-muted-foreground text-center py-2 h-full">Select an arpeggio type.</div>
           )}
         </div>
       </div>
