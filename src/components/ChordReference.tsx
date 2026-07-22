@@ -2647,12 +2647,14 @@ function ChordLibraryPanel({
                               handleSelectCustomVoicing(v);
                             }
                           }}
-                          className={`w-full rounded p-1 transition-all border flex flex-col items-center justify-center ${
+                          className={`w-full aspect-square rounded p-0.5 transition-all border flex flex-col items-center justify-between overflow-hidden ${
                             isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
                           }`}
                         >
-                          <MiniChordVoicingDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} formula={selectedChord ? CHORD_FORMULAS[selectedChord] : undefined} />
-                          <div className="flex items-center justify-center gap-0.5">
+                          <div className="flex-1 min-h-0 w-full flex items-center justify-center">
+                            <MiniChordVoicingDiagram voicing={v} root={selectedRoot} showDegrees={degreeColors} formula={selectedChord ? CHORD_FORMULAS[selectedChord] : undefined} fit />
+                          </div>
+                          <div className="flex shrink-0 items-center justify-center gap-0.5">
                             <span className="text-[7px] font-mono text-muted-foreground">
                               {formatCompactTab(v.frets)}
                             </span>
@@ -3319,7 +3321,7 @@ function getChordTypeDescription(suffix: string): string {
   return descriptions[suffix] || '';
 }
 
-function MiniChordVoicingDiagram({ voicing, root, showDegrees = false, formula }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean; formula?: number[] }) {
+function MiniChordVoicingDiagram({ voicing, root, showDegrees = false, formula, fit }: { voicing: ChordVoicing; root: NoteName; showDegrees?: boolean; formula?: number[]; fit?: boolean }) {
   const positiveFrets = voicing.frets.filter(f => f > 0);
   const maxFret = positiveFrets.length > 0 ? Math.max(...positiveFrets) : 1;
   const numFrets = 5;
@@ -3332,8 +3334,8 @@ function MiniChordVoicingDiagram({ voicing, root, showDegrees = false, formula }
   const rootPc = NOTE_NAMES.indexOf(root);
 
   return (
-    <div className="flex justify-center">
-      <svg width={w} height={h + 6} className="shrink-0">
+    <div className={`flex items-center justify-center ${fit ? 'w-full h-full' : 'justify-center'}`}>
+      <svg width={w} height={h + 6} viewBox={`0 0 ${w} ${h + 6}`} className={fit ? 'w-full h-full' : 'shrink-0'} preserveAspectRatio="xMidYMid meet">
         {startFret > 1 && (
           <text x={2} y={fretSpacing + 7} fontSize={8} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
         )}
@@ -3941,7 +3943,7 @@ function ArpeggioPositionsPanel({
                             onDragStart={(e) => handleDragStartCat(e, entry.catKey)}
                             onClick={() => handleSelectPosition(filteredEntries.indexOf(entry))}
                             onDoubleClick={(e) => { e.stopPropagation(); handleStartEditing(globalIdx); }}
-                            className={`w-full rounded p-1 transition-all border flex flex-col items-center justify-center ${
+                            className={`w-full aspect-square rounded p-0.5 transition-all border flex flex-col items-center justify-between overflow-hidden ${
                               isActive ? 'shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'hover:bg-muted/50'
                             }`}
                             style={{
@@ -3951,8 +3953,10 @@ function ArpeggioPositionsPanel({
                                 : (posCat === 'static' ? `hsl(${STATIC_COLOR} / 0.2)` : posCat === 'transit' ? `hsl(${TRANSIT_COLOR} / 0.2)` : undefined),
                             }}
                           >
-                            <MiniArpDiagram position={entry.pos} root={selectedRoot} large />
-                            <div className="flex items-center justify-center gap-0.5">
+                            <div className="flex-1 min-h-0 w-full flex items-center justify-center">
+                              <MiniArpDiagram position={entry.pos} root={selectedRoot} large fit />
+                            </div>
+                            <div className="flex shrink-0 items-center justify-center gap-0.5">
                               {isRenaming ? (
                                 <input autoFocus value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
                                   onBlur={() => handleRenameSubmit(globalIdx)}
@@ -3989,7 +3993,7 @@ function ArpeggioPositionsPanel({
   );
 }
 
-function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition; root: NoteName; large?: boolean }) {
+function MiniArpDiagram({ position, root, large, fit }: { position: ArpeggioPosition; root: NoteName; large?: boolean; fit?: boolean }) {
   if (!position.notes || position.notes.length === 0) return null;
   const playedFrets = position.notes.filter(n => n.fret > 0).map(n => n.fret);
   const allFrets = position.notes.map(n => n.fret);
@@ -4010,8 +4014,8 @@ function MiniArpDiagram({ position, root, large }: { position: ArpeggioPosition;
   }
 
   return (
-    <div className="flex justify-center">
-      <svg width={w} height={h + 6} className="shrink-0">
+    <div className={`flex items-center justify-center ${fit ? 'w-full h-full' : 'justify-center'}`}>
+      <svg width={w} height={h + 6} viewBox={`0 0 ${w} ${h + 6}`} className={fit ? 'w-full h-full' : 'shrink-0'} preserveAspectRatio="xMidYMid meet">
         {Array.from({ length: numFrets + 1 }, (_, i) => (
           <line key={i} x1={stringSpacing} y1={5 + i * fretSpacing} x2={stringSpacing * 6} y2={5 + i * fretSpacing} stroke="hsl(var(--fretboard-fret))" strokeWidth={0.5} strokeOpacity={0.55} />
         ))}
