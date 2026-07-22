@@ -3943,10 +3943,12 @@ function ArpeggioPositionsPanel({
               selectedRoot={selectedRoot}
               selectedChord={selectedArp}
               handleSelectChord={handleBuilderSelectArp}
-              getChordCellLabel={(ct) => `${ct} arpeggio`}
+              getChordCellLabel={(ct) => `${ct}`}
               isTypeAvailable={isArpTypeAvailable}
               draggable={false}
               unavailableTitle="No arpeggio positions available"
+              showTitle
+              titleSuffix="arpeggio"
             />
           </div>
         </div>
