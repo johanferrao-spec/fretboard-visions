@@ -434,41 +434,21 @@ function CompactScaleSlot({
       {/* Category grid — 2 columns, fills available space, no scroll */}
       <div className="flex-1 px-2 pb-1 overflow-hidden min-h-0">
         {slot.mode === 'arpeggio' ? (
-          openCategory === null ? (
-            <div className="grid grid-cols-2 gap-1">
-              {ARPEGGIO_CATEGORIES.map(cat => (
-                <button
-                  key={cat.label}
-                  onClick={() => setOpenCategory(cat.label)}
-                  className="text-left px-2 py-1.5 rounded text-[10px] font-mono uppercase tracking-wider transition-all bg-muted text-foreground/80 hover:bg-muted/80"
-                >{cat.label} →</button>
-              ))}
-            </div>
-          ) : (
-            <div className="animate-fade-in">
-              <button
-                onClick={() => setOpenCategory(null)}
-                className="text-[9px] font-mono text-muted-foreground hover:text-foreground mb-1 flex items-center gap-0.5 transition-colors"
-              >← Back</button>
-              <div className="grid grid-cols-2 gap-0.5">
-                {ARPEGGIO_CATEGORIES.find(c => c.label === openCategory)?.types
-                  ?.filter(t => ARPEGGIO_FORMULAS[t])
-                  .map(s => (
-                  <button
-                    key={s}
-                    onClick={() => { onChange({ ...slot, scale: s }); setOpenCategory(null); }}
-                    className={`text-left px-1.5 py-1 rounded text-[10px] font-mono transition-all border ${
-                      slot.scale === s
-                        ? 'bg-primary/20 text-primary border-primary/60 shadow-[0_0_6px_hsl(var(--primary)/0.3)] font-bold'
-                        : 'bg-muted/50 text-foreground/80 hover:bg-muted hover:text-foreground border-transparent'
-                    }`}
-                  >{s}</button>
-                ))}
-              </div>
-            </div>
-          )
+          <div className="h-full">
+            <ChordBuilder
+              selectedRoot={slot.root}
+              selectedChord={slot.scale}
+              handleSelectChord={(ct) => onChange({ ...slot, scale: ct })}
+              getChordCellLabel={(ct) => `${ct} arpeggio`}
+              isTypeAvailable={(ct) => !!ARPEGGIO_FORMULAS[ct]}
+              isExtensionHidden={(ext) => ['11', '#11', '♭13', '13'].includes(ext)}
+              draggable={false}
+              unavailableTitle="No arpeggio available"
+            />
+          </div>
         ) : (
           openCategory === null ? (
+
             <div className="grid grid-cols-2 gap-1">
               {SCALE_CATEGORIES.map(cat => {
                 const isDirect = cat.label === 'Major' || cat.label === 'Minor';
