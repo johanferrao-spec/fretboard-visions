@@ -126,7 +126,7 @@ export default function ControlPanel({
   );
 }
 
-export function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: NoteName; onSelect: (n: NoteName) => void }) {
+export function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: NoteName; onSelect: (n: NoteName, display?: string) => void }) {
   const [baseNote, setBaseNote] = useState<NoteName>(() => {
     if (NATURAL_NOTES.includes(selectedRoot)) return selectedRoot;
     const idx = NOTE_NAMES.indexOf(selectedRoot);
@@ -151,10 +151,15 @@ export function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: No
     return base;
   };
 
+  const buildDisplay = (base: NoteName, acc: 'natural' | 'sharp' | 'flat'): string => {
+    if (acc === 'natural') return base;
+    return `${base}${acc === 'sharp' ? '♯' : '♭'}`;
+  };
+
   const handleNoteClick = (n: NoteName) => {
     setBaseNote(n);
     setAccidental('natural');
-    onSelect(n);
+    onSelect(n, buildDisplay(n, 'natural'));
   };
 
   const handleAccidental = (acc: 'sharp' | 'flat') => {
@@ -162,7 +167,7 @@ export function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: No
     if (acc === 'flat' && (baseNote === 'F' || baseNote === 'C')) return;
     const newAcc = accidental === acc ? 'natural' : acc;
     setAccidental(newAcc);
-    onSelect(resolveNote(baseNote, newAcc));
+    onSelect(resolveNote(baseNote, newAcc), buildDisplay(baseNote, newAcc));
   };
 
   return (
