@@ -154,14 +154,14 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
         next[idx] = { ...current, bars: grown };
         return next;
       } else {
-        // Shrink: reclaim bars as new empty 1-bar slots after.
+        // Shrink: reclaim freed units as a single empty slot after.
         const freed = current.bars - desired;
         const next = prev.slice();
         next[idx] = { ...current, bars: desired };
-        const newSlots = Array.from({ length: freed }, () => ({ id: uid('slot'), bars: 1 }));
-        next.splice(idx + 1, 0, ...newSlots);
+        next.splice(idx + 1, 0, { id: uid('slot'), bars: freed });
         return next;
       }
+
     });
   }, []);
 
