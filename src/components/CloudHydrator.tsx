@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 /** Keys we mirror into cloud for a signed-in user. */
 const CHART_KEY = 'chartsView.state.v1';
 const BACKING_KEY = 'mf-backing-tracks';
+const LIBRARY_KEY = 'mf-charts-library';
+const SETLISTS_KEY = 'mf-setlists';
 
 type Snapshot = {
   user_id: string;
