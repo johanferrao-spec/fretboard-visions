@@ -1030,21 +1030,21 @@ export default function ChordReference({
       {/* Tab switcher */}
       <div className="flex gap-1 mb-2 flex-wrap">
         {([
-          { key: 'beginner' as MainTab, label: '🎓 Beginner' },
-          { key: 'scales' as MainTab, label: '♪ Scales' },
+          { key: 'beginner' as MainTab, label: 'Beginner' },
+          { key: 'scales' as MainTab, label: 'Scales' },
           { key: 'scaleview' as MainTab, label: 'Functional Harmony' },
           { key: 'chords' as MainTab, label: 'Chord Library' },
           { key: 'arpeggios' as MainTab, label: 'Arpeggio Positions' },
           
           { key: 'identify' as MainTab, label: "What's This?" },
           { key: 'changes' as MainTab, label: 'Progression Analyser' },
-          { key: 'backing' as MainTab, label: '🎹 Backing Track' },
-          { key: 'tuning' as MainTab, label: '🎸 Alternate Tuning' },
+          { key: 'backing' as MainTab, label: 'Backing Track' },
+          { key: 'tuning' as MainTab, label: 'Alternate Tuning' },
         ]).map(tab => (
           <button
             key={tab.key}
             onClick={() => handleTabSwitch(tab.key)}
-            className={`px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors flex items-center gap-0.5 ${
+            className={`px-3 py-1.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-colors flex items-center gap-0.5 ${
               activeTab === tab.key ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
             }`}
           >
@@ -1053,9 +1053,9 @@ export default function ChordReference({
         ))}
         <button
           onClick={() => navigate('/courses')}
-          className="px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider transition-colors flex items-center gap-0.5 bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
+          className="px-3 py-1.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-colors flex items-center gap-0.5 bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
         >
-          🎓 Courses
+          Courses
         </button>
         {activeChord && (
           <button
