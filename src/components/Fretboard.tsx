@@ -80,6 +80,8 @@ interface FretboardProps {
   hideToolbar?: boolean;
   /** Optional tint colour (HSL string, e.g. "200, 80%, 60%") for the position-focus box. Defaults to accent. */
   fretBoxTintHsl?: string;
+  /** Optional extra controls appended to the toolbar row after Position focus. */
+  toolbarExtras?: React.ReactNode;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
