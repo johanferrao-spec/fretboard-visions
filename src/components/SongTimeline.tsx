@@ -1039,16 +1039,7 @@ export default function SongTimeline({
             <div
               style={{ width: 200, minWidth: 200 }}
               className="border-r border-border/30 bg-card/40 flex items-start justify-center pt-2"
-            >
-              <button
-                onClick={() => onRegenerateBackingMidi?.()}
-                className="px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider flex items-center gap-1 bg-primary/20 text-primary hover:bg-primary/30 transition-colors border border-primary/30"
-                title="Regenerate backing track MIDI from current chords"
-              >
-                <RefreshCw size={10} />
-                Regenerate MIDI
-              </button>
-            </div>
+            />
           )}
           {cellView ? (
             <CellGridView
