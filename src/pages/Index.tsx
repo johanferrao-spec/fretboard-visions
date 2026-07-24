@@ -943,6 +943,11 @@ const Index = () => {
               currentKey={timelineKey}
               keyMode={keyMode}
               onToggleCharts={() => setShowCharts(v => !v)}
+              onArrangementChange={({ chords, measures, bpm }) => {
+                timeline.setChords(chords);
+                timeline.setMeasures(measures);
+                if (bpm && bpm !== timeline.bpm) timeline.setBpm(bpm);
+              }}
             />
           </div>
         )}
