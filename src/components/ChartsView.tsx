@@ -1329,7 +1329,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: `2px solid hsla(${seg.color}, 0.75)`,
                   background: `hsla(${seg.color}, 0.12)`,
-                  margin: '-8px -6px',
+                  margin: '-8px 0',
                   zIndex: 0,
                 }}
               >
