@@ -1582,26 +1582,20 @@ function ScaleViewPanel({
       {/* Top row: key+mode selector on the left, degree buttons on the right */}
       <div className="flex gap-2">
         {/* Left: key selector + mode dropdown */}
-        <div className="flex flex-col gap-2 shrink-0" style={{ width: 150 }}>
-          <div>
-            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Key</div>
-            <ScaleRootSelector
-              selectedRoot={primaryScale.root}
-              onSelect={(n) => onApplyScale?.(n, primaryScale.scale, 'scale')}
-            />
-          </div>
-          <div>
-            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Mode</div>
-            <select
-              value={currentMode}
-              onChange={(e) => onApplyScale?.(primaryScale.root, e.target.value, 'scale')}
-              className="w-full bg-muted text-foreground text-[11px] font-mono rounded border border-border px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              {STANDARD_MODES.map(m => (
-                <option key={m.scale} value={m.scale}>{m.label}</option>
-              ))}
-            </select>
-          </div>
+        <div className="flex flex-col gap-1 shrink-0" style={{ width: 150 }}>
+          <ScaleRootSelector
+            selectedRoot={primaryScale.root}
+            onSelect={(n) => onApplyScale?.(n, primaryScale.scale, 'scale')}
+          />
+          <select
+            value={currentMode}
+            onChange={(e) => onApplyScale?.(primaryScale.root, e.target.value, 'scale')}
+            className="w-full bg-muted text-foreground text-[11px] font-mono rounded border border-border px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            {STANDARD_MODES.map(m => (
+              <option key={m.scale} value={m.scale}>{m.label}</option>
+            ))}
+          </select>
         </div>
 
         {/* Right: degree buttons - BIG and colourful. In 3-NPS mode they show mode names. */}
