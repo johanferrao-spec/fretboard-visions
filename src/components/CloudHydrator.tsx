@@ -59,10 +59,15 @@ export default function CloudHydrator({ children }: { children: React.ReactNode 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const uid = session?.user?.id ?? null;
       if (event === 'SIGNED_IN' && uid && uid !== currentUserRef.current) {
-        // Re-hydrate and reload so hooks re-read localStorage cleanly.
+        const guardKey = 'cloudHydrator.reloaded.' + uid;
+        const already = sessionStorage.getItem(guardKey);
+        currentUserRef.current = uid;
         (async () => {
           await hydrateFor(uid);
-          window.location.reload();
+          if (!already) {
+            sessionStorage.setItem(guardKey, '1');
+            window.location.reload();
+          }
         })();
       } else if (event === 'SIGNED_OUT') {
         currentUserRef.current = null;
