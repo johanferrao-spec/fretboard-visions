@@ -1778,15 +1778,46 @@ function ScaleViewPanel({
             selectedRoot={primaryScale.root}
             onSelect={(n) => onApplyScale?.(n, primaryScale.scale, 'scale')}
           />
-          <select
-            value={currentMode}
-            onChange={(e) => onApplyScale?.(primaryScale.root, e.target.value, 'scale')}
-            className="w-full bg-muted text-foreground text-[11px] font-mono rounded border border-border px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            {STANDARD_MODES.map(m => (
-              <option key={m.scale} value={m.scale}>{m.label}</option>
-            ))}
-          </select>
+          {(() => {
+            const currentIdx = Math.max(0, STANDARD_MODES.findIndex(m => m.scale === currentMode));
+            const currentColor = SCALE_DEGREE_COLORS[currentIdx];
+            return (
+              <div className="relative group">
+                <button
+                  type="button"
+                  className="w-full text-[11px] font-mono font-bold rounded border px-2 py-1 flex items-center justify-between"
+                  style={{
+                    backgroundColor: `hsl(${currentColor})`,
+                    borderColor: `hsl(${currentColor})`,
+                    color: '#000',
+                  }}
+                >
+                  <span>{STANDARD_MODES[currentIdx].label}</span>
+                  <span className="opacity-60">▾</span>
+                </button>
+                <div className="absolute left-0 right-0 top-full mt-1 z-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity flex flex-col gap-0.5 p-1 rounded border border-border bg-background/95 backdrop-blur shadow-lg">
+                  {STANDARD_MODES.map((m, i) => {
+                    const color = SCALE_DEGREE_COLORS[i];
+                    const isSel = m.scale === currentMode;
+                    return (
+                      <button
+                        key={m.scale}
+                        onClick={() => onApplyScale?.(primaryScale.root, m.scale, 'scale')}
+                        className="w-full text-[11px] font-mono font-bold rounded px-2 py-1 text-left transition-transform hover:scale-[1.02]"
+                        style={{
+                          backgroundColor: `hsl(${color})`,
+                          color: '#000',
+                          outline: isSel ? `2px solid hsl(${color})` : 'none',
+                          outlineOffset: isSel ? 2 : 0,
+                        }}
+                      >{m.label}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
         </div>
 
         {/* Right: degree buttons - BIG and colourful. In 3-NPS mode they show mode names. */}
