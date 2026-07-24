@@ -894,9 +894,14 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
                   )}
 
                   <div
-                    onMouseDown={(e) => startResize(slot.id, slot.bars, e)}
+                    onMouseDown={(e) => startResize(slot.id, slot.bars, 'left', e)}
+                    className="absolute top-0 left-0 h-full w-2 cursor-ew-resize hover:bg-primary/40 transition-colors"
+                    title={`Drag to resize left edge — ${formatDuration(slot.bars)}`}
+                  />
+                  <div
+                    onMouseDown={(e) => startResize(slot.id, slot.bars, 'right', e)}
                     className="absolute top-0 right-0 h-full w-2 cursor-ew-resize hover:bg-primary/40 transition-colors"
-                    title="Drag to resize (1/8 bar steps)"
+                    title={`Drag to resize right edge — ${formatDuration(slot.bars)}`}
                   />
                 </div>
               );
