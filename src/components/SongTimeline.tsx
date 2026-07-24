@@ -57,6 +57,9 @@ interface SongTimelineProps {
   onLoadBackingTrack?: (id: string) => void;
   onDeleteBackingTrack?: (id: string) => void;
   savedBackingTracks?: { id: string; name: string }[];
+  /** Charts panel replaces the DAW when active. */
+  chartsActive?: boolean;
+  onToggleCharts?: () => void;
 }
 
 export default function SongTimeline({
@@ -69,6 +72,7 @@ export default function SongTimeline({
   backingTrackActive, onOpenBackingTrack, onCloseBackingTrack,
   onRegenerateBackingMidi,
   onSaveBackingTrack, onLoadBackingTrack, onDeleteBackingTrack, savedBackingTracks = [],
+  chartsActive, onToggleCharts,
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragChord, setDragChord] = useState<{ id: string; offsetBeats: number } | null>(null);
@@ -1007,16 +1011,16 @@ export default function SongTimeline({
             >
               <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Chords</span>
               <button
-                onClick={() => setCellView(v => !v)}
+                onClick={() => onToggleCharts?.()}
                 className={`ml-auto px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider flex items-center gap-1 transition-colors ${
-                  cellView
+                  chartsActive
                     ? 'bg-primary/30 text-primary hover:bg-primary/40'
                     : 'bg-secondary text-muted-foreground hover:bg-muted'
                 }`}
-                title={cellView ? 'Switch to linear view' : 'Switch to cell view'}
+                title={chartsActive ? 'Close charts and return to DAW' : 'Open charts panel'}
               >
-                {cellView ? <List size={9} /> : <LayoutGrid size={9} />}
-                Switch View
+                <LayoutGrid size={9} />
+                Charts
               </button>
             </div>
           )}

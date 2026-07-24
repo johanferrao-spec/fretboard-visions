@@ -11,6 +11,7 @@ import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import BackingTrackView from '@/components/BackingTrack/BackingTrackView';
+import ChartsView, { type ChartChord } from '@/components/ChartsView';
 import ChromaticTuner from '@/components/ChromaticTuner';
 import InstrumentSamplers from '@/components/BackingTrack/InstrumentSamplers';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
@@ -18,7 +19,7 @@ import { ensureToneAudioContext } from '@/hooks/engine/audioContext';
 import { ChevronUp, Settings } from 'lucide-react';
 import type { NoteName } from '@/lib/music';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
+import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, getChordDegree, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
   const fb = useFretboard();
@@ -35,6 +36,7 @@ const Index = () => {
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
   const [volume, setVolume] = useState(0.7);
   const [samplerHeight, setSamplerHeight] = useState(600);
+  const [showCharts, setShowCharts] = useState(false);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomePulse, setMetronomePulse] = useState(0);
@@ -862,19 +864,23 @@ const Index = () => {
             onLoadBackingTrack={(id) => backingApi?.load(id)}
             onDeleteBackingTrack={(id) => backingApi?.remove(id)}
             savedBackingTracks={backingApi?.saved || []}
+            chartsActive={showCharts}
+            onToggleCharts={() => setShowCharts(v => !v)}
           />
         </div>
 
         {/* Backing Track DAW — always mounted so the engine, sample resolver,
             and current groove drive playback even when the panel is minimised.
-            When inactive we keep it in the tree but visually hidden. */}
+            When inactive we keep it in the tree but visually hidden.
+            When the Charts panel is open it fully replaces the DAW UI, but
+            the engine below stays mounted for playback. */}
         <div
           className={
-            activeTab === 'backing'
+            activeTab === 'backing' && !showCharts
               ? 'flex-1 flex flex-col min-h-0 overflow-hidden'
               : 'hidden'
           }
-          aria-hidden={activeTab !== 'backing'}
+          aria-hidden={activeTab !== 'backing' || showCharts}
         >
           <div className="flex-1 min-h-0 overflow-hidden">
             <BackingTrackView
@@ -927,6 +933,19 @@ const Index = () => {
             </div>
           </div>
         </div>
+
+        {/* Charts panel — replaces the DAW when toggled on from the timeline toolbar. */}
+        {activeTab === 'backing' && showCharts && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ChartsView
+              diatonicChords={getDiatonicChords(timelineKey, keyMode)}
+              getChordColor={(c: ChartChord) => {
+                const deg = getChordDegree(timelineKey, c.root, c.chordType, keyMode);
+                return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <NoteInfoPanel
