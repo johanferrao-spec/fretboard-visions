@@ -1,14 +1,25 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2 } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Music4, Plus } from 'lucide-react';
+import { analyze } from 'web-audio-beat-detector';
 
 import type { NoteName, KeyMode } from '@/lib/music';
 import { getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { ChordBuilder } from '@/components/ChordReference';
 import { ScaleRootSelector } from '@/components/ControlPanel';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
+import { slotsFromBarText, parseMmSs, secondsToBarIndex, type AnalyzedSong } from '@/lib/analyzedSongImport';
+
+const ACCEPTED_AUDIO_MIME = new Set([
+  'audio/wav', 'audio/x-wav', 'audio/wave',
+  'audio/mp3', 'audio/mpeg',
+  'audio/aiff', 'audio/x-aiff',
+  'audio/aac', 'audio/ogg', 'audio/flac', 'audio/x-flac',
+]);
+const MAX_AUDIO_SECONDS = 240;
 
 const STORAGE_KEY = 'chartsView.state.v1';
 
