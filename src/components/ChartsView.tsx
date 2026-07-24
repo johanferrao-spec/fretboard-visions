@@ -1088,16 +1088,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     return lines;
                   })()}
 
-                  className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
-                    sectionMode ? 'cursor-crosshair select-none ' : slot.chord ? 'cursor-pointer ' : ''
-                  }${
-                    color
-                      ? 'brightness-100 hover:brightness-110'
-                      : 'bg-muted/20 border border-dashed border-border/50 hover:border-primary/60 hover:bg-muted/30'
-                  }`}
-                  title={slot.chord
-                    ? `${formatChordLabel(slot.chord)} — click to edit extensions`
-                    : 'Double-click to type a chord, or drop one here'}
+
                 >
                   <span
                     className="absolute top-0.5 left-1 text-[9px] font-mono font-bold pointer-events-none select-none"
