@@ -973,7 +973,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
                   <GripVertical size={10} className="opacity-60" />
                   <span className="text-[11px] font-mono font-bold uppercase tracking-wider">{sec.name}</span>
                   <button
-                    onClick={() => setArrangement(prev => prev.filter(a => a.id !== item.id))}
+                    onClick={() => { snapshot(); setArrangement(prev => prev.filter(a => a.id !== item.id)); }}
                     className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
                     title="Remove"
                   >
