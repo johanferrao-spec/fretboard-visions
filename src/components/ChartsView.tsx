@@ -800,10 +800,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   {
     let cursor = 0;
     for (let r = 0; r < totalLogicalRows; r++) {
-      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('3rem'); cursor += 1; }
+      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('2rem'); cursor += 1; }
       cursor += 1;
       renderRowOfLogical[r] = cursor;
-      rowHeights.push('3rem');
+      rowHeights.push('2.5rem');
     }
   }
   // Precompute section overlay segments (one rounded box per row a section touches).
