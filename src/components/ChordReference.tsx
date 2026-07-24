@@ -1903,7 +1903,7 @@ function ScaleViewPanel({
                       borderColor: isSel ? 'hsl(var(--accent))' : 'hsl(var(--border))',
                     }}
                   >
-                    <NutDiagram active={cfg.strings} disabled={cfg.disabled} />
+                    <NutDiagram active={cfg.strings} disabled={cfg.disabled} splitBass={dropMode === 'drop3'} />
                   </button>
                 );
               })}
