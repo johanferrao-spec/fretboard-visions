@@ -1608,13 +1608,13 @@ function ScaleViewPanel({
               <button
                 key={i}
                 onClick={() => setDegreeFilter(isActive ? null : i)}
-                className="rounded-xl font-bold transition-all flex flex-col items-center justify-center py-3 px-1"
+                className="rounded-xl font-bold transition-all flex flex-col items-center justify-center py-1 px-1"
                 style={{
                   backgroundColor: isActive ? `hsla(${color}, 0.15)` : `hsl(${color})`,
                   border: isActive ? `3px solid hsl(${color})` : `2px solid hsl(${color})`,
                   color: isActive ? `hsl(${color})` : '#000',
                   boxShadow: isActive ? `0 0 14px hsla(${color}, 0.6), inset 0 0 8px hsla(${color}, 0.2)` : 'none',
-                  minHeight: 60,
+                  minHeight: 40,
                 }}
               >
                 <span className="text-[14px] font-black">{chord.roman}</span>
