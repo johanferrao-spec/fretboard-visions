@@ -480,7 +480,13 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
       {/* Body: vertical toolbar + slot grid */}
       <div className="flex-1 overflow-hidden flex min-h-0">
         {/* Vertical toolbar */}
-        <div className="w-28 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-2 overflow-y-auto">
+        <div className="w-36 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-2 overflow-y-auto">
+          {/* Key selector */}
+          <div className="flex flex-col gap-1">
+            <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Key</div>
+            <ScaleRootSelector selectedRoot={chartKey} onSelect={(n) => setChartKey(n)} />
+          </div>
+
           <button
             onClick={() => { setSectionMode(m => !m); setDragSel(null); }}
             className={`h-9 rounded flex items-center justify-center gap-1.5 border transition-colors text-[10px] font-mono uppercase tracking-wider ${
