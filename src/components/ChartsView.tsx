@@ -8,6 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { ChordBuilder } from '@/components/ChordReference';
 import { ScaleRootSelector } from '@/components/ControlPanel';
+import type { TimelineChord } from '@/hooks/useSongTimeline';
+
+const STORAGE_KEY = 'chartsView.state.v1';
 
 interface DiatonicChord {
   root: NoteName;
@@ -32,6 +35,9 @@ interface ChartsViewProps {
   currentKey: NoteName;
   keyMode: KeyMode;
   onToggleCharts?: () => void;
+  /** Fired whenever the arrangement (or its underlying chords) change, so the
+      parent can push the resulting chord progression into the backing-track timeline. */
+  onArrangementChange?: (data: { chords: TimelineChord[]; measures: number; bpm: number }) => void;
 }
 
 /** 1 grid column = 1/8 bar. 32 columns per row = 4 bars per row. */
@@ -98,34 +104,53 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
-export default function ChartsView({ currentKey, keyMode, onToggleCharts }: ChartsViewProps) {
-  const [chartKey, setChartKey] = useState<NoteName>(currentKey);
+export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArrangementChange }: ChartsViewProps) {
+  // ---- Persisted state (survives closing/reopening the Charts panel) ----
+  type PersistedState = {
+    slots: ChartSlot[];
+    sections: Section[];
+    arrangement: ArrangementItem[];
+    chartKey: NoteName;
+    title: string;
+    composer: string;
+    tempo: number;
+    timeSig: string;
+    feel: string;
+  };
+  const persisted: Partial<PersistedState> = useMemo(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  }, []);
+
+  const [chartKey, setChartKey] = useState<NoteName>(persisted.chartKey ?? currentKey);
   const diatonicChords = useMemo(() => getDiatonicChords(chartKey, keyMode), [chartKey, keyMode]);
   const getChordColor = useCallback((chord: ChartChord) => {
     const deg = getChordDegree(chartKey, chord.root, chord.chordType, keyMode);
     return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
   }, [chartKey, keyMode]);
 
-  const [slots, setSlots] = useState<ChartSlot[]>(() => makeSlots(DEFAULT_SLOT_COUNT));
+  const [slots, setSlots] = useState<ChartSlot[]>(() => persisted.slots?.length ? persisted.slots! : makeSlots(DEFAULT_SLOT_COUNT));
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [parsingSlot, setParsingSlot] = useState<string | null>(null);
-  const [sections, setSections] = useState<Section[]>([]);
+  const [sections, setSections] = useState<Section[]>(persisted.sections ?? []);
   const [sectionMode, setSectionMode] = useState(false);
   const [dragSel, setDragSel] = useState<{ start: number; end: number } | null>(null);
   const [pendingRange, setPendingRange] = useState<{ startIdx: number; endIdx: number } | null>(null);
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
-  const [arrangement, setArrangement] = useState<ArrangementItem[]>([]);
+  const [arrangement, setArrangement] = useState<ArrangementItem[]>(persisted.arrangement ?? []);
   const [arrDragOverIdx, setArrDragOverIdx] = useState<number | null>(null);
   const [editorSlotId, setEditorSlotId] = useState<string | null>(null);
   const [editorPos, setEditorPos] = useState<{ top: number; left: number } | null>(null);
   // Chart metadata
-  const [title, setTitle] = useState('Untitled');
-  const [composer, setComposer] = useState('');
-  const [tempo, setTempo] = useState(120);
-  const [timeSig, setTimeSig] = useState('4/4');
-  const [feel, setFeel] = useState('Straight');
+  const [title, setTitle] = useState(persisted.title ?? 'Untitled');
+  const [composer, setComposer] = useState(persisted.composer ?? '');
+  const [tempo, setTempo] = useState<number>(persisted.tempo ?? 120);
+  const [timeSig, setTimeSig] = useState(persisted.timeSig ?? '4/4');
+  const [feel, setFeel] = useState(persisted.feel ?? 'Straight');
   const [readingChart, setReadingChart] = useState(false);
   const [readDragOver, setReadDragOver] = useState(false);
   const readInputRef = useRef<HTMLInputElement | null>(null);
@@ -159,6 +184,47 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [undo]);
+
+  // ---- Persist to localStorage whenever meaningful state changes ----
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        slots, sections, arrangement, chartKey, title, composer, tempo, timeSig, feel,
+      }));
+    } catch { /* quota or serialization failure — ignore */ }
+  }, [slots, sections, arrangement, chartKey, title, composer, tempo, timeSig, feel]);
+
+  // ---- Emit arrangement chords to parent (for the backing-track timeline) ----
+  const emitRef = useRef(onArrangementChange);
+  emitRef.current = onArrangementChange;
+  useEffect(() => {
+    if (!emitRef.current) return;
+    const out: TimelineChord[] = [];
+    let cursorBeats = 0;
+    let chordIdx = 0;
+    for (const item of arrangement) {
+      const sec = sections.find(s => s.id === item.sectionId);
+      if (!sec) continue;
+      for (let i = sec.startIdx; i <= sec.endIdx && i < slots.length; i++) {
+        const sl = slots[i];
+        const durBeats = (sl.bars / UNITS_PER_BAR) * 4; // 1 bar = 4 beats
+        if (sl.chord) {
+          out.push({
+            id: `chart-${item.id}-${chordIdx++}`,
+            root: sl.chord.root,
+            chordType: sl.chord.chordType,
+            startBeat: cursorBeats,
+            duration: durBeats,
+          });
+        }
+        cursorBeats += durBeats;
+      }
+    }
+    const measures = Math.max(2, Math.ceil(cursorBeats / 4));
+    emitRef.current({ chords: out, measures, bpm: tempo });
+  }, [arrangement, sections, slots, tempo]);
+
+
 
   // ---- Auto-link consecutive identical chords ----
   useEffect(() => {
