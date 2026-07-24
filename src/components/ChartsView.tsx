@@ -565,6 +565,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     const sectionId = e.dataTransfer.getData('application/chart-section');
     const moveId = e.dataTransfer.getData('application/chart-arrangement-item');
     if (sectionId) {
+      snapshot();
       const item: ArrangementItem = { id: uid('arr'), sectionId };
       setArrangement(prev => {
         const next = prev.slice();
