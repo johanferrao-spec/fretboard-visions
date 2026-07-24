@@ -1886,29 +1886,30 @@ function ScaleViewPanel({
         {/* Right: drop mode content panel */}
         {dropMode && (
           <div className="flex gap-2 flex-1 min-w-0">
-            {/* Description + string groups */}
-            <div className="w-32 shrink-0 space-y-2">
-              <textarea
-                value={dropDescriptions[dropMode] || ''}
-                onChange={(e) => handleDropDescChange(dropMode, e.target.value)}
-                placeholder={`Describe ${dropMode === 'drop2' ? 'Drop 2' : 'Drop 3'} voicings...`}
-                className="w-full h-20 rounded-lg border border-border bg-muted/40 text-[10px] font-mono text-foreground p-2 resize-none placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              <div className="space-y-1">
-                {(dropMode === 'drop3' ? (['lower', 'mid'] as StringGroup[]) : (['upper', 'mid', 'lower'] as StringGroup[])).map(sg => (
+            {/* String group selectors with nut diagrams */}
+            <div className="w-32 shrink-0 space-y-1.5">
+              {(dropMode === 'drop3' ? (['lower', 'mid'] as StringGroup[]) : (['upper', 'mid', 'lower'] as StringGroup[])).map(sg => {
+                const cfg = dropMode === 'drop3'
+                  ? DROP3_STRING_GROUP_CONFIG[sg as 'lower' | 'mid']
+                  : STRING_GROUP_CONFIG[sg];
+                const isSel = inversionStringGroup === sg;
+                return (
                   <button
                     key={sg}
-                    onClick={() => setInversionStringGroup(inversionStringGroup === sg ? null : sg)}
-                    className="w-full px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border"
+                    onClick={() => setInversionStringGroup(isSel ? null : sg)}
+                    title={STRING_GROUP_CONFIG[sg].label}
+                    className="w-full p-1.5 rounded-lg transition-all border flex items-center justify-center"
                     style={{
-                      backgroundColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--secondary))',
-                      borderColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--border))',
-                      color: inversionStringGroup === sg ? 'hsl(var(--accent-foreground))' : 'hsl(var(--secondary-foreground))',
+                      backgroundColor: isSel ? 'hsl(var(--accent) / 0.25)' : 'hsl(var(--secondary))',
+                      borderColor: isSel ? 'hsl(var(--accent))' : 'hsl(var(--border))',
                     }}
-                  >{STRING_GROUP_CONFIG[sg].label}</button>
-                ))}
-              </div>
+                  >
+                    <NutDiagram active={cfg.strings} disabled={cfg.disabled} />
+                  </button>
+                );
+              })}
             </div>
+
 
             {/* Voicings panel */}
             {inversionStringGroup && (
