@@ -1316,9 +1316,33 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             className="grid gap-1.5"
             style={{
               gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
-              gridAutoRows: '3rem',
+              gridTemplateRows: rowHeights.join(' '),
             }}
           >
+            {/* Section enclosure boxes — one rounded rect per row a section touches. */}
+            {sectionSegments.map(seg => (
+              <div
+                key={seg.key}
+                className="pointer-events-none rounded-md relative"
+                style={{
+                  gridRow: seg.row,
+                  gridColumn: `${seg.colStart} / ${seg.colEnd}`,
+                  border: `2px solid hsla(${seg.color}, 0.75)`,
+                  background: `hsla(${seg.color}, 0.12)`,
+                  margin: '-3px',
+                  zIndex: 0,
+                }}
+              >
+                {seg.showLabel && (
+                  <span
+                    className="absolute -top-2.5 left-2 px-1 text-[9px] font-mono font-bold uppercase tracking-wider bg-background rounded"
+                    style={{ color: `hsl(${seg.color})` }}
+                  >
+                    {seg.name}
+                  </span>
+                )}
+              </div>
+            ))}
             {slots.map((slot, idx) => {
               const isHover = hoverSlot === slot.id;
               const isEditing = editingSlot === slot.id;
@@ -1328,6 +1352,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               const inDragSel = sectionMode && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
               const startUnit = startUnits[idx];
               const barLabel = formatBarNumber(startUnit);
+              const gridRowIndex = renderRowOfLogical[logicalRowOf(idx)];
               return (
                 <div
                   key={slot.id}
@@ -1343,12 +1368,14 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                   }}
                   style={{
                     gridColumn: `span ${slot.bars} / span ${slot.bars}`,
+                    gridRow: gridRowIndex,
                     background: color ? `hsl(${color})` : undefined,
                     boxShadow: isHover
                       ? 'inset 0 0 0 2px hsl(var(--primary))'
                       : inDragSel
                         ? 'inset 0 0 0 2px hsl(var(--primary))'
                         : undefined,
+                    zIndex: 1,
                   }}
                   className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
                     sectionMode ? 'cursor-crosshair select-none ' : slot.chord ? 'cursor-pointer ' : ''
