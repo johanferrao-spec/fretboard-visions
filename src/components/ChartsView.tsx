@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw } from 'lucide-react';
 
 import type { NoteName, KeyMode } from '@/lib/music';
-import { getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS, NOTE_NAMES } from '@/lib/music';
+import { getDiatonicChords, getDiatonicSevenths, spellDiatonicRoots, getChordDegree, SCALE_DEGREE_COLORS, NOTE_NAMES } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
