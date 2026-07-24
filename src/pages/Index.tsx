@@ -29,6 +29,7 @@ const Index = () => {
     [sampleLib.resolveSlot],
   );
   const [showCustomTuning, setShowCustomTuning] = useState(false);
+  const [tunerOpen, setTunerOpen] = useState(false);
   const [customTuningName, setCustomTuningName] = useState('');
   const [customTuningNotes, setCustomTuningNotes] = useState<number[]>([4, 9, 2, 7, 11, 4]);
   const [volume, setVolume] = useState(0.7);
