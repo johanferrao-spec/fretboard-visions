@@ -900,7 +900,13 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
           {sections.length > 0 && (
             <div className="w-full flex flex-col items-stretch gap-1 mt-1 border-t border-border pt-2">
               <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Sections</div>
-              {sections.map(sec => (
+              {sections.map(sec => {
+                const progression = slots
+                  .slice(sec.startIdx, sec.endIdx + 1)
+                  .filter(s => s.chord)
+                  .map(s => romanForChord(s.chord!, chartKey))
+                  .join('-');
+                return (
                 <div
                   key={sec.id}
                   className="flex items-center gap-1 w-full"
@@ -918,6 +924,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                   >
                     <GripVertical size={9} className="opacity-60 shrink-0" />
                     <span className="truncate">{sec.name}</span>
+                    {progression && (
+                      <span className="ml-auto opacity-80 normal-case truncate">({progression})</span>
+                    )}
                   </button>
                   <button
                     onClick={() => removeSection(sec.id)}
@@ -927,7 +936,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     <Trash2 size={10} />
                   </button>
                 </div>
-              ))}
+                );
+              })}
+
             </div>
           )}
 
