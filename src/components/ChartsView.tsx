@@ -45,11 +45,27 @@ const uid = (prefix: string) => `${prefix}-${nextId++}`;
 const makeSlots = (n: number): ChartSlot[] =>
   Array.from({ length: n }, () => ({ id: uid('slot'), bars: UNITS_PER_BAR }));
 
+const EIGHTH_LABELS = ['', '⅛', '¼', '⅜', '½', '⅝', '¾', '⅞'];
+
 const formatBarNumber = (startEighth: number): string => {
-  const bar = startEighth / UNITS_PER_BAR + 1;
-  return Number.isInteger(bar) ? String(bar) : bar.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+  const bar = Math.floor(startEighth / UNITS_PER_BAR) + 1;
+  const rem = startEighth % UNITS_PER_BAR;
+  return rem === 0 ? String(bar) : `${bar}${EIGHTH_LABELS[rem]}`;
 };
 
+const formatDuration = (units: number): string => {
+  if (units % UNITS_PER_BAR === 0) {
+    const bars = units / UNITS_PER_BAR;
+    return bars === 1 ? '1 bar' : `${bars} bars`;
+  }
+  const wholeBars = Math.floor(units / UNITS_PER_BAR);
+  const rem = units % UNITS_PER_BAR;
+  const frac = EIGHTH_LABELS[rem] || `${rem}/8`;
+  return wholeBars > 0 ? `${wholeBars} ${frac}` : frac;
+};
+
+const chordsEqual = (a?: ChartChord, b?: ChartChord): boolean =>
+  !!a && !!b && a.root === b.root && a.chordType === b.chordType;
 
 const formatChordLabel = (c: ChartChord): string => {
   const suffix =
