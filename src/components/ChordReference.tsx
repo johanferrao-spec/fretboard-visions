@@ -20,6 +20,102 @@ import {
 } from '@/lib/music';
 import type { ChordSelection, ScaleSelection } from '@/hooks/useFretboard';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
+import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
+
+// Mode diagram: shows a mode's first-position shape built on a pentatonic skeleton
+const MODE_INTERVALS: Record<string, number[]> = {
+  Ionian:     [0,2,4,5,7,9,11],
+  Dorian:     [0,2,3,5,7,9,10],
+  Phrygian:   [0,1,3,5,7,8,10],
+  Lydian:     [0,2,4,6,7,9,11],
+  Mixolydian: [0,2,4,5,7,9,10],
+  Aeolian:    [0,2,3,5,7,8,10],
+  Locrian:    [0,1,3,5,6,8,10],
+};
+const MAJOR_PENT = new Set([0,2,4,7,9]);
+const MINOR_PENT = new Set([0,3,5,7,10]);
+const MODE_SKELETON: Record<string, Set<number>> = {
+  Ionian: MAJOR_PENT, Lydian: MAJOR_PENT, Mixolydian: MAJOR_PENT,
+  Dorian: MINOR_PENT, Phrygian: MINOR_PENT, Aeolian: MINOR_PENT, Locrian: MINOR_PENT,
+};
+const MODE_DEFINING: Record<string, number[]> = {
+  Ionian: [], Dorian: [9], Phrygian: [1], Lydian: [6], Mixolydian: [10], Aeolian: [8], Locrian: [1,6],
+};
+const MODE_ACCIDENTALS: Record<string, string> = {
+  Ionian: 'No sharps or flats',
+  Lydian: '1 sharp (♯4)',
+  Mixolydian: '1 flat (♭7)',
+  Dorian: '2 flats (♭3, ♭7)',
+  Aeolian: '3 flats (♭3, ♭6, ♭7)',
+  Phrygian: '4 flats (♭2, ♭3, ♭6, ♭7)',
+  Locrian: '5 flats (♭2, ♭3, ♭5, ♭6, ♭7)',
+};
+const INTERVAL_LABEL = ['1','♭2','2','♭3','3','4','♯4','5','♭6','6','♭7','7'];
+const INTERVAL_DEGREE_IDX = [0,1,1,2,2,3,3,4,5,5,6,6];
+
+function ModeDiagram({ mode }: { mode: string }) {
+  const intervals = MODE_INTERVALS[mode];
+  if (!intervals) return null;
+  const skeleton = MODE_SKELETON[mode];
+  const defining = new Set(MODE_DEFINING[mode]);
+  const tuning = [0, 5, 10, 15, 19, 24]; // low E to high e semitones
+  const root = 5; // A
+  const startFret = 4;
+  const frets = 5;
+  const modeSet = new Set(intervals);
+  const cellW = 20, cellH = 14, padL = 18, padT = 8;
+  const width = padL + cellW * frets + 8;
+  const height = padT + cellH * 6 + 8;
+
+  const markers: JSX.Element[] = [];
+  for (let s = 0; s < 6; s++) {
+    for (let f = 0; f < frets; f++) {
+      const absFret = startFret + f;
+      const interval = ((tuning[s] + absFret) - root + 120) % 12;
+      if (!modeSet.has(interval)) continue;
+      const displayString = 5 - s; // top row = high e
+      const cx = padL + f * cellW + cellW / 2;
+      const cy = padT + displayString * cellH + cellH / 2;
+      const isRoot = interval === 0;
+      const isDef = defining.has(interval);
+      const inSkel = skeleton.has(interval);
+      const color = SCALE_DEGREE_COLORS[INTERVAL_DEGREE_IDX[interval]];
+      let fill = 'hsl(var(--muted))';
+      let stroke = 'hsl(var(--border))';
+      let textColor = 'hsl(var(--muted-foreground))';
+      if (isRoot) { fill = `hsl(${SCALE_DEGREE_COLORS[0]})`; textColor = 'hsl(var(--background))'; stroke = 'transparent'; }
+      else if (isDef) { fill = `hsl(${color})`; textColor = 'hsl(var(--background))'; stroke = 'transparent'; }
+      else if (inSkel) { fill = 'hsl(var(--foreground) / 0.15)'; stroke = 'hsl(var(--foreground) / 0.4)'; textColor = 'hsl(var(--foreground))'; }
+      else { fill = `hsl(${color} / 0.2)`; stroke = `hsl(${color} / 0.5)`; textColor = `hsl(${color})`; }
+      markers.push(
+        <g key={`${s}-${f}`}>
+          <circle cx={cx} cy={cy} r={6} fill={fill} stroke={stroke} strokeWidth={1} />
+          <text x={cx} y={cy + 2.5} textAnchor="middle" fontSize={6.5} fontFamily="monospace" fontWeight="bold" fill={textColor}>
+            {INTERVAL_LABEL[interval]}
+          </text>
+        </g>
+      );
+    }
+  }
+  const strings: JSX.Element[] = [];
+  for (let s = 0; s < 6; s++) {
+    const y = padT + s * cellH + cellH / 2;
+    strings.push(<line key={`s${s}`} x1={padL} y1={y} x2={padL + cellW * frets} y2={y} stroke="hsl(var(--border))" strokeWidth={0.5} />);
+  }
+  const fretLines: JSX.Element[] = [];
+  for (let f = 0; f <= frets; f++) {
+    const x = padL + f * cellW;
+    fretLines.push(<line key={`f${f}`} x1={x} y1={padT + cellH / 2} x2={x} y2={padT + cellH * 5 + cellH / 2} stroke="hsl(var(--border))" strokeWidth={0.5} />);
+    fretLines.push(<text key={`ft${f}`} x={x + cellW / 2} y={padT + cellH * 6 + 4} textAnchor="middle" fontSize={6} fontFamily="monospace" fill="hsl(var(--muted-foreground))">{f === frets ? '' : startFret + f}</text>);
+  }
+  return (
+    <svg width={width} height={height} className="block">
+      {fretLines}
+      {strings}
+      {markers}
+    </svg>
+  );
+}
 
 // Natural notes starting from E
 const NATURAL_NOTES: NoteName[] = ['E', 'F', 'G', 'A', 'B', 'C', 'D'];
