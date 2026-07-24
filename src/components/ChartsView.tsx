@@ -449,21 +449,33 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       const rowEnd = rowStart + COLS;
 
       if (edge === 'right') {
-        // Region = [anchor slot .. end of row]
-        const maxOwnBars = anchorBarEnd - slotStartUnit; // extend anchor to its bar end
-        const clampedDesired = Math.min(desired, rowEnd - slotStartUnit);
+        // Region ends at the row boundary OR the start of the next different
+        // chord slot in this row — whichever comes first. This prevents the
+        // rebuild from clobbering unrelated chords.
+        let regionEndUnit = rowEnd;
+        {
+          let pos = slotEndUnit;
+          for (let i = idx + 1; i < prev.length && pos < rowEnd; i++) {
+            const nb = prev[i];
+            if (nb.chord && !chordsEqual(nb.chord, chord)) { regionEndUnit = pos; break; }
+            pos += nb.bars;
+          }
+        }
+        const regionUnits = regionEndUnit - slotStartUnit;
+        if (regionUnits <= 0) return prev;
+
+        const maxOwnBars = Math.min(anchorBarEnd - slotStartUnit, regionUnits);
+        const clampedDesired = Math.min(desired, regionUnits);
         const ownDesired = Math.min(clampedDesired, maxOwnBars);
         const extraUnits = chord ? Math.max(0, clampedDesired - maxOwnBars) : 0;
 
-        // Collect region slots (idx .. endIdx) totalling `rowEnd - slotStartUnit`
-        // units. Because no slot crosses a bar (or therefore a row) boundary,
-        // the region is a clean, whole set of slots.
+        // Collect region slots (idx .. endIdx) totalling regionUnits units.
         let endIdx = idx;
         let acc = 0;
         for (let i = idx; i < prev.length; i++) {
           acc += prev[i].bars;
           endIdx = i;
-          if (acc >= rowEnd - slotStartUnit) break;
+          if (acc >= regionUnits) break;
         }
 
         const region: ChartSlot[] = [];
@@ -476,11 +488,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
           placed = maxOwnBars;
         }
 
-        // Now `placed` is bar-aligned. Fill remaining bars in the row.
+        // Fill remaining bars in the region.
         let remainingExtra = extraUnits;
-        const regionUnits = rowEnd - slotStartUnit;
         while (placed < regionUnits) {
-          const barUnits = UNITS_PER_BAR;
+          const barUnits = Math.min(UNITS_PER_BAR, regionUnits - placed);
           if (remainingExtra >= barUnits) {
             region.push({ id: uid('slot'), bars: barUnits, chord: { ...chord! } });
             remainingExtra -= barUnits;
@@ -498,46 +509,69 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         next.splice(idx, endIdx - idx + 1, ...region);
         return next;
       } else {
-        // LEFT edge — region = [start of row .. anchor slot].
-        const maxOwnBars = slotEndUnit - anchorBarStart; // extend anchor to its bar start
-        const clampedDesired = Math.min(desired, slotEndUnit - rowStart);
+        // LEFT edge — region starts at rowStart OR just after the previous
+        // different chord slot in this row, whichever is later.
+        let regionStartUnit = rowStart;
+        {
+          let pos = slotStartUnit;
+          for (let i = idx - 1; i >= 0 && pos > rowStart; i--) {
+            const nb = prev[i];
+            if (nb.chord && !chordsEqual(nb.chord, chord)) { regionStartUnit = pos; break; }
+            pos -= nb.bars;
+          }
+        }
+        const regionUnits = slotEndUnit - regionStartUnit;
+        if (regionUnits <= 0) return prev;
+
+        const maxOwnBars = Math.min(slotEndUnit - anchorBarStart, regionUnits);
+        const clampedDesired = Math.min(desired, regionUnits);
         const ownDesired = Math.min(clampedDesired, maxOwnBars);
         const extraUnits = chord ? Math.max(0, clampedDesired - maxOwnBars) : 0;
 
-        // Collect region slots (startIdx .. idx) totalling `slotEndUnit - rowStart`.
         let startIdx = idx;
         let acc = current.bars;
         for (let i = idx - 1; i >= 0; i--) {
+          if (acc >= regionUnits) break;
           acc += prev[i].bars;
           startIdx = i;
-          if (acc >= slotEndUnit - rowStart) break;
         }
 
         const region: ChartSlot[] = [];
-        const barsBeforeAnchor = (anchorBarStart - rowStart) / UNITS_PER_BAR;
-
-        // Fill each full bar to the left of anchor's bar with empty, then
-        // overwrite from the RIGHT with chord replicas until extraUnits is spent.
-        const bars: ChartSlot[][] = [];
-        for (let b = 0; b < barsBeforeAnchor; b++) {
-          bars.push([{ id: uid('slot'), bars: UNITS_PER_BAR }]);
-        }
-        let toFill = extraUnits;
-        let bIdx = barsBeforeAnchor - 1;
-        while (toFill > 0 && bIdx >= 0) {
-          if (toFill >= UNITS_PER_BAR) {
-            bars[bIdx] = [{ id: uid('slot'), bars: UNITS_PER_BAR, chord: { ...chord! } }];
-            toFill -= UNITS_PER_BAR;
-          } else {
-            bars[bIdx] = [
-              { id: uid('slot'), bars: UNITS_PER_BAR - toFill },
-              { id: uid('slot'), bars: toFill, chord: { ...chord! } },
-            ];
-            toFill = 0;
+        // Bars entirely to the LEFT of anchor's bar within the region.
+        // regionStartUnit may not be bar-aligned if a partial replica of another
+        // chord sits nearby; in that case the leading bar is truncated.
+        const leftUnits = anchorBarStart - regionStartUnit;
+        if (leftUnits > 0) {
+          const bars: ChartSlot[][] = [];
+          let remaining = leftUnits;
+          // Split into bar-aligned chunks starting from regionStartUnit.
+          let cursor = regionStartUnit;
+          while (remaining > 0) {
+            const nextBar = Math.floor(cursor / UNITS_PER_BAR) * UNITS_PER_BAR + UNITS_PER_BAR;
+            const chunk = Math.min(remaining, nextBar - cursor);
+            bars.push([{ id: uid('slot'), bars: chunk }]);
+            cursor += chunk;
+            remaining -= chunk;
           }
-          bIdx--;
+          // Fill from the RIGHT with chord replicas until extraUnits is spent.
+          let toFill = extraUnits;
+          let bIdx = bars.length - 1;
+          while (toFill > 0 && bIdx >= 0) {
+            const chunkBars = bars[bIdx][0].bars;
+            if (toFill >= chunkBars) {
+              bars[bIdx] = [{ id: uid('slot'), bars: chunkBars, chord: { ...chord! } }];
+              toFill -= chunkBars;
+            } else {
+              bars[bIdx] = [
+                { id: uid('slot'), bars: chunkBars - toFill },
+                { id: uid('slot'), bars: toFill, chord: { ...chord! } },
+              ];
+              toFill = 0;
+            }
+            bIdx--;
+          }
+          for (const b of bars) region.push(...b);
         }
-        for (const b of bars) region.push(...b);
 
         // Anchor's own bar: optional empty filler to the left of the anchor.
         if (ownDesired < maxOwnBars) {
@@ -549,6 +583,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         next.splice(startIdx, idx - startIdx + 1, ...region);
         return next;
       }
+
     });
   }, []);
 
