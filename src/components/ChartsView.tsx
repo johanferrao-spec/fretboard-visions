@@ -305,40 +305,64 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
   }, []);
 
 
-  const resizeSlot = useCallback((slotId: string, targetBars: number) => {
+  // Resize by growing/shrinking from a specific edge. Growth only consumes
+  // adjacent EMPTY (chord-less) slots — chord-holding neighbors are not affected.
+  const resizeSlotEdge = useCallback((slotId: string, targetBars: number, edge: 'right' | 'left') => {
     setSlots(prev => {
       const idx = prev.findIndex(sl => sl.id === slotId);
       if (idx < 0) return prev;
       const current = prev[idx];
       const desired = Math.max(1, targetBars);
       if (desired === current.bars) return prev;
+      const next = prev.slice();
 
-      if (desired > current.bars) {
-        let need = desired - current.bars;
-        const next = prev.slice();
-        let cursor = idx + 1;
-        while (need > 0 && cursor < next.length) {
-          const neighbor = next[cursor];
-          if (neighbor.bars <= need) {
-            need -= neighbor.bars;
-            next.splice(cursor, 1);
+      if (edge === 'right') {
+        if (desired > current.bars) {
+          let need = desired - current.bars;
+          let cursor = idx + 1;
+          while (need > 0 && cursor < next.length && !next[cursor].chord) {
+            const nb = next[cursor];
+            if (nb.bars <= need) { need -= nb.bars; next.splice(cursor, 1); }
+            else { next[cursor] = { ...nb, bars: nb.bars - need }; need = 0; }
+          }
+          next[idx] = { ...current, bars: desired - need };
+        } else {
+          const freed = current.bars - desired;
+          next[idx] = { ...current, bars: desired };
+          if (next[idx + 1] && !next[idx + 1].chord) {
+            next[idx + 1] = { ...next[idx + 1], bars: next[idx + 1].bars + freed };
           } else {
-            next[cursor] = { ...neighbor, bars: neighbor.bars - need };
-            need = 0;
+            next.splice(idx + 1, 0, { id: uid('slot'), bars: freed });
           }
         }
-        const grown = desired - need;
-        next[idx] = { ...current, bars: grown };
-        return next;
       } else {
-        const freed = current.bars - desired;
-        const next = prev.slice();
-        next[idx] = { ...current, bars: desired };
-        next.splice(idx + 1, 0, { id: uid('slot'), bars: freed });
-        return next;
+        if (desired > current.bars) {
+          let need = desired - current.bars;
+          let cursor = idx - 1;
+          let curIdx = idx;
+          while (need > 0 && cursor >= 0 && !next[cursor].chord) {
+            const nb = next[cursor];
+            if (nb.bars <= need) {
+              need -= nb.bars; next.splice(cursor, 1); curIdx--; cursor--;
+            } else {
+              next[cursor] = { ...nb, bars: nb.bars - need }; need = 0;
+            }
+          }
+          next[curIdx] = { ...current, bars: desired - need };
+        } else {
+          const freed = current.bars - desired;
+          next[idx] = { ...current, bars: desired };
+          if (idx > 0 && !next[idx - 1].chord) {
+            next[idx - 1] = { ...next[idx - 1], bars: next[idx - 1].bars + freed };
+          } else {
+            next.splice(idx, 0, { id: uid('slot'), bars: freed });
+          }
+        }
       }
+      return next;
     });
   }, []);
+
 
   const handleDrop = (slotId: string, e: React.DragEvent) => {
     e.preventDefault();
