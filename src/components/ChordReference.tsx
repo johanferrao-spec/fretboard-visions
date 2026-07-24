@@ -1526,6 +1526,52 @@ function ScaleViewPanel({
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
   const [selectedModePreview, setSelectedModePreview] = useState<string>('Ionian');
 
+  // Resizable widths for the three-column help panel (percentages, sum = 100)
+  const helpPanelRef = useRef<HTMLDivElement>(null);
+  const [helpColWidths, setHelpColWidths] = useState<[number, number, number]>(() => {
+    try {
+      const raw = localStorage.getItem('mf-help-col-widths');
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (Array.isArray(p) && p.length === 3 && p.every((n: any) => typeof n === 'number')) {
+          return p as [number, number, number];
+        }
+      }
+    } catch {/*ignore*/}
+    return [33.34, 33.33, 33.33];
+  });
+  useEffect(() => {
+    try { localStorage.setItem('mf-help-col-widths', JSON.stringify(helpColWidths)); } catch {/*ignore*/}
+  }, [helpColWidths]);
+  const startHelpResize = (dividerIdx: 0 | 1) => (e: React.PointerEvent) => {
+    e.preventDefault();
+    const container = helpPanelRef.current;
+    if (!container) return;
+    const startX = e.clientX;
+    const rect = container.getBoundingClientRect();
+    const totalW = rect.width;
+    const startWidths = [...helpColWidths] as [number, number, number];
+    const onMove = (ev: PointerEvent) => {
+      const deltaPct = ((ev.clientX - startX) / totalW) * 100;
+      const next = [...startWidths] as [number, number, number];
+      const a = dividerIdx;
+      const b = dividerIdx + 1;
+      const min = 10;
+      let da = deltaPct;
+      if (startWidths[a] + da < min) da = min - startWidths[a];
+      if (startWidths[b] - da < min) da = startWidths[b] - min;
+      next[a] = startWidths[a] + da;
+      next[b] = startWidths[b] - da;
+      setHelpColWidths(next);
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
   // Persisted descriptions for drop voicings
   const [dropDescriptions, setDropDescriptions] = useState<Record<string, string>>(() => {
     try { return JSON.parse(localStorage.getItem('mf-drop-descriptions') || '{}'); } catch { return {}; }
@@ -1998,8 +2044,8 @@ function ScaleViewPanel({
 
         {/* Default empty-space content: three-column help */}
         {!dropMode && !threeNpsMode && !voiceLeadingMode && (
-          <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex gap-0 min-w-0">
-            <div className="flex-1 min-w-0 px-3 flex flex-col gap-1.5">
+          <div ref={helpPanelRef} className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex gap-0 min-w-0">
+            <div className="min-w-0 px-3 flex flex-col gap-1.5" style={{ flex: `0 0 calc(${helpColWidths[0]}% - 6px)` }}>
               <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Functional Harmony</div>
               <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
                 Chords are organized by their role within a key. Each degree (I–VII) has a job—<span className="text-primary font-bold">tonic</span> chords resolve, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension back to the tonic.
@@ -2027,15 +2073,23 @@ function ScaleViewPanel({
                 ))}
               </div>
             </div>
-            <div className="w-px bg-border/60 self-stretch my-1" />
-            <div className="flex-1 min-w-0 px-3 flex flex-col gap-1.5">
+            <div
+              onPointerDown={startHelpResize(0)}
+              className="w-1.5 mx-0.5 cursor-col-resize self-stretch my-1 rounded bg-border/60 hover:bg-primary/60 transition-colors shrink-0"
+              title="Drag to resize"
+            />
+            <div className="min-w-0 px-3 flex flex-col gap-1.5" style={{ flex: `0 0 calc(${helpColWidths[1]}% - 6px)` }}>
               <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Drop 2 & Drop 3</div>
               <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
                 Chord voicings built by dropping the second or third highest note of a close-position chord down an octave. On guitar they essentially act as 7th inversions which allow players to access voicings for most chords from anywhere across the neck. Drop 2 spreads the chord across four adjacent strings; Drop 3 leaves a string gap for a wider, more open sound.
               </p>
             </div>
-            <div className="w-px bg-border/60 self-stretch my-1" />
-            <div className="flex-1 min-w-0 px-3 flex flex-col gap-1.5">
+            <div
+              onPointerDown={startHelpResize(1)}
+              className="w-1.5 mx-0.5 cursor-col-resize self-stretch my-1 rounded bg-border/60 hover:bg-primary/60 transition-colors shrink-0"
+              title="Drag to resize"
+            />
+            <div className="min-w-0 px-3 flex flex-col gap-1.5" style={{ flex: `0 0 calc(${helpColWidths[2]}% - 6px)` }}>
               <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Modes</div>
               <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
                 Modes are scales created by starting the major scale on a different degree. They are useful when learning to visualise the fretboard as they all link together. They can also be used compositionally as they can offer interesting tonal colours.
