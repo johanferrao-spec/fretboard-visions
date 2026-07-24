@@ -133,12 +133,60 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
   const editorRef = useRef<HTMLDivElement | null>(null);
   const presetRef = useRef<HTMLDivElement | null>(null);
 
-
-
-
-  const setSlotChord = useCallback((slotId: string, chord: ChartChord | undefined) => {
-    setSlots(prev => prev.map(sl => sl.id === slotId ? { ...sl, chord } : sl));
+  // ---- Undo history ----
+  type Snapshot = { slots: ChartSlot[]; sections: Section[]; arrangement: ArrangementItem[] };
+  const historyRef = useRef<Snapshot[]>([]);
+  const isUndoingRef = useRef(false);
+  const snapshot = useCallback(() => {
+    historyRef.current.push({ slots, sections, arrangement });
+    if (historyRef.current.length > 100) historyRef.current.shift();
+  }, [slots, sections, arrangement]);
+  const undo = useCallback(() => {
+    const snap = historyRef.current.pop();
+    if (!snap) return;
+    isUndoingRef.current = true;
+    setSlots(snap.slots);
+    setSections(snap.sections);
+    setArrangement(snap.arrangement);
   }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo]);
+
+  // ---- Auto-link consecutive identical chords ----
+  useEffect(() => {
+    if (isUndoingRef.current) { isUndoingRef.current = false; return; }
+    let changed = false;
+    const merged: ChartSlot[] = [];
+    const indexMap: number[] = []; // old idx -> new idx
+    slots.forEach((s) => {
+      const last = merged[merged.length - 1];
+      if (last && chordsEqual(last.chord, s.chord) && s.chord) {
+        merged[merged.length - 1] = { ...last, bars: last.bars + s.bars };
+        indexMap.push(merged.length - 1);
+        changed = true;
+      } else {
+        merged.push(s);
+        indexMap.push(merged.length - 1);
+      }
+    });
+    if (changed) {
+      setSlots(merged);
+      setSections(prev => prev.map(sec => ({
+        ...sec,
+        startIdx: indexMap[sec.startIdx] ?? sec.startIdx,
+        endIdx: indexMap[sec.endIdx] ?? sec.endIdx,
+      })));
+    }
+  }, [slots]);
+
 
   const beginEdit = useCallback((slot: ChartSlot) => {
     setEditingSlot(slot.id);
