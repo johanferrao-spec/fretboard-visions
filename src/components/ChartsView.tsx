@@ -35,6 +35,9 @@ interface ChartsViewProps {
   currentKey: NoteName;
   keyMode: KeyMode;
   onToggleCharts?: () => void;
+  /** Fired whenever the arrangement (or its underlying chords) change, so the
+      parent can push the resulting chord progression into the backing-track timeline. */
+  onArrangementChange?: (data: { chords: TimelineChord[]; measures: number; bpm: number }) => void;
 }
 
 /** 1 grid column = 1/8 bar. 32 columns per row = 4 bars per row. */
