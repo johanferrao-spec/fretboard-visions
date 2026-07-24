@@ -16,12 +16,16 @@ import ChromaticTuner from '@/components/ChromaticTuner';
 import InstrumentSamplers from '@/components/BackingTrack/InstrumentSamplers';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
 import { ensureToneAudioContext } from '@/hooks/engine/audioContext';
-import { ChevronUp, Settings } from 'lucide-react';
+import { ChevronUp, Settings, Target, LogIn, LogOut, User as UserIcon, BookOpen } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 import type { NoteName } from '@/lib/music';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, getChordDegree, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
+  const { user, signOut } = useAuth();
   const fb = useFretboard();
   const timeline = useSongTimeline();
   const midi = useMidiEngine();
@@ -406,8 +410,40 @@ const Index = () => {
             </Select>
           </div>
         </div>
-        <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-          Guitar Fretboard Visualizer
+        <div className="flex items-center gap-3">
+          <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            Guitar Fretboard Visualizer
+          </div>
+          <Link
+            to="/courses"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+            title="Browse courses"
+          >
+            <BookOpen size={12} /> Courses
+          </Link>
+          {user ? (
+            <div className="flex items-center gap-1.5">
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono bg-secondary text-secondary-foreground max-w-[180px] truncate" title={user.email ?? ''}>
+                <UserIcon size={12} />
+                <span className="truncate">{user.email}</span>
+              </div>
+              <button
+                onClick={async () => { await signOut(); toast.success('Signed out'); }}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                title="Sign out"
+              >
+                <LogOut size={12} /> Sign out
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/auth?next=/"
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              title="Sign in to save your work"
+            >
+              <LogIn size={12} /> Sign in
+            </Link>
+          )}
         </div>
       </header>
 
@@ -542,10 +578,10 @@ const Index = () => {
             {/* Tuner */}
             <button
               onClick={() => setTunerOpen(true)}
-              className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors inline-flex items-center gap-1"
               title="Open chromatic tuner"
             >
-              🎯 Tuner
+              <Target size={12} /> Tuner
             </button>
 
             {/* Display mode + Size/Frets/Opacity sliders moved into Fretboard toolbar */}
