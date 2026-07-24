@@ -1951,7 +1951,7 @@ function ScaleViewPanel({
             <div className="flex-1 min-w-0 px-3 flex flex-col gap-1.5">
               <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Modes</div>
               <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
-                Modes are scales created by starting the major scale on a different degree. Each mode has its own tonal color—Dorian is jazzy and minor, Mixolydian is bluesy with a dominant feel, and Lydian sounds bright and floating.
+                Modes are scales created by starting the major scale on a different degree. They are useful when learning to visualise the fretboard as they all link together. They can also be used compositionally as they can offer interesting tonal colours.&nbsp;
               </p>
             </div>
           </div>
