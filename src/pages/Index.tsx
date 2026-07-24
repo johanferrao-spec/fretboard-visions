@@ -41,6 +41,7 @@ const Index = () => {
   const [volume, setVolume] = useState(0.7);
   const [samplerHeight, setSamplerHeight] = useState(600);
   const [showCharts, setShowCharts] = useState(false);
+  const [arrangementSections, setArrangementSections] = useState<{ id: string; name: string; color: string; startBeat: number; lengthBeats: number }[]>([]);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomePulse, setMetronomePulse] = useState(0);
@@ -940,6 +941,7 @@ const Index = () => {
               isPlaying={timeline.isPlaying}
               currentBeat={timeline.currentBeat}
               registerHandlers={handleRegisterBackingApi}
+              sections={arrangementSections}
             />
           </div>
           {/* Instrument samplers — resizable bottom strip */}
@@ -986,13 +988,15 @@ const Index = () => {
               currentKey={timelineKey}
               keyMode={keyMode}
               onToggleCharts={() => setShowCharts(v => !v)}
-              onArrangementChange={({ chords, measures, bpm }) => {
+              onArrangementChange={({ chords, measures, bpm, sections }) => {
                 timeline.setChords(chords);
                 timeline.setMeasures(measures);
                 if (bpm && bpm !== timeline.bpm) timeline.setBpm(bpm);
+                setArrangementSections(sections);
               }}
               onResetAll={() => {
                 timeline.clearTimeline();
+                setArrangementSections([]);
               }}
             />
           </div>
