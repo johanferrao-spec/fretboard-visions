@@ -40,7 +40,7 @@ interface BackingTrackViewProps {
 }
 
 export default function BackingTrackView({
-  chords, measures, bpm, genre, groove, swing = 0, volume, isPlaying, currentBeat, registerHandlers,
+  chords, measures, bpm, genre, groove, swing = 0, volume, isPlaying, currentBeat, registerHandlers, sections = [],
 }: BackingTrackViewProps) {
 
   const bt = useBackingTrack();
