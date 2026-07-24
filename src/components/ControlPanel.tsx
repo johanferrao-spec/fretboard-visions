@@ -178,38 +178,42 @@ export function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: No
 
   return (
     <div className="mb-2">
-      <div className="flex flex-nowrap gap-0.5 items-center">
+      <div className="flex flex-nowrap gap-0.5 items-end">
         {NATURAL_NOTES.map(n => {
           const isBase = n === baseNote;
           const showFlat = isBase && n !== 'F' && n !== 'C';
           const showSharp = isBase && n !== 'E' && n !== 'B';
           return (
-            <div key={n} className="flex items-center gap-px">
+            <div key={n} className="flex flex-col items-center">
               <button
                 onClick={() => handleNoteClick(n)}
                 className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
                   isBase ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
                 }`}
               >{n}</button>
-              {showFlat && (
-                <button
-                  onClick={() => handleAccidental('flat')}
-                  className={`w-4 h-4 rounded border text-[9px] font-mono font-bold transition-colors ${
-                    accidental === 'flat'
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
-                  }`}
-                >♭</button>
-              )}
-              {showSharp && (
-                <button
-                  onClick={() => handleAccidental('sharp')}
-                  className={`w-4 h-4 rounded border text-[9px] font-mono font-bold transition-colors ${
-                    accidental === 'sharp'
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
-                  }`}
-                >♯</button>
+              {isBase && (showFlat || showSharp) && (
+                <div className="mt-0.5 flex gap-px">
+                  {showFlat && (
+                    <button
+                      onClick={() => handleAccidental('flat')}
+                      className={`w-4 h-4 ${showSharp ? 'rounded-l' : 'rounded'} border text-[9px] font-mono font-bold transition-colors ${
+                        accidental === 'flat'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
+                      }`}
+                    >♭</button>
+                  )}
+                  {showSharp && (
+                    <button
+                      onClick={() => handleAccidental('sharp')}
+                      className={`w-4 h-4 ${showFlat ? 'rounded-r border-l-0' : 'rounded'} border text-[9px] font-mono font-bold transition-colors ${
+                        accidental === 'sharp'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
+                      }`}
+                    >♯</button>
+                  )}
+                </div>
               )}
             </div>
           );
@@ -218,6 +222,7 @@ export function ScaleRootSelector({ selectedRoot, onSelect }: { selectedRoot: No
     </div>
   );
 }
+
 
 
 export const COLOR_OPTIONS = [
