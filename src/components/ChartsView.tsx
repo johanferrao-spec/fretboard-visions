@@ -573,6 +573,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
         return next;
       });
     } else if (moveId) {
+      snapshot();
       setArrangement(prev => {
         const fromIdx = prev.findIndex(a => a.id === moveId);
         if (fromIdx < 0) return prev;
