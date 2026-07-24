@@ -117,6 +117,54 @@ function ModeDiagram({ mode }: { mode: string }) {
   );
 }
 
+// Vertical nut diagram used inside Drop 2 / Drop 3 string-group buttons.
+// Shows all 6 strings (E A D G B e) with a box enclosing the active strings;
+// disabled/muted strings are greyed out.
+function NutDiagram({ active, disabled, active: _a }: { active: number[]; disabled: number[] }) {
+  const labels = ['E', 'A', 'D', 'G', 'B', 'e'];
+  const w = 108, h = 46;
+  const padX = 8, padTop = 12, padBot = 8;
+  const step = (w - padX * 2) / 5;
+  const nutY = padTop;
+  const stringBot = h - padBot;
+  const activeSet = new Set(active);
+  const disabledSet = new Set(disabled);
+  const minA = Math.min(...active);
+  const maxA = Math.max(...active);
+  const boxX = padX + minA * step - step * 0.35;
+  const boxW = (maxA - minA) * step + step * 0.7;
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block">
+      {/* box enclosing active strings */}
+      <rect
+        x={boxX} y={nutY - 5} width={boxW} height={stringBot - nutY + 10}
+        rx={4} ry={4}
+        fill="hsl(var(--accent) / 0.18)"
+        stroke="hsl(var(--accent))"
+        strokeWidth={1.25}
+      />
+      {/* nut bar */}
+      <rect x={padX - 4} y={nutY} width={w - (padX - 4) * 2} height={3} fill="hsl(var(--fretboard-fret))" />
+      {labels.map((lb, i) => {
+        const x = padX + i * step;
+        const isActive = activeSet.has(i);
+        const isDisabled = disabledSet.has(i);
+        const stroke = isActive ? 'hsl(var(--fretboard-string))' : 'hsl(var(--fretboard-string) / 0.25)';
+        const textFill = isActive ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground) / 0.5)';
+        return (
+          <g key={i}>
+            <text x={x} y={nutY - 3} textAnchor="middle" fontSize={8} fontFamily="monospace" fontWeight={700} fill={textFill}>{lb}</text>
+            <line x1={x} y1={nutY + 3} x2={x} y2={stringBot} stroke={stroke} strokeWidth={isActive ? 1.4 : 1} strokeLinecap="round" />
+            {isDisabled && activeSet.size > 0 && i > minA && i < maxA && (
+              <text x={x} y={stringBot - 2} textAnchor="middle" fontSize={9} fontWeight={700} fill="hsl(0 70% 55%)">✕</text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 
 // Natural notes starting from E
 const NATURAL_NOTES: NoteName[] = ['E', 'F', 'G', 'A', 'B', 'C', 'D'];
