@@ -2071,7 +2071,7 @@ function ScaleViewPanel({
                         </span>
                         <span className="text-[10px] font-mono text-foreground/90">{MODE_ACCIDENTALS[d.mode]}</span>
                       </div>
-                      <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">A {d.mode} — first position</div>
+                      
                       <ModeDiagram mode={d.mode} />
                     </div>
                   </div>
