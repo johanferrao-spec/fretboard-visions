@@ -211,24 +211,27 @@ export default function BackingTrackView({
       <div className="flex items-center gap-3 px-3 py-1 border-b border-border bg-card shrink-0 overflow-x-auto">
         <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider shrink-0">Backing Track</span>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[7px] font-mono uppercase tracking-wider text-muted-foreground/70">Shortcuts</span>
+          <span className="text-[7px] font-mono uppercase tracking-wider text-muted-foreground/70">Sections</span>
           {[
-            ['Z', 'Extend chord'],
-            ['X', 'Dom 7'],
-            ['A', 'Triad'],
-            ['Del', 'Remove'],
-            ['⌘D', 'Duplicate'],
-            ['⌘+click', 'Delete'],
-            ['Shift+click', 'Multi-select'],
-            ['Esc', 'Close'],
-            ['Enter', 'Confirm'],
-          ].map(([k, desc]) => (
-            <span key={k} className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground">
-              <kbd className="rounded border border-border bg-muted/60 px-1 py-0 text-[7px] text-foreground">{k}</kbd>
-              {desc}
+            ['Intro', '210 80% 60%'],
+            ['Verse', '340 75% 60%'],
+            ['Pre', '45 90% 55%'],
+            ['Chorus', '150 60% 50%'],
+            ['Bridge', '280 60% 60%'],
+            ['Solo', '20 80% 55%'],
+            ['Middle 8', '190 70% 55%'],
+            ['Outro', '95 55% 50%'],
+          ].map(([label, color]) => (
+            <span key={label} className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-wider text-muted-foreground">
+              <span
+                className="h-2.5 w-2.5 rounded-sm border"
+                style={{ background: `hsl(${color} / 0.35)`, borderColor: `hsl(${color})` }}
+              />
+              {label}
             </span>
           ))}
         </div>
+
       </div>
 
       {/* Tracks */}
