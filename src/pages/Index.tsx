@@ -427,9 +427,80 @@ const Index = () => {
                 }`}
                 title={metronomeOn ? 'Metronome ON — click to mute' : 'Metronome OFF — click to enable'}
               >
-                <span aria-hidden>🎵</span>
-                <span>{metronomeOn ? 'On' : 'Off'}</span>
+                <span>Metronome</span>
               </button>
+
+              {/* Settings gear with hover dropdown */}
+              <div className="relative group">
+                <button
+                  className="p-1 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                  title="Metronome settings"
+                  aria-label="Metronome settings"
+                >
+                  <Settings size={12} />
+                </button>
+                <div className="absolute left-0 top-full mt-1 z-50 hidden group-hover:block pt-1">
+                  <div className="w-56 rounded-md border border-border bg-popover text-popover-foreground shadow-lg p-3 space-y-3">
+                    <div>
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Time signature</div>
+                      <div className="flex flex-wrap gap-1">
+                        {[2, 3, 4, 5, 6, 7].map(n => (
+                          <button
+                            key={n}
+                            onClick={() => setTimeSigNum(n)}
+                            className={`w-7 h-7 rounded text-[10px] font-mono ${timeSigNum === n ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                          >
+                            {n}/4
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Subdivision</div>
+                      <div className="flex gap-1">
+                        {([[1, '♩'], [2, '♪♪'], [3, '3'], [4, '16']] as const).map(([v, label]) => (
+                          <button
+                            key={v}
+                            onClick={() => setSubdivision(v)}
+                            className={`flex-1 h-7 rounded text-[10px] font-mono ${subdivision === v ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                            title={v === 1 ? 'Quarter notes' : v === 2 ? 'Eighth notes' : v === 3 ? 'Triplets' : 'Sixteenth notes'}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Tap tempo</div>
+                      <button
+                        onClick={handleTapTempo}
+                        className="w-full h-8 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 text-[10px] font-mono uppercase tracking-wider"
+                      >
+                        Tap ({metronomeBpm} BPM)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Beat indicator (parallel with metronome, not in dropdown) */}
+              <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-secondary/40 border border-border">
+                {Array.from({ length: timeSigNum }).map((_, i) => {
+                  const active = metronomeOn && currentMetroBeat === i;
+                  const isDown = i === 0;
+                  const bg = active
+                    ? (isDown ? 'hsl(var(--beginner-green))' : 'hsl(var(--beginner-yellow))')
+                    : undefined;
+                  return (
+                    <div
+                      key={i}
+                      className={`w-2.5 h-2.5 rounded-full transition-all duration-75 ${active ? '' : isDown ? 'bg-muted-foreground/40' : 'bg-muted-foreground/20'}`}
+                      style={active ? { backgroundColor: bg, boxShadow: `0 0 6px ${bg}` } : undefined}
+                    />
+                  );
+                })}
+              </div>
+
               <div
                 className={`w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center select-none cursor-ns-resize ${bpmDragging ? 'ring-1 ring-primary' : ''}`}
                 style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
