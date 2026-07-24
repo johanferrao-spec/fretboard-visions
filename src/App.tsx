@@ -23,17 +23,19 @@ const App = () => (
       <Sonner />
       <SampleLibraryProvider>
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-          <Route path="/courses" element={<Courses />} />
-          <Route path="/courses/:courseId" element={<CourseDetail />} />
-          <Route path="/courses/:courseId/lessons/:tabId/edit" element={<CourseCreator />} />
-          <Route path="/courses/:courseId/lessons/:tabId" element={<CoursePlayer />} />
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+          <CloudHydrator>
+            <Routes>
+              <Route path="/" element={<Index />} />
+            <Route path="/courses" element={<Courses />} />
+            <Route path="/courses/:courseId" element={<CourseDetail />} />
+            <Route path="/courses/:courseId/lessons/:tabId/edit" element={<CourseCreator />} />
+            <Route path="/courses/:courseId/lessons/:tabId" element={<CoursePlayer />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          </CloudHydrator>
         </BrowserRouter>
       </SampleLibraryProvider>
     </TooltipProvider>
