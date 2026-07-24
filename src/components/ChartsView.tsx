@@ -671,9 +671,27 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       }
     }
 
+    // Cap resize at the row boundary AND at the nearest different-chord slot.
+    let boundary = edge === 'right' ? rowEnd : rowStart;
+    if (edge === 'right') {
+      let pos = slotEndUnit;
+      for (let i = idx + 1; i < slots.length && pos < rowEnd; i++) {
+        const nb = slots[i];
+        if (nb.chord && !chordsEqual(nb.chord, chord)) { boundary = pos; break; }
+        pos += nb.bars;
+      }
+    } else {
+      let pos = slotStartUnit;
+      for (let i = idx - 1; i >= 0 && pos > rowStart; i--) {
+        const nb = slots[i];
+        if (nb.chord && !chordsEqual(nb.chord, chord)) { boundary = pos; break; }
+        pos -= nb.bars;
+      }
+    }
     const maxBars = edge === 'right'
-      ? rowEnd - slotStartUnit
-      : slotEndUnit - rowStart;
+      ? boundary - slotStartUnit
+      : slotEndUnit - boundary;
+
 
 
     const startBars = chainBars;
