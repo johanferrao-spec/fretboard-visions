@@ -1,10 +1,11 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { X, Loader2, Group, Trash2, Check } from 'lucide-react';
 
 import type { NoteName } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { ChordBuilder } from '@/components/ChordReference';
 
 interface DiatonicChord {
   root: NoteName;
@@ -20,7 +21,7 @@ export interface ChartChord {
 
 export interface ChartSlot {
   id: string;
-  /** How many bars this slot spans (min 1). */
+  /** How many 1/8-bar units this slot spans (min 1). 8 = one bar. */
   bars: number;
   chord?: ChartChord;
 }
@@ -31,13 +32,22 @@ interface ChartsViewProps {
   getChordColor: (chord: ChartChord) => string;
 }
 
+/** 1 grid column = 1/8 bar. 32 columns per row = 4 bars per row. */
+const UNITS_PER_BAR = 8;
+const BARS_PER_ROW = 4;
+const COLS = BARS_PER_ROW * UNITS_PER_BAR;
 const DEFAULT_SLOT_COUNT = 32;
-const COLS = 4;
 let nextId = 1;
 const uid = (prefix: string) => `${prefix}-${nextId++}`;
 
 const makeSlots = (n: number): ChartSlot[] =>
-  Array.from({ length: n }, () => ({ id: uid('slot'), bars: 1 }));
+  Array.from({ length: n }, () => ({ id: uid('slot'), bars: UNITS_PER_BAR }));
+
+const formatBarNumber = (startEighth: number): string => {
+  const bar = startEighth / UNITS_PER_BAR + 1;
+  return Number.isInteger(bar) ? String(bar) : bar.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+};
+
 
 const formatChordLabel = (c: ChartChord): string => {
   const suffix =
