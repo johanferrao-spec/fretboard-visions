@@ -37,9 +37,10 @@ For each chord return:
 - "root": one of ${VALID_ROOTS.join(', ')} (use SHARP form only; convert Db->C#, Eb->D#, Gb->F#, Ab->G#, Bb->A#)
 - "chordType": exactly one of: ${VALID_CHORD_TYPES.join(' | ')}
 - "bars": duration in bars (number, use fractions like 0.5 if the chord occupies half a bar; default 1 if unclear)
+- "section": OPTIONAL short label for the song section this chord belongs to (e.g. "A", "B", "C", "Intro", "Verse", "Chorus", "Bridge", "Outro"). Lead sheets often mark rehearsal letters like [A], (A), or "A Section" / "B Section" at the start of a system — assign every subsequent chord to that section until the next marker appears. Omit the field entirely if the chart has no visible section markers.
 
 Return STRICT JSON only:
-{ "chords": [ { "root": "...", "chordType": "...", "bars": 1 }, ... ] }
+{ "chords": [ { "root": "...", "chordType": "...", "bars": 1, "section": "A" }, ... ] }
 
 No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
 
@@ -71,7 +72,7 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
 
     const data = await aiRes.json();
     const raw: string = data?.choices?.[0]?.message?.content ?? '';
-    let parsed: { chords?: Array<{ root?: string; chordType?: string; bars?: number }> } | null = null;
+    let parsed: { chords?: Array<{ root?: string; chordType?: string; bars?: number; section?: string }> } | null = null;
     try { parsed = JSON.parse(raw); } catch {
       const m = raw.match(/\{[\s\S]*\}/);
       if (m) { try { parsed = JSON.parse(m[0]); } catch { /* ignore */ } }
@@ -85,6 +86,7 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
       root: c.root!,
       chordType: c.chordType!,
       bars: typeof c.bars === 'number' && c.bars > 0 ? c.bars : 1,
+      section: typeof (c as any).section === 'string' && (c as any).section.trim() ? (c as any).section.trim() : undefined,
     }));
 
     return new Response(JSON.stringify({ chords, raw }),

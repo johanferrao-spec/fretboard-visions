@@ -385,15 +385,19 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       });
       const { data, error } = await supabase.functions.invoke('read-chart', { body: { image: dataUrl } });
       if (error) throw error;
-      const chords: Array<{ root: NoteName; chordType: string; bars: number }> = data?.chords ?? [];
+      const chords: Array<{ root: NoteName; chordType: string; bars: number; section?: string }> = data?.chords ?? [];
       if (chords.length === 0) {
         toast({ title: 'No chords detected', description: 'Try a clearer image or crop to the chord chart.', variant: 'destructive' });
         return;
       }
       // Convert to slots (1 bar = UNITS_PER_BAR eighths). Snap fractional bars to nearest 1/8.
-      const newSlots: ChartSlot[] = chords.map(c => {
+      // Track which slot index each chord landed on so we can build sections.
+      const newSlots: ChartSlot[] = [];
+      const slotSectionLabels: (string | undefined)[] = [];
+      chords.forEach(c => {
         const units = Math.max(1, Math.round(c.bars * UNITS_PER_BAR));
-        return { id: uid('slot'), bars: units, chord: { root: c.root, chordType: c.chordType } };
+        newSlots.push({ id: uid('slot'), bars: units, chord: { root: c.root, chordType: c.chordType } });
+        slotSectionLabels.push(c.section);
       });
       // Pad with empty bars up to at least DEFAULT_SLOT_COUNT bars.
       const usedUnits = newSlots.reduce((n, s) => n + s.bars, 0);
@@ -401,13 +405,51 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       let padUnits = Math.max(0, minUnits - usedUnits);
       while (padUnits > 0) {
         newSlots.push({ id: uid('slot'), bars: UNITS_PER_BAR });
+        slotSectionLabels.push(undefined);
         padUnits -= UNITS_PER_BAR;
       }
+
+      // Build sections from contiguous runs of the same section label.
+      // A label like "A" -> "A Section", full names ("Verse") pass through.
+      const expandName = (raw: string) => {
+        const t = raw.trim();
+        if (/^[A-Z]$/i.test(t)) return `${t.toUpperCase()} Section`;
+        return t.charAt(0).toUpperCase() + t.slice(1);
+      };
+      const newSections: Section[] = [];
+      const newArrangement: ArrangementItem[] = [];
+      // Map of label -> section id so repeated labels reuse the same section.
+      const labelToSectionId = new Map<string, string>();
+      let runStart = -1;
+      let runLabel: string | undefined;
+      const flushRun = (endIdxExclusive: number) => {
+        if (runStart < 0 || !runLabel) return;
+        const name = expandName(runLabel);
+        let secId = labelToSectionId.get(runLabel);
+        if (!secId) {
+          secId = uid('sec');
+          const color = SECTION_COLORS[newSections.length % SECTION_COLORS.length];
+          newSections.push({ id: secId, name, startIdx: runStart, endIdx: endIdxExclusive - 1, color });
+          labelToSectionId.set(runLabel, secId);
+        }
+        newArrangement.push({ id: uid('arr'), sectionId: secId });
+      };
+      for (let i = 0; i < slotSectionLabels.length; i++) {
+        const lbl = slotSectionLabels[i];
+        if (lbl !== runLabel) {
+          flushRun(i);
+          runStart = lbl ? i : -1;
+          runLabel = lbl;
+        }
+      }
+      flushRun(slotSectionLabels.length);
+
       snapshot();
       setSlots(newSlots);
-      setSections([]);
-      setArrangement([]);
-      toast({ title: 'Chart imported', description: `Loaded ${chords.length} chord${chords.length === 1 ? '' : 's'}.` });
+      setSections(newSections);
+      setArrangement(newArrangement);
+      const sectionMsg = newSections.length > 0 ? ` in ${newSections.length} section${newSections.length === 1 ? '' : 's'}` : '';
+      toast({ title: 'Chart imported', description: `Loaded ${chords.length} chord${chords.length === 1 ? '' : 's'}${sectionMsg}.` });
     } catch (err) {
       toast({ title: 'Read chart failed', description: (err as Error).message ?? 'Try again.', variant: 'destructive' });
     } finally {
