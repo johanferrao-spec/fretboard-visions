@@ -1302,6 +1302,9 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick, tuni
       <div className="text-[8px] font-mono mt-0.5 leading-tight text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
         {voicing.degreeOrder}
       </div>
+      <div className="text-[9px] font-mono font-bold mt-0.5 leading-tight text-center" style={{ color: `hsl(${color})` }}>
+        {voicing.inversionNumber === 0 ? 'Root' : `${voicing.inversionLabel} inversion`}
+      </div>
     </button>
   );
 }
