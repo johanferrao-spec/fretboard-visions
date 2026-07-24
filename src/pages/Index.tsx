@@ -896,7 +896,6 @@ const Index = () => {
               backingTrackActive={activeTab === 'backing'}
               onOpenBackingTrack={() => setActiveTab('backing')}
               onCloseBackingTrack={() => setActiveTab(null)}
-              onRegenerateBackingMidi={() => backingApi?.regenerateAll()}
               onSaveBackingTrack={(name) => backingApi?.save(name)}
               onLoadBackingTrack={(id) => backingApi?.load(id)}
               onDeleteBackingTrack={(id) => backingApi?.remove(id)}
