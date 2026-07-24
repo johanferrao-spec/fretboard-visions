@@ -152,6 +152,50 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
     }
   }, [setSlotChord]);
 
+  const readChartFromFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Not an image', description: 'Drop a screenshot or photo of a chord chart.', variant: 'destructive' });
+      return;
+    }
+    setReadingChart(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+      const { data, error } = await supabase.functions.invoke('read-chart', { body: { image: dataUrl } });
+      if (error) throw error;
+      const chords: Array<{ root: NoteName; chordType: string; bars: number }> = data?.chords ?? [];
+      if (chords.length === 0) {
+        toast({ title: 'No chords detected', description: 'Try a clearer image or crop to the chord chart.', variant: 'destructive' });
+        return;
+      }
+      // Convert to slots (1 bar = UNITS_PER_BAR eighths). Snap fractional bars to nearest 1/8.
+      const newSlots: ChartSlot[] = chords.map(c => {
+        const units = Math.max(1, Math.round(c.bars * UNITS_PER_BAR));
+        return { id: uid('slot'), bars: units, chord: { root: c.root, chordType: c.chordType } };
+      });
+      // Pad with empty bars up to at least DEFAULT_SLOT_COUNT bars.
+      const usedUnits = newSlots.reduce((n, s) => n + s.bars, 0);
+      const minUnits = DEFAULT_SLOT_COUNT * UNITS_PER_BAR;
+      let padUnits = Math.max(0, minUnits - usedUnits);
+      while (padUnits > 0) {
+        newSlots.push({ id: uid('slot'), bars: UNITS_PER_BAR });
+        padUnits -= UNITS_PER_BAR;
+      }
+      setSlots(newSlots);
+      setSections([]);
+      setArrangement([]);
+      toast({ title: 'Chart imported', description: `Loaded ${chords.length} chord${chords.length === 1 ? '' : 's'}.` });
+    } catch (err) {
+      toast({ title: 'Read chart failed', description: (err as Error).message ?? 'Try again.', variant: 'destructive' });
+    } finally {
+      setReadingChart(false);
+    }
+  }, []);
+
 
   const resizeSlot = useCallback((slotId: string, targetBars: number) => {
     setSlots(prev => {
