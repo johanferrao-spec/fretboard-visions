@@ -1321,8 +1321,12 @@ function VoiceLeadingDiagram({ voicing, color, onClick, isActive = false }: {
 }) {
   const frettedNotes = voicing.frets.filter(f => f > 0);
   const minFret = frettedNotes.length > 0 ? Math.min(...frettedNotes) : 1;
-  const startFret = Math.max(1, minFret - 1);
+  const maxFret = frettedNotes.length > 0 ? Math.max(...frettedNotes) : 1;
   const numFrets = 5;
+  let startFret = Math.max(1, minFret - 1);
+  if (maxFret - startFret >= numFrets) {
+    startFret = Math.max(1, maxFret - numFrets + 1);
+  }
   const cellW = 14;
   const cellH = 18;
   const numStrings = 6;
