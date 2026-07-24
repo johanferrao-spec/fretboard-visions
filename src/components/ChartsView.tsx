@@ -1,11 +1,13 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { X, Loader2, Group, Trash2, GripVertical, Upload } from 'lucide-react';
 
-import type { NoteName } from '@/lib/music';
+import type { NoteName, KeyMode } from '@/lib/music';
+import { getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { ChordBuilder } from '@/components/ChordReference';
+import { ScaleRootSelector } from '@/components/ControlPanel';
 
 interface DiatonicChord {
   root: NoteName;
@@ -27,9 +29,8 @@ export interface ChartSlot {
 }
 
 interface ChartsViewProps {
-  diatonicChords: DiatonicChord[];
-  /** Returns `H, S%, L%` triple (no `hsl()` wrapper). */
-  getChordColor: (chord: ChartChord) => string;
+  currentKey: NoteName;
+  keyMode: KeyMode;
   onToggleCharts?: () => void;
 }
 
@@ -81,7 +82,14 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
-export default function ChartsView({ diatonicChords, getChordColor, onToggleCharts }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode, onToggleCharts }: ChartsViewProps) {
+  const [chartKey, setChartKey] = useState<NoteName>(currentKey);
+  const diatonicChords = useMemo(() => getDiatonicChords(chartKey, keyMode), [chartKey, keyMode]);
+  const getChordColor = useCallback((chord: ChartChord) => {
+    const deg = getChordDegree(chartKey, chord.root, chord.chordType, keyMode);
+    return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
+  }, [chartKey, keyMode]);
+
   const [slots, setSlots] = useState<ChartSlot[]>(() => makeSlots(DEFAULT_SLOT_COUNT));
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
@@ -472,7 +480,13 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
       {/* Body: vertical toolbar + slot grid */}
       <div className="flex-1 overflow-hidden flex min-h-0">
         {/* Vertical toolbar */}
-        <div className="w-28 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-2 overflow-y-auto">
+        <div className="w-36 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-2 overflow-y-auto">
+          {/* Key selector */}
+          <div className="flex flex-col gap-1 chart-key-selector">
+            <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Key</div>
+            <ScaleRootSelector selectedRoot={chartKey} onSelect={(n) => setChartKey(n)} />
+          </div>
+
           <button
             onClick={() => { setSectionMode(m => !m); setDragSel(null); }}
             className={`h-9 rounded flex items-center justify-center gap-1.5 border transition-colors text-[10px] font-mono uppercase tracking-wider ${

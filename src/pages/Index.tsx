@@ -940,11 +940,8 @@ const Index = () => {
         {activeTab === 'backing' && showCharts && (
           <div className="flex-1 min-h-0 overflow-hidden">
             <ChartsView
-              diatonicChords={getDiatonicChords(timelineKey, keyMode)}
-              getChordColor={(c: ChartChord) => {
-                const deg = getChordDegree(timelineKey, c.root, c.chordType, keyMode);
-                return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
-              }}
+              currentKey={timelineKey}
+              keyMode={keyMode}
               onToggleCharts={() => setShowCharts(v => !v)}
             />
           </div>
