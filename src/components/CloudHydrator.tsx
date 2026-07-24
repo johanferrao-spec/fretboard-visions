@@ -94,10 +94,12 @@ export default function CloudHydrator({ children }: { children: React.ReactNode 
         try {
           const raw = localStorage.getItem(key);
           const parsed = raw ? JSON.parse(raw) : null;
-          const patch: { user_id: string; charts_data?: any; backing_tracks_data?: any } = { user_id: uid };
+          const patch: any = { user_id: uid };
           if (key === CHART_KEY) patch.charts_data = parsed;
           if (key === BACKING_KEY) patch.backing_tracks_data = parsed;
-          await supabase.from('user_snapshots').upsert(patch as any, { onConflict: 'user_id' });
+          if (key === LIBRARY_KEY) patch.charts_library = parsed;
+          if (key === SETLISTS_KEY) patch.setlists = parsed;
+          await supabase.from('user_snapshots').upsert(patch, { onConflict: 'user_id' });
         } catch {}
       }, 800);
     };
@@ -106,7 +108,7 @@ export default function CloudHydrator({ children }: { children: React.ReactNode 
     const origSet = Storage.prototype.setItem;
     Storage.prototype.setItem = function (k: string, v: string) {
       origSet.call(this, k, v);
-      if (k === CHART_KEY || k === BACKING_KEY) push(k);
+      if (k === CHART_KEY || k === BACKING_KEY || k === LIBRARY_KEY || k === SETLISTS_KEY) push(k);
     };
 
     return () => {
