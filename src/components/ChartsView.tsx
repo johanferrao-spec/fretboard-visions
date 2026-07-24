@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef } from 'react';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import type { NoteName } from '@/lib/music';
+import { parseChordSymbol } from '@/lib/chordParser';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface DiatonicChord {
   root: NoteName;
@@ -46,11 +49,53 @@ const formatChordLabel = (c: ChartChord): string => {
 export default function ChartsView({ diatonicChords, getChordColor }: ChartsViewProps) {
   const [slots, setSlots] = useState<ChartSlot[]>(() => makeSlots(DEFAULT_SLOT_COUNT));
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
+  const [editingSlot, setEditingSlot] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [parsingSlot, setParsingSlot] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   const setSlotChord = useCallback((slotId: string, chord: ChartChord | undefined) => {
     setSlots(prev => prev.map(sl => sl.id === slotId ? { ...sl, chord } : sl));
   }, []);
+
+  const beginEdit = useCallback((slot: ChartSlot) => {
+    setEditingSlot(slot.id);
+    setEditValue(slot.chord ? formatChordLabel(slot.chord) : '');
+  }, []);
+
+  const commitEdit = useCallback(async (slotId: string, raw: string) => {
+    const text = raw.trim();
+    setEditingSlot(null);
+    setEditValue('');
+    if (!text) return;
+
+    // Optimistic local parse for instant feedback.
+    const local = parseChordSymbol(text);
+    if (local) setSlotChord(slotId, { root: local.root, chordType: local.quality });
+
+    // AI resolution for anything ambiguous or verbose.
+    setParsingSlot(slotId);
+    try {
+      const { data, error } = await supabase.functions.invoke('parse-chord', { body: { input: text } });
+      if (error) throw error;
+      if (data?.root && data?.chordType) {
+        setSlotChord(slotId, { root: data.root as NoteName, chordType: data.chordType });
+      } else if (!local) {
+        toast({ title: 'Chord not recognised', description: text, variant: 'destructive' });
+      }
+    } catch (err) {
+      if (!local) {
+        toast({
+          title: 'Chord parse failed',
+          description: (err as Error).message ?? 'Try a simpler notation like "Am7" or "Cmaj7".',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setParsingSlot(prev => (prev === slotId ? null : prev));
+    }
+  }, [setSlotChord]);
+
 
   const resizeSlot = useCallback((slotId: string, targetBars: number) => {
     setSlots(prev => {
@@ -162,7 +207,7 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
       <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-card shrink-0">
         <span className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">Charts</span>
         <span className="text-[9px] font-mono text-muted-foreground/70">
-          Drag coloured degree cells above into any slot. Each slot = 1 bar. Drag the right edge to resize.
+          Drag coloured degree cells into any slot, or double-click a slot to type a chord (e.g. "Am7", "A minor seventh"). Drag the right edge to resize.
         </span>
         <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">
           {slots.reduce((n, s) => n + s.bars, 0)} bars · {slots.length} slots
@@ -173,11 +218,13 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
       <div className="flex-1 overflow-hidden p-3">
         <div
           ref={gridRef}
-          className="grid gap-2"
+          className="grid gap-1.5"
           style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
         >
           {slots.map(slot => {
             const isHover = hoverSlot === slot.id;
+            const isEditing = editingSlot === slot.id;
+            const isParsing = parsingSlot === slot.id;
             const color = slot.chord ? getChordColor(slot.chord) : null;
             return (
               <div
@@ -185,27 +232,45 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
                 onDragOver={(e) => handleDragOver(slot.id, e)}
                 onDragLeave={() => setHoverSlot(prev => prev === slot.id ? null : prev)}
                 onDrop={(e) => handleDrop(slot.id, e)}
+                onDoubleClick={() => beginEdit(slot)}
                 style={{
                   gridColumn: `span ${slot.bars} / span ${slot.bars}`,
                   background: color ? `hsl(${color})` : undefined,
                   boxShadow: isHover ? 'inset 0 0 0 2px hsl(var(--primary))' : undefined,
                 }}
-                className={`group relative aspect-[3/1] rounded-md flex items-center justify-center transition-colors overflow-hidden ${
+                className={`group relative aspect-[5/1] rounded-md flex items-center justify-center transition-colors overflow-hidden ${
                   color
                     ? 'brightness-100 hover:brightness-110'
                     : 'bg-muted/20 border border-dashed border-border/50 hover:border-primary/60 hover:bg-muted/30'
                 }`}
-                title={slot.chord ? `${formatChordLabel(slot.chord)} — ${slot.bars} bar${slot.bars === 1 ? '' : 's'}` : 'Empty slot — drop a chord here'}
+                title={slot.chord ? `${formatChordLabel(slot.chord)} — ${slot.bars} bar${slot.bars === 1 ? '' : 's'}` : 'Double-click to type a chord, or drop one here'}
               >
-                {slot.chord ? (
-                  <span className="text-[15px] font-mono font-bold pointer-events-none" style={{ color: '#000' }}>
+                {isEditing ? (
+                  <input
+                    autoFocus
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onBlur={() => commitEdit(slot.id, editValue)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); commitEdit(slot.id, editValue); }
+                      else if (e.key === 'Escape') { setEditingSlot(null); setEditValue(''); }
+                    }}
+                    placeholder="e.g. Am7"
+                    className="w-[90%] text-center text-[13px] font-mono font-bold bg-background/90 text-foreground rounded px-1 py-0.5 border border-primary focus:outline-none"
+                  />
+                ) : slot.chord ? (
+                  <span className="text-[13px] font-mono font-bold pointer-events-none" style={{ color: '#000' }}>
                     {formatChordLabel(slot.chord)}
                   </span>
                 ) : (
-                  <span className="text-[10px] font-mono text-muted-foreground/50">1 bar</span>
+                  <span className="text-[9px] font-mono text-muted-foreground/50">1 bar</span>
                 )}
 
-                {slot.chord && (
+                {isParsing && (
+                  <Loader2 size={10} className="absolute top-1 right-3 animate-spin text-foreground/70" />
+                )}
+
+                {slot.chord && !isEditing && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setSlotChord(slot.id, undefined); }}
                     className="absolute top-1 left-1 p-0.5 rounded bg-background/70 hover:bg-destructive/70 text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
@@ -225,6 +290,7 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
             );
           })}
         </div>
+
       </div>
     </div>
   );
