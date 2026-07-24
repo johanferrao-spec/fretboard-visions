@@ -2097,13 +2097,13 @@ function ScaleViewPanel({
               <div className="flex items-start gap-3 mt-0.5">
                 <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                   {[
-                    { num: 'I', mode: 'Ionian', desc: 'Bright, stable — the major scale.', color: SCALE_DEGREE_COLORS[0] },
-                    { num: 'II', mode: 'Dorian', desc: 'Jazzy minor with a natural 6th.', color: SCALE_DEGREE_COLORS[1] },
-                    { num: 'III', mode: 'Phrygian', desc: 'Dark, Spanish-flavoured (♭2).', color: SCALE_DEGREE_COLORS[2] },
-                    { num: 'IV', mode: 'Lydian', desc: 'Bright, floating (♯4).', color: SCALE_DEGREE_COLORS[3] },
-                    { num: 'V', mode: 'Mixolydian', desc: 'Bluesy dominant (♭7).', color: SCALE_DEGREE_COLORS[4] },
-                    { num: 'VI', mode: 'Aeolian', desc: 'Natural minor — melancholic.', color: SCALE_DEGREE_COLORS[5] },
-                    { num: 'VII', mode: 'Locrian', desc: 'Dark, unstable (♭2, ♭5).', color: SCALE_DEGREE_COLORS[6] },
+                    { num: 'I', mode: 'Ionian', desc: 'Bright, stable, resolved', color: SCALE_DEGREE_COLORS[0] },
+                    { num: 'II', mode: 'Dorian', desc: 'Jazzy, questioning, soulful', color: SCALE_DEGREE_COLORS[1] },
+                    { num: 'III', mode: 'Phrygian', desc: 'Dark, Spanish, tense', color: SCALE_DEGREE_COLORS[2] },
+                    { num: 'IV', mode: 'Lydian', desc: 'Bright, floating, whimsical', color: SCALE_DEGREE_COLORS[3] },
+                    { num: 'V', mode: 'Mixolydian', desc: 'Bluesy, playful, upbeat', color: SCALE_DEGREE_COLORS[4] },
+                    { num: 'VI', mode: 'Aeolian', desc: 'Melancholic, serious, Introspective\u00a0', color: SCALE_DEGREE_COLORS[5] },
+                    { num: 'VII', mode: 'Locrian', desc: 'Dark, unstable, dissonant', color: SCALE_DEGREE_COLORS[6] },
                   ].map(d => {
                     const isActive = selectedModePreview === d.mode;
                     return (
