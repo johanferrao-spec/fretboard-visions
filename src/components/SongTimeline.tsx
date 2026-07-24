@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight, RefreshCw, Sparkles, Loader2 } from 'lucide-react';
+import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight, Sparkles, Loader2 } from 'lucide-react';
 import type { TimelineChord, SnapValue, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
@@ -52,7 +52,6 @@ interface SongTimelineProps {
   backingTrackActive?: boolean;
   onOpenBackingTrack?: () => void;
   onCloseBackingTrack?: () => void;
-  onRegenerateBackingMidi?: () => void;
   onSaveBackingTrack?: (name: string) => void;
   onLoadBackingTrack?: (id: string) => void;
   onDeleteBackingTrack?: (id: string) => void;
@@ -70,7 +69,6 @@ export default function SongTimeline({
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
   onSeek, onSetChordBass,
   backingTrackActive, onOpenBackingTrack, onCloseBackingTrack,
-  onRegenerateBackingMidi,
   onSaveBackingTrack, onLoadBackingTrack, onDeleteBackingTrack, savedBackingTracks = [],
   chartsActive, onToggleCharts,
 }: SongTimelineProps) {
@@ -1003,27 +1001,25 @@ export default function SongTimeline({
             setPlayheadDragging(true);
           }}
         >
-          {backingTrackActive && (
-            <div
-              style={{ width: 200, minWidth: 200 }}
-              className="flex items-center gap-1 px-2 h-5"
-              onMouseDown={(e) => e.stopPropagation()}
+          <div
+            style={{ width: 200, minWidth: 200 }}
+            className="flex items-center gap-1 px-2 h-5"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Chords</span>
+            <button
+              onClick={() => onToggleCharts?.()}
+              className={`ml-auto px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider flex items-center gap-1 transition-colors ${
+                chartsActive
+                  ? 'bg-primary/30 text-primary hover:bg-primary/40'
+                  : 'bg-secondary text-muted-foreground hover:bg-muted'
+              }`}
+              title={chartsActive ? 'Close charts and return to DAW' : 'Open charts panel'}
             >
-              <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Chords</span>
-              <button
-                onClick={() => onToggleCharts?.()}
-                className={`ml-auto px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider flex items-center gap-1 transition-colors ${
-                  chartsActive
-                    ? 'bg-primary/30 text-primary hover:bg-primary/40'
-                    : 'bg-secondary text-muted-foreground hover:bg-muted'
-                }`}
-                title={chartsActive ? 'Close charts and return to DAW' : 'Open charts panel'}
-              >
-                <LayoutGrid size={9} />
-                Charts
-              </button>
-            </div>
-          )}
+              <LayoutGrid size={9} />
+              Charts
+            </button>
+          </div>
           {!cellView && (
             <div className="flex-1 flex items-center">
               {Array.from({ length: measures }, (_, m) => (
@@ -1041,16 +1037,7 @@ export default function SongTimeline({
             <div
               style={{ width: 200, minWidth: 200 }}
               className="border-r border-border/30 bg-card/40 flex items-start justify-center pt-2"
-            >
-              <button
-                onClick={() => onRegenerateBackingMidi?.()}
-                className="px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider flex items-center gap-1 bg-primary/20 text-primary hover:bg-primary/30 transition-colors border border-primary/30"
-                title="Regenerate backing track MIDI from current chords"
-              >
-                <RefreshCw size={10} />
-                Regenerate MIDI
-              </button>
-            </div>
+            />
           )}
           {cellView ? (
             <CellGridView
