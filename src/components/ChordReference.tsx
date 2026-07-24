@@ -2059,21 +2059,17 @@ function ScaleViewPanel({
                   { num: 'VI', mode: 'Aeolian', desc: 'Natural minor — melancholic.', color: SCALE_DEGREE_COLORS[5] },
                   { num: 'VII', mode: 'Locrian', desc: 'Dark, unstable (♭2, ♭5).', color: SCALE_DEGREE_COLORS[6] },
                 ].map(d => (
-                  <HoverCard key={d.mode} openDelay={80} closeDelay={40}>
-                    <HoverCardTrigger asChild>
-                      <div className="flex items-center gap-1.5 text-[9px] font-mono leading-tight cursor-help">
-                        <span
-                          className="px-1.5 h-4 rounded flex items-center justify-center font-bold text-[9px] shrink-0 gap-0.5"
-                          style={{ backgroundColor: `hsl(${d.color})`, color: 'hsl(var(--background))' }}
-                        >
-                          <span>{d.num}</span>
-                          <span>-</span>
-                          <span>{d.mode}</span>
-                        </span>
-                        <span className="text-muted-foreground truncate">— {d.desc}</span>
-                      </div>
-                    </HoverCardTrigger>
-                    <HoverCardContent side="left" align="start" className="w-auto p-2 flex flex-col gap-1.5">
+                  <div key={d.mode} className="relative group flex items-center gap-1.5 text-[9px] font-mono leading-tight cursor-help">
+                    <span
+                      className="px-1.5 h-4 rounded flex items-center justify-center font-bold text-[9px] shrink-0 gap-0.5"
+                      style={{ backgroundColor: `hsl(${d.color})`, color: 'hsl(var(--background))' }}
+                    >
+                      <span>{d.num}</span>
+                      <span>-</span>
+                      <span>{d.mode}</span>
+                    </span>
+                    <span className="text-muted-foreground truncate">— {d.desc}</span>
+                    <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute right-full top-1/2 -translate-y-1/2 mr-2 z-50 rounded-md border bg-popover p-2 shadow-md flex flex-col gap-1.5 w-max">
                       <div className="flex items-center gap-1.5">
                         <span
                           className="px-1.5 h-4 rounded flex items-center justify-center font-bold text-[9px]"
@@ -2085,8 +2081,8 @@ function ScaleViewPanel({
                       </div>
                       <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">A {d.mode} — first position</div>
                       <ModeDiagram mode={d.mode} />
-                    </HoverCardContent>
-                  </HoverCard>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
