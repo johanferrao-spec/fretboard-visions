@@ -30,6 +30,7 @@ interface ChartsViewProps {
   diatonicChords: DiatonicChord[];
   /** Returns `H, S%, L%` triple (no `hsl()` wrapper). */
   getChordColor: (chord: ChartChord) => string;
+  onToggleCharts?: () => void;
 }
 
 /** 1 grid column = 1/8 bar. 32 columns per row = 4 bars per row. */
@@ -80,7 +81,7 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
-export default function ChartsView({ diatonicChords, getChordColor }: ChartsViewProps) {
+export default function ChartsView({ diatonicChords, getChordColor, onToggleCharts }: ChartsViewProps) {
   const [slots, setSlots] = useState<ChartSlot[]>(() => makeSlots(DEFAULT_SLOT_COUNT));
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
@@ -403,6 +404,14 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
         <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">
           {totalBars % 1 === 0 ? totalBars : totalBars.toFixed(2)} bars · {slots.length} slots
         </span>
+        <button
+          onClick={() => onToggleCharts?.()}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-muted-foreground hover:bg-muted transition-colors"
+          title="Close charts and return to timeline"
+        >
+          <X size={10} />
+          Close
+        </button>
       </div>
 
       {/* Body: vertical toolbar + slot grid */}

@@ -818,56 +818,58 @@ const Index = () => {
           maxHeight: activeTab === 'backing' ? 'none' : '180px',
         }}
       >
-        {/* Timeline — order shifts when backing is active so it slides up to top of this region */}
-        <div className="transition-all duration-500 ease-out shrink-0">
-          <SongTimeline
-            chords={timeline.chords}
-            measures={timeline.measures}
-            setMeasures={timeline.setMeasures}
-            bpm={timeline.bpm}
-            setBpm={timeline.setBpm}
-            genre={timeline.genre}
-            setGenre={timeline.setGenre}
-            groove={timeline.groove}
-            setGroove={timeline.setGroove}
-            swing={timeline.swing}
-            setSwing={timeline.setSwing}
-            snap={timeline.snap}
-            setSnap={timeline.setSnap}
-            isPlaying={timeline.isPlaying}
-            currentBeat={timeline.currentBeat}
-            panelHeight={timeline.panelHeight}
-            setPanelHeight={timeline.setPanelHeight}
-            onPlay={handlePlay}
-            onStop={handleStop}
-            onAddChord={timeline.addChord}
-            onMoveChord={timeline.moveChord}
-            onCommitMove={timeline.commitMove}
-            onResizeChord={timeline.resizeChord}
-            onResizeChordRange={timeline.resizeChordRange}
-            onRemoveChord={timeline.removeChord}
-            onClearTimeline={timeline.clearTimeline}
-            onTrimOverlaps={timeline.trimOverlaps}
-            volume={volume}
-            onVolumeChange={handleVolumeChange}
-            timelineKey={timelineKey}
-            setTimelineKey={setTimelineKey}
-            keyMode={keyMode}
-            setKeyMode={setKeyMode}
-            onSeek={handleSeek}
-            onSetChordBass={timeline.setChordBass}
-            backingTrackActive={activeTab === 'backing'}
-            onOpenBackingTrack={() => setActiveTab('backing')}
-            onCloseBackingTrack={() => setActiveTab(null)}
-            onRegenerateBackingMidi={() => backingApi?.regenerateAll()}
-            onSaveBackingTrack={(name) => backingApi?.save(name)}
-            onLoadBackingTrack={(id) => backingApi?.load(id)}
-            onDeleteBackingTrack={(id) => backingApi?.remove(id)}
-            savedBackingTracks={backingApi?.saved || []}
-            chartsActive={showCharts}
-            onToggleCharts={() => setShowCharts(v => !v)}
-          />
-        </div>
+        {/* Timeline — hidden when the Charts panel is open so the chart view takes the full bottom area */}
+        {!(activeTab === 'backing' && showCharts) && (
+          <div className="transition-all duration-500 ease-out shrink-0">
+            <SongTimeline
+              chords={timeline.chords}
+              measures={timeline.measures}
+              setMeasures={timeline.setMeasures}
+              bpm={timeline.bpm}
+              setBpm={timeline.setBpm}
+              genre={timeline.genre}
+              setGenre={timeline.setGenre}
+              groove={timeline.groove}
+              setGroove={timeline.setGroove}
+              swing={timeline.swing}
+              setSwing={timeline.setSwing}
+              snap={timeline.snap}
+              setSnap={timeline.setSnap}
+              isPlaying={timeline.isPlaying}
+              currentBeat={timeline.currentBeat}
+              panelHeight={timeline.panelHeight}
+              setPanelHeight={timeline.setPanelHeight}
+              onPlay={handlePlay}
+              onStop={handleStop}
+              onAddChord={timeline.addChord}
+              onMoveChord={timeline.moveChord}
+              onCommitMove={timeline.commitMove}
+              onResizeChord={timeline.resizeChord}
+              onResizeChordRange={timeline.resizeChordRange}
+              onRemoveChord={timeline.removeChord}
+              onClearTimeline={timeline.clearTimeline}
+              onTrimOverlaps={timeline.trimOverlaps}
+              volume={volume}
+              onVolumeChange={handleVolumeChange}
+              timelineKey={timelineKey}
+              setTimelineKey={setTimelineKey}
+              keyMode={keyMode}
+              setKeyMode={setKeyMode}
+              onSeek={handleSeek}
+              onSetChordBass={timeline.setChordBass}
+              backingTrackActive={activeTab === 'backing'}
+              onOpenBackingTrack={() => setActiveTab('backing')}
+              onCloseBackingTrack={() => setActiveTab(null)}
+              onRegenerateBackingMidi={() => backingApi?.regenerateAll()}
+              onSaveBackingTrack={(name) => backingApi?.save(name)}
+              onLoadBackingTrack={(id) => backingApi?.load(id)}
+              onDeleteBackingTrack={(id) => backingApi?.remove(id)}
+              savedBackingTracks={backingApi?.saved || []}
+              chartsActive={showCharts}
+              onToggleCharts={() => setShowCharts(v => !v)}
+            />
+          </div>
+        )}
 
         {/* Backing Track DAW — always mounted so the engine, sample resolver,
             and current groove drive playback even when the panel is minimised.
@@ -943,6 +945,7 @@ const Index = () => {
                 const deg = getChordDegree(timelineKey, c.root, c.chordType, keyMode);
                 return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
               }}
+              onToggleCharts={() => setShowCharts(v => !v)}
             />
           </div>
         )}
