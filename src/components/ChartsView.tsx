@@ -303,7 +303,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     } finally {
       setReadingChart(false);
     }
-  }, []);
+  }, [snapshot]);
 
 
   // Resize by growing/shrinking from a specific edge. Growth only consumes
