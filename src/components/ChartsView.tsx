@@ -393,57 +393,141 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
 
 
-  // Resize by growing/shrinking from a specific edge. Growth only consumes
-  // adjacent EMPTY (chord-less) slots — chord-holding neighbors are not affected.
+  // Resize by growing/shrinking from a specific edge.
+  // Behaviour:
+  //  • Within the slot's own bar, we grow/shrink the slot itself (consuming
+  //    adjacent EMPTY neighbors when growing).
+  //  • Past the bar boundary, chords are replicated across subsequent bar-aligned
+  //    full-bar cells so each bar remains its own visually separate cell.
+  //  • Shrinking removes those replicated copies.
+  // `targetBars` is the total desired chain length in 1/8 units.
   const resizeSlotEdge = useCallback((slotId: string, targetBars: number, edge: 'right' | 'left') => {
     setSlots(prev => {
       const idx = prev.findIndex(sl => sl.id === slotId);
       if (idx < 0) return prev;
       const current = prev[idx];
       const desired = Math.max(1, targetBars);
-      if (desired === current.bars) return prev;
-      const next = prev.slice();
+      const chord = current.chord;
+
+      // Absolute unit position of this slot in the flattened grid.
+      let before = 0;
+      for (let i = 0; i < idx; i++) before += prev[i].bars;
+      const offsetInBar = before % UNITS_PER_BAR;
+
+      let next = prev.slice();
 
       if (edge === 'right') {
-        if (desired > current.bars) {
-          let need = desired - current.bars;
-          let cursor = idx + 1;
-          while (need > 0 && cursor < next.length && !next[cursor].chord) {
-            const nb = next[cursor];
-            if (nb.bars <= need) { need -= nb.bars; next.splice(cursor, 1); }
-            else { next[cursor] = { ...nb, bars: nb.bars - need }; need = 0; }
-          }
-          next[idx] = { ...current, bars: desired - need };
-        } else {
-          const freed = current.bars - desired;
-          next[idx] = { ...current, bars: desired };
-          if (next[idx + 1] && !next[idx + 1].chord) {
-            next[idx + 1] = { ...next[idx + 1], bars: next[idx + 1].bars + freed };
+        const maxOwnBars = UNITS_PER_BAR - offsetInBar;
+        const ownDesired = Math.min(desired, maxOwnBars);
+        const extraFullBars = chord
+          ? Math.max(0, Math.round((desired - maxOwnBars) / UNITS_PER_BAR))
+          : 0;
+
+        // 1) Resize the slot itself within its own bar.
+        if (ownDesired !== current.bars) {
+          if (ownDesired > current.bars) {
+            let need = ownDesired - current.bars;
+            let cursor = idx + 1;
+            while (need > 0 && cursor < next.length && !next[cursor].chord) {
+              // Stop at the current-bar boundary — don't consume into next bar here.
+              let cs = 0; for (let i = 0; i < cursor; i++) cs += next[i].bars;
+              if (cs % UNITS_PER_BAR === 0 && cs !== before) break;
+              const nb = next[cursor];
+              if (nb.bars <= need) { need -= nb.bars; next.splice(cursor, 1); }
+              else { next[cursor] = { ...nb, bars: nb.bars - need }; need = 0; }
+            }
+            next[idx] = { ...current, bars: ownDesired - need };
           } else {
-            next.splice(idx + 1, 0, { id: uid('slot'), bars: freed });
+            const freed = current.bars - ownDesired;
+            next[idx] = { ...current, bars: ownDesired };
+            if (next[idx + 1] && !next[idx + 1].chord) {
+              next[idx + 1] = { ...next[idx + 1], bars: next[idx + 1].bars + freed };
+            } else {
+              next.splice(idx + 1, 0, { id: uid('slot'), bars: freed });
+            }
+          }
+        }
+
+        // 2) Replicate chord into subsequent bar-aligned full-bar cells.
+        if (chord) {
+          const curIdx = next.findIndex(sl => sl.id === slotId);
+          let pos = 0; for (let i = 0; i <= curIdx; i++) pos += next[i].bars;
+          let cursor = curIdx + 1;
+          let placed = 0;
+          while (placed < extraFullBars && cursor < next.length) {
+            if (pos % UNITS_PER_BAR !== 0) break;
+            const nb = next[cursor];
+            if (nb.bars === UNITS_PER_BAR && (!nb.chord || chordsEqual(nb.chord, chord))) {
+              if (!chordsEqual(nb.chord, chord)) next[cursor] = { ...nb, chord: { ...chord } };
+              placed++; pos += nb.bars; cursor++;
+            } else break;
+          }
+          // Clear any further replicated copies beyond the desired chain.
+          while (cursor < next.length && pos % UNITS_PER_BAR === 0) {
+            const nb = next[cursor];
+            if (nb.bars === UNITS_PER_BAR && chordsEqual(nb.chord, chord)) {
+              next[cursor] = { ...nb, chord: undefined };
+              pos += nb.bars; cursor++;
+            } else break;
           }
         }
       } else {
-        if (desired > current.bars) {
-          let need = desired - current.bars;
-          let cursor = idx - 1;
-          let curIdx = idx;
-          while (need > 0 && cursor >= 0 && !next[cursor].chord) {
-            const nb = next[cursor];
-            if (nb.bars <= need) {
-              need -= nb.bars; next.splice(cursor, 1); curIdx--; cursor--;
+        // LEFT edge — symmetric. Chain grows to the LEFT of the anchor slot.
+        const maxOwnBars = current.bars + offsetInBar;
+        const ownDesired = Math.min(desired, maxOwnBars);
+        const extraFullBars = chord
+          ? Math.max(0, Math.round((desired - maxOwnBars) / UNITS_PER_BAR))
+          : 0;
+
+        let curIdxLocal = idx;
+        if (ownDesired !== current.bars) {
+          if (ownDesired > current.bars) {
+            let need = ownDesired - current.bars;
+            let cursor = curIdxLocal - 1;
+            while (need > 0 && cursor >= 0 && !next[cursor].chord) {
+              let cs = 0; for (let i = 0; i < cursor; i++) cs += next[i].bars;
+              const cend = cs + next[cursor].bars;
+              if (cend % UNITS_PER_BAR === 0 && cend !== before) break;
+              const nb = next[cursor];
+              if (nb.bars <= need) {
+                need -= nb.bars; next.splice(cursor, 1); curIdxLocal--; cursor--;
+              } else {
+                next[cursor] = { ...nb, bars: nb.bars - need }; need = 0;
+              }
+            }
+            next[curIdxLocal] = { ...current, bars: ownDesired - need };
+          } else {
+            const freed = current.bars - ownDesired;
+            next[curIdxLocal] = { ...current, bars: ownDesired };
+            if (curIdxLocal > 0 && !next[curIdxLocal - 1].chord) {
+              next[curIdxLocal - 1] = { ...next[curIdxLocal - 1], bars: next[curIdxLocal - 1].bars + freed };
             } else {
-              next[cursor] = { ...nb, bars: nb.bars - need }; need = 0;
+              next.splice(curIdxLocal, 0, { id: uid('slot'), bars: freed });
+              curIdxLocal++;
             }
           }
-          next[curIdx] = { ...current, bars: desired - need };
-        } else {
-          const freed = current.bars - desired;
-          next[idx] = { ...current, bars: desired };
-          if (idx > 0 && !next[idx - 1].chord) {
-            next[idx - 1] = { ...next[idx - 1], bars: next[idx - 1].bars + freed };
-          } else {
-            next.splice(idx, 0, { id: uid('slot'), bars: freed });
+        }
+
+        if (chord) {
+          const curIdx = next.findIndex(sl => sl.id === slotId);
+          let posStart = 0; for (let i = 0; i < curIdx; i++) posStart += next[i].bars;
+          let cursor = curIdx - 1;
+          let cursorEnd = posStart;
+          let placed = 0;
+          while (placed < extraFullBars && cursor >= 0) {
+            if (cursorEnd % UNITS_PER_BAR !== 0) break;
+            const nb = next[cursor];
+            if (nb.bars === UNITS_PER_BAR && (!nb.chord || chordsEqual(nb.chord, chord))) {
+              if (!chordsEqual(nb.chord, chord)) next[cursor] = { ...nb, chord: { ...chord } };
+              placed++; cursorEnd -= nb.bars; cursor--;
+            } else break;
+          }
+          while (cursor >= 0 && cursorEnd % UNITS_PER_BAR === 0) {
+            const nb = next[cursor];
+            if (nb.bars === UNITS_PER_BAR && chordsEqual(nb.chord, chord)) {
+              next[cursor] = { ...nb, chord: undefined };
+              cursorEnd -= nb.bars; cursor--;
+            } else break;
           }
         }
       }
@@ -486,7 +570,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     }
   };
 
-  const startResize = (slotId: string, startBars: number, edge: 'right' | 'left', e: React.MouseEvent) => {
+  const startResize = (slotId: string, _startBars: number, edge: 'right' | 'left', e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const grid = gridRef.current;
@@ -495,23 +579,57 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     const gap = parseFloat(styles.columnGap || '0') || 0;
     const unitWidth = (grid.clientWidth - gap * (COLS - 1)) / COLS;
     const startX = e.clientX;
+
+    const idx = slots.findIndex(s => s.id === slotId);
+    if (idx < 0) return;
+    const slot = slots[idx];
+    const chord = slot.chord;
+
+    // Absolute unit position of this slot.
+    let slotStartUnit = 0;
+    for (let i = 0; i < idx; i++) slotStartUnit += slots[i].bars;
+    const slotEndUnit = slotStartUnit + slot.bars;
+
+    // Include existing replicated chain in the effective startBars so shrinking
+    // removes copies before eating into the anchor slot itself.
+    let chainBars = slot.bars;
+    let chainStartUnit = slotStartUnit;
+    let chainEndUnit = slotEndUnit;
+    if (chord) {
+      if (edge === 'right') {
+        let pos = slotEndUnit;
+        for (let i = idx + 1; i < slots.length; i++) {
+          if (pos % UNITS_PER_BAR !== 0) break;
+          const nb = slots[i];
+          if (nb.bars === UNITS_PER_BAR && chordsEqual(nb.chord, chord)) {
+            chainBars += nb.bars; pos += nb.bars; chainEndUnit = pos;
+          } else break;
+        }
+      } else {
+        let pos = slotStartUnit;
+        for (let i = idx - 1; i >= 0; i--) {
+          if (pos % UNITS_PER_BAR !== 0) break;
+          const nb = slots[i];
+          if (nb.bars === UNITS_PER_BAR && chordsEqual(nb.chord, chord)) {
+            chainBars += nb.bars; pos -= nb.bars; chainStartUnit = pos;
+          } else break;
+        }
+      }
+    }
+
+    // Row constraints: chain must remain within its 4-bar row.
+    const rowStart = Math.floor(chainStartUnit / COLS) * COLS;
+    const rowEnd = rowStart + COLS;
+    const maxBars = edge === 'right'
+      ? rowEnd - chainStartUnit
+      : chainEndUnit - rowStart;
+
+    const startBars = chainBars;
     let lastBars = startBars;
     let snapped = false;
 
-    // Compute start unit of this slot to constrain resize within its row.
-    let slotStartUnit = 0;
-    for (const s of slots) {
-      if (s.id === slotId) break;
-      slotStartUnit += s.bars;
-    }
-    const offsetInRow = slotStartUnit % COLS;
-    const maxBarsRight = COLS - offsetInRow; // right edge cannot cross row end
-    const maxBarsLeft = startBars + offsetInRow; // left edge cannot cross row start
-    const maxBars = edge === 'right' ? maxBarsRight : maxBarsLeft;
-
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX;
-      // Left handle: dragging left grows, dragging right shrinks.
       const delta = edge === 'right' ? Math.round(dx / unitWidth) : Math.round(-dx / unitWidth);
       const nextBars = Math.min(maxBars, Math.max(1, startBars + delta));
       if (nextBars !== lastBars) {
