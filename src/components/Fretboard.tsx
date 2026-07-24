@@ -1059,15 +1059,39 @@ export default function Fretboard({
             return (
               <div key={d.label} className="flex flex-col items-center gap-0.5">
                 <button
-                  onClick={() => {
+                  data-color-degree={posKey}
+                  data-color-degree-off={isOff ? '1' : '0'}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
                     if (isHidden) {
                       setHiddenDegrees(prev => { const next = new Set(prev); next.delete(posKey); return next; });
-                    } else {
-                      toggleDegree(posKey);
+                      return;
                     }
+                    // Initial toggle sets the target state for the drag
+                    const shouldDisable = !isOff;
+                    toggleDegree(posKey);
+                    const touched = new Set<string>([posKey]);
+                    const handleMove = (ev: PointerEvent) => {
+                      const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
+                      const btn = el?.closest('[data-color-degree]') as HTMLElement | null;
+                      const key = btn?.dataset.colorDegree;
+                      if (!key || touched.has(key)) return;
+                      const currentlyOff = btn!.dataset.colorDegreeOff === '1';
+                      if (currentlyOff !== shouldDisable) {
+                        toggleDegree(key);
+                      }
+                      touched.add(key);
+                    };
+                    const handleUp = () => {
+                      window.removeEventListener('pointermove', handleMove);
+                      window.removeEventListener('pointerup', handleUp);
+                    };
+                    window.addEventListener('pointermove', handleMove);
+                    window.addEventListener('pointerup', handleUp);
                   }}
-                  className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${isHidden ? 'opacity-100' : isOff ? 'opacity-30' : 'opacity-100'}`}
-                  title={isHidden ? `Click to restore ${d.label}` : `Click to toggle ${d.label}`}
+                  className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all touch-none select-none ${isHidden ? 'opacity-100' : isOff ? 'opacity-30' : 'opacity-100'}`}
+                  title={isHidden ? `Click to restore ${d.label}` : `Click or drag to toggle ${d.label}`}
                 >
                   {isHidden ? (
                     <>
