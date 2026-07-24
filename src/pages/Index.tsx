@@ -578,10 +578,10 @@ const Index = () => {
             {/* Tuner */}
             <button
               onClick={() => setTunerOpen(true)}
-              className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors inline-flex items-center gap-1"
               title="Open chromatic tuner"
             >
-              🎯 Tuner
+              <Target size={12} /> Tuner
             </button>
 
             {/* Display mode + Size/Frets/Opacity sliders moved into Fretboard toolbar */}
