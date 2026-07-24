@@ -266,32 +266,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
 
 
-  // ---- Auto-link consecutive identical chords ----
-  useEffect(() => {
-    if (isUndoingRef.current) { isUndoingRef.current = false; return; }
-    let changed = false;
-    const merged: ChartSlot[] = [];
-    const indexMap: number[] = []; // old idx -> new idx
-    slots.forEach((s) => {
-      const last = merged[merged.length - 1];
-      if (last && chordsEqual(last.chord, s.chord) && s.chord) {
-        merged[merged.length - 1] = { ...last, bars: last.bars + s.bars };
-        indexMap.push(merged.length - 1);
-        changed = true;
-      } else {
-        merged.push(s);
-        indexMap.push(merged.length - 1);
-      }
-    });
-    if (changed) {
-      setSlots(merged);
-      setSections(prev => prev.map(sec => ({
-        ...sec,
-        startIdx: indexMap[sec.startIdx] ?? sec.startIdx,
-        endIdx: indexMap[sec.endIdx] ?? sec.endIdx,
-      })));
-    }
-  }, [slots]);
+  // Auto-linking of consecutive identical chords was removed — each cell should
+  // stay visually distinct even when neighbouring chords match.
+
 
   // Normalize a run of empty (chord-less) slots around idx: merge them and
   // re-split along bar boundaries so a cleared cell falls back to whole bars.
