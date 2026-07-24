@@ -86,6 +86,7 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
       root: c.root!,
       chordType: c.chordType!,
       bars: typeof c.bars === 'number' && c.bars > 0 ? c.bars : 1,
+      section: typeof (c as any).section === 'string' && (c as any).section.trim() ? (c as any).section.trim() : undefined,
     }));
 
     return new Response(JSON.stringify({ chords, raw }),
