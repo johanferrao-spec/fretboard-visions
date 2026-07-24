@@ -800,7 +800,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   {
     let cursor = 0;
     for (let r = 0; r < totalLogicalRows; r++) {
-      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('2.25rem'); cursor += 1; }
+      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('3rem'); cursor += 1; }
       cursor += 1;
       renderRowOfLogical[r] = cursor;
       rowHeights.push('3rem');
@@ -1323,13 +1323,14 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             {sectionSegments.map(seg => (
               <div
                 key={seg.key}
-                className="pointer-events-none rounded-md relative"
+                className="pointer-events-none rounded-lg relative"
                 style={{
                   gridRow: seg.row,
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
-                  border: `2px solid hsla(${seg.color}, 0.75)`,
-                  background: `hsla(${seg.color}, 0.12)`,
-                  margin: '-8px 0',
+                  border: `2px solid hsla(${seg.color}, 0.9)`,
+                  background: `hsla(${seg.color}, 0.10)`,
+                  boxShadow: `0 0 12px hsla(${seg.color}, 0.35), inset 0 0 12px hsla(${seg.color}, 0.15)`,
+                  margin: '-10px 0',
                   zIndex: 0,
                 }}
               >
