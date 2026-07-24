@@ -120,7 +120,7 @@ function ModeDiagram({ mode }: { mode: string }) {
 // Vertical nut diagram used inside Drop 2 / Drop 3 string-group buttons.
 // Shows all 6 strings (E A D G B e) with a box enclosing the active strings;
 // disabled/muted strings are greyed out.
-function NutDiagram({ active, disabled }: { active: number[]; disabled: number[] }) {
+function NutDiagram({ active, disabled, splitBass }: { active: number[]; disabled: number[]; splitBass?: boolean }) {
   const labels = ['E', 'A', 'D', 'G', 'B', 'e'];
   const w = 108, h = 56;
   const padX = 10, padTop = 20, padBot = 8;
@@ -128,44 +128,40 @@ function NutDiagram({ active, disabled }: { active: number[]; disabled: number[]
   const nutY = padTop;
   const stringBot = h - padBot;
   const activeSet = new Set(active);
-  const disabledSet = new Set(disabled);
-  const minA = Math.min(...active);
-  const maxA = Math.max(...active);
-  const boxX = padX + minA * step - step * 0.4;
-  const boxW = (maxA - minA) * step + step * 0.8;
+  const sortedA = [...active].sort((a, b) => a - b);
+  const bassIdx = splitBass ? sortedA[0] : null;
+  const upper = splitBass ? sortedA.slice(1) : sortedA;
   const boxY = 2;
   const boxH = stringBot - boxY + 4;
+  const makeBox = (indices: number[], stroke: string, fill: string, key: string) => {
+    if (indices.length === 0) return null;
+    const mn = Math.min(...indices), mx = Math.max(...indices);
+    const bx = padX + mn * step - step * 0.4;
+    const bw = (mx - mn) * step + step * 0.8;
+    return <rect key={key} x={bx} y={boxY} width={bw} height={boxH} rx={5} ry={5} fill={fill} stroke={stroke} strokeWidth={1.25} />;
+  };
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block">
-      {/* box enclosing active strings + their labels */}
-      <rect
-        x={boxX} y={boxY} width={boxW} height={boxH}
-        rx={5} ry={5}
-        fill="hsl(var(--accent) / 0.18)"
-        stroke="hsl(var(--accent))"
-        strokeWidth={1.25}
-      />
+      {makeBox(upper, 'hsl(var(--accent))', 'hsl(var(--accent) / 0.18)', 'upper')}
+      {bassIdx !== null && makeBox([bassIdx], 'hsl(175 70% 45%)', 'hsl(175 70% 45% / 0.22)', 'bass')}
       {/* nut bar */}
       <rect x={padX - 4} y={nutY} width={w - (padX - 4) * 2} height={3} fill="hsl(var(--fretboard-fret))" />
       {labels.map((lb, i) => {
         const x = padX + i * step;
         const isActive = activeSet.has(i);
-        const isDisabled = disabledSet.has(i);
         const stroke = isActive ? 'hsl(var(--fretboard-string))' : 'hsl(var(--fretboard-string) / 0.25)';
         const textFill = isActive ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground) / 0.5)';
         return (
           <g key={i}>
             <text x={x} y={nutY - 6} textAnchor="middle" fontSize={9} fontFamily="monospace" fontWeight={700} fill={textFill}>{lb}</text>
             <line x1={x} y1={nutY + 3} x2={x} y2={stringBot} stroke={stroke} strokeWidth={isActive ? 1.4 : 1} strokeLinecap="round" />
-            {isDisabled && activeSet.size > 0 && i > minA && i < maxA && (
-              <text x={x} y={stringBot - 2} textAnchor="middle" fontSize={9} fontWeight={700} fill="hsl(0 70% 55%)">✕</text>
-            )}
           </g>
         );
       })}
     </svg>
   );
 }
+
 
 
 
@@ -1907,7 +1903,7 @@ function ScaleViewPanel({
                       borderColor: isSel ? 'hsl(var(--accent))' : 'hsl(var(--border))',
                     }}
                   >
-                    <NutDiagram active={cfg.strings} disabled={cfg.disabled} />
+                    <NutDiagram active={cfg.strings} disabled={cfg.disabled} splitBass={dropMode === 'drop3'} />
                   </button>
                 );
               })}
