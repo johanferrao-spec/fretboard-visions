@@ -547,7 +547,24 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
         </div>
 
         {/* Slot grid */}
-        <div className="flex-1 overflow-auto p-3">
+        <div className="flex-1 overflow-auto p-3 flex flex-col">
+          {/* Chart metadata banner */}
+          <div className="mb-2 pb-2 border-b border-border flex items-baseline gap-4 flex-wrap">
+            <div className="flex flex-col">
+              <span className="text-lg font-bold leading-tight text-foreground">{title || 'Untitled'}</span>
+              {composer && (
+                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                  by {composer}
+                </span>
+              )}
+            </div>
+            <div className="ml-auto flex items-center gap-3 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              <span><span className="text-foreground font-bold">{tempo}</span> BPM</span>
+              <span><span className="text-foreground font-bold">{timeSig}</span></span>
+              <span><span className="text-foreground font-bold">{feel}</span></span>
+            </div>
+          </div>
+
           <div
             ref={gridRef}
             className="grid gap-1.5"
