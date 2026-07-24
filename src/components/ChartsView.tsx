@@ -404,6 +404,14 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
         <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">
           {totalBars % 1 === 0 ? totalBars : totalBars.toFixed(2)} bars · {slots.length} slots
         </span>
+        <button
+          onClick={() => onToggleCharts?.()}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-muted-foreground hover:bg-muted transition-colors"
+          title="Close charts and return to timeline"
+        >
+          <X size={10} />
+          Close
+        </button>
       </div>
 
       {/* Body: vertical toolbar + slot grid */}
