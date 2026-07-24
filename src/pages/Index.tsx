@@ -389,7 +389,7 @@ const Index = () => {
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <h1 className="text-lg font-display font-bold text-foreground tracking-tight">
-            <span className="text-primary">Maps</span> &amp; <span className="text-primary">Facts</span> for Jazz Cats
+            <span className="text-primary">jazz</span> maps
           </h1>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Output</span>
