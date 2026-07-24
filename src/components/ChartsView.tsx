@@ -81,6 +81,34 @@ const formatChordLabel = (c: ChartChord): string => {
   return `${c.root}${suffix}`;
 };
 
+const ROMANS_UP = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
+
+const romanForChord = (chord: ChartChord, key: NoteName): string => {
+  const keyIdx = NOTE_NAMES.indexOf(key);
+  const rootIdx = NOTE_NAMES.indexOf(chord.root);
+  if (keyIdx < 0 || rootIdx < 0) return '?';
+  const semis = (rootIdx - keyIdx + 12) % 12;
+  let degree = MAJOR_INTERVALS.indexOf(semis);
+  let accidental = '';
+  if (degree === -1) {
+    const flat = MAJOR_INTERVALS.indexOf((semis + 1) % 12);
+    if (flat !== -1) { degree = flat; accidental = 'b'; }
+    else {
+      const sharp = MAJOR_INTERVALS.indexOf((semis + 11) % 12);
+      if (sharp !== -1) { degree = sharp; accidental = '#'; }
+    }
+  }
+  if (degree === -1) return '?';
+  const t = chord.chordType;
+  const isMinorish = /^(Minor|Diminished|Half|m7b5)/i.test(t) || t.toLowerCase().startsWith('minor');
+  const base = ROMANS_UP[degree];
+  const roman = isMinorish ? base.toLowerCase() : base;
+  const suffix = /Diminished|m7b5|Half/i.test(t) ? '°' : '';
+  return accidental + roman + suffix;
+};
+
+
 interface Section {
   id: string;
   name: string;
