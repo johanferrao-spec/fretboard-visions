@@ -806,29 +806,28 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       rowHeights.push('2.5rem');
     }
   }
-  // Precompute section overlay segments (one rounded box per row a section touches).
+  // Precompute section overlay segments: one single box per section (spanning all rows it touches).
   const sectionSegments = sections.flatMap(sec => {
     if (sec.startIdx >= slots.length || sec.endIdx >= slots.length) return [];
     const startRow = logicalRowOf(sec.startIdx);
     const endRow = logicalRowOf(sec.endIdx);
-    const segs: Array<{ key: string; row: number; colStart: number; colEnd: number; color: string; name: string; showLabel: boolean }> = [];
-    for (let r = startRow; r <= endRow; r++) {
-      const colStart = r === startRow ? (startUnits[sec.startIdx] % COLS) + 1 : 1;
-      const colEnd = r === endRow
-        ? (startUnits[sec.endIdx] % COLS) + slots[sec.endIdx].bars + 1
-        : COLS + 1;
-      segs.push({
-        key: `${sec.id}-r${r}`,
-        row: renderRowOfLogical[r],
-        colStart,
-        colEnd,
-        color: sec.color,
-        name: sec.name,
-        showLabel: r === startRow,
-      });
-    }
-    return segs;
+    const singleRow = startRow === endRow;
+    const colStart = singleRow ? (startUnits[sec.startIdx] % COLS) + 1 : 1;
+    const colEnd = singleRow
+      ? (startUnits[sec.endIdx] % COLS) + slots[sec.endIdx].bars + 1
+      : COLS + 1;
+    return [{
+      key: `${sec.id}-box`,
+      rowStart: renderRowOfLogical[startRow],
+      rowEnd: renderRowOfLogical[endRow] + 1,
+      colStart,
+      colEnd,
+      color: sec.color,
+      name: sec.name,
+      showLabel: true,
+    }];
   });
+
 
 
 
