@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload } from 'lucide-react';
 
 import type { NoteName } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
@@ -102,6 +102,9 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
   const [tempo, setTempo] = useState(120);
   const [timeSig, setTimeSig] = useState('4/4');
   const [feel, setFeel] = useState('Straight');
+  const [readingChart, setReadingChart] = useState(false);
+  const [readDragOver, setReadDragOver] = useState(false);
+  const readInputRef = useRef<HTMLInputElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const presetRef = useRef<HTMLDivElement | null>(null);
@@ -148,6 +151,50 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
       setParsingSlot(prev => (prev === slotId ? null : prev));
     }
   }, [setSlotChord]);
+
+  const readChartFromFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Not an image', description: 'Drop a screenshot or photo of a chord chart.', variant: 'destructive' });
+      return;
+    }
+    setReadingChart(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+      const { data, error } = await supabase.functions.invoke('read-chart', { body: { image: dataUrl } });
+      if (error) throw error;
+      const chords: Array<{ root: NoteName; chordType: string; bars: number }> = data?.chords ?? [];
+      if (chords.length === 0) {
+        toast({ title: 'No chords detected', description: 'Try a clearer image or crop to the chord chart.', variant: 'destructive' });
+        return;
+      }
+      // Convert to slots (1 bar = UNITS_PER_BAR eighths). Snap fractional bars to nearest 1/8.
+      const newSlots: ChartSlot[] = chords.map(c => {
+        const units = Math.max(1, Math.round(c.bars * UNITS_PER_BAR));
+        return { id: uid('slot'), bars: units, chord: { root: c.root, chordType: c.chordType } };
+      });
+      // Pad with empty bars up to at least DEFAULT_SLOT_COUNT bars.
+      const usedUnits = newSlots.reduce((n, s) => n + s.bars, 0);
+      const minUnits = DEFAULT_SLOT_COUNT * UNITS_PER_BAR;
+      let padUnits = Math.max(0, minUnits - usedUnits);
+      while (padUnits > 0) {
+        newSlots.push({ id: uid('slot'), bars: UNITS_PER_BAR });
+        padUnits -= UNITS_PER_BAR;
+      }
+      setSlots(newSlots);
+      setSections([]);
+      setArrangement([]);
+      toast({ title: 'Chart imported', description: `Loaded ${chords.length} chord${chords.length === 1 ? '' : 's'}.` });
+    } catch (err) {
+      toast({ title: 'Read chart failed', description: (err as Error).message ?? 'Try again.', variant: 'destructive' });
+    } finally {
+      setReadingChart(false);
+    }
+  }, []);
 
 
   const resizeSlot = useCallback((slotId: string, targetBars: number) => {
@@ -742,6 +789,45 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
             />
           )}
         </div>
+
+        {/* Read Chart drop box */}
+        <label
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes('Files')) {
+              e.preventDefault();
+              setReadDragOver(true);
+            }
+          }}
+          onDragLeave={() => setReadDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setReadDragOver(false);
+            const file = e.dataTransfer.files?.[0];
+            if (file) readChartFromFile(file);
+          }}
+          className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded border-2 border-dashed cursor-pointer transition-colors ${
+            readDragOver
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-border/60 text-muted-foreground hover:border-primary/60 hover:text-foreground'
+          }`}
+          title="Drop a screenshot of a chord chart; AI will fill the chart above."
+        >
+          {readingChart ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+          <span className="text-[10px] font-mono uppercase tracking-wider">
+            {readingChart ? 'Reading…' : 'Read Chart'}
+          </span>
+          <input
+            ref={readInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) readChartFromFile(file);
+              e.target.value = '';
+            }}
+          />
+        </label>
       </div>
 
       {/* Section preset picker */}
