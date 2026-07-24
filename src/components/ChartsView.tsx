@@ -1054,6 +1054,52 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     ? `${formatChordLabel(slot.chord)} — click to edit extensions`
                     : 'Double-click to type a chord, or drop one here'}
                 >
+                  {/* Section tint + framing */}
+                  {section && (
+                    <div
+                      className="absolute inset-0 pointer-events-none rounded-md"
+                      style={{
+                        background: `hsl(${section.color} / 0.18)`,
+                        borderTop: `3px solid hsl(${section.color})`,
+                        borderBottom: `2px solid hsl(${section.color} / 0.75)`,
+                        borderLeft: section.startIdx === idx ? `3px solid hsl(${section.color})` : undefined,
+                        borderRight: section.endIdx === idx ? `3px solid hsl(${section.color})` : undefined,
+                      }}
+                    />
+                  )}
+
+                  {/* Internal bar dividers when a chord spans past its own cell */}
+                  {slot.bars > 1 && (() => {
+                    const lines: JSX.Element[] = [];
+                    for (let u = 1; u < slot.bars; u++) {
+                      if ((startUnit + u) % UNITS_PER_BAR !== 0) continue;
+                      const leftPct = (u / slot.bars) * 100;
+                      lines.push(
+                        <div
+                          key={u}
+                          className="absolute top-0 bottom-0 pointer-events-none"
+                          style={{
+                            left: `${leftPct}%`,
+                            width: 0,
+                            borderLeft: '1px dashed rgba(0,0,0,0.35)',
+                          }}
+                        />
+                      );
+                    }
+                    return lines;
+                  })()}
+
+                  className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
+                    sectionMode ? 'cursor-crosshair select-none ' : slot.chord ? 'cursor-pointer ' : ''
+                  }${
+                    color
+                      ? 'brightness-100 hover:brightness-110'
+                      : 'bg-muted/20 border border-dashed border-border/50 hover:border-primary/60 hover:bg-muted/30'
+                  }`}
+                  title={slot.chord
+                    ? `${formatChordLabel(slot.chord)} — click to edit extensions`
+                    : 'Double-click to type a chord, or drop one here'}
+                >
                   <span
                     className="absolute top-0.5 left-1 text-[9px] font-mono font-bold pointer-events-none select-none"
                     style={{ color: color ? 'rgba(0,0,0,0.65)' : undefined }}
