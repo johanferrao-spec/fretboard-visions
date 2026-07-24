@@ -2051,24 +2051,42 @@ function ScaleViewPanel({
               </p>
               <div className="flex flex-col gap-0.5 mt-0.5">
                 {[
-                  { num: 'I', mode: 'Ionian', desc: 'Bright and stable — the major scale tonic sound.', color: SCALE_DEGREE_COLORS[0] },
+                  { num: 'I', mode: 'Ionian', desc: 'Bright, stable — the major scale.', color: SCALE_DEGREE_COLORS[0] },
                   { num: 'II', mode: 'Dorian', desc: 'Jazzy minor with a natural 6th.', color: SCALE_DEGREE_COLORS[1] },
-                  { num: 'III', mode: 'Phrygian', desc: 'Dark and Spanish-flavoured with a ♭2.', color: SCALE_DEGREE_COLORS[2] },
-                  { num: 'IV', mode: 'Lydian', desc: 'Bright and floating with a raised 4th.', color: SCALE_DEGREE_COLORS[3] },
-                  { num: 'V', mode: 'Mixolydian', desc: 'Bluesy major sound with a ♭7.', color: SCALE_DEGREE_COLORS[4] },
-                  { num: 'VI', mode: 'Aeolian', desc: 'Natural minor — melancholic and versatile.', color: SCALE_DEGREE_COLORS[5] },
-                  { num: 'VII', mode: 'Locrian', desc: 'Dark and unstable with ♭2 and ♭5.', color: SCALE_DEGREE_COLORS[6] },
+                  { num: 'III', mode: 'Phrygian', desc: 'Dark, Spanish-flavoured (♭2).', color: SCALE_DEGREE_COLORS[2] },
+                  { num: 'IV', mode: 'Lydian', desc: 'Bright, floating (♯4).', color: SCALE_DEGREE_COLORS[3] },
+                  { num: 'V', mode: 'Mixolydian', desc: 'Bluesy dominant (♭7).', color: SCALE_DEGREE_COLORS[4] },
+                  { num: 'VI', mode: 'Aeolian', desc: 'Natural minor — melancholic.', color: SCALE_DEGREE_COLORS[5] },
+                  { num: 'VII', mode: 'Locrian', desc: 'Dark, unstable (♭2, ♭5).', color: SCALE_DEGREE_COLORS[6] },
                 ].map(d => (
-                  <div key={d.mode} className="flex items-center gap-1.5 text-[9px] font-mono leading-tight">
-                    <span
-                      className="w-4 h-4 rounded flex items-center justify-center font-bold text-[8px] shrink-0"
-                      style={{ backgroundColor: `hsl(${d.color})`, color: 'hsl(var(--background))' }}
-                    >
-                      {d.num}
-                    </span>
-                    <span className="font-bold text-foreground/90 shrink-0">{d.mode}</span>
-                    <span className="text-muted-foreground truncate">— {d.desc}</span>
-                  </div>
+                  <HoverCard key={d.mode} openDelay={80} closeDelay={40}>
+                    <HoverCardTrigger asChild>
+                      <div className="flex items-center gap-1.5 text-[9px] font-mono leading-tight cursor-help">
+                        <span
+                          className="px-1.5 h-4 rounded flex items-center justify-center font-bold text-[9px] shrink-0 gap-0.5"
+                          style={{ backgroundColor: `hsl(${d.color})`, color: 'hsl(var(--background))' }}
+                        >
+                          <span>{d.num}</span>
+                          <span>-</span>
+                          <span>{d.mode}</span>
+                        </span>
+                        <span className="text-muted-foreground truncate">— {d.desc}</span>
+                      </div>
+                    </HoverCardTrigger>
+                    <HoverCardContent side="left" align="start" className="w-auto p-2 flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="px-1.5 h-4 rounded flex items-center justify-center font-bold text-[9px]"
+                          style={{ backgroundColor: `hsl(${d.color})`, color: 'hsl(var(--background))' }}
+                        >
+                          {d.mode}
+                        </span>
+                        <span className="text-[10px] font-mono text-foreground/90">{MODE_ACCIDENTALS[d.mode]}</span>
+                      </div>
+                      <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">A {d.mode} — first position</div>
+                      <ModeDiagram mode={d.mode} />
+                    </HoverCardContent>
+                  </HoverCard>
                 ))}
               </div>
             </div>
