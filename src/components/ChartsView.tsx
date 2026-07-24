@@ -1388,19 +1388,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     ? `${formatChordLabel(slot.chord, chartKey, keyMode)} — click to edit extensions`
                     : 'Double-click to type a chord, or drop one here'}
                 >
-                  {/* Section tint + framing */}
-                  {section && (
-                    <div
-                      className="absolute inset-0 pointer-events-none rounded-md"
-                      style={{
-                        background: `hsl(${section.color} / 0.18)`,
-                        borderTop: `3px solid hsl(${section.color})`,
-                        borderBottom: `2px solid hsl(${section.color} / 0.75)`,
-                        borderLeft: section.startIdx === idx ? `3px solid hsl(${section.color})` : undefined,
-                        borderRight: section.endIdx === idx ? `3px solid hsl(${section.color})` : undefined,
-                      }}
-                    />
-                  )}
+                  {/* Section enclosure is drawn as a single sibling box across all cells (see sectionSegments above). */}
 
                   {/* Internal bar dividers when a chord spans past its own cell */}
                   {slot.bars > 1 && (() => {
