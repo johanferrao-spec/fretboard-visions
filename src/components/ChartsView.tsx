@@ -1313,7 +1313,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
           <div
             ref={gridRef}
-            className="grid gap-1.5 pt-4 pb-2"
+            className="grid gap-1.5 pt-6 pb-2"
             style={{
               gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
               gridTemplateRows: rowHeights.join(' '),
@@ -1368,7 +1368,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     if (slot.chord && !isEditing) openChordEditor(slot, e.currentTarget as HTMLElement);
                   }}
                   style={{
-                    gridColumn: `span ${slot.bars} / span ${slot.bars}`,
+                    gridColumn: `${(startUnit % COLS) + 1} / span ${slot.bars}`,
                     gridRow: gridRowIndex,
                     background: color ? `hsl(${color})` : undefined,
                     boxShadow: isHover
