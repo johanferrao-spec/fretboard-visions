@@ -57,6 +57,9 @@ interface SongTimelineProps {
   onLoadBackingTrack?: (id: string) => void;
   onDeleteBackingTrack?: (id: string) => void;
   savedBackingTracks?: { id: string; name: string }[];
+  /** Charts panel replaces the DAW when active. */
+  chartsActive?: boolean;
+  onToggleCharts?: () => void;
 }
 
 export default function SongTimeline({
