@@ -96,9 +96,17 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
   const [arrDragOverIdx, setArrDragOverIdx] = useState<number | null>(null);
   const [editorSlotId, setEditorSlotId] = useState<string | null>(null);
   const [editorPos, setEditorPos] = useState<{ top: number; left: number } | null>(null);
+  // Chart metadata
+  const [title, setTitle] = useState('Untitled');
+  const [composer, setComposer] = useState('');
+  const [tempo, setTempo] = useState(120);
+  const [timeSig, setTimeSig] = useState('4/4');
+  const [feel, setFeel] = useState('Straight');
   const gridRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const presetRef = useRef<HTMLDivElement | null>(null);
+
+
 
 
   const setSlotChord = useCallback((slotId: string, chord: ChartChord | undefined) => {
@@ -431,7 +439,52 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
             <span>Section</span>
           </button>
 
+          {/* Chart metadata config */}
+          <div className="flex flex-col gap-1 mt-1 border-t border-border pt-2">
+            <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Chart Info</div>
+            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Title</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
+              placeholder="Untitled"
+            />
+            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Composer</label>
+            <input
+              value={composer}
+              onChange={(e) => setComposer(e.target.value)}
+              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
+              placeholder="—"
+            />
+            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Tempo (BPM)</label>
+            <input
+              type="number"
+              min={20}
+              max={400}
+              value={tempo}
+              onChange={(e) => setTempo(Math.max(20, Math.min(400, Number(e.target.value) || 0)))}
+              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
+            />
+            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Time Sig</label>
+            <select
+              value={timeSig}
+              onChange={(e) => setTimeSig(e.target.value)}
+              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
+            >
+              {['2/4','3/4','4/4','5/4','6/8','7/8','12/8'].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Feel</label>
+            <select
+              value={feel}
+              onChange={(e) => setFeel(e.target.value)}
+              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
+            >
+              {['Straight','Swing','Shuffle','Ballad','Rock','Funk','Latin','Bossa Nova','Samba','Reggae','Jazz','Blues','Folk'].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+
           {/* Diatonic chord palette */}
+
           {diatonicChords.length > 0 && (
             <div className="flex flex-col gap-1 mt-1 border-t border-border pt-2">
               <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Diatonic</div>
@@ -494,7 +547,24 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
         </div>
 
         {/* Slot grid */}
-        <div className="flex-1 overflow-auto p-3">
+        <div className="flex-1 overflow-auto p-3 flex flex-col">
+          {/* Chart metadata banner */}
+          <div className="mb-2 pb-2 border-b border-border flex items-baseline gap-4 flex-wrap">
+            <div className="flex flex-col">
+              <span className="text-lg font-bold leading-tight text-foreground">{title || 'Untitled'}</span>
+              {composer && (
+                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                  by {composer}
+                </span>
+              )}
+            </div>
+            <div className="ml-auto flex items-center gap-3 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              <span><span className="text-foreground font-bold">{tempo}</span> BPM</span>
+              <span><span className="text-foreground font-bold">{timeSig}</span></span>
+              <span><span className="text-foreground font-bold">{feel}</span></span>
+            </div>
+          </div>
+
           <div
             ref={gridRef}
             className="grid gap-1.5"
