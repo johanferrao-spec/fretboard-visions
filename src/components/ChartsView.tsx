@@ -759,7 +759,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         </button>
         <button
           onClick={() => {
-            if (!confirm('Are you sure? This will clear the current chart, sections and arrangement.')) return;
+            if (!confirm('Are you sure? This will clear the current chart, sections, arrangement AND the backing-track timeline chords.')) return;
             setSlots(makeSlots(DEFAULT_SLOT_COUNT));
             setSections([]);
             setArrangement([]);
@@ -771,6 +771,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             setFeel('Straight');
             historyRef.current = [];
             try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+            onResetAll?.();
             toast({ title: 'Chart reset', description: 'A fresh blank chart has been created.' });
           }}
           className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
