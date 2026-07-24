@@ -40,19 +40,21 @@ const Index = () => {
   const [metronomePulse, setMetronomePulse] = useState(0);
   const [metronomeFlash, setMetronomeFlash] = useState<'accent' | 'beat' | null>(null);
   const [timeSignature, setTimeSignature] = useState('4/4');
+  const [subdivision, setSubdivision] = useState<1 | 2 | 3 | 4>(1);
   const timeSignatures = useMemo(() => [
-    { sig: '2/4', beats: 2, subdiv: 1, tickMult: 1 },
-    { sig: '3/4', beats: 3, subdiv: 1, tickMult: 1 },
-    { sig: '4/4', beats: 4, subdiv: 1, tickMult: 1 },
-    { sig: '5/4', beats: 5, subdiv: 1, tickMult: 1 },
-    { sig: '6/8', beats: 2, subdiv: 3, tickMult: 2 },
-    { sig: '7/8', beats: 7, subdiv: 1, tickMult: 2 },
-    { sig: '12/8', beats: 4, subdiv: 3, tickMult: 2 },
+    { sig: '2/4', beats: 2, subdiv: 1 },
+    { sig: '3/4', beats: 3, subdivide subdiv: 1 },
+    { sig: '4/4', beats: 4, subdiv: 1 },
+    { sig: '5/4', beats: 5, subdiv: 1 },
+    { sig: '6/8', beats: 2, subdiv: 3 },
+    { sig: '7/8', beats: 7, subdiv: 1 },
+    { sig: '12/8', beats: 4, subdiv: 3 },
   ], []);
-  const { beats: timeSigBeats, subdiv: timeSigSubdiv, tickMult: timeSigTickMult } = useMemo(
-    () => timeSignatures.find(t => t.sig === timeSignature) || timeSignatures[3],
+  const { beats: timeSigBeats, subdiv: timeSigSubdiv } = useMemo(
+    () => timeSignatures.find(t => t.sig === timeSignature) || timeSignatures[2],
     [timeSignature, timeSignatures],
   );
+  const effectiveSubdivision = timeSignature.endsWith('/8') ? timeSigSubdiv : subdivision;
   const [currentMetroBeat, setCurrentMetroBeat] = useState(-1);
   const tapTimesRef = useRef<number[]>([]);
   const metronomeFlashTimerRef = useRef<number | null>(null);
