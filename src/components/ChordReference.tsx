@@ -1526,6 +1526,7 @@ function ScaleViewPanel({
 
 
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
+  const [selectedModePreview, setSelectedModePreview] = useState<string>('Ionian');
 
   // Persisted descriptions for drop voicings
   const [dropDescriptions, setDropDescriptions] = useState<Record<string, string>>(() => {
