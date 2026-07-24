@@ -1526,6 +1526,52 @@ function ScaleViewPanel({
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
   const [selectedModePreview, setSelectedModePreview] = useState<string>('Ionian');
 
+  // Resizable widths for the three-column help panel (percentages, sum = 100)
+  const helpPanelRef = useRef<HTMLDivElement>(null);
+  const [helpColWidths, setHelpColWidths] = useState<[number, number, number]>(() => {
+    try {
+      const raw = localStorage.getItem('mf-help-col-widths');
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (Array.isArray(p) && p.length === 3 && p.every((n: any) => typeof n === 'number')) {
+          return p as [number, number, number];
+        }
+      }
+    } catch {/*ignore*/}
+    return [33.34, 33.33, 33.33];
+  });
+  useEffect(() => {
+    try { localStorage.setItem('mf-help-col-widths', JSON.stringify(helpColWidths)); } catch {/*ignore*/}
+  }, [helpColWidths]);
+  const startHelpResize = (dividerIdx: 0 | 1) => (e: React.PointerEvent) => {
+    e.preventDefault();
+    const container = helpPanelRef.current;
+    if (!container) return;
+    const startX = e.clientX;
+    const rect = container.getBoundingClientRect();
+    const totalW = rect.width;
+    const startWidths = [...helpColWidths] as [number, number, number];
+    const onMove = (ev: PointerEvent) => {
+      const deltaPct = ((ev.clientX - startX) / totalW) * 100;
+      const next = [...startWidths] as [number, number, number];
+      const a = dividerIdx;
+      const b = dividerIdx + 1;
+      const min = 10;
+      let da = deltaPct;
+      if (startWidths[a] + da < min) da = min - startWidths[a];
+      if (startWidths[b] - da < min) da = startWidths[b] - min;
+      next[a] = startWidths[a] + da;
+      next[b] = startWidths[b] - da;
+      setHelpColWidths(next);
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
   // Persisted descriptions for drop voicings
   const [dropDescriptions, setDropDescriptions] = useState<Record<string, string>>(() => {
     try { return JSON.parse(localStorage.getItem('mf-drop-descriptions') || '{}'); } catch { return {}; }
