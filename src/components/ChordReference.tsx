@@ -39,7 +39,7 @@ const MODE_SKELETON: Record<string, Set<number>> = {
   Dorian: MINOR_PENT, Phrygian: MINOR_PENT, Aeolian: MINOR_PENT, Locrian: MINOR_PENT,
 };
 const MODE_DEFINING: Record<string, number[]> = {
-  Ionian: [5, 11], Dorian: [9], Phrygian: [1], Lydian: [6], Mixolydian: [10], Aeolian: [8], Locrian: [1, 6],
+  Ionian: [5, 11], Dorian: [2, 9], Phrygian: [1, 8], Lydian: [6, 11], Mixolydian: [5, 10], Aeolian: [2, 8], Locrian: [1, 6],
 };
 const MODE_ACCIDENTALS: Record<string, string> = {
   Ionian: 'No sharps or flats',
