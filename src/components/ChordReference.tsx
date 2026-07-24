@@ -77,12 +77,10 @@ function ModeDiagram({ mode }: { mode: string }) {
       const displayString = 5 - s;
       const cx = padL + f * cellW + cellW / 2;
       const cy = padT + displayString * cellH + cellH / 2;
-      const isRoot = interval === 0;
       const inSkel = skeleton.has(interval);
       const isDef = defining.has(interval);
       let fill: string;
-      if (isRoot) fill = `hsl(${SCALE_DEGREE_COLORS[0]})`;
-      else if (inSkel) fill = `hsl(${DEFAULT_MARKER})`;
+      if (inSkel) fill = `hsl(${DEFAULT_MARKER})`;
       else if (isDef) fill = `hsl(${SCALE_DEGREE_COLORS[INTERVAL_DEGREE_IDX[interval]]})`;
       else fill = `hsl(${DEFAULT_MARKER})`;
       markers.push(
