@@ -120,7 +120,7 @@ function ModeDiagram({ mode }: { mode: string }) {
 // Vertical nut diagram used inside Drop 2 / Drop 3 string-group buttons.
 // Shows all 6 strings (E A D G B e) with a box enclosing the active strings;
 // disabled/muted strings are greyed out.
-function NutDiagram({ active, disabled, active: _a }: { active: number[]; disabled: number[] }) {
+function NutDiagram({ active, disabled }: { active: number[]; disabled: number[] }) {
   const labels = ['E', 'A', 'D', 'G', 'B', 'e'];
   const w = 108, h = 46;
   const padX = 8, padTop = 12, padBot = 8;
