@@ -1363,3 +1363,161 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
   );
 }
+
+// ---- Analyze Song preview modal ----
+
+interface AnalyzeSongPreviewProps {
+  initial: AnalyzedSong;
+  onCancel: () => void;
+  onApply: (edited: AnalyzedSong) => void;
+}
+
+function AnalyzeSongPreview({ initial, onCancel, onApply }: AnalyzeSongPreviewProps) {
+  const [tempo, setTempo] = useState<number>(Math.round(initial.tempo ?? 120));
+  const [keyRoot, setKeyRoot] = useState<string>(initial.keyRoot ?? 'C');
+  const [keyQuality, setKeyQuality] = useState<'Major' | 'Minor'>(initial.keyQuality ?? 'Major');
+  const [barText, setBarText] = useState<string>(initial.barText ?? '');
+  const [structure, setStructure] = useState(initial.structure ?? []);
+
+  const updateSection = (i: number, patch: Partial<{ label: string; startTime: string }>) => {
+    setStructure(prev => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s));
+  };
+  const removeSection = (i: number) => setStructure(prev => prev.filter((_, idx) => idx !== i));
+  const addSection = () => setStructure(prev => [...prev, { label: 'Section', startTime: '0:00' }]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onMouseDown={onCancel}
+    >
+      <div
+        className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Music4 size={16} className="text-amber-400" />
+            <h2 className="text-sm font-mono uppercase tracking-wider">Review AI Analysis</h2>
+          </div>
+          <button
+            onClick={onCancel}
+            className="text-muted-foreground hover:text-foreground"
+            title="Cancel"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Edit anything the AI got wrong, then apply to overwrite the chart. Nothing is saved until you click Apply.
+          </p>
+
+          <div className="grid grid-cols-3 gap-3">
+            <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              Tempo (BPM)
+              <input
+                type="number"
+                min={30}
+                max={300}
+                value={tempo}
+                onChange={(e) => setTempo(Number(e.target.value))}
+                className="bg-background border border-border rounded px-2 py-1 text-sm text-foreground font-mono"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              Key Root
+              <input
+                type="text"
+                value={keyRoot}
+                onChange={(e) => setKeyRoot(e.target.value)}
+                className="bg-background border border-border rounded px-2 py-1 text-sm text-foreground font-mono"
+                placeholder="C, F#, Bb…"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              Quality
+              <select
+                value={keyQuality}
+                onChange={(e) => setKeyQuality(e.target.value as 'Major' | 'Minor')}
+                className="bg-background border border-border rounded px-2 py-1 text-sm text-foreground font-mono"
+              >
+                <option value="Major">Major</option>
+                <option value="Minor">Minor</option>
+              </select>
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+            Chords by Bar <span className="normal-case text-muted-foreground/70">(pipe-separated bars; spaces = multiple chords per bar)</span>
+            <textarea
+              value={barText}
+              onChange={(e) => setBarText(e.target.value)}
+              rows={6}
+              className="bg-background border border-border rounded px-2 py-1.5 text-sm text-foreground font-mono leading-relaxed"
+              placeholder="Cmaj7 | A7 | Dm7 G7 | Cmaj7"
+            />
+          </label>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Song Structure</span>
+              <button
+                onClick={addSection}
+                className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-primary hover:text-primary/80"
+              >
+                <Plus size={11} /> Add
+              </button>
+            </div>
+            <div className="space-y-1">
+              {structure.length === 0 && (
+                <div className="text-xs text-muted-foreground italic">No sections detected.</div>
+              )}
+              {structure.map((s, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={s.startTime}
+                    onChange={(e) => updateSection(i, { startTime: e.target.value })}
+                    className="w-20 bg-background border border-border rounded px-2 py-1 text-xs text-foreground font-mono"
+                    placeholder="0:00"
+                  />
+                  <input
+                    type="text"
+                    value={s.label}
+                    onChange={(e) => updateSection(i, { label: e.target.value })}
+                    className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs text-foreground font-mono"
+                    placeholder="Verse"
+                  />
+                  <button
+                    onClick={() => removeSection(i)}
+                    className="text-muted-foreground hover:text-destructive"
+                    title="Remove section"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border">
+          <button
+            onClick={onCancel}
+            className="px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onApply({ tempo, keyRoot, keyQuality, barText, structure })}
+            className="px-3 py-1.5 rounded bg-amber-500 text-black text-xs font-mono uppercase tracking-wider hover:bg-amber-400"
+          >
+            Apply to Chart
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
