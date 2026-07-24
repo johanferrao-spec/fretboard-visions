@@ -1625,22 +1625,12 @@ export default function Fretboard({
                                 ...(style.ring ? { boxShadow: `0 0 0 ${(style as { ringWidth?: number }).ringWidth ?? 2}px ${style.ringColor}` } : {}),
                               }}
                             >
-                              {label}
-                              {(style as { accidental?: '' | '♯' | '♭' }).accidental && (
-                                <span
-                                  className="absolute font-mono font-black leading-none pointer-events-none"
-                                  style={{
-                                    right: -Math.max(4, noteMarkerSize * 0.22),
-                                    top: -Math.max(4, noteMarkerSize * 0.22),
-                                    fontSize: Math.max(11, noteMarkerSize * 0.55),
-                                    color: 'hsl(var(--foreground))',
-                                    textShadow: '0 1px 3px hsl(var(--background) / 0.95)',
-                                  }}
-                                >
-                                  {(style as { accidental?: '' | '♯' | '♭' }).accidental}
-                                </span>
-                              )}
+                              {(() => {
+                                const acc = (style as { accidental?: '' | '♯' | '♭' }).accidental;
+                                return acc ? `${acc}${label}` : label;
+                              })()}
                             </div>
+
                           </button>
                         )}
                       </div>
