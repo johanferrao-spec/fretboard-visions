@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw } from 'lucide-react';
 
 import type { NoteName, KeyMode } from '@/lib/music';
-import { getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS, NOTE_NAMES } from '@/lib/music';
+import { getDiatonicChords, getDiatonicSevenths, spellDiatonicRoots, getChordDegree, SCALE_DEGREE_COLORS, NOTE_NAMES } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -156,7 +156,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   }, []);
 
   const [chartKey, setChartKey] = useState<NoteName>(persisted.chartKey ?? currentKey);
+  const [useSevenths, setUseSevenths] = useState(false);
   const diatonicChords = useMemo(() => getDiatonicChords(chartKey, keyMode), [chartKey, keyMode]);
+  const diatonicSevenths = useMemo(() => getDiatonicSevenths(chartKey, keyMode), [chartKey, keyMode]);
+  const spelledRoots = useMemo(() => spellDiatonicRoots(chartKey, keyMode), [chartKey, keyMode]);
   const getChordColor = useCallback((chord: ChartChord) => {
     const deg = getChordDegree(chartKey, chord.root, chord.chordType, keyMode);
     return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
@@ -479,10 +482,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     if (degreeData) {
       try {
         const { degree } = JSON.parse(degreeData);
-        const dc = diatonicChords[degree];
+        const dc = useSevenths ? diatonicSevenths[degree] : diatonicChords[degree];
         if (dc) {
-          const chordType = degree === 4 ? 'Dominant 7' : dc.type;
-          setSlotChord(slotId, { root: dc.root, chordType });
+          setSlotChord(slotId, { root: dc.root, chordType: dc.type });
         }
         return;
       } catch { /* ignore */ }
@@ -899,10 +901,24 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
           {diatonicChords.length > 0 && (
             <div className="flex flex-col gap-1 mt-1 border-t border-border pt-2">
-              <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Diatonic</div>
+              <div className="flex items-center justify-between gap-2 px-0.5">
+                <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">Diatonic</span>
+                <label className="flex items-center gap-1 cursor-pointer select-none" title="Add 7th extensions to dragged chords">
+                  <input
+                    type="checkbox"
+                    checked={useSevenths}
+                    onChange={(e) => setUseSevenths(e.target.checked)}
+                    className="w-3 h-3 accent-primary cursor-pointer"
+                  />
+                  <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">7ths</span>
+                </label>
+              </div>
               {diatonicChords.slice(0, 7).map((dc, i) => {
-                const chordType = i === 4 ? 'Dominant 7' : dc.type;
-                const color = getChordColor({ root: dc.root, chordType });
+                const source = useSevenths ? diatonicSevenths[i] : dc;
+                const color = getChordColor({ root: source.root, chordType: source.type });
+                const spelledRoot = spelledRoots[i] ?? source.root;
+                const suffix = source.symbol.slice(source.root.length);
+                const spelledSymbol = spelledRoot + suffix;
                 return (
                   <button
                     key={i}
@@ -913,10 +929,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     }}
                     className="rounded px-1.5 py-1 flex items-center justify-between gap-1 leading-tight cursor-grab active:cursor-grabbing hover:brightness-110 transition"
                     style={{ background: `hsl(${color})`, color: '#000' }}
-                    title={`${dc.roman} — ${dc.symbol} (drag into a slot)`}
+                    title={`${source.roman} — ${spelledSymbol} (drag into a slot)`}
                   >
-                    <span className="text-[10px] font-mono font-bold opacity-80">{dc.roman}</span>
-                    <span className="text-[11px] font-mono font-bold">{dc.symbol}</span>
+                    <span className="text-[10px] font-mono font-bold opacity-80">{source.roman}</span>
+                    <span className="text-[11px] font-mono font-bold">{spelledSymbol}</span>
                   </button>
                 );
               })}
