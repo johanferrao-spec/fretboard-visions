@@ -49,11 +49,53 @@ const formatChordLabel = (c: ChartChord): string => {
 export default function ChartsView({ diatonicChords, getChordColor }: ChartsViewProps) {
   const [slots, setSlots] = useState<ChartSlot[]>(() => makeSlots(DEFAULT_SLOT_COUNT));
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
+  const [editingSlot, setEditingSlot] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [parsingSlot, setParsingSlot] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   const setSlotChord = useCallback((slotId: string, chord: ChartChord | undefined) => {
     setSlots(prev => prev.map(sl => sl.id === slotId ? { ...sl, chord } : sl));
   }, []);
+
+  const beginEdit = useCallback((slot: ChartSlot) => {
+    setEditingSlot(slot.id);
+    setEditValue(slot.chord ? formatChordLabel(slot.chord) : '');
+  }, []);
+
+  const commitEdit = useCallback(async (slotId: string, raw: string) => {
+    const text = raw.trim();
+    setEditingSlot(null);
+    setEditValue('');
+    if (!text) return;
+
+    // Optimistic local parse for instant feedback.
+    const local = parseChordSymbol(text);
+    if (local) setSlotChord(slotId, { root: local.root, chordType: local.quality });
+
+    // AI resolution for anything ambiguous or verbose.
+    setParsingSlot(slotId);
+    try {
+      const { data, error } = await supabase.functions.invoke('parse-chord', { body: { input: text } });
+      if (error) throw error;
+      if (data?.root && data?.chordType) {
+        setSlotChord(slotId, { root: data.root as NoteName, chordType: data.chordType });
+      } else if (!local) {
+        toast({ title: 'Chord not recognised', description: text, variant: 'destructive' });
+      }
+    } catch (err) {
+      if (!local) {
+        toast({
+          title: 'Chord parse failed',
+          description: (err as Error).message ?? 'Try a simpler notation like "Am7" or "Cmaj7".',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setParsingSlot(prev => (prev === slotId ? null : prev));
+    }
+  }, [setSlotChord]);
+
 
   const resizeSlot = useCallback((slotId: string, targetBars: number) => {
     setSlots(prev => {
