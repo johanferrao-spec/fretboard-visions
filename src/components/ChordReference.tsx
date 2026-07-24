@@ -2371,7 +2371,7 @@ function computeNextExts(prev: Set<ChordExtension>, e: ChordExtension): Set<Chor
   return next;
 }
 
-function ChordBuilder({
+export function ChordBuilder({
   selectedRoot, selectedChord, handleSelectChord, getChordCellLabel, handleRenameChord,
   isTypeAvailable, draggable = true, unavailableTitle = 'No voicings available',
   isExtensionAllowed,
