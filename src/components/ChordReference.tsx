@@ -1216,8 +1216,12 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick, tuni
   if (activeFrets.length === 0 && !voicing.frets.some(f => f === 0)) return null;
   const frettedNotes = voicing.frets.filter(f => f > 0);
   const minFret = frettedNotes.length > 0 ? Math.min(...frettedNotes) : 1;
-  const startFret = Math.max(1, minFret - 1);
+  const maxFret = frettedNotes.length > 0 ? Math.max(...frettedNotes) : 1;
   const numFrets = 5; // Fixed number of frets for uniform sizing
+  let startFret = Math.max(1, minFret - 1);
+  if (maxFret - startFret >= numFrets) {
+    startFret = Math.max(1, maxFret - numFrets + 1);
+  }
   const cellW = 16;
   const cellH = 22;
   const numStrings = 6;
