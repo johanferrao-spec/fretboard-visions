@@ -1089,7 +1089,6 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                   })()}
 
 
-                >
                   <span
                     className="absolute top-0.5 left-1 text-[9px] font-mono font-bold pointer-events-none select-none"
                     style={{ color: color ? 'rgba(0,0,0,0.65)' : undefined }}
