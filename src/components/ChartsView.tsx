@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Group, Trash2, Check } from 'lucide-react';
+
 import type { NoteName } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
 import { supabase } from '@/integrations/supabase/client';
