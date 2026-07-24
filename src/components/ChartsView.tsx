@@ -473,6 +473,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
 
   const commitSection = (name: string) => {
     if (!pendingRange) return;
+    snapshot();
     const { startIdx, endIdx } = pendingRange;
     setSections(prev => [
       ...prev.filter(s => s.endIdx < startIdx || s.startIdx > endIdx),
