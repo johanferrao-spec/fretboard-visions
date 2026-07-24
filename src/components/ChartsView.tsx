@@ -267,11 +267,13 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   useEffect(() => {
     if (!emitRef.current) return;
     const out: TimelineChord[] = [];
+    const outSections: { id: string; name: string; color: string; startBeat: number; lengthBeats: number }[] = [];
     let cursorBeats = 0;
     let chordIdx = 0;
     for (const item of arrangement) {
       const sec = sections.find(s => s.id === item.sectionId);
       if (!sec) continue;
+      const sectionStartBeat = cursorBeats;
       for (let i = sec.startIdx; i <= sec.endIdx && i < slots.length; i++) {
         const sl = slots[i];
         const durBeats = (sl.bars / UNITS_PER_BAR) * 4; // 1 bar = 4 beats
@@ -286,9 +288,13 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         }
         cursorBeats += durBeats;
       }
+      const lengthBeats = cursorBeats - sectionStartBeat;
+      if (lengthBeats > 0) {
+        outSections.push({ id: `${item.id}`, name: sec.name, color: sec.color, startBeat: sectionStartBeat, lengthBeats });
+      }
     }
     const measures = Math.max(2, Math.ceil(cursorBeats / 4));
-    emitRef.current({ chords: out, measures, bpm: tempo });
+    emitRef.current({ chords: out, measures, bpm: tempo, sections: outSections });
   }, [arrangement, sections, slots, tempo]);
 
 
