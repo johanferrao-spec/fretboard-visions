@@ -84,8 +84,8 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
   const gridRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
 
-  const [sectionStartIdx, setSectionStartIdx] = useState<number | null>(null);
-  const gridRef = useRef<HTMLDivElement | null>(null);
+
+
 
 
   const setSlotChord = useCallback((slotId: string, chord: ChartChord | undefined) => {
