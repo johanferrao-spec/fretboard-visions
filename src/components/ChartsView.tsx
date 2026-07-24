@@ -219,18 +219,8 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
     window.addEventListener('mouseup', onUp);
   };
 
-  return (
-    <div className="h-full flex flex-col overflow-hidden bg-background">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-card shrink-0">
-        <span className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">Charts</span>
-        <span className="text-[9px] font-mono text-muted-foreground/70">
-          Drag coloured degree cells into any slot, or double-click a slot to type a chord (e.g. "Am7", "A minor seventh"). Drag the right edge to resize.
-        </span>
-        <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">
-          {slots.reduce((n, s) => n + s.bars, 0)} bars · {slots.length} slots
-        </span>
-      </div>
+
+
 
   // Cumulative bar number at start of each slot (1-indexed).
   const barNumbers: number[] = [];
