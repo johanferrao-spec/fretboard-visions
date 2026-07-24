@@ -43,7 +43,7 @@ const Index = () => {
   const [subdivision, setSubdivision] = useState<1 | 2 | 3 | 4>(1);
   const timeSignatures = useMemo(() => [
     { sig: '2/4', beats: 2, subdiv: 1 },
-    { sig: '3/4', beats: 3, subdivide subdiv: 1 },
+    { sig: '3/4', beats: 3, subdiv: 1 },
     { sig: '4/4', beats: 4, subdiv: 1 },
     { sig: '5/4', beats: 5, subdiv: 1 },
     { sig: '6/8', beats: 2, subdiv: 3 },
