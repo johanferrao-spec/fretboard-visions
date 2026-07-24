@@ -1319,11 +1319,11 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               gridTemplateRows: rowHeights.join(' '),
             }}
           >
-            {/* Section enclosure boxes — one rounded rect per row a section touches. */}
+            {/* Section enclosure boxes — drawn above cells like the fretboard position-focus box. */}
             {sectionSegments.map(seg => (
               <div
                 key={seg.key}
-                className="pointer-events-none rounded-lg relative"
+                className="pointer-events-none rounded-md relative"
                 style={{
                   gridRow: seg.row,
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
@@ -1331,7 +1331,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                   background: `hsla(${seg.color}, 0.10)`,
                   boxShadow: `0 0 12px hsla(${seg.color}, 0.35), inset 0 0 12px hsla(${seg.color}, 0.15)`,
                   margin: '-10px 0',
-                  zIndex: 0,
+                  zIndex: 3,
                 }}
               >
                 {seg.showLabel && (
