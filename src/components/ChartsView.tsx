@@ -1350,6 +1350,16 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
           />
         </div>
       )}
+
+      {/* Analyze Song preview / editor modal */}
+      {analyzeResult && (
+        <AnalyzeSongPreview
+          initial={analyzeResult}
+          onCancel={() => setAnalyzeResult(null)}
+          onApply={applyAnalyzedSong}
+        />
+      )}
     </div>
+
   );
 }
