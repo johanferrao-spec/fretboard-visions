@@ -1001,25 +1001,15 @@ export default function SongTimeline({
             setPlayheadDragging(true);
           }}
         >
-          <div
-            style={{ width: 200, minWidth: 200 }}
-            className="flex items-center gap-1 px-2 h-5"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Chords</span>
-            <button
-              onClick={() => onToggleCharts?.()}
-              className={`ml-auto px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider flex items-center gap-1 transition-colors ${
-                chartsActive
-                  ? 'bg-primary/30 text-primary hover:bg-primary/40'
-                  : 'bg-secondary text-muted-foreground hover:bg-muted'
-              }`}
-              title={chartsActive ? 'Close charts and return to DAW' : 'Open charts panel'}
+          {backingTrackActive && !cellView && (
+            <div
+              style={{ width: 200, minWidth: 200 }}
+              className="flex items-center gap-1 px-2 h-5"
+              onMouseDown={(e) => e.stopPropagation()}
             >
-              <LayoutGrid size={9} />
-              Charts
-            </button>
-          </div>
+              <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Chords</span>
+            </div>
+          )}
           {!cellView && (
             <div className="flex-1 flex items-center">
               {Array.from({ length: measures }, (_, m) => (
@@ -1032,13 +1022,29 @@ export default function SongTimeline({
         </div>
 
         {/* Grid wrapper — adds left header-spacer so chord grid aligns with DAW lanes */}
-        <div className="flex-1 flex min-h-0">
+        <div className="flex-1 flex min-h-0 relative">
+          {/* Charts toggle — always visible (works when timeline is minimised too).
+              Amber pill positioned at the top-left of the grid area where the
+              old Regenerate MIDI button lived. */}
+          <button
+            onClick={() => onToggleCharts?.()}
+            className={`absolute top-1.5 left-1.5 z-20 px-3 py-1.5 rounded-md text-[11px] font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors border shadow-sm ${
+              chartsActive
+                ? 'bg-amber-500 text-black border-amber-400 hover:bg-amber-400'
+                : 'bg-amber-500/80 text-black border-amber-400/80 hover:bg-amber-400'
+            }`}
+            title={chartsActive ? 'Close charts and return to DAW' : 'Open charts panel'}
+          >
+            <LayoutGrid size={13} />
+            Charts
+          </button>
           {backingTrackActive && !cellView && (
             <div
               style={{ width: 200, minWidth: 200 }}
               className="border-r border-border/30 bg-card/40 flex items-start justify-center pt-2"
             />
           )}
+
           {cellView ? (
             <CellGridView
               measures={measures}
