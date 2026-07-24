@@ -156,7 +156,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   }, []);
 
   const [chartKey, setChartKey] = useState<NoteName>(persisted.chartKey ?? currentKey);
+  const [useSevenths, setUseSevenths] = useState(false);
   const diatonicChords = useMemo(() => getDiatonicChords(chartKey, keyMode), [chartKey, keyMode]);
+  const diatonicSevenths = useMemo(() => getDiatonicSevenths(chartKey, keyMode), [chartKey, keyMode]);
+  const spelledRoots = useMemo(() => spellDiatonicRoots(chartKey, keyMode), [chartKey, keyMode]);
   const getChordColor = useCallback((chord: ChartChord) => {
     const deg = getChordDegree(chartKey, chord.root, chord.chordType, keyMode);
     return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
