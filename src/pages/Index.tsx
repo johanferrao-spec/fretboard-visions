@@ -900,8 +900,16 @@ const Index = () => {
               onLoadBackingTrack={(id) => backingApi?.load(id)}
               onDeleteBackingTrack={(id) => backingApi?.remove(id)}
               savedBackingTracks={backingApi?.saved || []}
-              chartsActive={showCharts}
-              onToggleCharts={() => setShowCharts(v => !v)}
+              chartsActive={showCharts && activeTab === 'backing'}
+              onToggleCharts={() => {
+                if (activeTab !== 'backing') {
+                  setActiveTab('backing');
+                  setShowCharts(true);
+                } else {
+                  setShowCharts(v => !v);
+                }
+              }}
+
             />
           </div>
         )}
