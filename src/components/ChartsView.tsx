@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save } from 'lucide-react';
 
 import type { NoteName, KeyMode } from '@/lib/music';
-import { getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS } from '@/lib/music';
+import { getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS, NOTE_NAMES } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -80,6 +80,34 @@ const formatChordLabel = (c: ChartChord): string => {
     ` ${c.chordType}`;
   return `${c.root}${suffix}`;
 };
+
+const ROMANS_UP = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
+
+const romanForChord = (chord: ChartChord, key: NoteName): string => {
+  const keyIdx = NOTE_NAMES.indexOf(key);
+  const rootIdx = NOTE_NAMES.indexOf(chord.root);
+  if (keyIdx < 0 || rootIdx < 0) return '?';
+  const semis = (rootIdx - keyIdx + 12) % 12;
+  let degree = MAJOR_INTERVALS.indexOf(semis);
+  let accidental = '';
+  if (degree === -1) {
+    const flat = MAJOR_INTERVALS.indexOf((semis + 1) % 12);
+    if (flat !== -1) { degree = flat; accidental = 'b'; }
+    else {
+      const sharp = MAJOR_INTERVALS.indexOf((semis + 11) % 12);
+      if (sharp !== -1) { degree = sharp; accidental = '#'; }
+    }
+  }
+  if (degree === -1) return '?';
+  const t = chord.chordType;
+  const isMinorish = /^(Minor|Diminished|Half|m7b5)/i.test(t) || t.toLowerCase().startsWith('minor');
+  const base = ROMANS_UP[degree];
+  const roman = isMinorish ? base.toLowerCase() : base;
+  const suffix = /Diminished|m7b5|Half/i.test(t) ? '°' : '';
+  return accidental + roman + suffix;
+};
+
 
 interface Section {
   id: string;
@@ -872,7 +900,13 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
           {sections.length > 0 && (
             <div className="w-full flex flex-col items-stretch gap-1 mt-1 border-t border-border pt-2">
               <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Sections</div>
-              {sections.map(sec => (
+              {sections.map(sec => {
+                const progression = slots
+                  .slice(sec.startIdx, sec.endIdx + 1)
+                  .filter(s => s.chord)
+                  .map(s => romanForChord(s.chord!, chartKey))
+                  .join('-');
+                return (
                 <div
                   key={sec.id}
                   className="flex items-center gap-1 w-full"
@@ -890,6 +924,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                   >
                     <GripVertical size={9} className="opacity-60 shrink-0" />
                     <span className="truncate">{sec.name}</span>
+                    {progression && (
+                      <span className="ml-auto opacity-80 normal-case truncate">({progression})</span>
+                    )}
                   </button>
                   <button
                     onClick={() => removeSection(sec.id)}
@@ -899,7 +936,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     <Trash2 size={10} />
                   </button>
                 </div>
-              ))}
+                );
+              })}
+
             </div>
           )}
 
@@ -1002,7 +1041,6 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                       : inDragSel
                         ? 'inset 0 0 0 2px hsl(var(--primary))'
                         : undefined,
-                    borderTop: section ? `3px solid hsl(${section.color})` : undefined,
                   }}
                   className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
                     sectionMode ? 'cursor-crosshair select-none ' : slot.chord ? 'cursor-pointer ' : ''
@@ -1015,6 +1053,42 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     ? `${formatChordLabel(slot.chord)} — click to edit extensions`
                     : 'Double-click to type a chord, or drop one here'}
                 >
+                  {/* Section tint + framing */}
+                  {section && (
+                    <div
+                      className="absolute inset-0 pointer-events-none rounded-md"
+                      style={{
+                        background: `hsl(${section.color} / 0.18)`,
+                        borderTop: `3px solid hsl(${section.color})`,
+                        borderBottom: `2px solid hsl(${section.color} / 0.75)`,
+                        borderLeft: section.startIdx === idx ? `3px solid hsl(${section.color})` : undefined,
+                        borderRight: section.endIdx === idx ? `3px solid hsl(${section.color})` : undefined,
+                      }}
+                    />
+                  )}
+
+                  {/* Internal bar dividers when a chord spans past its own cell */}
+                  {slot.bars > 1 && (() => {
+                    const lines: JSX.Element[] = [];
+                    for (let u = 1; u < slot.bars; u++) {
+                      if ((startUnit + u) % UNITS_PER_BAR !== 0) continue;
+                      const leftPct = (u / slot.bars) * 100;
+                      lines.push(
+                        <div
+                          key={u}
+                          className="absolute top-0 bottom-0 pointer-events-none"
+                          style={{
+                            left: `${leftPct}%`,
+                            width: 0,
+                            borderLeft: '1px dashed rgba(0,0,0,0.35)',
+                          }}
+                        />
+                      );
+                    }
+                    return lines;
+                  })()}
+
+
                   <span
                     className="absolute top-0.5 left-1 text-[9px] font-mono font-bold pointer-events-none select-none"
                     style={{ color: color ? 'rgba(0,0,0,0.65)' : undefined }}
