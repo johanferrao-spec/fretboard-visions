@@ -233,12 +233,13 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
 
 
 
-  // Cumulative bar number at start of each slot (1-indexed).
-  const barNumbers: number[] = [];
+  // Cumulative unit offset (1/8 bar) at start of each slot.
+  const startUnits: number[] = [];
   {
-    let n = 1;
-    for (const s of slots) { barNumbers.push(n); n += s.bars; }
+    let n = 0;
+    for (const s of slots) { startUnits.push(n); n += s.bars; }
   }
+
 
   const sectionOfSlot = (idx: number): Section | undefined =>
     sections.find(sec => idx >= sec.startIdx && idx <= sec.endIdx);
