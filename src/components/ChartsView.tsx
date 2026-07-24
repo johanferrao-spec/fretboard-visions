@@ -76,13 +76,40 @@ const formatDuration = (units: number): string => {
 const chordsEqual = (a?: ChartChord, b?: ChartChord): boolean =>
   !!a && !!b && a.root === b.root && a.chordType === b.chordType;
 
-const formatChordLabel = (c: ChartChord): string => {
+const SHARP_TO_FLAT: Record<string, string> = {
+  'C#': 'D♭', 'D#': 'E♭', 'F#': 'G♭', 'G#': 'A♭', 'A#': 'B♭',
+};
+
+/** Spell a chord root using the key signature's preferred accidental. */
+const spellRootInKey = (root: NoteName, key: NoteName, keyMode: KeyMode): string => {
+  try {
+    const spelled = spellDiatonicRoots(key, keyMode);
+    const LETTER_PC: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+    const pcOf = (s: string) => {
+      const letter = s[0];
+      const acc = s.slice(1);
+      const shift = /[#]/.test(acc) ? 1 : /[b♭]/.test(acc) ? -1 : 0;
+      return ((LETTER_PC[letter] ?? 0) + shift + 12) % 12;
+    };
+    const rootPc = NOTE_NAMES.indexOf(root);
+    for (const s of spelled) if (pcOf(s) === rootPc) return s;
+    // Non-diatonic: prefer flat spelling if the key signature uses flats.
+    const flatKey = spelled.some(s => /[b♭]/.test(s.slice(1)));
+    return flatKey && SHARP_TO_FLAT[root] ? SHARP_TO_FLAT[root] : root;
+  } catch {
+    return root;
+  }
+};
+
+const formatChordLabel = (c: ChartChord, key?: NoteName, keyMode?: KeyMode): string => {
+  const root = key && keyMode ? spellRootInKey(c.root, key, keyMode) : c.root;
   const suffix =
     c.chordType === 'Major' ? '' :
     c.chordType === 'Minor' ? 'm' :
     ` ${c.chordType}`;
-  return `${c.root}${suffix}`;
+  return `${root}${suffix}`;
 };
+
 
 const ROMANS_UP = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
