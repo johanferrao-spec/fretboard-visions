@@ -1915,53 +1915,20 @@ function ScaleViewPanel({
           </div>
         )}
 
-        {/* Default empty-space content: key selector + mode dropdown + functional harmony description */}
-        {!dropMode && !threeNpsMode && !voiceLeadingMode && (() => {
-          const STANDARD_MODES: { label: string; scale: string }[] = [
-            { label: 'Ionian', scale: 'Major (Ionian)' },
-            { label: 'Dorian', scale: 'Dorian' },
-            { label: 'Phrygian', scale: 'Phrygian' },
-            { label: 'Lydian', scale: 'Lydian' },
-            { label: 'Mixolydian', scale: 'Mixolydian' },
-            { label: 'Aeolian', scale: 'Natural Minor (Aeolian)' },
-            { label: 'Locrian', scale: 'Locrian' },
-          ];
-          const currentMode = STANDARD_MODES.find(m => m.scale === primaryScale.scale)?.scale ?? 'Major (Ionian)';
-          return (
-            <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex flex-col gap-3 min-w-0">
-              <div className="flex items-end gap-3 flex-wrap">
-                <div className="min-w-[140px]">
-                  <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Key</div>
-                  <ScaleRootSelector
-                    selectedRoot={primaryScale.root}
-                    onSelect={(n) => onApplyScale?.(n, primaryScale.scale, 'scale')}
-                  />
-                </div>
-                <div className="shrink-0">
-                  <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Mode</div>
-                  <select
-                    value={currentMode}
-                    onChange={(e) => onApplyScale?.(primaryScale.root, e.target.value, 'scale')}
-                    className="bg-muted text-foreground text-[11px] font-mono rounded border border-border px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
-                  >
-                    {STANDARD_MODES.map(m => (
-                      <option key={m.scale} value={m.scale}>{m.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">What is Functional Harmony?</div>
-                <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
-                  Functional harmony organizes chords into roles based on how they function within a key. Each degree (I–VII) has a specific harmonic purpose—<span className="text-primary font-bold">tonic</span> chords provide resolution, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension.
-                </p>
-                <p className="text-[11px] font-mono text-foreground/80 leading-relaxed mt-2">
-                  Click any degree above to highlight its chord tones on the fretboard. Use Drop 2 / Drop 3 to explore jazz voicings, or 3-Notes-Per-String to see modal patterns.
-                </p>
-              </div>
+        {/* Default empty-space content: functional harmony description */}
+        {!dropMode && !threeNpsMode && !voiceLeadingMode && (
+          <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex flex-col gap-3 min-w-0">
+            <div className="flex-1">
+              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">What is Functional Harmony?</div>
+              <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
+                Functional harmony organizes chords into roles based on how they function within a key. Each degree (I–VII) has a specific harmonic purpose—<span className="text-primary font-bold">tonic</span> chords provide resolution, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension.
+              </p>
+              <p className="text-[11px] font-mono text-foreground/80 leading-relaxed mt-2">
+                Click any degree above to highlight its chord tones on the fretboard. Use Drop 2 / Drop 3 to explore jazz voicings, or 3-Notes-Per-String to see modal patterns.
+              </p>
             </div>
-          );
-        })()}
+          </div>
+        )}
       </div>
 
       {!dropMode && !threeNpsMode && degreeFilter === null && (
