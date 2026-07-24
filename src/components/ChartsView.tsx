@@ -38,6 +38,9 @@ interface ChartsViewProps {
   /** Fired whenever the arrangement (or its underlying chords) change, so the
       parent can push the resulting chord progression into the backing-track timeline. */
   onArrangementChange?: (data: { chords: TimelineChord[]; measures: number; bpm: number }) => void;
+  /** Called when the user confirms a full chart reset, so the parent can also
+      clear the backing-track timeline (which sits above the Charts panel). */
+  onResetAll?: () => void;
 }
 
 /** 1 grid column = 1/8 bar. 32 columns per row = 4 bars per row. */
@@ -132,7 +135,7 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
-export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArrangementChange }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArrangementChange, onResetAll }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
     slots: ChartSlot[];
@@ -756,7 +759,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         </button>
         <button
           onClick={() => {
-            if (!confirm('Are you sure? This will clear the current chart, sections and arrangement.')) return;
+            if (!confirm('Are you sure? This will clear the current chart, sections, arrangement AND the backing-track timeline chords.')) return;
             setSlots(makeSlots(DEFAULT_SLOT_COUNT));
             setSections([]);
             setArrangement([]);
@@ -768,6 +771,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             setFeel('Straight');
             historyRef.current = [];
             try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+            onResetAll?.();
             toast({ title: 'Chart reset', description: 'A fresh blank chart has been created.' });
           }}
           className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"

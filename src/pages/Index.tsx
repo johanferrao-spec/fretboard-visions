@@ -991,6 +991,9 @@ const Index = () => {
                 timeline.setMeasures(measures);
                 if (bpm && bpm !== timeline.bpm) timeline.setBpm(bpm);
               }}
+              onResetAll={() => {
+                timeline.clearTimeline();
+              }}
             />
           </div>
         )}
