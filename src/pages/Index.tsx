@@ -39,6 +39,10 @@ const Index = () => {
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomePulse, setMetronomePulse] = useState(0);
   const [metronomeFlash, setMetronomeFlash] = useState<'accent' | 'beat' | null>(null);
+  const [timeSigNum, setTimeSigNum] = useState(4);
+  const [subdivision, setSubdivision] = useState<1 | 2 | 3 | 4>(1);
+  const [currentMetroBeat, setCurrentMetroBeat] = useState(-1);
+  const tapTimesRef = useRef<number[]>([]);
   const metronomeFlashTimerRef = useRef<number | null>(null);
   const [bpmDragging, setBpmDragging] = useState(false);
   const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
