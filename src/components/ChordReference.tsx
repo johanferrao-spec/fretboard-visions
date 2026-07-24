@@ -55,7 +55,7 @@ const INTERVAL_DEGREE_IDX = [0,1,1,2,2,3,3,4,5,5,6,6];
 
 function ModeDiagram({ mode }: { mode: string }) {
   const intervals = MODE_INTERVALS[mode];
-  const [hover, setHover] = React.useState(false);
+  const [hover, setHover] = useState(false);
   if (!intervals) return null;
   const skeleton = MODE_SKELETON[mode];
   const defining = new Set(MODE_DEFINING[mode]);
