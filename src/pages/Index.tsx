@@ -458,13 +458,13 @@ const Index = () => {
                     <div>
                       <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Time signature</div>
                       <div className="flex flex-wrap gap-1">
-                        {[2, 3, 4, 5, 6, 7].map(n => (
+                        {timeSignatures.map(t => (
                           <button
-                            key={n}
-                            onClick={() => setTimeSigNum(n)}
-                            className={`w-7 h-7 rounded text-[10px] font-mono ${timeSigNum === n ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                            key={t.sig}
+                            onClick={() => setTimeSignature(t.sig)}
+                            className={`w-9 h-7 rounded text-[10px] font-mono ${timeSignature === t.sig ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
                           >
-                            {n}/4
+                            {t.sig}
                           </button>
                         ))}
                       </div>
@@ -476,7 +476,8 @@ const Index = () => {
                           <button
                             key={v}
                             onClick={() => setSubdivision(v)}
-                            className={`flex-1 h-7 rounded text-[10px] font-mono ${subdivision === v ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                            disabled={timeSignature.endsWith('/8')}
+                            className={`flex-1 h-7 rounded text-[10px] font-mono ${timeSignature.endsWith('/8') ? 'opacity-40 cursor-not-allowed' : ''} ${subdivision === v ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
                             title={v === 1 ? 'Quarter notes' : v === 2 ? 'Eighth notes' : v === 3 ? 'Triplets' : 'Sixteenth notes'}
                           >
                             {label}
@@ -499,7 +500,7 @@ const Index = () => {
 
               {/* Beat indicator (parallel with metronome, not in dropdown) */}
               <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-secondary/40 border border-border">
-                {Array.from({ length: timeSigNum }).map((_, i) => {
+                {Array.from({ length: timeSigBeats }).map((_, i) => {
                   const active = metronomeOn && currentMetroBeat === i;
                   const isDown = i === 0;
                   const bg = active
