@@ -871,14 +871,16 @@ const Index = () => {
 
         {/* Backing Track DAW — always mounted so the engine, sample resolver,
             and current groove drive playback even when the panel is minimised.
-            When inactive we keep it in the tree but visually hidden. */}
+            When inactive we keep it in the tree but visually hidden.
+            When the Charts panel is open it fully replaces the DAW UI, but
+            the engine below stays mounted for playback. */}
         <div
           className={
-            activeTab === 'backing'
+            activeTab === 'backing' && !showCharts
               ? 'flex-1 flex flex-col min-h-0 overflow-hidden'
               : 'hidden'
           }
-          aria-hidden={activeTab !== 'backing'}
+          aria-hidden={activeTab !== 'backing' || showCharts}
         >
           <div className="flex-1 min-h-0 overflow-hidden">
             <BackingTrackView
@@ -931,6 +933,19 @@ const Index = () => {
             </div>
           </div>
         </div>
+
+        {/* Charts panel — replaces the DAW when toggled on from the timeline toolbar. */}
+        {activeTab === 'backing' && showCharts && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ChartsView
+              diatonicChords={getDiatonicChords(timelineKey, keyMode)}
+              getChordColor={(c: ChartChord) => {
+                const deg = getChordDegree(timelineKey, c.root, c.chordType, keyMode);
+                return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <NoteInfoPanel
