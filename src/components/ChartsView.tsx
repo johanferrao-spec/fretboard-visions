@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload } from 'lucide-react';
 
 import type { NoteName } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
