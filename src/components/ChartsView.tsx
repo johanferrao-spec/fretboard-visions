@@ -1332,8 +1332,6 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                   margin: '-8px -6px',
                   zIndex: 0,
                 }}
-                  zIndex: 0,
-                }}
               >
                 {seg.showLabel && (
                   <span
