@@ -185,6 +185,47 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     return () => window.removeEventListener('keydown', onKey);
   }, [undo]);
 
+  // ---- Persist to localStorage whenever meaningful state changes ----
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        slots, sections, arrangement, chartKey, title, composer, tempo, timeSig, feel,
+      }));
+    } catch { /* quota or serialization failure — ignore */ }
+  }, [slots, sections, arrangement, chartKey, title, composer, tempo, timeSig, feel]);
+
+  // ---- Emit arrangement chords to parent (for the backing-track timeline) ----
+  const emitRef = useRef(onArrangementChange);
+  emitRef.current = onArrangementChange;
+  useEffect(() => {
+    if (!emitRef.current) return;
+    const out: TimelineChord[] = [];
+    let cursorBeats = 0;
+    let chordIdx = 0;
+    for (const item of arrangement) {
+      const sec = sections.find(s => s.id === item.sectionId);
+      if (!sec) continue;
+      for (let i = sec.startIdx; i <= sec.endIdx && i < slots.length; i++) {
+        const sl = slots[i];
+        const durBeats = (sl.bars / UNITS_PER_BAR) * 4; // 1 bar = 4 beats
+        if (sl.chord) {
+          out.push({
+            id: `chart-${item.id}-${chordIdx++}`,
+            root: sl.chord.root,
+            chordType: sl.chord.chordType,
+            startBeat: cursorBeats,
+            duration: durBeats,
+          });
+        }
+        cursorBeats += durBeats;
+      }
+    }
+    const measures = Math.max(2, Math.ceil(cursorBeats / 4));
+    emitRef.current({ chords: out, measures, bpm: tempo });
+  }, [arrangement, sections, slots, tempo]);
+
+
+
   // ---- Auto-link consecutive identical chords ----
   useEffect(() => {
     if (isUndoingRef.current) { isUndoingRef.current = false; return; }
