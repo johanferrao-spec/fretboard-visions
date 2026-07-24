@@ -875,6 +875,7 @@ const Index = () => {
           </div>
         </div>
       )}
+      {tunerOpen && <ChromaticTuner onClose={() => setTunerOpen(false)} />}
     </div>
   );
 };
