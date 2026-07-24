@@ -778,13 +778,48 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             />
             <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Tempo (BPM)</label>
             <input
-              type="number"
-              min={20}
-              max={400}
-              value={tempo}
-              onChange={(e) => setTempo(Math.max(20, Math.min(400, Number(e.target.value) || 0)))}
-              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
+              type="text"
+              inputMode="numeric"
+              value={tempoDraft}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9]/g, '');
+                setTempoDraft(v);
+                if (v !== '') {
+                  const n = Math.max(20, Math.min(400, Number(v)));
+                  setTempo(n);
+                }
+              }}
+              onBlur={() => {
+                const n = Math.max(20, Math.min(400, Number(tempoDraft) || tempo));
+                setTempo(n);
+                setTempoDraft(String(n));
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+              onMouseDown={(e) => {
+                const input = e.currentTarget;
+                const startY = e.clientY;
+                const startTempo = tempo;
+                let dragged = false;
+                const onMove = (ev: MouseEvent) => {
+                  const dy = startY - ev.clientY;
+                  if (!dragged && Math.abs(dy) < 3) return;
+                  dragged = true;
+                  const next = Math.max(20, Math.min(400, startTempo + Math.round(dy / 2)));
+                  setTempo(next);
+                  setTempoDraft(String(next));
+                };
+                const onUp = () => {
+                  window.removeEventListener('mousemove', onMove);
+                  window.removeEventListener('mouseup', onUp);
+                  if (dragged) input.blur();
+                };
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+              }}
+              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary cursor-ns-resize"
+              title="Type a tempo, or click and drag up/down to change"
             />
+
             <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Time Sig</label>
             <select
               value={timeSig}
