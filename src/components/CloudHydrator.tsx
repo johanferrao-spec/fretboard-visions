@@ -39,15 +39,22 @@ export default function CloudHydrator({ children }: { children: React.ReactNode 
       try {
         const { data, error } = await supabase
           .from('user_snapshots')
-          .select('charts_data, backing_tracks_data')
+          .select('charts_data, backing_tracks_data, charts_library, setlists')
           .eq('user_id', userId)
           .maybeSingle();
         if (!error && data) {
-          if (data.charts_data !== null && data.charts_data !== undefined) {
-            try { localStorage.setItem(CHART_KEY, JSON.stringify(data.charts_data)); } catch {}
+          const d: any = data;
+          if (d.charts_data != null) {
+            try { localStorage.setItem(CHART_KEY, JSON.stringify(d.charts_data)); } catch {}
           }
-          if (data.backing_tracks_data !== null && data.backing_tracks_data !== undefined) {
-            try { localStorage.setItem(BACKING_KEY, JSON.stringify(data.backing_tracks_data)); } catch {}
+          if (d.backing_tracks_data != null) {
+            try { localStorage.setItem(BACKING_KEY, JSON.stringify(d.backing_tracks_data)); } catch {}
+          }
+          if (d.charts_library != null) {
+            try { localStorage.setItem(LIBRARY_KEY, JSON.stringify(d.charts_library)); } catch {}
+          }
+          if (d.setlists != null) {
+            try { localStorage.setItem(SETLISTS_KEY, JSON.stringify(d.setlists)); } catch {}
           }
         }
       } catch {}
