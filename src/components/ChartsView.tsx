@@ -149,6 +149,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const [title, setTitle] = useState(persisted.title ?? 'Untitled');
   const [composer, setComposer] = useState(persisted.composer ?? '');
   const [tempo, setTempo] = useState<number>(persisted.tempo ?? 120);
+  const [tempoDraft, setTempoDraft] = useState<string>(String(persisted.tempo ?? 120));
+  useEffect(() => { setTempoDraft(String(tempo)); }, [tempo]);
+
   const [timeSig, setTimeSig] = useState(persisted.timeSig ?? '4/4');
   const [feel, setFeel] = useState(persisted.feel ?? 'Straight');
   const [readingChart, setReadingChart] = useState(false);
