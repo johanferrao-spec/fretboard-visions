@@ -82,7 +82,14 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
-export default function ChartsView({ diatonicChords, getChordColor, onToggleCharts }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode, onToggleCharts }: ChartsViewProps) {
+  const [chartKey, setChartKey] = useState<NoteName>(currentKey);
+  const diatonicChords = useMemo(() => getDiatonicChords(chartKey, keyMode), [chartKey, keyMode]);
+  const getChordColor = useCallback((chord: ChartChord) => {
+    const deg = getChordDegree(chartKey, chord.root, chord.chordType, keyMode);
+    return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
+  }, [chartKey, keyMode]);
+
   const [slots, setSlots] = useState<ChartSlot[]>(() => makeSlots(DEFAULT_SLOT_COUNT));
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
