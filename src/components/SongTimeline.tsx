@@ -1001,13 +1001,15 @@ export default function SongTimeline({
             setPlayheadDragging(true);
           }}
         >
-          {backingTrackActive && !cellView && (
+          {!cellView && (
             <div
               style={{ width: 200, minWidth: 200 }}
               className="flex items-center gap-1 px-2 h-5"
               onMouseDown={(e) => e.stopPropagation()}
             >
-              <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Chords</span>
+              {backingTrackActive && (
+                <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider">Chords</span>
+              )}
             </div>
           )}
           {!cellView && (
@@ -1023,27 +1025,28 @@ export default function SongTimeline({
 
         {/* Grid wrapper — adds left header-spacer so chord grid aligns with DAW lanes */}
         <div className="flex-1 flex min-h-0 relative">
-          {/* Charts toggle — always visible (works when timeline is minimised too).
-              Amber pill positioned at the top-left of the grid area where the
-              old Regenerate MIDI button lived. */}
-          <button
-            onClick={() => onToggleCharts?.()}
-            className={`absolute top-1.5 left-1.5 z-20 px-3 py-1.5 rounded-md text-[11px] font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors border shadow-sm ${
-              chartsActive
-                ? 'bg-amber-500 text-black border-amber-400 hover:bg-amber-400'
-                : 'bg-amber-500/80 text-black border-amber-400/80 hover:bg-amber-400'
-            }`}
-            title={chartsActive ? 'Close charts and return to DAW' : 'Open charts panel'}
-          >
-            <LayoutGrid size={13} />
-            Charts
-          </button>
-          {backingTrackActive && !cellView && (
+          {!cellView && (
             <div
               style={{ width: 200, minWidth: 200 }}
-              className="border-r border-border/30 bg-card/40 flex items-start justify-center pt-2"
-            />
+              className="border-r border-border/30 bg-card/40 flex items-center justify-center"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {/* Chart toggle — centered in the left header column, always visible. */}
+              <button
+                onClick={() => onToggleCharts?.()}
+                className={`px-4 py-2 rounded-md text-[11px] font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors border shadow-sm ${
+                  chartsActive
+                    ? 'bg-amber-500 text-black border-amber-400 hover:bg-amber-400'
+                    : 'bg-amber-500/80 text-black border-amber-400/80 hover:bg-amber-400'
+                }`}
+                title={chartsActive ? 'Close chart and return to DAW' : 'Open chart panel'}
+              >
+                <LayoutGrid size={14} />
+                Chart
+              </button>
+            </div>
           )}
+
 
           {cellView ? (
             <CellGridView
