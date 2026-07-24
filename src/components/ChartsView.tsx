@@ -581,39 +581,38 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     for (let i = 0; i < idx; i++) slotStartUnit += slots[i].bars;
     const slotEndUnit = slotStartUnit + slot.bars;
 
-    // Include existing replicated chain in the effective startBars so shrinking
-    // removes copies before eating into the anchor slot itself.
+    // Row this anchor lives in.
+    const rowStart = Math.floor(slotStartUnit / COLS) * COLS;
+    const rowEnd = rowStart + COLS;
+
+    // Include existing chord replicas (including partial-bar ones) as part of
+    // the effective start size so shrinking removes replicas before eating
+    // into the anchor slot itself.
     let chainBars = slot.bars;
-    let chainStartUnit = slotStartUnit;
-    let chainEndUnit = slotEndUnit;
     if (chord) {
       if (edge === 'right') {
         let pos = slotEndUnit;
-        for (let i = idx + 1; i < slots.length; i++) {
-          if (pos % UNITS_PER_BAR !== 0) break;
+        for (let i = idx + 1; i < slots.length && pos < rowEnd; i++) {
           const nb = slots[i];
-          if (nb.bars === UNITS_PER_BAR && chordsEqual(nb.chord, chord)) {
-            chainBars += nb.bars; pos += nb.bars; chainEndUnit = pos;
+          if (chordsEqual(nb.chord, chord)) {
+            chainBars += nb.bars; pos += nb.bars;
           } else break;
         }
       } else {
         let pos = slotStartUnit;
-        for (let i = idx - 1; i >= 0; i--) {
-          if (pos % UNITS_PER_BAR !== 0) break;
+        for (let i = idx - 1; i >= 0 && pos > rowStart; i--) {
           const nb = slots[i];
-          if (nb.bars === UNITS_PER_BAR && chordsEqual(nb.chord, chord)) {
-            chainBars += nb.bars; pos -= nb.bars; chainStartUnit = pos;
+          if (chordsEqual(nb.chord, chord)) {
+            chainBars += nb.bars; pos -= nb.bars;
           } else break;
         }
       }
     }
 
-    // Row constraints: chain must remain within its 4-bar row.
-    const rowStart = Math.floor(chainStartUnit / COLS) * COLS;
-    const rowEnd = rowStart + COLS;
     const maxBars = edge === 'right'
-      ? rowEnd - chainStartUnit
-      : chainEndUnit - rowStart;
+      ? rowEnd - slotStartUnit
+      : slotEndUnit - rowStart;
+
 
     const startBars = chainBars;
     let lastBars = startBars;
