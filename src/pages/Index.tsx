@@ -41,6 +41,7 @@ const Index = () => {
   const [volume, setVolume] = useState(0.7);
   const [samplerHeight, setSamplerHeight] = useState(600);
   const [showCharts, setShowCharts] = useState(false);
+  const [arrangementSections, setArrangementSections] = useState<{ id: string; name: string; color: string; startBeat: number; lengthBeats: number }[]>([]);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomePulse, setMetronomePulse] = useState(0);
