@@ -155,12 +155,8 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const [readDragOver, setReadDragOver] = useState(false);
   const readInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ---- Song audio analysis ----
-  const { user } = useAuth();
-  const [analyzingAudio, setAnalyzingAudio] = useState<'idle' | 'detecting-bpm' | 'uploading' | 'analyzing'>('idle');
-  const [audioDragOver, setAudioDragOver] = useState(false);
-  const audioInputRef = useRef<HTMLInputElement | null>(null);
-  const [analyzeResult, setAnalyzeResult] = useState<AnalyzedSong | null>(null);
+  // (Song audio analysis feature removed.)
+
   const gridRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const presetRef = useRef<HTMLDivElement | null>(null);
