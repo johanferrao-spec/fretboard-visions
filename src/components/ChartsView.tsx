@@ -30,6 +30,7 @@ interface ChartsViewProps {
   diatonicChords: DiatonicChord[];
   /** Returns `H, S%, L%` triple (no `hsl()` wrapper). */
   getChordColor: (chord: ChartChord) => string;
+  onToggleCharts?: () => void;
 }
 
 /** 1 grid column = 1/8 bar. 32 columns per row = 4 bars per row. */
