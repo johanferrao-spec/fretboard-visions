@@ -125,6 +125,7 @@ export default function Fretboard({
   chordOctaveShift = 0,
   hideToolbar = false,
   fretBoxTintHsl,
+  toolbarExtras,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
