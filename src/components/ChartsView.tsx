@@ -773,6 +773,65 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const sectionOfSlot = (idx: number): Section | undefined =>
     sections.find(sec => idx >= sec.startIdx && idx <= sec.endIdx);
 
+  // ---- Section-aware row layout ----
+  // Each logical row holds COLS units (BARS_PER_ROW bars). We add an extra
+  // spacer row between consecutive logical rows when they belong to different
+  // sections, so groups are visually separated vertically.
+  const logicalRowOf = (idx: number) => Math.floor(startUnits[idx] / COLS);
+  const totalLogicalRows = slots.length > 0
+    ? Math.max(1, Math.ceil((startUnits[slots.length - 1] + slots[slots.length - 1].bars) / COLS))
+    : 1;
+  const firstSlotOnRow: number[] = new Array(totalLogicalRows).fill(-1);
+  const lastSlotOnRow: number[] = new Array(totalLogicalRows).fill(-1);
+  slots.forEach((_, i) => {
+    const r = logicalRowOf(i);
+    if (firstSlotOnRow[r] === -1) firstSlotOnRow[r] = i;
+    lastSlotOnRow[r] = i;
+  });
+  const hasSpacerBefore: boolean[] = new Array(totalLogicalRows).fill(false);
+  for (let r = 1; r < totalLogicalRows; r++) {
+    const prevSec = lastSlotOnRow[r - 1] >= 0 ? sectionOfSlot(lastSlotOnRow[r - 1])?.id : undefined;
+    const currSec = firstSlotOnRow[r] >= 0 ? sectionOfSlot(firstSlotOnRow[r])?.id : undefined;
+    if (prevSec !== currSec) hasSpacerBefore[r] = true;
+  }
+  // Grid render-row (1-based) for each logical row + a matching template.
+  const renderRowOfLogical: number[] = new Array(totalLogicalRows).fill(1);
+  const rowHeights: string[] = [];
+  {
+    let cursor = 0;
+    for (let r = 0; r < totalLogicalRows; r++) {
+      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('0.9rem'); cursor += 1; }
+      cursor += 1;
+      renderRowOfLogical[r] = cursor;
+      rowHeights.push('3rem');
+    }
+  }
+  // Precompute section overlay segments (one rounded box per row a section touches).
+  const sectionSegments = sections.flatMap(sec => {
+    if (sec.startIdx >= slots.length || sec.endIdx >= slots.length) return [];
+    const startRow = logicalRowOf(sec.startIdx);
+    const endRow = logicalRowOf(sec.endIdx);
+    const segs: Array<{ key: string; row: number; colStart: number; colEnd: number; color: string; name: string; showLabel: boolean }> = [];
+    for (let r = startRow; r <= endRow; r++) {
+      const colStart = r === startRow ? (startUnits[sec.startIdx] % COLS) + 1 : 1;
+      const colEnd = r === endRow
+        ? (startUnits[sec.endIdx] % COLS) + slots[sec.endIdx].bars + 1
+        : COLS + 1;
+      segs.push({
+        key: `${sec.id}-r${r}`,
+        row: renderRowOfLogical[r],
+        colStart,
+        colEnd,
+        color: sec.color,
+        name: sec.name,
+        showLabel: r === startRow,
+      });
+    }
+    return segs;
+  });
+
+
+
   // Drag-to-select section range
   const startSectionDrag = (idx: number, e: React.MouseEvent) => {
     if (!sectionMode) return;
