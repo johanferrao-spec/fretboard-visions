@@ -2482,6 +2482,77 @@ export function getDiatonicChords(key: NoteName, keyMode: KeyMode = 'major'): Di
   });
 }
 
+/**
+ * Return diatonic chord roots as properly-spelled strings (Eb instead of D#) that
+ * respect the key's natural accidental conventions. Uses the relative-major
+ * key signature to choose letter names, then re-orders for the current mode.
+ */
+export function spellDiatonicRoots(key: NoteName, keyMode: KeyMode = 'major'): string[] {
+  const MODE_OFFSET: Record<string, number> = {
+    major: 0, ionian: 0, dorian: 2, phrygian: 4, lydian: 5,
+    mixolydian: 7, minor: 9, aeolian: 9, locrian: 11,
+  };
+  const MODE_START_IDX: Record<string, number> = {
+    major: 0, ionian: 0, dorian: 1, phrygian: 2, lydian: 3,
+    mixolydian: 4, minor: 5, aeolian: 5, locrian: 6,
+  };
+  const offset = MODE_OFFSET[keyMode];
+  const startIdx = MODE_START_IDX[keyMode];
+  // If we're on an exotic mode we don't cover, fall back to raw NOTE_NAMES.
+  if (offset === undefined || startIdx === undefined) {
+    return getDiatonicChords(key, keyMode).map(c => c.root);
+  }
+  const keyPc = NOTE_NAMES.indexOf(key);
+  const relMajorPc = ((keyPc - offset) + 12) % 12;
+  // Preferred spelling for each PC when used as a major tonic (flat-friendly).
+  const REL_MAJOR_TONIC: Record<number, { letter: string; acc: string }> = {
+    0: { letter: 'C', acc: '' }, 1: { letter: 'D', acc: 'b' }, 2: { letter: 'D', acc: '' },
+    3: { letter: 'E', acc: 'b' }, 4: { letter: 'E', acc: '' }, 5: { letter: 'F', acc: '' },
+    6: { letter: 'F', acc: '#' }, 7: { letter: 'G', acc: '' }, 8: { letter: 'A', acc: 'b' },
+    9: { letter: 'A', acc: '' }, 10: { letter: 'B', acc: 'b' }, 11: { letter: 'B', acc: '' },
+  };
+  const tonic = REL_MAJOR_TONIC[relMajorPc];
+  const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  const LETTER_PC: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const tonicPc = (LETTER_PC[tonic.letter] + (tonic.acc === '#' ? 1 : tonic.acc === 'b' ? -1 : 0) + 12) % 12;
+  const MAJOR_INTS = [0, 2, 4, 5, 7, 9, 11];
+  const startLetterIdx = LETTERS.indexOf(tonic.letter);
+  const majorScaleSpelled = MAJOR_INTS.map((iv, i) => {
+    const letter = LETTERS[(startLetterIdx + i) % 7];
+    const pc = (tonicPc + iv) % 12;
+    const diff = ((pc - LETTER_PC[letter]) + 12) % 12;
+    if (diff === 0) return letter;
+    if (diff === 1) return letter + '#';
+    if (diff === 11) return letter + '♭';
+    if (diff === 2) return letter + '##';
+    if (diff === 10) return letter + '♭♭';
+    return letter;
+  });
+  // Rotate to start on the current mode's tonic.
+  return Array.from({ length: 7 }, (_, i) => majorScaleSpelled[(startIdx + i) % 7]);
+}
+
+/**
+ * Diatonic seventh chords for the given key/mode — same interface as
+ * getDiatonicChords, but each chord is a stacked 7th (maj7, m7, 7, ø7, °7, etc.).
+ */
+export function getDiatonicSevenths(key: NoteName, keyMode: KeyMode = 'major'): DiatonicChord[] {
+  const keyIndex = NOTE_NAMES.indexOf(key);
+  const { scale, numerals } = resolveMode(keyMode);
+  return scale.map((interval, degree) => {
+    const rootIndex = (keyIndex + interval) % 12;
+    const root = NOTE_NAMES[rootIndex];
+    const q = computeSeventhQuality(scale, degree);
+    return {
+      degree,
+      root,
+      type: q.type,
+      roman: `${numerals[degree]}${q.symbol.replace(/^m/, '').replace(/^°/, '')}`,
+      symbol: `${root}${q.symbol}`,
+    };
+  });
+}
+
 export interface ChordVariation {
   root: NoteName;
   type: string;
