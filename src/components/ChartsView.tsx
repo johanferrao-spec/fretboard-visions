@@ -1,14 +1,25 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2 } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Music4, Plus } from 'lucide-react';
+import { analyze } from 'web-audio-beat-detector';
 
 import type { NoteName, KeyMode } from '@/lib/music';
 import { getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { ChordBuilder } from '@/components/ChordReference';
 import { ScaleRootSelector } from '@/components/ControlPanel';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
+import { slotsFromBarText, parseMmSs, secondsToBarIndex, type AnalyzedSong } from '@/lib/analyzedSongImport';
+
+const ACCEPTED_AUDIO_MIME = new Set([
+  'audio/wav', 'audio/x-wav', 'audio/wave',
+  'audio/mp3', 'audio/mpeg',
+  'audio/aiff', 'audio/x-aiff',
+  'audio/aac', 'audio/ogg', 'audio/flac', 'audio/x-flac',
+]);
+const MAX_AUDIO_SECONDS = 240;
 
 const STORAGE_KEY = 'chartsView.state.v1';
 
@@ -154,6 +165,13 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const [readingChart, setReadingChart] = useState(false);
   const [readDragOver, setReadDragOver] = useState(false);
   const readInputRef = useRef<HTMLInputElement | null>(null);
+
+  // ---- Song audio analysis ----
+  const { user } = useAuth();
+  const [analyzingAudio, setAnalyzingAudio] = useState<'idle' | 'detecting-bpm' | 'uploading' | 'analyzing'>('idle');
+  const [audioDragOver, setAudioDragOver] = useState(false);
+  const audioInputRef = useRef<HTMLInputElement | null>(null);
+  const [analyzeResult, setAnalyzeResult] = useState<AnalyzedSong | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const presetRef = useRef<HTMLDivElement | null>(null);
@@ -370,6 +388,163 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       setReadingChart(false);
     }
   }, [snapshot]);
+
+  // ---- Analyze Song Audio ----
+  const analyzeSongFromFile = useCallback(async (file: File) => {
+    const mime = (file.type || '').toLowerCase();
+    if (!ACCEPTED_AUDIO_MIME.has(mime)) {
+      toast({
+        title: 'Unsupported audio type',
+        description: `"${file.type || 'unknown'}" — please use WAV, MP3, AAC, OGG, FLAC or AIFF.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!user) {
+      toast({ title: 'Sign in required', description: 'Sign in to upload and analyze songs.', variant: 'destructive' });
+      return;
+    }
+
+    // Read file bytes once — reused for BPM detect + upload.
+    const arrayBuf = await file.arrayBuffer();
+
+    // Duration + client-side BPM (best-effort; never blocks upload).
+    let durationSeconds = 0;
+    let detectedBpm: number | undefined;
+    try {
+      setAnalyzingAudio('detecting-bpm');
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
+      durationSeconds = audioBuf.duration;
+      if (durationSeconds > MAX_AUDIO_SECONDS) {
+        toast({
+          title: 'Audio too long',
+          description: `Max ${MAX_AUDIO_SECONDS / 60} minutes. This file is ${Math.round(durationSeconds)}s.`,
+          variant: 'destructive',
+        });
+        ctx.close();
+        setAnalyzingAudio('idle');
+        return;
+      }
+      try {
+        detectedBpm = Math.round(await analyze(audioBuf));
+      } catch {
+        // BPM detection is a hint — Gemini will estimate on its own.
+      }
+      ctx.close();
+    } catch (err) {
+      console.warn('audio decode failed, continuing without local BPM:', err);
+    }
+
+    // Upload → user's own folder in private bucket. Local-first: any Storage
+    // failure surfaces to the user and aborts (no local fallback because
+    // analysis requires server-side access to the file).
+    setAnalyzingAudio('uploading');
+    const ext = (file.name.match(/\.([a-z0-9]+)$/i)?.[1] ?? 'bin').toLowerCase();
+    const audioPath = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const upload = await supabase.storage.from('song-audio').upload(audioPath, file, {
+      contentType: file.type || 'application/octet-stream',
+      upsert: false,
+    });
+    if (upload.error) {
+      toast({ title: 'Upload failed', description: upload.error.message, variant: 'destructive' });
+      setAnalyzingAudio('idle');
+      return;
+    }
+
+    // Analyze via edge function.
+    setAnalyzingAudio('analyzing');
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-song-audio', {
+        body: { audioPath, mimeType: mime, detectedBpm, durationSeconds },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error ?? 'Analysis failed');
+      setAnalyzeResult({
+        tempo: data.tempo,
+        key: data.key,
+        keyRoot: data.keyRoot,
+        keyQuality: data.keyQuality,
+        barText: data.barText,
+        structure: Array.isArray(data.structure) ? data.structure : [],
+      });
+    } catch (err) {
+      toast({
+        title: 'Analysis failed',
+        description: (err as Error).message ?? 'Try a shorter or clearer clip.',
+        variant: 'destructive',
+      });
+    } finally {
+      // Best-effort cleanup — the file isn't needed after analysis.
+      supabase.storage.from('song-audio').remove([audioPath]).catch(() => {});
+      setAnalyzingAudio('idle');
+    }
+  }, [user]);
+
+  // Apply user-approved analysis to the chart (never auto-applied).
+  const applyAnalyzedSong = useCallback((edit: AnalyzedSong) => {
+    // Tempo + key.
+    if (typeof edit.tempo === 'number' && edit.tempo > 0) setTempo(Math.round(edit.tempo));
+    if (edit.keyRoot) {
+      const parsed = parseChordSymbol(edit.keyRoot);
+      if (parsed) setChartKey(parsed.root as NoteName);
+    }
+    // Slots from barText.
+    const imported = slotsFromBarText(edit.barText ?? '');
+    const newSlots: ChartSlot[] = imported.map(it => ({
+      id: uid('slot'),
+      bars: it.units,
+      chord: it.chord,
+    }));
+    // Track first slot index per bar for section mapping.
+    const barToSlotIdx = new Map<number, number>();
+    imported.forEach((it, i) => {
+      if (!barToSlotIdx.has(it.barIndex)) barToSlotIdx.set(it.barIndex, i);
+    });
+    // Pad to DEFAULT_SLOT_COUNT bars.
+    const usedUnits = newSlots.reduce((n, s) => n + s.bars, 0);
+    const minUnits = DEFAULT_SLOT_COUNT * UNITS_PER_BAR;
+    let padUnits = Math.max(0, minUnits - usedUnits);
+    while (padUnits > 0) {
+      newSlots.push({ id: uid('slot'), bars: UNITS_PER_BAR });
+      padUnits -= UNITS_PER_BAR;
+    }
+    // Sections from structure.
+    const tempoForSections = (typeof edit.tempo === 'number' && edit.tempo > 0) ? edit.tempo : 120;
+    const structure = (edit.structure ?? []).map(s => ({
+      label: s.label,
+      barIndex: secondsToBarIndex(parseMmSs(s.startTime), tempoForSections),
+    })).sort((a, b) => a.barIndex - b.barIndex);
+    const lastSlotIdx = newSlots.length - 1;
+    const newSections: Section[] = structure.map((s, i) => {
+      const nextBar = i + 1 < structure.length ? structure[i + 1].barIndex : Infinity;
+      const startIdx = barToSlotIdx.get(s.barIndex) ?? Math.min(s.barIndex, lastSlotIdx);
+      const endBar = Math.max(s.barIndex, nextBar - 1);
+      const endStart = barToSlotIdx.get(endBar);
+      const endIdx = endStart !== undefined
+        ? endStart
+        : Math.min(nextBar === Infinity ? lastSlotIdx : Math.max(0, (barToSlotIdx.get(nextBar) ?? lastSlotIdx + 1) - 1), lastSlotIdx);
+      return {
+        id: uid('sec'),
+        name: s.label,
+        startIdx: Math.min(startIdx, lastSlotIdx),
+        endIdx: Math.max(Math.min(endIdx, lastSlotIdx), Math.min(startIdx, lastSlotIdx)),
+        color: SECTION_COLORS[i % SECTION_COLORS.length],
+      };
+    }).filter(sec => sec.startIdx <= sec.endIdx);
+
+    snapshot();
+    setSlots(newSlots);
+    setSections(newSections);
+    setArrangement([]);
+    setAnalyzeResult(null);
+    toast({
+      title: 'Song analyzed',
+      description: `Imported ${imported.length} chord${imported.length === 1 ? '' : 's'}${newSections.length ? ` · ${newSections.length} section${newSections.length === 1 ? '' : 's'}` : ''}.`,
+    });
+  }, [snapshot]);
+
 
 
   // Resize by growing/shrinking from a specific edge. Growth only consumes
@@ -853,7 +1028,54 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               }}
             />
           </label>
+
+          {/* Analyze Song drop box */}
+          <label
+            onDragOver={(e) => {
+              if (e.dataTransfer.types.includes('Files')) {
+                e.preventDefault();
+                setAudioDragOver(true);
+              }
+            }}
+            onDragLeave={() => setAudioDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setAudioDragOver(false);
+              const file = e.dataTransfer.files?.[0];
+              if (file) analyzeSongFromFile(file);
+            }}
+            className={`mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border-2 border-dashed cursor-pointer transition-colors ${
+              audioDragOver
+                ? 'border-amber-400 bg-amber-400/10 text-amber-300'
+                : 'border-border/60 text-muted-foreground hover:border-amber-400/60 hover:text-foreground'
+            } ${analyzingAudio !== 'idle' ? 'pointer-events-none opacity-70' : ''}`}
+            title={user
+              ? 'Drop a short audio clip (≤ 4 min) — AI will detect tempo, key, chords and structure.'
+              : 'Sign in to analyze songs from audio.'}
+          >
+            {analyzingAudio !== 'idle'
+              ? <Loader2 size={12} className="animate-spin" />
+              : <Music4 size={12} />}
+            <span className="text-[10px] font-mono uppercase tracking-wider">
+              {analyzingAudio === 'detecting-bpm' ? 'BPM…'
+                : analyzingAudio === 'uploading' ? 'Uploading…'
+                : analyzingAudio === 'analyzing' ? 'Analyzing…'
+                : 'Analyze Song'}
+            </span>
+            <input
+              ref={audioInputRef}
+              type="file"
+              accept="audio/wav,audio/x-wav,audio/wave,audio/mp3,audio/mpeg,audio/aac,audio/ogg,audio/flac,audio/x-flac,audio/aiff,audio/x-aiff"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) analyzeSongFromFile(file);
+                e.target.value = '';
+              }}
+            />
+          </label>
         </div>
+
 
         {/* Slot grid */}
         <div className="flex-1 overflow-auto p-3 flex flex-col">
@@ -1128,6 +1350,174 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
           />
         </div>
       )}
+
+      {/* Analyze Song preview / editor modal */}
+      {analyzeResult && (
+        <AnalyzeSongPreview
+          initial={analyzeResult}
+          onCancel={() => setAnalyzeResult(null)}
+          onApply={applyAnalyzedSong}
+        />
+      )}
+    </div>
+
+  );
+}
+
+// ---- Analyze Song preview modal ----
+
+interface AnalyzeSongPreviewProps {
+  initial: AnalyzedSong;
+  onCancel: () => void;
+  onApply: (edited: AnalyzedSong) => void;
+}
+
+function AnalyzeSongPreview({ initial, onCancel, onApply }: AnalyzeSongPreviewProps) {
+  const [tempo, setTempo] = useState<number>(Math.round(initial.tempo ?? 120));
+  const [keyRoot, setKeyRoot] = useState<string>(initial.keyRoot ?? 'C');
+  const [keyQuality, setKeyQuality] = useState<'Major' | 'Minor'>(initial.keyQuality ?? 'Major');
+  const [barText, setBarText] = useState<string>(initial.barText ?? '');
+  const [structure, setStructure] = useState(initial.structure ?? []);
+
+  const updateSection = (i: number, patch: Partial<{ label: string; startTime: string }>) => {
+    setStructure(prev => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s));
+  };
+  const removeSection = (i: number) => setStructure(prev => prev.filter((_, idx) => idx !== i));
+  const addSection = () => setStructure(prev => [...prev, { label: 'Section', startTime: '0:00' }]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onMouseDown={onCancel}
+    >
+      <div
+        className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Music4 size={16} className="text-amber-400" />
+            <h2 className="text-sm font-mono uppercase tracking-wider">Review AI Analysis</h2>
+          </div>
+          <button
+            onClick={onCancel}
+            className="text-muted-foreground hover:text-foreground"
+            title="Cancel"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Edit anything the AI got wrong, then apply to overwrite the chart. Nothing is saved until you click Apply.
+          </p>
+
+          <div className="grid grid-cols-3 gap-3">
+            <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              Tempo (BPM)
+              <input
+                type="number"
+                min={30}
+                max={300}
+                value={tempo}
+                onChange={(e) => setTempo(Number(e.target.value))}
+                className="bg-background border border-border rounded px-2 py-1 text-sm text-foreground font-mono"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              Key Root
+              <input
+                type="text"
+                value={keyRoot}
+                onChange={(e) => setKeyRoot(e.target.value)}
+                className="bg-background border border-border rounded px-2 py-1 text-sm text-foreground font-mono"
+                placeholder="C, F#, Bb…"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              Quality
+              <select
+                value={keyQuality}
+                onChange={(e) => setKeyQuality(e.target.value as 'Major' | 'Minor')}
+                className="bg-background border border-border rounded px-2 py-1 text-sm text-foreground font-mono"
+              >
+                <option value="Major">Major</option>
+                <option value="Minor">Minor</option>
+              </select>
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+            Chords by Bar <span className="normal-case text-muted-foreground/70">(pipe-separated bars; spaces = multiple chords per bar)</span>
+            <textarea
+              value={barText}
+              onChange={(e) => setBarText(e.target.value)}
+              rows={6}
+              className="bg-background border border-border rounded px-2 py-1.5 text-sm text-foreground font-mono leading-relaxed"
+              placeholder="Cmaj7 | A7 | Dm7 G7 | Cmaj7"
+            />
+          </label>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Song Structure</span>
+              <button
+                onClick={addSection}
+                className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-primary hover:text-primary/80"
+              >
+                <Plus size={11} /> Add
+              </button>
+            </div>
+            <div className="space-y-1">
+              {structure.length === 0 && (
+                <div className="text-xs text-muted-foreground italic">No sections detected.</div>
+              )}
+              {structure.map((s, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={s.startTime}
+                    onChange={(e) => updateSection(i, { startTime: e.target.value })}
+                    className="w-20 bg-background border border-border rounded px-2 py-1 text-xs text-foreground font-mono"
+                    placeholder="0:00"
+                  />
+                  <input
+                    type="text"
+                    value={s.label}
+                    onChange={(e) => updateSection(i, { label: e.target.value })}
+                    className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs text-foreground font-mono"
+                    placeholder="Verse"
+                  />
+                  <button
+                    onClick={() => removeSection(i)}
+                    className="text-muted-foreground hover:text-destructive"
+                    title="Remove section"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border">
+          <button
+            onClick={onCancel}
+            className="px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onApply({ tempo, keyRoot, keyQuality, barText, structure })}
+            className="px-3 py-1.5 rounded bg-amber-500 text-black text-xs font-mono uppercase tracking-wider hover:bg-amber-400"
+          >
+            Apply to Chart
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
+
