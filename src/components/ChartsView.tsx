@@ -1327,9 +1327,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                 style={{
                   gridRow: seg.row,
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
-                  border: `2px solid hsla(${seg.color}, 0.9)`,
-                  background: `hsla(${seg.color}, 0.10)`,
-                  boxShadow: `0 0 12px hsla(${seg.color}, 0.35), inset 0 0 12px hsla(${seg.color}, 0.15)`,
+                  border: `2px solid hsl(${seg.color} / 0.9)`,
+                  background: `hsl(${seg.color} / 0.10)`,
+                  boxShadow: `0 0 12px hsl(${seg.color} / 0.35), inset 0 0 12px hsl(${seg.color} / 0.15)`,
                   margin: '-10px 0',
                   zIndex: 3,
                 }}
