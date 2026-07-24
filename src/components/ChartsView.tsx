@@ -38,6 +38,9 @@ interface ChartsViewProps {
   /** Fired whenever the arrangement (or its underlying chords) change, so the
       parent can push the resulting chord progression into the backing-track timeline. */
   onArrangementChange?: (data: { chords: TimelineChord[]; measures: number; bpm: number }) => void;
+  /** Called when the user confirms a full chart reset, so the parent can also
+      clear the backing-track timeline (which sits above the Charts panel). */
+  onResetAll?: () => void;
 }
 
 /** 1 grid column = 1/8 bar. 32 columns per row = 4 bars per row. */
