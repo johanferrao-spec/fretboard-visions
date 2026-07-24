@@ -773,6 +773,65 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const sectionOfSlot = (idx: number): Section | undefined =>
     sections.find(sec => idx >= sec.startIdx && idx <= sec.endIdx);
 
+  // ---- Section-aware row layout ----
+  // Each logical row holds COLS units (BARS_PER_ROW bars). We add an extra
+  // spacer row between consecutive logical rows when they belong to different
+  // sections, so groups are visually separated vertically.
+  const logicalRowOf = (idx: number) => Math.floor(startUnits[idx] / COLS);
+  const totalLogicalRows = slots.length > 0
+    ? Math.max(1, Math.ceil((startUnits[slots.length - 1] + slots[slots.length - 1].bars) / COLS))
+    : 1;
+  const firstSlotOnRow: number[] = new Array(totalLogicalRows).fill(-1);
+  const lastSlotOnRow: number[] = new Array(totalLogicalRows).fill(-1);
+  slots.forEach((_, i) => {
+    const r = logicalRowOf(i);
+    if (firstSlotOnRow[r] === -1) firstSlotOnRow[r] = i;
+    lastSlotOnRow[r] = i;
+  });
+  const hasSpacerBefore: boolean[] = new Array(totalLogicalRows).fill(false);
+  for (let r = 1; r < totalLogicalRows; r++) {
+    const prevSec = lastSlotOnRow[r - 1] >= 0 ? sectionOfSlot(lastSlotOnRow[r - 1])?.id : undefined;
+    const currSec = firstSlotOnRow[r] >= 0 ? sectionOfSlot(firstSlotOnRow[r])?.id : undefined;
+    if (prevSec !== currSec) hasSpacerBefore[r] = true;
+  }
+  // Grid render-row (1-based) for each logical row + a matching template.
+  const renderRowOfLogical: number[] = new Array(totalLogicalRows).fill(1);
+  const rowHeights: string[] = [];
+  {
+    let cursor = 0;
+    for (let r = 0; r < totalLogicalRows; r++) {
+      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('0.9rem'); cursor += 1; }
+      cursor += 1;
+      renderRowOfLogical[r] = cursor;
+      rowHeights.push('3rem');
+    }
+  }
+  // Precompute section overlay segments (one rounded box per row a section touches).
+  const sectionSegments = sections.flatMap(sec => {
+    if (sec.startIdx >= slots.length || sec.endIdx >= slots.length) return [];
+    const startRow = logicalRowOf(sec.startIdx);
+    const endRow = logicalRowOf(sec.endIdx);
+    const segs: Array<{ key: string; row: number; colStart: number; colEnd: number; color: string; name: string; showLabel: boolean }> = [];
+    for (let r = startRow; r <= endRow; r++) {
+      const colStart = r === startRow ? (startUnits[sec.startIdx] % COLS) + 1 : 1;
+      const colEnd = r === endRow
+        ? (startUnits[sec.endIdx] % COLS) + slots[sec.endIdx].bars + 1
+        : COLS + 1;
+      segs.push({
+        key: `${sec.id}-r${r}`,
+        row: renderRowOfLogical[r],
+        colStart,
+        colEnd,
+        color: sec.color,
+        name: sec.name,
+        showLabel: r === startRow,
+      });
+    }
+    return segs;
+  });
+
+
+
   // Drag-to-select section range
   const startSectionDrag = (idx: number, e: React.MouseEvent) => {
     if (!sectionMode) return;
@@ -1257,9 +1316,33 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             className="grid gap-1.5"
             style={{
               gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
-              gridAutoRows: '3rem',
+              gridTemplateRows: rowHeights.join(' '),
             }}
           >
+            {/* Section enclosure boxes — one rounded rect per row a section touches. */}
+            {sectionSegments.map(seg => (
+              <div
+                key={seg.key}
+                className="pointer-events-none rounded-md relative"
+                style={{
+                  gridRow: seg.row,
+                  gridColumn: `${seg.colStart} / ${seg.colEnd}`,
+                  border: `2px solid hsla(${seg.color}, 0.75)`,
+                  background: `hsla(${seg.color}, 0.12)`,
+                  margin: '-3px',
+                  zIndex: 0,
+                }}
+              >
+                {seg.showLabel && (
+                  <span
+                    className="absolute -top-2.5 left-2 px-1 text-[9px] font-mono font-bold uppercase tracking-wider bg-background rounded"
+                    style={{ color: `hsl(${seg.color})` }}
+                  >
+                    {seg.name}
+                  </span>
+                )}
+              </div>
+            ))}
             {slots.map((slot, idx) => {
               const isHover = hoverSlot === slot.id;
               const isEditing = editingSlot === slot.id;
@@ -1269,6 +1352,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               const inDragSel = sectionMode && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
               const startUnit = startUnits[idx];
               const barLabel = formatBarNumber(startUnit);
+              const gridRowIndex = renderRowOfLogical[logicalRowOf(idx)];
               return (
                 <div
                   key={slot.id}
@@ -1284,12 +1368,14 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                   }}
                   style={{
                     gridColumn: `span ${slot.bars} / span ${slot.bars}`,
+                    gridRow: gridRowIndex,
                     background: color ? `hsl(${color})` : undefined,
                     boxShadow: isHover
                       ? 'inset 0 0 0 2px hsl(var(--primary))'
                       : inDragSel
                         ? 'inset 0 0 0 2px hsl(var(--primary))'
                         : undefined,
+                    zIndex: 1,
                   }}
                   className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
                     sectionMode ? 'cursor-crosshair select-none ' : slot.chord ? 'cursor-pointer ' : ''
@@ -1302,19 +1388,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     ? `${formatChordLabel(slot.chord, chartKey, keyMode)} — click to edit extensions`
                     : 'Double-click to type a chord, or drop one here'}
                 >
-                  {/* Section tint + framing */}
-                  {section && (
-                    <div
-                      className="absolute inset-0 pointer-events-none rounded-md"
-                      style={{
-                        background: `hsl(${section.color} / 0.18)`,
-                        borderTop: `3px solid hsl(${section.color})`,
-                        borderBottom: `2px solid hsl(${section.color} / 0.75)`,
-                        borderLeft: section.startIdx === idx ? `3px solid hsl(${section.color})` : undefined,
-                        borderRight: section.endIdx === idx ? `3px solid hsl(${section.color})` : undefined,
-                      }}
-                    />
-                  )}
+                  {/* Section enclosure is drawn as a single sibling box across all cells (see sectionSegments above). */}
 
                   {/* Internal bar dividers when a chord spans past its own cell */}
                   {slot.bars > 1 && (() => {
@@ -1347,8 +1421,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
                   {section && section.startIdx === idx && (
                     <span
-                      className="absolute top-0.5 right-2 text-[8px] font-mono font-bold uppercase tracking-wider pointer-events-none"
-                      style={{ color: `hsl(${section.color})` }}
+                      className="sr-only"
                     >
                       {section.name}
                     </span>
