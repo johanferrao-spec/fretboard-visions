@@ -2,3 +2,6 @@ project_id = "cfpadpfgmuqxvoqmaztb"
 
 [functions.generate-backing-midi]
 verify_jwt = false
+
+[functions.parse-chord]
+verify_jwt = false
