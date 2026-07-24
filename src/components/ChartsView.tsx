@@ -1,11 +1,13 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { X, Loader2, Group, Trash2, GripVertical, Upload } from 'lucide-react';
 
-import type { NoteName } from '@/lib/music';
+import type { NoteName, KeyMode } from '@/lib/music';
+import { getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { ChordBuilder } from '@/components/ChordReference';
+import { ScaleRootSelector } from '@/components/ControlPanel';
 
 interface DiatonicChord {
   root: NoteName;
