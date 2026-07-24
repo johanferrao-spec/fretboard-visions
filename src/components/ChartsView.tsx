@@ -515,10 +515,12 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     if (!sec) return;
     const name = window.prompt('Rename section', sec.name);
     if (!name) return;
+    snapshot();
     setSections(prev => prev.map(s => s.id === id ? { ...s, name } : s));
   };
 
   const removeSection = (id: string) => {
+    snapshot();
     setSections(prev => prev.filter(s => s.id !== id));
     setArrangement(prev => prev.filter(a => a.sectionId !== id));
   };
