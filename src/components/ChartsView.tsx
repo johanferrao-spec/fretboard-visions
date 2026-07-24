@@ -485,11 +485,22 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     let lastBars = startBars;
     let snapped = false;
 
+    // Compute start unit of this slot to constrain resize within its row.
+    let slotStartUnit = 0;
+    for (const s of slots) {
+      if (s.id === slotId) break;
+      slotStartUnit += s.bars;
+    }
+    const offsetInRow = slotStartUnit % COLS;
+    const maxBarsRight = COLS - offsetInRow; // right edge cannot cross row end
+    const maxBarsLeft = startBars + offsetInRow; // left edge cannot cross row start
+    const maxBars = edge === 'right' ? maxBarsRight : maxBarsLeft;
+
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX;
       // Left handle: dragging left grows, dragging right shrinks.
       const delta = edge === 'right' ? Math.round(dx / unitWidth) : Math.round(-dx / unitWidth);
-      const nextBars = Math.max(1, startBars + delta);
+      const nextBars = Math.min(maxBars, Math.max(1, startBars + delta));
       if (nextBars !== lastBars) {
         if (!snapped) { snapshot(); snapped = true; }
         lastBars = nextBars;
@@ -504,6 +515,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   };
+
 
 
 
