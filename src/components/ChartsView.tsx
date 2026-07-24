@@ -293,6 +293,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
         newSlots.push({ id: uid('slot'), bars: UNITS_PER_BAR });
         padUnits -= UNITS_PER_BAR;
       }
+      snapshot();
       setSlots(newSlots);
       setSections([]);
       setArrangement([]);
