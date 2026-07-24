@@ -76,13 +76,40 @@ const formatDuration = (units: number): string => {
 const chordsEqual = (a?: ChartChord, b?: ChartChord): boolean =>
   !!a && !!b && a.root === b.root && a.chordType === b.chordType;
 
-const formatChordLabel = (c: ChartChord): string => {
+const SHARP_TO_FLAT: Record<string, string> = {
+  'C#': 'D♭', 'D#': 'E♭', 'F#': 'G♭', 'G#': 'A♭', 'A#': 'B♭',
+};
+
+/** Spell a chord root using the key signature's preferred accidental. */
+const spellRootInKey = (root: NoteName, key: NoteName, keyMode: KeyMode): string => {
+  try {
+    const spelled = spellDiatonicRoots(key, keyMode);
+    const LETTER_PC: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+    const pcOf = (s: string) => {
+      const letter = s[0];
+      const acc = s.slice(1);
+      const shift = /[#]/.test(acc) ? 1 : /[b♭]/.test(acc) ? -1 : 0;
+      return ((LETTER_PC[letter] ?? 0) + shift + 12) % 12;
+    };
+    const rootPc = NOTE_NAMES.indexOf(root);
+    for (const s of spelled) if (pcOf(s) === rootPc) return s;
+    // Non-diatonic: prefer flat spelling if the key signature uses flats.
+    const flatKey = spelled.some(s => /[b♭]/.test(s.slice(1)));
+    return flatKey && SHARP_TO_FLAT[root] ? SHARP_TO_FLAT[root] : root;
+  } catch {
+    return root;
+  }
+};
+
+const formatChordLabel = (c: ChartChord, key?: NoteName, keyMode?: KeyMode): string => {
+  const root = key && keyMode ? spellRootInKey(c.root, key, keyMode) : c.root;
   const suffix =
     c.chordType === 'Major' ? '' :
     c.chordType === 'Minor' ? 'm' :
     ` ${c.chordType}`;
-  return `${c.root}${suffix}`;
+  return `${root}${suffix}`;
 };
+
 
 const ROMANS_UP = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
@@ -309,7 +336,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
   const beginEdit = useCallback((slot: ChartSlot) => {
     setEditingSlot(slot.id);
-    setEditValue(slot.chord ? formatChordLabel(slot.chord) : '');
+    setEditValue(slot.chord ? formatChordLabel(slot.chord, chartKey, keyMode) : '');
   }, []);
 
   const commitEdit = useCallback(async (slotId: string, raw: string) => {
@@ -422,21 +449,33 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       const rowEnd = rowStart + COLS;
 
       if (edge === 'right') {
-        // Region = [anchor slot .. end of row]
-        const maxOwnBars = anchorBarEnd - slotStartUnit; // extend anchor to its bar end
-        const clampedDesired = Math.min(desired, rowEnd - slotStartUnit);
+        // Region ends at the row boundary OR the start of the next different
+        // chord slot in this row — whichever comes first. This prevents the
+        // rebuild from clobbering unrelated chords.
+        let regionEndUnit = rowEnd;
+        {
+          let pos = slotEndUnit;
+          for (let i = idx + 1; i < prev.length && pos < rowEnd; i++) {
+            const nb = prev[i];
+            if (nb.chord && !chordsEqual(nb.chord, chord)) { regionEndUnit = pos; break; }
+            pos += nb.bars;
+          }
+        }
+        const regionUnits = regionEndUnit - slotStartUnit;
+        if (regionUnits <= 0) return prev;
+
+        const maxOwnBars = Math.min(anchorBarEnd - slotStartUnit, regionUnits);
+        const clampedDesired = Math.min(desired, regionUnits);
         const ownDesired = Math.min(clampedDesired, maxOwnBars);
         const extraUnits = chord ? Math.max(0, clampedDesired - maxOwnBars) : 0;
 
-        // Collect region slots (idx .. endIdx) totalling `rowEnd - slotStartUnit`
-        // units. Because no slot crosses a bar (or therefore a row) boundary,
-        // the region is a clean, whole set of slots.
+        // Collect region slots (idx .. endIdx) totalling regionUnits units.
         let endIdx = idx;
         let acc = 0;
         for (let i = idx; i < prev.length; i++) {
           acc += prev[i].bars;
           endIdx = i;
-          if (acc >= rowEnd - slotStartUnit) break;
+          if (acc >= regionUnits) break;
         }
 
         const region: ChartSlot[] = [];
@@ -449,11 +488,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
           placed = maxOwnBars;
         }
 
-        // Now `placed` is bar-aligned. Fill remaining bars in the row.
+        // Fill remaining bars in the region.
         let remainingExtra = extraUnits;
-        const regionUnits = rowEnd - slotStartUnit;
         while (placed < regionUnits) {
-          const barUnits = UNITS_PER_BAR;
+          const barUnits = Math.min(UNITS_PER_BAR, regionUnits - placed);
           if (remainingExtra >= barUnits) {
             region.push({ id: uid('slot'), bars: barUnits, chord: { ...chord! } });
             remainingExtra -= barUnits;
@@ -471,46 +509,69 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         next.splice(idx, endIdx - idx + 1, ...region);
         return next;
       } else {
-        // LEFT edge — region = [start of row .. anchor slot].
-        const maxOwnBars = slotEndUnit - anchorBarStart; // extend anchor to its bar start
-        const clampedDesired = Math.min(desired, slotEndUnit - rowStart);
+        // LEFT edge — region starts at rowStart OR just after the previous
+        // different chord slot in this row, whichever is later.
+        let regionStartUnit = rowStart;
+        {
+          let pos = slotStartUnit;
+          for (let i = idx - 1; i >= 0 && pos > rowStart; i--) {
+            const nb = prev[i];
+            if (nb.chord && !chordsEqual(nb.chord, chord)) { regionStartUnit = pos; break; }
+            pos -= nb.bars;
+          }
+        }
+        const regionUnits = slotEndUnit - regionStartUnit;
+        if (regionUnits <= 0) return prev;
+
+        const maxOwnBars = Math.min(slotEndUnit - anchorBarStart, regionUnits);
+        const clampedDesired = Math.min(desired, regionUnits);
         const ownDesired = Math.min(clampedDesired, maxOwnBars);
         const extraUnits = chord ? Math.max(0, clampedDesired - maxOwnBars) : 0;
 
-        // Collect region slots (startIdx .. idx) totalling `slotEndUnit - rowStart`.
         let startIdx = idx;
         let acc = current.bars;
         for (let i = idx - 1; i >= 0; i--) {
+          if (acc >= regionUnits) break;
           acc += prev[i].bars;
           startIdx = i;
-          if (acc >= slotEndUnit - rowStart) break;
         }
 
         const region: ChartSlot[] = [];
-        const barsBeforeAnchor = (anchorBarStart - rowStart) / UNITS_PER_BAR;
-
-        // Fill each full bar to the left of anchor's bar with empty, then
-        // overwrite from the RIGHT with chord replicas until extraUnits is spent.
-        const bars: ChartSlot[][] = [];
-        for (let b = 0; b < barsBeforeAnchor; b++) {
-          bars.push([{ id: uid('slot'), bars: UNITS_PER_BAR }]);
-        }
-        let toFill = extraUnits;
-        let bIdx = barsBeforeAnchor - 1;
-        while (toFill > 0 && bIdx >= 0) {
-          if (toFill >= UNITS_PER_BAR) {
-            bars[bIdx] = [{ id: uid('slot'), bars: UNITS_PER_BAR, chord: { ...chord! } }];
-            toFill -= UNITS_PER_BAR;
-          } else {
-            bars[bIdx] = [
-              { id: uid('slot'), bars: UNITS_PER_BAR - toFill },
-              { id: uid('slot'), bars: toFill, chord: { ...chord! } },
-            ];
-            toFill = 0;
+        // Bars entirely to the LEFT of anchor's bar within the region.
+        // regionStartUnit may not be bar-aligned if a partial replica of another
+        // chord sits nearby; in that case the leading bar is truncated.
+        const leftUnits = anchorBarStart - regionStartUnit;
+        if (leftUnits > 0) {
+          const bars: ChartSlot[][] = [];
+          let remaining = leftUnits;
+          // Split into bar-aligned chunks starting from regionStartUnit.
+          let cursor = regionStartUnit;
+          while (remaining > 0) {
+            const nextBar = Math.floor(cursor / UNITS_PER_BAR) * UNITS_PER_BAR + UNITS_PER_BAR;
+            const chunk = Math.min(remaining, nextBar - cursor);
+            bars.push([{ id: uid('slot'), bars: chunk }]);
+            cursor += chunk;
+            remaining -= chunk;
           }
-          bIdx--;
+          // Fill from the RIGHT with chord replicas until extraUnits is spent.
+          let toFill = extraUnits;
+          let bIdx = bars.length - 1;
+          while (toFill > 0 && bIdx >= 0) {
+            const chunkBars = bars[bIdx][0].bars;
+            if (toFill >= chunkBars) {
+              bars[bIdx] = [{ id: uid('slot'), bars: chunkBars, chord: { ...chord! } }];
+              toFill -= chunkBars;
+            } else {
+              bars[bIdx] = [
+                { id: uid('slot'), bars: chunkBars - toFill },
+                { id: uid('slot'), bars: toFill, chord: { ...chord! } },
+              ];
+              toFill = 0;
+            }
+            bIdx--;
+          }
+          for (const b of bars) region.push(...b);
         }
-        for (const b of bars) region.push(...b);
 
         // Anchor's own bar: optional empty filler to the left of the anchor.
         if (ownDesired < maxOwnBars) {
@@ -522,6 +583,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         next.splice(startIdx, idx - startIdx + 1, ...region);
         return next;
       }
+
     });
   }, []);
 
@@ -609,9 +671,27 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       }
     }
 
+    // Cap resize at the row boundary AND at the nearest different-chord slot.
+    let boundary = edge === 'right' ? rowEnd : rowStart;
+    if (edge === 'right') {
+      let pos = slotEndUnit;
+      for (let i = idx + 1; i < slots.length && pos < rowEnd; i++) {
+        const nb = slots[i];
+        if (nb.chord && !chordsEqual(nb.chord, chord)) { boundary = pos; break; }
+        pos += nb.bars;
+      }
+    } else {
+      let pos = slotStartUnit;
+      for (let i = idx - 1; i >= 0 && pos > rowStart; i--) {
+        const nb = slots[i];
+        if (nb.chord && !chordsEqual(nb.chord, chord)) { boundary = pos; break; }
+        pos -= nb.bars;
+      }
+    }
     const maxBars = edge === 'right'
-      ? rowEnd - slotStartUnit
-      : slotEndUnit - rowStart;
+      ? boundary - slotStartUnit
+      : slotEndUnit - boundary;
+
 
 
     const startBars = chainBars;
@@ -1177,7 +1257,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                       : 'bg-muted/20 border border-dashed border-border/50 hover:border-primary/60 hover:bg-muted/30'
                   }`}
                   title={slot.chord
-                    ? `${formatChordLabel(slot.chord)} — click to edit extensions`
+                    ? `${formatChordLabel(slot.chord, chartKey, keyMode)} — click to edit extensions`
                     : 'Double-click to type a chord, or drop one here'}
                 >
                   {/* Section tint + framing */}
@@ -1247,7 +1327,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     />
                   ) : slot.chord ? (
                     <span className="text-[13px] font-mono font-bold pointer-events-none" style={{ color: '#000' }}>
-                      {formatChordLabel(slot.chord)}
+                      {formatChordLabel(slot.chord, chartKey, keyMode)}
                     </span>
                   ) : null}
 
@@ -1414,7 +1494,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             handleSelectChord={(ct) => {
               setSlotChord(editorSlot.id, { root: editorChord.root, chordType: ct });
             }}
-            getChordCellLabel={(ct) => formatChordLabel({ root: editorChord.root, chordType: ct })}
+            getChordCellLabel={(ct) => formatChordLabel({ root: editorChord.root, chordType: ct }, chartKey, keyMode)}
             draggable={false}
           />
         </div>
