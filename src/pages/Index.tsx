@@ -410,8 +410,40 @@ const Index = () => {
             </Select>
           </div>
         </div>
-        <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-          Guitar Fretboard Visualizer
+        <div className="flex items-center gap-3">
+          <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            Guitar Fretboard Visualizer
+          </div>
+          <Link
+            to="/courses"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+            title="Browse courses"
+          >
+            <BookOpen size={12} /> Courses
+          </Link>
+          {user ? (
+            <div className="flex items-center gap-1.5">
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono bg-secondary text-secondary-foreground max-w-[180px] truncate" title={user.email ?? ''}>
+                <UserIcon size={12} />
+                <span className="truncate">{user.email}</span>
+              </div>
+              <button
+                onClick={async () => { await signOut(); toast.success('Signed out'); }}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                title="Sign out"
+              >
+                <LogOut size={12} /> Sign out
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/auth?next=/"
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              title="Sign in to save your work"
+            >
+              <LogIn size={12} /> Sign in
+            </Link>
+          )}
         </div>
       </header>
 
