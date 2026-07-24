@@ -187,6 +187,42 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     }
   }, [slots]);
 
+  // Normalize a run of empty (chord-less) slots around idx: merge them and
+  // re-split along bar boundaries so a cleared cell falls back to whole bars.
+  const normalizeEmptyRun = useCallback((list: ChartSlot[], idx: number): ChartSlot[] => {
+    if (idx < 0 || idx >= list.length || list[idx].chord) return list;
+    let start = idx, end = idx;
+    while (start > 0 && !list[start - 1].chord) start--;
+    while (end < list.length - 1 && !list[end + 1].chord) end++;
+    let startUnit = 0;
+    for (let i = 0; i < start; i++) startUnit += list[i].bars;
+    let totalUnits = 0;
+    for (let i = start; i <= end; i++) totalUnits += list[i].bars;
+    const pieces: ChartSlot[] = [];
+    let cursor = startUnit;
+    let remaining = totalUnits;
+    while (remaining > 0) {
+      const nextBoundary = Math.floor(cursor / UNITS_PER_BAR) * UNITS_PER_BAR + UNITS_PER_BAR;
+      const size = Math.min(nextBoundary - cursor, remaining);
+      pieces.push({ id: uid('slot'), bars: size });
+      cursor += size;
+      remaining -= size;
+    }
+    return [...list.slice(0, start), ...pieces, ...list.slice(end + 1)];
+  }, []);
+
+  const setSlotChord = useCallback((slotId: string, chord: ChartChord | undefined) => {
+    snapshot();
+    setSlots(prev => {
+      const idx = prev.findIndex(sl => sl.id === slotId);
+      if (idx < 0) return prev;
+      const next = prev.slice();
+      next[idx] = { ...next[idx], chord };
+      return chord ? next : normalizeEmptyRun(next, idx);
+    });
+  }, [snapshot, normalizeEmptyRun]);
+
+
 
   const beginEdit = useCallback((slot: ChartSlot) => {
     setEditingSlot(slot.id);
