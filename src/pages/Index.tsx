@@ -416,12 +416,13 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Orientation toggle */}
+            {/* Tuner */}
             <button
-              onClick={() => fb.setOrientation(fb.orientation === 'horizontal' ? 'vertical' : 'horizontal')}
+              onClick={() => setTunerOpen(true)}
               className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              title="Open chromatic tuner"
             >
-              {fb.orientation === 'horizontal' ? '⬇ Vertical' : '➡ Horizontal'}
+              🎯 Tuner
             </button>
 
             {/* Display mode toggle */}
