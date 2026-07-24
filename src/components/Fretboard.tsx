@@ -80,6 +80,8 @@ interface FretboardProps {
   hideToolbar?: boolean;
   /** Optional tint colour (HSL string, e.g. "200, 80%, 60%") for the position-focus box. Defaults to accent. */
   fretBoxTintHsl?: string;
+  /** Optional extra controls appended to the toolbar row after Position focus. */
+  toolbarExtras?: React.ReactNode;
 }
 
 const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -123,6 +125,7 @@ export default function Fretboard({
   chordOctaveShift = 0,
   hideToolbar = false,
   fretBoxTintHsl,
+  toolbarExtras,
 }: FretboardProps) {
   const frets = Array.from({ length: maxFrets + 1 }, (_, i) => i);
   const widths = fretWidths(maxFrets);
@@ -1177,6 +1180,7 @@ export default function Fretboard({
           >
             Position focus: {showFretBox ? 'on' : 'off'}
           </button>
+          {toolbarExtras}
         </div>
         )}
 

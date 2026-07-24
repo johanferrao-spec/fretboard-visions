@@ -427,51 +427,8 @@ const Index = () => {
               🎯 Tuner
             </button>
 
-            {/* Display mode toggle */}
-            <button
-              onClick={() => fb.setDisplayMode(fb.displayMode === 'notes' ? 'degrees' : fb.displayMode === 'degrees' ? 'none' : 'notes')}
-              className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
-            >
-              {fb.displayMode === 'notes' ? '♪ Notes' : fb.displayMode === 'degrees' ? '° Degrees' : '○ None'}
-            </button>
+            {/* Display mode + Size/Frets/Opacity sliders moved into Fretboard toolbar */}
 
-            {/* Tuning tab moved to ChordReference */}
-
-            {/* Marker size slider */}
-            <div className="flex items-center gap-1">
-              <span className="text-[9px] font-mono text-muted-foreground uppercase">Size:</span>
-              <input
-                type="range" min={12} max={32} value={fb.noteMarkerSize}
-                onChange={e => fb.setNoteMarkerSize(Number(e.target.value))}
-                className="w-16 accent-primary"
-              />
-            </div>
-
-            {/* Fret count */}
-            <div className="flex items-center gap-1 ml-auto">
-              <span className="text-[9px] font-mono text-muted-foreground uppercase">Frets:</span>
-              <input
-                type="range" min={12} max={24} value={fb.maxFrets}
-                onChange={e => fb.setMaxFrets(Number(e.target.value))}
-                className="w-20 accent-primary"
-              />
-              <span className="text-[10px] font-mono text-muted-foreground w-5">{fb.maxFrets}</span>
-            </div>
-            {/* Master opacity slider */}
-            <div className="flex items-center gap-1">
-              <span className="text-[9px] font-mono text-muted-foreground uppercase">Opacity:</span>
-              <input
-                type="range" min={0} max={100} value={Math.round(fb.arpOverlayOpacity * 100)}
-                onChange={e => {
-                  const v = Number(e.target.value) / 100;
-                  fb.setArpOverlayOpacity(v);
-                  fb.setGhostNoteOpacity(v);
-                  fb.setSecondaryOpacity(v);
-                }}
-                className="w-16 accent-primary"
-              />
-              <span className="text-[10px] font-mono text-muted-foreground w-5">{Math.round(fb.arpOverlayOpacity * 100)}%</span>
-            </div>
 
             {/* Reset */}
             <button
@@ -485,7 +442,7 @@ const Index = () => {
                 setInversionStringGroup(null);
                 setActiveTab(null);
               }}
-              className="px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
+              className="ml-auto px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
             >
               Reset
             </button>
@@ -524,6 +481,48 @@ const Index = () => {
               disabledDegrees={fb.disabledDegrees}
               toggleDegree={fb.toggleDegree}
               setShowFretBox={fb.setShowFretBox}
+              toolbarExtras={
+                <>
+                  <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider ml-2">Markers:</span>
+                  <button
+                    onClick={() => fb.setDisplayMode(fb.displayMode === 'notes' ? 'degrees' : fb.displayMode === 'degrees' ? 'none' : 'notes')}
+                    className="px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                  >
+                    {fb.displayMode === 'notes' ? '♪ Notes' : fb.displayMode === 'degrees' ? '° Degrees' : '○ None'}
+                  </button>
+                  <div className="flex items-center gap-1 ml-2">
+                    <span className="text-[9px] font-mono text-muted-foreground uppercase">Size:</span>
+                    <input
+                      type="range" min={12} max={32} value={fb.noteMarkerSize}
+                      onChange={e => fb.setNoteMarkerSize(Number(e.target.value))}
+                      className="w-16 accent-primary"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] font-mono text-muted-foreground uppercase">Frets:</span>
+                    <input
+                      type="range" min={12} max={24} value={fb.maxFrets}
+                      onChange={e => fb.setMaxFrets(Number(e.target.value))}
+                      className="w-20 accent-primary"
+                    />
+                    <span className="text-[10px] font-mono text-muted-foreground w-5">{fb.maxFrets}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] font-mono text-muted-foreground uppercase">Opacity:</span>
+                    <input
+                      type="range" min={0} max={100} value={Math.round(fb.arpOverlayOpacity * 100)}
+                      onChange={e => {
+                        const v = Number(e.target.value) / 100;
+                        fb.setArpOverlayOpacity(v);
+                        fb.setGhostNoteOpacity(v);
+                        fb.setSecondaryOpacity(v);
+                      }}
+                      className="w-16 accent-primary"
+                    />
+                    <span className="text-[10px] font-mono text-muted-foreground w-5">{Math.round(fb.arpOverlayOpacity * 100)}%</span>
+                  </div>
+                </>
+              }
               identifyMode={fb.identifyMode}
               identifyFrets={fb.identifyFrets}
               setIdentifyFrets={fb.setIdentifyFrets}
