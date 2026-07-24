@@ -1180,6 +1180,7 @@ export default function Fretboard({
           >
             Position focus: {showFretBox ? 'on' : 'off'}
           </button>
+          {toolbarExtras}
         </div>
         )}
 
