@@ -55,6 +55,7 @@ const INTERVAL_DEGREE_IDX = [0,1,1,2,2,3,3,4,5,5,6,6];
 
 function ModeDiagram({ mode }: { mode: string }) {
   const intervals = MODE_INTERVALS[mode];
+  const [hover, setHover] = React.useState(false);
   if (!intervals) return null;
   const skeleton = MODE_SKELETON[mode];
   const defining = new Set(MODE_DEFINING[mode]);
@@ -67,6 +68,7 @@ function ModeDiagram({ mode }: { mode: string }) {
   const width = padL + cellW * frets + padR;
   const height = padT + cellH * 6 + padB;
   const DEFAULT_MARKER = '35, 85%, 55%'; // pentatonic default (amber/orange)
+  const pentLabel = skeleton === MAJOR_PENT ? 'Major Pentatonic' : 'Minor Pentatonic';
 
   const markers: JSX.Element[] = [];
   for (let s = 0; s < 6; s++) {
@@ -74,10 +76,11 @@ function ModeDiagram({ mode }: { mode: string }) {
       const absFret = startFret + f;
       const interval = ((tuning[s] + absFret) - root + 120) % 12;
       if (!modeSet.has(interval)) continue;
+      const inSkel = skeleton.has(interval);
+      if (hover && !inSkel) continue;
       const displayString = 5 - s;
       const cx = padL + f * cellW + cellW / 2;
       const cy = padT + displayString * cellH + cellH / 2;
-      const inSkel = skeleton.has(interval);
       const isDef = defining.has(interval);
       let fill: string;
       if (inSkel) fill = `hsl(${DEFAULT_MARKER})`;
@@ -99,13 +102,21 @@ function ModeDiagram({ mode }: { mode: string }) {
     fretLines.push(<line key={`f${f}`} x1={x} y1={padT + cellH / 2} x2={x} y2={padT + cellH * 5 + cellH / 2} stroke="hsl(var(--fretboard-fret))" strokeWidth={1} />);
   }
   return (
-    <svg width={width} height={height} className="block rounded" style={{ background: 'hsl(var(--fretboard-wood))' }}>
-      {fretLines}
-      {strings}
-      {markers}
-    </svg>
+    <div
+      className="flex flex-col items-center gap-1"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <svg width={width} height={height} className="block rounded" style={{ background: 'hsl(var(--fretboard-wood))' }}>
+        {fretLines}
+        {strings}
+        {markers}
+      </svg>
+      <div className="text-[9px] font-mono text-muted-foreground">{pentLabel}</div>
+    </div>
   );
 }
+
 
 // Natural notes starting from E
 const NATURAL_NOTES: NoteName[] = ['E', 'F', 'G', 'A', 'B', 'C', 'D'];
