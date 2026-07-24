@@ -72,7 +72,7 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
 
     const data = await aiRes.json();
     const raw: string = data?.choices?.[0]?.message?.content ?? '';
-    let parsed: { chords?: Array<{ root?: string; chordType?: string; bars?: number }> } | null = null;
+    let parsed: { chords?: Array<{ root?: string; chordType?: string; bars?: number; section?: string }> } | null = null;
     try { parsed = JSON.parse(raw); } catch {
       const m = raw.match(/\{[\s\S]*\}/);
       if (m) { try { parsed = JSON.parse(m[0]); } catch { /* ignore */ } }
