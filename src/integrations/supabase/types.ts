@@ -208,6 +208,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_snapshots: {
+        Row: {
+          backing_tracks_data: Json | null
+          charts_data: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          backing_tracks_data?: Json | null
+          charts_data?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          backing_tracks_data?: Json | null
+          charts_data?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
