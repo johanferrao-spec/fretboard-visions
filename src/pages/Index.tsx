@@ -945,6 +945,7 @@ const Index = () => {
                 const deg = getChordDegree(timelineKey, c.root, c.chordType, keyMode);
                 return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
               }}
+              onToggleCharts={() => setShowCharts(v => !v)}
             />
           </div>
         )}
