@@ -20,7 +20,7 @@ import {
 } from '@/lib/music';
 import type { ChordSelection, ScaleSelection } from '@/hooks/useFretboard';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
-import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
+
 
 // Mode diagram: shows a mode's first-position shape built on a pentatonic skeleton
 const MODE_INTERVALS: Record<string, number[]> = {
