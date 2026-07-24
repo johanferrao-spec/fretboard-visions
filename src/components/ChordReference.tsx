@@ -1917,6 +1917,28 @@ function ScaleViewPanel({
               <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
                 Chords are organized by their role within a key. Each degree (I–VII) has a job—<span className="text-primary font-bold">tonic</span> chords resolve, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension back to the tonic.
               </p>
+              <div className="flex flex-col gap-0.5 mt-0.5">
+                {[
+                  { num: 'I', name: 'Tonic', desc: 'Home — resolves all tension', color: SCALE_DEGREE_COLORS[0] },
+                  { num: 'II', name: 'Supertonic', desc: 'Movement — leads to dominant', color: SCALE_DEGREE_COLORS[1] },
+                  { num: 'III', name: 'Mediant', desc: 'Tonic color — weak resolution', color: SCALE_DEGREE_COLORS[2] },
+                  { num: 'IV', name: 'Subdominant', desc: 'Pre-dominant — forward motion', color: SCALE_DEGREE_COLORS[3] },
+                  { num: 'V', name: 'Dominant', desc: 'Tension — strongest pull home', color: SCALE_DEGREE_COLORS[4] },
+                  { num: 'VI', name: 'Submediant', desc: 'Tonic substitute — relative minor', color: SCALE_DEGREE_COLORS[5] },
+                  { num: 'VII', name: 'Leading Tone', desc: 'Half-step pull — intense resolution', color: SCALE_DEGREE_COLORS[6] },
+                ].map(d => (
+                  <div key={d.num} className="flex items-center gap-1.5 text-[9px] font-mono leading-tight">
+                    <span
+                      className="w-4 h-4 rounded flex items-center justify-center font-bold text-[8px] shrink-0"
+                      style={{ backgroundColor: `hsl(${d.color})`, color: 'hsl(var(--background))' }}
+                    >
+                      {d.num}
+                    </span>
+                    <span className="font-bold text-foreground/90 shrink-0">{d.name}</span>
+                    <span className="text-muted-foreground truncate">— {d.desc}</span>
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="w-px bg-border/60 self-stretch my-1" />
             <div className="flex-1 min-w-0 px-3 flex flex-col gap-1.5">
