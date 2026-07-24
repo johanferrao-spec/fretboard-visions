@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw } from 'lucide-react';
 
 import type { NoteName, KeyMode } from '@/lib/music';
 import { getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS, NOTE_NAMES } from '@/lib/music';
@@ -753,6 +753,28 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         >
           <Save size={10} />
           Save
+        </button>
+        <button
+          onClick={() => {
+            if (!confirm('Are you sure? This will clear the current chart, sections and arrangement.')) return;
+            setSlots(makeSlots(DEFAULT_SLOT_COUNT));
+            setSections([]);
+            setArrangement([]);
+            setChartKey(currentKey);
+            setTitle('Untitled');
+            setComposer('');
+            setTempo(120);
+            setTimeSig('4/4');
+            setFeel('Straight');
+            historyRef.current = [];
+            try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+            toast({ title: 'Chart reset', description: 'A fresh blank chart has been created.' });
+          }}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
+          title="Reset the current chart to a blank state"
+        >
+          <RotateCcw size={10} />
+          Reset
         </button>
         <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">
           {totalBars % 1 === 0 ? totalBars : totalBars.toFixed(2)} bars · {slots.length} slots
