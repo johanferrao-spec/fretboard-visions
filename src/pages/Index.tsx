@@ -987,13 +987,15 @@ const Index = () => {
               currentKey={timelineKey}
               keyMode={keyMode}
               onToggleCharts={() => setShowCharts(v => !v)}
-              onArrangementChange={({ chords, measures, bpm }) => {
+              onArrangementChange={({ chords, measures, bpm, sections }) => {
                 timeline.setChords(chords);
                 timeline.setMeasures(measures);
                 if (bpm && bpm !== timeline.bpm) timeline.setBpm(bpm);
+                setArrangementSections(sections);
               }}
               onResetAll={() => {
                 timeline.clearTimeline();
+                setArrangementSections([]);
               }}
             />
           </div>
