@@ -29,9 +29,8 @@ export interface ChartSlot {
 }
 
 interface ChartsViewProps {
-  diatonicChords: DiatonicChord[];
-  /** Returns `H, S%, L%` triple (no `hsl()` wrapper). */
-  getChordColor: (chord: ChartChord) => string;
+  currentKey: NoteName;
+  keyMode: KeyMode;
   onToggleCharts?: () => void;
 }
 
