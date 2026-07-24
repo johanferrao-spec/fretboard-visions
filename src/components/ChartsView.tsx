@@ -47,13 +47,30 @@ const formatChordLabel = (c: ChartChord): string => {
   return `${c.root}${suffix}`;
 };
 
+interface Section {
+  id: string;
+  name: string;
+  startIdx: number; // inclusive slot index
+  endIdx: number;   // inclusive slot index
+  color: string;    // hsl triple
+}
+
+const SECTION_COLORS = [
+  '210 80% 60%', '340 75% 60%', '45 90% 55%', '150 60% 50%',
+  '280 60% 60%', '20 80% 55%', '190 70% 55%', '95 55% 50%',
+];
+
 export default function ChartsView({ diatonicChords, getChordColor }: ChartsViewProps) {
   const [slots, setSlots] = useState<ChartSlot[]>(() => makeSlots(DEFAULT_SLOT_COUNT));
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [parsingSlot, setParsingSlot] = useState<string | null>(null);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [sectionMode, setSectionMode] = useState(false);
+  const [sectionStartIdx, setSectionStartIdx] = useState<number | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
+
 
   const setSlotChord = useCallback((slotId: string, chord: ChartChord | undefined) => {
     setSlots(prev => prev.map(sl => sl.id === slotId ? { ...sl, chord } : sl));
