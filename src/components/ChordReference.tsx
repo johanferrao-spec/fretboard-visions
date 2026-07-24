@@ -1566,34 +1566,71 @@ function ScaleViewPanel({
 
   const activeColor = degreeFilter !== null ? SCALE_DEGREE_COLORS[degreeFilter] : null;
 
+  const STANDARD_MODES: { label: string; scale: string }[] = [
+    { label: 'Ionian', scale: 'Major (Ionian)' },
+    { label: 'Dorian', scale: 'Dorian' },
+    { label: 'Phrygian', scale: 'Phrygian' },
+    { label: 'Lydian', scale: 'Lydian' },
+    { label: 'Mixolydian', scale: 'Mixolydian' },
+    { label: 'Aeolian', scale: 'Natural Minor (Aeolian)' },
+    { label: 'Locrian', scale: 'Locrian' },
+  ];
+  const currentMode = STANDARD_MODES.find(m => m.scale === primaryScale.scale)?.scale ?? 'Major (Ionian)';
+
   return (
     <div className="space-y-2">
-      {/* Degree buttons - BIG and colourful. In 3-NPS mode they show mode names. */}
-      <div className="grid grid-cols-7 gap-1">
-        {diatonicLabels.map((chord, i) => {
-          const isActive = degreeFilter === i;
-          const color = SCALE_DEGREE_COLORS[i];
-          const modeName = modeNames[i] ?? '';
-          return (
-            <button
-              key={i}
-              onClick={() => setDegreeFilter(isActive ? null : i)}
-              className="rounded-xl font-bold transition-all flex flex-col items-center justify-center py-3 px-1"
-              style={{
-                backgroundColor: isActive ? `hsla(${color}, 0.15)` : `hsl(${color})`,
-                border: isActive ? `3px solid hsl(${color})` : `2px solid hsl(${color})`,
-                color: isActive ? `hsl(${color})` : '#000',
-                boxShadow: isActive ? `0 0 14px hsla(${color}, 0.6), inset 0 0 8px hsla(${color}, 0.2)` : 'none',
-                minHeight: 60,
-              }}
+      {/* Top row: key+mode selector on the left, degree buttons on the right */}
+      <div className="flex gap-2">
+        {/* Left: key selector + mode dropdown */}
+        <div className="flex flex-col gap-2 shrink-0" style={{ width: 150 }}>
+          <div>
+            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Key</div>
+            <ScaleRootSelector
+              selectedRoot={primaryScale.root}
+              onSelect={(n) => onApplyScale?.(n, primaryScale.scale, 'scale')}
+            />
+          </div>
+          <div>
+            <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Mode</div>
+            <select
+              value={currentMode}
+              onChange={(e) => onApplyScale?.(primaryScale.root, e.target.value, 'scale')}
+              className="w-full bg-muted text-foreground text-[11px] font-mono rounded border border-border px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <span className="text-[14px] font-black">{chord.roman}</span>
-              <span className="text-[9px] font-mono opacity-80 truncate w-full text-center">
-                {threeNpsMode ? modeName : chord.label7}
-              </span>
-            </button>
-          );
-        })}
+              {STANDARD_MODES.map(m => (
+                <option key={m.scale} value={m.scale}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Right: degree buttons - BIG and colourful. In 3-NPS mode they show mode names. */}
+        <div className="flex-1 grid grid-cols-7 gap-1">
+          {diatonicLabels.map((chord, i) => {
+            const isActive = degreeFilter === i;
+            const color = SCALE_DEGREE_COLORS[i];
+            const modeName = modeNames[i] ?? '';
+            return (
+              <button
+                key={i}
+                onClick={() => setDegreeFilter(isActive ? null : i)}
+                className="rounded-xl font-bold transition-all flex flex-col items-center justify-center py-3 px-1"
+                style={{
+                  backgroundColor: isActive ? `hsla(${color}, 0.15)` : `hsl(${color})`,
+                  border: isActive ? `3px solid hsl(${color})` : `2px solid hsl(${color})`,
+                  color: isActive ? `hsl(${color})` : '#000',
+                  boxShadow: isActive ? `0 0 14px hsla(${color}, 0.6), inset 0 0 8px hsla(${color}, 0.2)` : 'none',
+                  minHeight: 60,
+                }}
+              >
+                <span className="text-[14px] font-black">{chord.roman}</span>
+                <span className="text-[9px] font-mono opacity-80 truncate w-full text-center">
+                  {threeNpsMode ? modeName : chord.label7}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Drop 2 / Drop 3 / 3-NPS — bigger vertical buttons with content to the right */}
@@ -1878,53 +1915,20 @@ function ScaleViewPanel({
           </div>
         )}
 
-        {/* Default empty-space content: key selector + mode dropdown + functional harmony description */}
-        {!dropMode && !threeNpsMode && !voiceLeadingMode && (() => {
-          const STANDARD_MODES: { label: string; scale: string }[] = [
-            { label: 'Ionian', scale: 'Major (Ionian)' },
-            { label: 'Dorian', scale: 'Dorian' },
-            { label: 'Phrygian', scale: 'Phrygian' },
-            { label: 'Lydian', scale: 'Lydian' },
-            { label: 'Mixolydian', scale: 'Mixolydian' },
-            { label: 'Aeolian', scale: 'Natural Minor (Aeolian)' },
-            { label: 'Locrian', scale: 'Locrian' },
-          ];
-          const currentMode = STANDARD_MODES.find(m => m.scale === primaryScale.scale)?.scale ?? 'Major (Ionian)';
-          return (
-            <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex flex-col gap-3 min-w-0">
-              <div className="flex items-end gap-3 flex-wrap">
-                <div className="min-w-[140px]">
-                  <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Key</div>
-                  <ScaleRootSelector
-                    selectedRoot={primaryScale.root}
-                    onSelect={(n) => onApplyScale?.(n, primaryScale.scale, 'scale')}
-                  />
-                </div>
-                <div className="shrink-0">
-                  <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Mode</div>
-                  <select
-                    value={currentMode}
-                    onChange={(e) => onApplyScale?.(primaryScale.root, e.target.value, 'scale')}
-                    className="bg-muted text-foreground text-[11px] font-mono rounded border border-border px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
-                  >
-                    {STANDARD_MODES.map(m => (
-                      <option key={m.scale} value={m.scale}>{m.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">What is Functional Harmony?</div>
-                <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
-                  Functional harmony organizes chords into roles based on how they function within a key. Each degree (I–VII) has a specific harmonic purpose—<span className="text-primary font-bold">tonic</span> chords provide resolution, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension.
-                </p>
-                <p className="text-[11px] font-mono text-foreground/80 leading-relaxed mt-2">
-                  Click any degree above to highlight its chord tones on the fretboard. Use Drop 2 / Drop 3 to explore jazz voicings, or 3-Notes-Per-String to see modal patterns.
-                </p>
-              </div>
+        {/* Default empty-space content: functional harmony description */}
+        {!dropMode && !threeNpsMode && !voiceLeadingMode && (
+          <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex flex-col gap-3 min-w-0">
+            <div className="flex-1">
+              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">What is Functional Harmony?</div>
+              <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
+                Functional harmony organizes chords into roles based on how they function within a key. Each degree (I–VII) has a specific harmonic purpose—<span className="text-primary font-bold">tonic</span> chords provide resolution, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension.
+              </p>
+              <p className="text-[11px] font-mono text-foreground/80 leading-relaxed mt-2">
+                Click any degree above to highlight its chord tones on the fretboard. Use Drop 2 / Drop 3 to explore jazz voicings, or 3-Notes-Per-String to see modal patterns.
+              </p>
             </div>
-          );
-        })()}
+          </div>
+        )}
       </div>
 
       {!dropMode && !threeNpsMode && degreeFilter === null && (
