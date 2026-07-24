@@ -1028,7 +1028,54 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               }}
             />
           </label>
+
+          {/* Analyze Song drop box */}
+          <label
+            onDragOver={(e) => {
+              if (e.dataTransfer.types.includes('Files')) {
+                e.preventDefault();
+                setAudioDragOver(true);
+              }
+            }}
+            onDragLeave={() => setAudioDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setAudioDragOver(false);
+              const file = e.dataTransfer.files?.[0];
+              if (file) analyzeSongFromFile(file);
+            }}
+            className={`mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border-2 border-dashed cursor-pointer transition-colors ${
+              audioDragOver
+                ? 'border-amber-400 bg-amber-400/10 text-amber-300'
+                : 'border-border/60 text-muted-foreground hover:border-amber-400/60 hover:text-foreground'
+            } ${analyzingAudio !== 'idle' ? 'pointer-events-none opacity-70' : ''}`}
+            title={user
+              ? 'Drop a short audio clip (≤ 4 min) — AI will detect tempo, key, chords and structure.'
+              : 'Sign in to analyze songs from audio.'}
+          >
+            {analyzingAudio !== 'idle'
+              ? <Loader2 size={12} className="animate-spin" />
+              : <Music4 size={12} />}
+            <span className="text-[10px] font-mono uppercase tracking-wider">
+              {analyzingAudio === 'detecting-bpm' ? 'BPM…'
+                : analyzingAudio === 'uploading' ? 'Uploading…'
+                : analyzingAudio === 'analyzing' ? 'Analyzing…'
+                : 'Analyze Song'}
+            </span>
+            <input
+              ref={audioInputRef}
+              type="file"
+              accept="audio/wav,audio/x-wav,audio/wave,audio/mp3,audio/mpeg,audio/aac,audio/ogg,audio/flac,audio/x-flac,audio/aiff,audio/x-aiff"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) analyzeSongFromFile(file);
+                e.target.value = '';
+              }}
+            />
+          </label>
         </div>
+
 
         {/* Slot grid */}
         <div className="flex-1 overflow-auto p-3 flex flex-col">
