@@ -389,6 +389,163 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     }
   }, [snapshot]);
 
+  // ---- Analyze Song Audio ----
+  const analyzeSongFromFile = useCallback(async (file: File) => {
+    const mime = (file.type || '').toLowerCase();
+    if (!ACCEPTED_AUDIO_MIME.has(mime)) {
+      toast({
+        title: 'Unsupported audio type',
+        description: `"${file.type || 'unknown'}" — please use WAV, MP3, AAC, OGG, FLAC or AIFF.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!user) {
+      toast({ title: 'Sign in required', description: 'Sign in to upload and analyze songs.', variant: 'destructive' });
+      return;
+    }
+
+    // Read file bytes once — reused for BPM detect + upload.
+    const arrayBuf = await file.arrayBuffer();
+
+    // Duration + client-side BPM (best-effort; never blocks upload).
+    let durationSeconds = 0;
+    let detectedBpm: number | undefined;
+    try {
+      setAnalyzingAudio('detecting-bpm');
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
+      durationSeconds = audioBuf.duration;
+      if (durationSeconds > MAX_AUDIO_SECONDS) {
+        toast({
+          title: 'Audio too long',
+          description: `Max ${MAX_AUDIO_SECONDS / 60} minutes. This file is ${Math.round(durationSeconds)}s.`,
+          variant: 'destructive',
+        });
+        ctx.close();
+        setAnalyzingAudio('idle');
+        return;
+      }
+      try {
+        detectedBpm = Math.round(await analyze(audioBuf));
+      } catch {
+        // BPM detection is a hint — Gemini will estimate on its own.
+      }
+      ctx.close();
+    } catch (err) {
+      console.warn('audio decode failed, continuing without local BPM:', err);
+    }
+
+    // Upload → user's own folder in private bucket. Local-first: any Storage
+    // failure surfaces to the user and aborts (no local fallback because
+    // analysis requires server-side access to the file).
+    setAnalyzingAudio('uploading');
+    const ext = (file.name.match(/\.([a-z0-9]+)$/i)?.[1] ?? 'bin').toLowerCase();
+    const audioPath = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const upload = await supabase.storage.from('song-audio').upload(audioPath, file, {
+      contentType: file.type || 'application/octet-stream',
+      upsert: false,
+    });
+    if (upload.error) {
+      toast({ title: 'Upload failed', description: upload.error.message, variant: 'destructive' });
+      setAnalyzingAudio('idle');
+      return;
+    }
+
+    // Analyze via edge function.
+    setAnalyzingAudio('analyzing');
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-song-audio', {
+        body: { audioPath, mimeType: mime, detectedBpm, durationSeconds },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error ?? 'Analysis failed');
+      setAnalyzeResult({
+        tempo: data.tempo,
+        key: data.key,
+        keyRoot: data.keyRoot,
+        keyQuality: data.keyQuality,
+        barText: data.barText,
+        structure: Array.isArray(data.structure) ? data.structure : [],
+      });
+    } catch (err) {
+      toast({
+        title: 'Analysis failed',
+        description: (err as Error).message ?? 'Try a shorter or clearer clip.',
+        variant: 'destructive',
+      });
+    } finally {
+      // Best-effort cleanup — the file isn't needed after analysis.
+      supabase.storage.from('song-audio').remove([audioPath]).catch(() => {});
+      setAnalyzingAudio('idle');
+    }
+  }, [user]);
+
+  // Apply user-approved analysis to the chart (never auto-applied).
+  const applyAnalyzedSong = useCallback((edit: AnalyzedSong) => {
+    // Tempo + key.
+    if (typeof edit.tempo === 'number' && edit.tempo > 0) setTempo(Math.round(edit.tempo));
+    if (edit.keyRoot) {
+      const parsed = parseChordSymbol(edit.keyRoot);
+      if (parsed) setChartKey(parsed.root as NoteName);
+    }
+    // Slots from barText.
+    const imported = slotsFromBarText(edit.barText ?? '');
+    const newSlots: ChartSlot[] = imported.map(it => ({
+      id: uid('slot'),
+      bars: it.units,
+      chord: it.chord,
+    }));
+    // Track first slot index per bar for section mapping.
+    const barToSlotIdx = new Map<number, number>();
+    imported.forEach((it, i) => {
+      if (!barToSlotIdx.has(it.barIndex)) barToSlotIdx.set(it.barIndex, i);
+    });
+    // Pad to DEFAULT_SLOT_COUNT bars.
+    const usedUnits = newSlots.reduce((n, s) => n + s.bars, 0);
+    const minUnits = DEFAULT_SLOT_COUNT * UNITS_PER_BAR;
+    let padUnits = Math.max(0, minUnits - usedUnits);
+    while (padUnits > 0) {
+      newSlots.push({ id: uid('slot'), bars: UNITS_PER_BAR });
+      padUnits -= UNITS_PER_BAR;
+    }
+    // Sections from structure.
+    const tempoForSections = (typeof edit.tempo === 'number' && edit.tempo > 0) ? edit.tempo : 120;
+    const structure = (edit.structure ?? []).map(s => ({
+      label: s.label,
+      barIndex: secondsToBarIndex(parseMmSs(s.startTime), tempoForSections),
+    })).sort((a, b) => a.barIndex - b.barIndex);
+    const lastSlotIdx = newSlots.length - 1;
+    const newSections: Section[] = structure.map((s, i) => {
+      const nextBar = i + 1 < structure.length ? structure[i + 1].barIndex : Infinity;
+      const startIdx = barToSlotIdx.get(s.barIndex) ?? Math.min(s.barIndex, lastSlotIdx);
+      const endBar = Math.max(s.barIndex, nextBar - 1);
+      const endStart = barToSlotIdx.get(endBar);
+      const endIdx = endStart !== undefined
+        ? endStart
+        : Math.min(nextBar === Infinity ? lastSlotIdx : Math.max(0, (barToSlotIdx.get(nextBar) ?? lastSlotIdx + 1) - 1), lastSlotIdx);
+      return {
+        id: uid('sec'),
+        name: s.label,
+        startIdx: Math.min(startIdx, lastSlotIdx),
+        endIdx: Math.max(Math.min(endIdx, lastSlotIdx), Math.min(startIdx, lastSlotIdx)),
+        color: SECTION_COLORS[i % SECTION_COLORS.length],
+      };
+    }).filter(sec => sec.startIdx <= sec.endIdx);
+
+    snapshot();
+    setSlots(newSlots);
+    setSections(newSections);
+    setArrangement([]);
+    setAnalyzeResult(null);
+    toast({
+      title: 'Song analyzed',
+      description: `Imported ${imported.length} chord${imported.length === 1 ? '' : 's'}${newSections.length ? ` · ${newSections.length} section${newSections.length === 1 ? '' : 's'}` : ''}.`,
+    });
+  }, [snapshot]);
+
+
 
   // Resize by growing/shrinking from a specific edge. Growth only consumes
   // adjacent EMPTY (chord-less) slots — chord-holding neighbors are not affected.
