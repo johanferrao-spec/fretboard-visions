@@ -976,8 +976,10 @@ export default function Fretboard({
     return points;
   }, [arpeggioPosition, stringOrder, cumLeft, widths, stringH]);
 
+  const stripAccidental = (s: string) => (s.startsWith('♭') || s.startsWith('♯') ? s.slice(1) : s);
+
   const getChordLabel = (note: NoteName, fret: number, stringIndex: number): string => {
-    if (identifyMode && identifyRoot && displayMode === 'degrees') return getIntervalName(identifyRoot, note);
+    if (identifyMode && identifyRoot && displayMode === 'degrees') return stripAccidental(getIntervalName(identifyRoot, note));
     if (activeChord && displayMode !== 'notes') {
       const formula = CHORD_FORMULAS[activeChord.chordType];
       if (formula) {
@@ -987,11 +989,11 @@ export default function Fretboard({
         const info = pcMap.get((notePc - rootPc + 12) % 12);
         if (info) return info.accidental ? info.label.slice(1) : info.label;
       }
-      return getExtendedIntervalName(activeChord.root, note);
+      return stripAccidental(getExtendedIntervalName(activeChord.root, note));
     }
     if (displayMode === 'degrees') {
       const activeRoot = activePrimary ? primaryScale.root : secondaryScale.root;
-      return getIntervalName(activeRoot, note);
+      return stripAccidental(getIntervalName(activeRoot, note));
     }
     if (displayMode === 'none') return '';
     return note;
