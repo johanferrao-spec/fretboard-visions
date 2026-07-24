@@ -147,16 +147,16 @@ const Index = () => {
   // Metronome — fully standalone (independent of any timeline / playback)
   const { primeAudio: primeMetronomeAudio } = useMetronome({
     enabled: metronomeOn,
-    bpm: metronomeBpm * subdivision,
-    beatsPerBar: timeSigNum * subdivision,
+    bpm: metronomeBpm * effectiveSubdivision,
+    beatsPerBar: timeSigBeats * effectiveSubdivision,
     onTick: (i) => {
       setMetronomePulse(i + 1);
-      const isMainBeat = i % subdivision === 0;
+      const isMainBeat = i % effectiveSubdivision === 0;
       if (isMainBeat) {
-        const beatIdx = Math.floor(i / subdivision) % timeSigNum;
+        const beatIdx = Math.floor(i / effectiveSubdivision) % timeSigBeats;
         setCurrentMetroBeat(beatIdx);
       }
-      const isDownbeat = i % (timeSigNum * subdivision) === 0;
+      const isDownbeat = i % (timeSigBeats * effectiveSubdivision) === 0;
       const kind: 'accent' | 'beat' = isDownbeat ? 'accent' : 'beat';
       setMetronomeFlash(kind);
       if (metronomeFlashTimerRef.current !== null) {
