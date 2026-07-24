@@ -212,18 +212,24 @@ export type Database = {
         Row: {
           backing_tracks_data: Json | null
           charts_data: Json | null
+          charts_library: Json | null
+          setlists: Json | null
           updated_at: string
           user_id: string
         }
         Insert: {
           backing_tracks_data?: Json | null
           charts_data?: Json | null
+          charts_library?: Json | null
+          setlists?: Json | null
           updated_at?: string
           user_id: string
         }
         Update: {
           backing_tracks_data?: Json | null
           charts_data?: Json | null
+          charts_library?: Json | null
+          setlists?: Json | null
           updated_at?: string
           user_id?: string
         }

@@ -1,0 +1,1 @@
+ALTER TABLE public.user_snapshots ADD COLUMN IF NOT EXISTS charts_library jsonb, ADD COLUMN IF NOT EXISTS setlists jsonb;
