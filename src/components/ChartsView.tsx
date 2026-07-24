@@ -1421,8 +1421,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
                   {section && section.startIdx === idx && (
                     <span
-                      className="absolute top-0.5 right-2 text-[8px] font-mono font-bold uppercase tracking-wider pointer-events-none"
-                      style={{ color: `hsl(${section.color})` }}
+                      className="sr-only"
                     >
                       {section.name}
                     </span>
