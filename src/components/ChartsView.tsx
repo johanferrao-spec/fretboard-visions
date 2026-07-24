@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2 } from 'lucide-react';
 
 import type { NoteName, KeyMode } from '@/lib/music';
 import { getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS } from '@/lib/music';
@@ -45,11 +45,27 @@ const uid = (prefix: string) => `${prefix}-${nextId++}`;
 const makeSlots = (n: number): ChartSlot[] =>
   Array.from({ length: n }, () => ({ id: uid('slot'), bars: UNITS_PER_BAR }));
 
+const EIGHTH_LABELS = ['', '⅛', '¼', '⅜', '½', '⅝', '¾', '⅞'];
+
 const formatBarNumber = (startEighth: number): string => {
-  const bar = startEighth / UNITS_PER_BAR + 1;
-  return Number.isInteger(bar) ? String(bar) : bar.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+  const bar = Math.floor(startEighth / UNITS_PER_BAR) + 1;
+  const rem = startEighth % UNITS_PER_BAR;
+  return rem === 0 ? String(bar) : `${bar}${EIGHTH_LABELS[rem]}`;
 };
 
+const formatDuration = (units: number): string => {
+  if (units % UNITS_PER_BAR === 0) {
+    const bars = units / UNITS_PER_BAR;
+    return bars === 1 ? '1 bar' : `${bars} bars`;
+  }
+  const wholeBars = Math.floor(units / UNITS_PER_BAR);
+  const rem = units % UNITS_PER_BAR;
+  const frac = EIGHTH_LABELS[rem] || `${rem}/8`;
+  return wholeBars > 0 ? `${wholeBars} ${frac}` : frac;
+};
+
+const chordsEqual = (a?: ChartChord, b?: ChartChord): boolean =>
+  !!a && !!b && a.root === b.root && a.chordType === b.chordType;
 
 const formatChordLabel = (c: ChartChord): string => {
   const suffix =
@@ -117,12 +133,96 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
   const editorRef = useRef<HTMLDivElement | null>(null);
   const presetRef = useRef<HTMLDivElement | null>(null);
 
+  // ---- Undo history ----
+  type Snapshot = { slots: ChartSlot[]; sections: Section[]; arrangement: ArrangementItem[] };
+  const historyRef = useRef<Snapshot[]>([]);
+  const isUndoingRef = useRef(false);
+  const snapshot = useCallback(() => {
+    historyRef.current.push({ slots, sections, arrangement });
+    if (historyRef.current.length > 100) historyRef.current.shift();
+  }, [slots, sections, arrangement]);
+  const undo = useCallback(() => {
+    const snap = historyRef.current.pop();
+    if (!snap) return;
+    isUndoingRef.current = true;
+    setSlots(snap.slots);
+    setSections(snap.sections);
+    setArrangement(snap.arrangement);
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo]);
 
+  // ---- Auto-link consecutive identical chords ----
+  useEffect(() => {
+    if (isUndoingRef.current) { isUndoingRef.current = false; return; }
+    let changed = false;
+    const merged: ChartSlot[] = [];
+    const indexMap: number[] = []; // old idx -> new idx
+    slots.forEach((s) => {
+      const last = merged[merged.length - 1];
+      if (last && chordsEqual(last.chord, s.chord) && s.chord) {
+        merged[merged.length - 1] = { ...last, bars: last.bars + s.bars };
+        indexMap.push(merged.length - 1);
+        changed = true;
+      } else {
+        merged.push(s);
+        indexMap.push(merged.length - 1);
+      }
+    });
+    if (changed) {
+      setSlots(merged);
+      setSections(prev => prev.map(sec => ({
+        ...sec,
+        startIdx: indexMap[sec.startIdx] ?? sec.startIdx,
+        endIdx: indexMap[sec.endIdx] ?? sec.endIdx,
+      })));
+    }
+  }, [slots]);
 
+  // Normalize a run of empty (chord-less) slots around idx: merge them and
+  // re-split along bar boundaries so a cleared cell falls back to whole bars.
+  const normalizeEmptyRun = useCallback((list: ChartSlot[], idx: number): ChartSlot[] => {
+    if (idx < 0 || idx >= list.length || list[idx].chord) return list;
+    let start = idx, end = idx;
+    while (start > 0 && !list[start - 1].chord) start--;
+    while (end < list.length - 1 && !list[end + 1].chord) end++;
+    let startUnit = 0;
+    for (let i = 0; i < start; i++) startUnit += list[i].bars;
+    let totalUnits = 0;
+    for (let i = start; i <= end; i++) totalUnits += list[i].bars;
+    const pieces: ChartSlot[] = [];
+    let cursor = startUnit;
+    let remaining = totalUnits;
+    while (remaining > 0) {
+      const nextBoundary = Math.floor(cursor / UNITS_PER_BAR) * UNITS_PER_BAR + UNITS_PER_BAR;
+      const size = Math.min(nextBoundary - cursor, remaining);
+      pieces.push({ id: uid('slot'), bars: size });
+      cursor += size;
+      remaining -= size;
+    }
+    return [...list.slice(0, start), ...pieces, ...list.slice(end + 1)];
+  }, []);
 
   const setSlotChord = useCallback((slotId: string, chord: ChartChord | undefined) => {
-    setSlots(prev => prev.map(sl => sl.id === slotId ? { ...sl, chord } : sl));
-  }, []);
+    snapshot();
+    setSlots(prev => {
+      const idx = prev.findIndex(sl => sl.id === slotId);
+      if (idx < 0) return prev;
+      const next = prev.slice();
+      next[idx] = { ...next[idx], chord };
+      return chord ? next : normalizeEmptyRun(next, idx);
+    });
+  }, [snapshot, normalizeEmptyRun]);
+
+
 
   const beginEdit = useCallback((slot: ChartSlot) => {
     setEditingSlot(slot.id);
@@ -193,6 +293,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
         newSlots.push({ id: uid('slot'), bars: UNITS_PER_BAR });
         padUnits -= UNITS_PER_BAR;
       }
+      snapshot();
       setSlots(newSlots);
       setSections([]);
       setArrangement([]);
@@ -202,43 +303,67 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     } finally {
       setReadingChart(false);
     }
-  }, []);
+  }, [snapshot]);
 
 
-  const resizeSlot = useCallback((slotId: string, targetBars: number) => {
+  // Resize by growing/shrinking from a specific edge. Growth only consumes
+  // adjacent EMPTY (chord-less) slots — chord-holding neighbors are not affected.
+  const resizeSlotEdge = useCallback((slotId: string, targetBars: number, edge: 'right' | 'left') => {
     setSlots(prev => {
       const idx = prev.findIndex(sl => sl.id === slotId);
       if (idx < 0) return prev;
       const current = prev[idx];
       const desired = Math.max(1, targetBars);
       if (desired === current.bars) return prev;
+      const next = prev.slice();
 
-      if (desired > current.bars) {
-        let need = desired - current.bars;
-        const next = prev.slice();
-        let cursor = idx + 1;
-        while (need > 0 && cursor < next.length) {
-          const neighbor = next[cursor];
-          if (neighbor.bars <= need) {
-            need -= neighbor.bars;
-            next.splice(cursor, 1);
+      if (edge === 'right') {
+        if (desired > current.bars) {
+          let need = desired - current.bars;
+          let cursor = idx + 1;
+          while (need > 0 && cursor < next.length && !next[cursor].chord) {
+            const nb = next[cursor];
+            if (nb.bars <= need) { need -= nb.bars; next.splice(cursor, 1); }
+            else { next[cursor] = { ...nb, bars: nb.bars - need }; need = 0; }
+          }
+          next[idx] = { ...current, bars: desired - need };
+        } else {
+          const freed = current.bars - desired;
+          next[idx] = { ...current, bars: desired };
+          if (next[idx + 1] && !next[idx + 1].chord) {
+            next[idx + 1] = { ...next[idx + 1], bars: next[idx + 1].bars + freed };
           } else {
-            next[cursor] = { ...neighbor, bars: neighbor.bars - need };
-            need = 0;
+            next.splice(idx + 1, 0, { id: uid('slot'), bars: freed });
           }
         }
-        const grown = desired - need;
-        next[idx] = { ...current, bars: grown };
-        return next;
       } else {
-        const freed = current.bars - desired;
-        const next = prev.slice();
-        next[idx] = { ...current, bars: desired };
-        next.splice(idx + 1, 0, { id: uid('slot'), bars: freed });
-        return next;
+        if (desired > current.bars) {
+          let need = desired - current.bars;
+          let cursor = idx - 1;
+          let curIdx = idx;
+          while (need > 0 && cursor >= 0 && !next[cursor].chord) {
+            const nb = next[cursor];
+            if (nb.bars <= need) {
+              need -= nb.bars; next.splice(cursor, 1); curIdx--; cursor--;
+            } else {
+              next[cursor] = { ...nb, bars: nb.bars - need }; need = 0;
+            }
+          }
+          next[curIdx] = { ...current, bars: desired - need };
+        } else {
+          const freed = current.bars - desired;
+          next[idx] = { ...current, bars: desired };
+          if (idx > 0 && !next[idx - 1].chord) {
+            next[idx - 1] = { ...next[idx - 1], bars: next[idx - 1].bars + freed };
+          } else {
+            next.splice(idx, 0, { id: uid('slot'), bars: freed });
+          }
+        }
       }
+      return next;
     });
   }, []);
+
 
   const handleDrop = (slotId: string, e: React.DragEvent) => {
     e.preventDefault();
@@ -275,7 +400,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     }
   };
 
-  const startResize = (slotId: string, startBars: number, e: React.MouseEvent) => {
+  const startResize = (slotId: string, startBars: number, edge: 'right' | 'left', e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const grid = gridRef.current;
@@ -285,14 +410,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     const unitWidth = (grid.clientWidth - gap * (COLS - 1)) / COLS;
     const startX = e.clientX;
     let lastBars = startBars;
+    let snapped = false;
 
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX;
-      const delta = Math.round(dx / unitWidth);
+      // Left handle: dragging left grows, dragging right shrinks.
+      const delta = edge === 'right' ? Math.round(dx / unitWidth) : Math.round(-dx / unitWidth);
       const nextBars = Math.max(1, startBars + delta);
       if (nextBars !== lastBars) {
+        if (!snapped) { snapshot(); snapped = true; }
         lastBars = nextBars;
-        resizeSlot(slotId, nextBars);
+        resizeSlotEdge(slotId, nextBars, edge);
       }
     };
 
@@ -303,6 +431,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   };
+
 
 
   // Cumulative unit offset (1/8 bar) at start of each slot.
@@ -345,6 +474,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
 
   const commitSection = (name: string) => {
     if (!pendingRange) return;
+    snapshot();
     const { startIdx, endIdx } = pendingRange;
     setSections(prev => [
       ...prev.filter(s => s.endIdx < startIdx || s.startIdx > endIdx),
@@ -386,10 +516,12 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     if (!sec) return;
     const name = window.prompt('Rename section', sec.name);
     if (!name) return;
+    snapshot();
     setSections(prev => prev.map(s => s.id === id ? { ...s, name } : s));
   };
 
   const removeSection = (id: string) => {
+    snapshot();
     setSections(prev => prev.filter(s => s.id !== id));
     setArrangement(prev => prev.filter(a => a.sectionId !== id));
   };
@@ -434,6 +566,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     const sectionId = e.dataTransfer.getData('application/chart-section');
     const moveId = e.dataTransfer.getData('application/chart-arrangement-item');
     if (sectionId) {
+      snapshot();
       const item: ArrangementItem = { id: uid('arr'), sectionId };
       setArrangement(prev => {
         const next = prev.slice();
@@ -441,6 +574,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
         return next;
       });
     } else if (moveId) {
+      snapshot();
       setArrangement(prev => {
         const fromIdx = prev.findIndex(a => a.id === moveId);
         if (fromIdx < 0) return prev;
@@ -462,8 +596,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
       <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-card shrink-0">
         <span className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">Charts</span>
         <span className="text-[9px] font-mono text-muted-foreground/70">
-          Drag degree chips into a slot. Double-click to type a chord. Click a chord to edit extensions. Drag the right edge to resize (1/8 bar steps).
+          Drag degree chips into a slot. Double-click to type a chord. Click a chord to edit extensions. Drag either edge to resize (1/8 bar steps).
         </span>
+        <button
+          onClick={undo}
+          disabled={historyRef.current.length === 0}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Undo (⌘Z / Ctrl+Z)"
+        >
+          <Undo2 size={10} />
+          Undo
+        </button>
         <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">
           {totalBars % 1 === 0 ? totalBars : totalBars.toFixed(2)} bars · {slots.length} slots
         </span>
@@ -766,9 +909,14 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
                   )}
 
                   <div
-                    onMouseDown={(e) => startResize(slot.id, slot.bars, e)}
+                    onMouseDown={(e) => startResize(slot.id, slot.bars, 'left', e)}
+                    className="absolute top-0 left-0 h-full w-2 cursor-ew-resize hover:bg-primary/40 transition-colors"
+                    title={`Drag to resize left edge — ${formatDuration(slot.bars)}`}
+                  />
+                  <div
+                    onMouseDown={(e) => startResize(slot.id, slot.bars, 'right', e)}
                     className="absolute top-0 right-0 h-full w-2 cursor-ew-resize hover:bg-primary/40 transition-colors"
-                    title="Drag to resize (1/8 bar steps)"
+                    title={`Drag to resize right edge — ${formatDuration(slot.bars)}`}
                   />
                 </div>
               );
@@ -825,7 +973,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
                   <GripVertical size={10} className="opacity-60" />
                   <span className="text-[11px] font-mono font-bold uppercase tracking-wider">{sec.name}</span>
                   <button
-                    onClick={() => setArrangement(prev => prev.filter(a => a.id !== item.id))}
+                    onClick={() => { snapshot(); setArrangement(prev => prev.filter(a => a.id !== item.id)); }}
                     className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
                     title="Remove"
                   >
