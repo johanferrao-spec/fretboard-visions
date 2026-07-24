@@ -133,11 +133,17 @@ const Index = () => {
   // Metronome — fully standalone (independent of any timeline / playback)
   const { primeAudio: primeMetronomeAudio } = useMetronome({
     enabled: metronomeOn,
-    bpm: metronomeBpm,
+    bpm: metronomeBpm * subdivision,
+    beatsPerBar: timeSigNum * subdivision,
     onTick: (i) => {
       setMetronomePulse(i + 1);
-      // Flash on every beat; downbeat (i % 4 === 0) is accent (green), others yellow.
-      const kind: 'accent' | 'beat' = i % 4 === 0 ? 'accent' : 'beat';
+      const isMainBeat = i % subdivision === 0;
+      if (isMainBeat) {
+        const beatIdx = Math.floor(i / subdivision) % timeSigNum;
+        setCurrentMetroBeat(beatIdx);
+      }
+      const isDownbeat = i % (timeSigNum * subdivision) === 0;
+      const kind: 'accent' | 'beat' = isDownbeat ? 'accent' : 'beat';
       setMetronomeFlash(kind);
       if (metronomeFlashTimerRef.current !== null) {
         window.clearTimeout(metronomeFlashTimerRef.current);
@@ -148,6 +154,29 @@ const Index = () => {
       }, 90);
     },
   });
+
+  // Reset visual beat indicator when metronome turns off
+  useEffect(() => {
+    if (!metronomeOn) setCurrentMetroBeat(-1);
+  }, [metronomeOn]);
+
+  // Tap tempo — averages last 4 taps, ignores gaps > 2s
+  const handleTapTempo = useCallback(() => {
+    const now = performance.now();
+    const taps = tapTimesRef.current;
+    if (taps.length > 0 && now - taps[taps.length - 1] > 2000) {
+      taps.length = 0;
+    }
+    taps.push(now);
+    if (taps.length > 4) taps.shift();
+    if (taps.length >= 2) {
+      const intervals: number[] = [];
+      for (let i = 1; i < taps.length; i++) intervals.push(taps[i] - taps[i - 1]);
+      const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const bpm = Math.round(60000 / avg);
+      setMetronomeBpm(Math.max(40, Math.min(300, bpm)));
+    }
+  }, []);
 
   // Metronome BPM drag (toolbar)
   useEffect(() => {
