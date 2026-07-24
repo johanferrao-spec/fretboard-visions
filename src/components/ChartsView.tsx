@@ -839,8 +839,8 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             }}
             className={`mt-auto w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border-2 border-dashed cursor-pointer transition-colors ${
               readDragOver
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border/60 text-muted-foreground hover:border-primary/60 hover:text-foreground'
+                ? 'border-amber-400 bg-amber-400/10 text-amber-300'
+                : 'border-border/60 text-muted-foreground hover:border-amber-400/60 hover:text-amber-300'
             }`}
             title="Drop a screenshot of a chord chart; AI will fill the chart above."
           >
