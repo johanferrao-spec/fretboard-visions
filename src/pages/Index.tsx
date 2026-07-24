@@ -415,11 +415,11 @@ const Index = () => {
             Guitar Fretboard Visualizer
           </div>
           <Link
-            to="/courses"
+            to="/my-charts"
             className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
-            title="Browse courses"
+            title="Your saved charts, backing tracks, and setlists"
           >
-            <BookOpen size={12} /> Courses
+            <BookOpen size={12} /> My Charts
           </Link>
           {user ? (
             <div className="flex items-center gap-1.5">
