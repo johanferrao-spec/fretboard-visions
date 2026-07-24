@@ -941,6 +941,7 @@ const Index = () => {
               isPlaying={timeline.isPlaying}
               currentBeat={timeline.currentBeat}
               registerHandlers={handleRegisterBackingApi}
+              sections={arrangementSections}
             />
           </div>
           {/* Instrument samplers — resizable bottom strip */}
