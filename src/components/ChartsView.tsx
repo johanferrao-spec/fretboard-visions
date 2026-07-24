@@ -277,26 +277,60 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
     setSections(prev => prev.map(s => s.id === id ? { ...s, name } : s));
   };
 
+  // Close editor on outside click / Escape.
+  useEffect(() => {
+    if (!editorSlotId) return;
+    const onDown = (ev: MouseEvent) => {
+      if (editorRef.current && !editorRef.current.contains(ev.target as Node)) {
+        setEditorSlotId(null);
+      }
+    };
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') setEditorSlotId(null);
+    };
+    window.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousedown', onDown);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [editorSlotId]);
+
+  const openChordEditor = (slot: ChartSlot, target: HTMLElement) => {
+    if (!slot.chord) return;
+    const rect = target.getBoundingClientRect();
+    // Prefer opening below, clamped to viewport.
+    const width = 320;
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
+    const top = Math.min(rect.bottom + 6, window.innerHeight - 300);
+    setEditorPos({ top, left });
+    setEditorSlotId(slot.id);
+  };
+
+  const editorSlot = editorSlotId ? slots.find(s => s.id === editorSlotId) : null;
+  const editorChord = editorSlot?.chord ?? null;
+  const totalBars = slots.reduce((n, s) => n + s.bars, 0) / UNITS_PER_BAR;
+
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-card shrink-0">
         <span className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">Charts</span>
         <span className="text-[9px] font-mono text-muted-foreground/70">
-          Drag coloured degree cells into any slot, or double-click a slot to type a chord (e.g. "Am7", "A minor seventh"). Drag the right edge to resize.
+          Drag degree chips into a slot. Double-click to type a chord. Click a chord to edit extensions. Drag the right edge to resize (1/8 bar steps).
         </span>
         <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">
-          {slots.reduce((n, s) => n + s.bars, 0)} bars · {slots.length} slots
+          {totalBars % 1 === 0 ? totalBars : totalBars.toFixed(2)} bars · {slots.length} slots
         </span>
       </div>
 
       {/* Body: vertical toolbar + slot grid */}
       <div className="flex-1 overflow-hidden flex">
         {/* Vertical toolbar */}
-        <div className="w-20 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-1.5 overflow-y-auto">
+        <div className="w-28 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-2 overflow-y-auto">
           <button
             onClick={() => { setSectionMode(m => !m); setSectionStartIdx(null); }}
-            className={`h-9 rounded flex items-center justify-center gap-1 border transition-colors ${
+            className={`h-9 rounded flex items-center justify-center gap-1.5 border transition-colors text-[10px] font-mono uppercase tracking-wider ${
               sectionMode
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-background text-foreground border-border hover:bg-muted'
@@ -305,7 +339,8 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
               ? (sectionStartIdx === null ? 'Click first slot of section' : 'Click last slot of section')
               : 'Group into section'}
           >
-            {sectionMode && sectionStartIdx !== null ? <Check size={14} /> : <Group size={14} />}
+            {sectionMode && sectionStartIdx !== null ? <Check size={13} /> : <Group size={13} />}
+            <span>Section</span>
           </button>
 
           {/* Diatonic chord palette */}
@@ -323,11 +358,11 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
                       e.dataTransfer.setData('application/diatonic-degree', JSON.stringify({ degree: i }));
                       e.dataTransfer.effectAllowed = 'copy';
                     }}
-                    className="rounded px-1 py-1 flex flex-col items-center leading-tight cursor-grab active:cursor-grabbing hover:brightness-110 transition"
+                    className="rounded px-1.5 py-1 flex items-center justify-between gap-1 leading-tight cursor-grab active:cursor-grabbing hover:brightness-110 transition"
                     style={{ background: `hsl(${color})`, color: '#000' }}
                     title={`${dc.roman} — ${dc.symbol} (drag into a slot)`}
                   >
-                    <span className="text-[9px] font-mono font-bold opacity-80">{dc.roman}</span>
+                    <span className="text-[10px] font-mono font-bold opacity-80">{dc.roman}</span>
                     <span className="text-[11px] font-mono font-bold">{dc.symbol}</span>
                   </button>
                 );
@@ -335,14 +370,13 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
             </div>
           )}
 
-
           {sections.length > 0 && (
-            <div className="w-full flex flex-col items-center gap-1 mt-1 border-t border-border pt-2">
+            <div className="w-full flex flex-col items-stretch gap-1 mt-1 border-t border-border pt-2">
               {sections.map(sec => (
-                <div key={sec.id} className="flex flex-col items-center gap-0.5 w-full px-1">
+                <div key={sec.id} className="flex items-center gap-1 w-full">
                   <button
                     onClick={() => renameSection(sec.id)}
-                    className="w-full text-[8px] font-mono font-bold uppercase truncate rounded px-0.5 py-0.5"
+                    className="flex-1 text-[9px] font-mono font-bold uppercase truncate rounded px-1 py-0.5 text-left"
                     style={{ background: `hsl(${sec.color} / 0.25)`, color: `hsl(${sec.color})` }}
                     title={`Rename "${sec.name}"`}
                   >
@@ -350,7 +384,7 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
                   </button>
                   <button
                     onClick={() => setSections(prev => prev.filter(s => s.id !== sec.id))}
-                    className="text-muted-foreground hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive shrink-0"
                     title="Delete section"
                   >
                     <Trash2 size={10} />
@@ -362,11 +396,14 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
         </div>
 
         {/* Slot grid */}
-        <div className="flex-1 overflow-hidden p-3">
+        <div className="flex-1 overflow-auto p-3">
           <div
             ref={gridRef}
             className="grid gap-1.5"
-            style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
+            style={{
+              gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
+              gridAutoRows: '3rem',
+            }}
           >
             {slots.map((slot, idx) => {
               const isHover = hoverSlot === slot.id;
@@ -375,6 +412,8 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
               const color = slot.chord ? getChordColor(slot.chord) : null;
               const section = sectionOfSlot(idx);
               const isSectionPickStart = sectionMode && sectionStartIdx === idx;
+              const startUnit = startUnits[idx];
+              const barLabel = formatBarNumber(startUnit);
               return (
                 <div
                   key={slot.id}
@@ -382,7 +421,10 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
                   onDragLeave={() => setHoverSlot(prev => prev === slot.id ? null : prev)}
                   onDrop={(e) => handleDrop(slot.id, e)}
                   onDoubleClick={() => { if (!sectionMode) beginEdit(slot); }}
-                  onClick={() => handleSlotClickForSection(idx)}
+                  onClick={(e) => {
+                    if (sectionMode) { handleSlotClickForSection(idx); return; }
+                    if (slot.chord && !isEditing) openChordEditor(slot, e.currentTarget as HTMLElement);
+                  }}
                   style={{
                     gridColumn: `span ${slot.bars} / span ${slot.bars}`,
                     background: color ? `hsl(${color})` : undefined,
@@ -393,21 +435,23 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
                         : undefined,
                     borderTop: section ? `3px solid hsl(${section.color})` : undefined,
                   }}
-                  className={`group relative aspect-[5/1] rounded-md flex items-center justify-center transition-colors overflow-hidden ${
-                    sectionMode ? 'cursor-crosshair ' : ''
+                  className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
+                    sectionMode ? 'cursor-crosshair ' : slot.chord ? 'cursor-pointer ' : ''
                   }${
                     color
                       ? 'brightness-100 hover:brightness-110'
                       : 'bg-muted/20 border border-dashed border-border/50 hover:border-primary/60 hover:bg-muted/30'
                   }`}
-                  title={slot.chord ? `${formatChordLabel(slot.chord)} — ${slot.bars} bar${slot.bars === 1 ? '' : 's'}` : 'Double-click to type a chord, or drop one here'}
+                  title={slot.chord
+                    ? `${formatChordLabel(slot.chord)} — click to edit extensions`
+                    : 'Double-click to type a chord, or drop one here'}
                 >
                   {/* Bar number (top-left) */}
                   <span
                     className="absolute top-0.5 left-1 text-[9px] font-mono font-bold pointer-events-none select-none"
                     style={{ color: color ? 'rgba(0,0,0,0.65)' : undefined }}
                   >
-                    {barNumbers[idx]}
+                    {barLabel}
                   </span>
 
                   {/* Section label on first slot of a section */}
@@ -457,7 +501,7 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
                   <div
                     onMouseDown={(e) => startResize(slot.id, slot.bars, e)}
                     className="absolute top-0 right-0 h-full w-2 cursor-ew-resize hover:bg-primary/40 transition-colors"
-                    title="Drag to resize"
+                    title="Drag to resize (1/8 bar steps)"
                   />
                 </div>
               );
@@ -465,7 +509,40 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
           </div>
         </div>
       </div>
+
+      {/* Chord editor popover — Logic-style Quality + Extensions builder */}
+      {editorSlot && editorChord && editorPos && (
+        <div
+          ref={editorRef}
+          className="fixed z-50 rounded-lg border border-border bg-card shadow-xl p-3"
+          style={{ top: editorPos.top, left: editorPos.left, width: 320 }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              Edit chord · {editorChord.root}
+            </span>
+            <button
+              onClick={() => setEditorSlotId(null)}
+              className="text-muted-foreground hover:text-foreground"
+              title="Close"
+            >
+              <X size={12} />
+            </button>
+          </div>
+          <ChordBuilder
+            selectedRoot={editorChord.root}
+            selectedChord={editorChord.chordType}
+            handleSelectChord={(ct) => {
+              setSlotChord(editorSlot.id, { root: editorChord.root, chordType: ct });
+            }}
+            getChordCellLabel={(ct) => formatChordLabel({ root: editorChord.root, chordType: ct })}
+            draggable={false}
+          />
+        </div>
+      )}
     </div>
   );
 }
+
 
