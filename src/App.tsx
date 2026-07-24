@@ -12,6 +12,7 @@ import CoursePlayer from "./pages/CoursePlayer.tsx";
 import AuthPage from "./pages/Auth.tsx";
 import OAuthConsent from "./pages/OAuthConsent.tsx";
 import { SampleLibraryProvider } from "@/hooks/SampleLibraryContext";
+import CloudHydrator from "@/components/CloudHydrator";
 
 const queryClient = new QueryClient();
 
