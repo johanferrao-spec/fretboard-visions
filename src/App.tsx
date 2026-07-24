@@ -10,6 +10,7 @@ import CourseDetail from "./pages/CourseDetail.tsx";
 import CourseCreator from "./pages/CourseCreator.tsx";
 import CoursePlayer from "./pages/CoursePlayer.tsx";
 import AuthPage from "./pages/Auth.tsx";
+import MyCharts from "./pages/MyCharts.tsx";
 import OAuthConsent from "./pages/OAuthConsent.tsx";
 import { SampleLibraryProvider } from "@/hooks/SampleLibraryContext";
 import CloudHydrator from "@/components/CloudHydrator";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/courses/:courseId/lessons/:tabId/edit" element={<CourseCreator />} />
             <Route path="/courses/:courseId/lessons/:tabId" element={<CoursePlayer />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/my-charts" element={<MyCharts />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

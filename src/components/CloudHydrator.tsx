@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 /** Keys we mirror into cloud for a signed-in user. */
 const CHART_KEY = 'chartsView.state.v1';
 const BACKING_KEY = 'mf-backing-tracks';
+const LIBRARY_KEY = 'mf-charts-library';
+const SETLISTS_KEY = 'mf-setlists';
 
 type Snapshot = {
   user_id: string;
@@ -37,15 +39,22 @@ export default function CloudHydrator({ children }: { children: React.ReactNode 
       try {
         const { data, error } = await supabase
           .from('user_snapshots')
-          .select('charts_data, backing_tracks_data')
+          .select('charts_data, backing_tracks_data, charts_library, setlists')
           .eq('user_id', userId)
           .maybeSingle();
         if (!error && data) {
-          if (data.charts_data !== null && data.charts_data !== undefined) {
-            try { localStorage.setItem(CHART_KEY, JSON.stringify(data.charts_data)); } catch {}
+          const d: any = data;
+          if (d.charts_data != null) {
+            try { localStorage.setItem(CHART_KEY, JSON.stringify(d.charts_data)); } catch {}
           }
-          if (data.backing_tracks_data !== null && data.backing_tracks_data !== undefined) {
-            try { localStorage.setItem(BACKING_KEY, JSON.stringify(data.backing_tracks_data)); } catch {}
+          if (d.backing_tracks_data != null) {
+            try { localStorage.setItem(BACKING_KEY, JSON.stringify(d.backing_tracks_data)); } catch {}
+          }
+          if (d.charts_library != null) {
+            try { localStorage.setItem(LIBRARY_KEY, JSON.stringify(d.charts_library)); } catch {}
+          }
+          if (d.setlists != null) {
+            try { localStorage.setItem(SETLISTS_KEY, JSON.stringify(d.setlists)); } catch {}
           }
         }
       } catch {}
@@ -85,10 +94,12 @@ export default function CloudHydrator({ children }: { children: React.ReactNode 
         try {
           const raw = localStorage.getItem(key);
           const parsed = raw ? JSON.parse(raw) : null;
-          const patch: { user_id: string; charts_data?: any; backing_tracks_data?: any } = { user_id: uid };
+          const patch: any = { user_id: uid };
           if (key === CHART_KEY) patch.charts_data = parsed;
           if (key === BACKING_KEY) patch.backing_tracks_data = parsed;
-          await supabase.from('user_snapshots').upsert(patch as any, { onConflict: 'user_id' });
+          if (key === LIBRARY_KEY) patch.charts_library = parsed;
+          if (key === SETLISTS_KEY) patch.setlists = parsed;
+          await supabase.from('user_snapshots').upsert(patch, { onConflict: 'user_id' });
         } catch {}
       }, 800);
     };
@@ -97,7 +108,7 @@ export default function CloudHydrator({ children }: { children: React.ReactNode 
     const origSet = Storage.prototype.setItem;
     Storage.prototype.setItem = function (k: string, v: string) {
       origSet.call(this, k, v);
-      if (k === CHART_KEY || k === BACKING_KEY) push(k);
+      if (k === CHART_KEY || k === BACKING_KEY || k === LIBRARY_KEY || k === SETLISTS_KEY) push(k);
     };
 
     return () => {

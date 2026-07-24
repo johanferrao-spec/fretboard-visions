@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2 } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save } from 'lucide-react';
 
 import type { NoteName, KeyMode } from '@/lib/music';
 import { getDiatonicChords, getChordDegree, SCALE_DEGREE_COLORS } from '@/lib/music';
@@ -679,6 +679,37 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         >
           <Undo2 size={10} />
           Undo
+        </button>
+        <button
+          onClick={() => {
+            try {
+              const LIB_KEY = 'mf-charts-library';
+              const raw = localStorage.getItem(LIB_KEY);
+              const lib: any[] = raw ? JSON.parse(raw) : [];
+              const payload = { slots, sections, arrangement, chartKey, title, composer, tempo, timeSig, feel };
+              const existingIdx = lib.findIndex((c) => c.title === title && title !== 'Untitled');
+              const entry = {
+                id: existingIdx >= 0 ? lib[existingIdx].id : `chart-${Date.now()}`,
+                title: title || 'Untitled',
+                composer,
+                tempo,
+                timeSig,
+                feel,
+                updatedAt: Date.now(),
+                data: payload,
+              };
+              if (existingIdx >= 0) lib[existingIdx] = entry; else lib.push(entry);
+              localStorage.setItem(LIB_KEY, JSON.stringify(lib));
+              toast({ title: 'Chart saved', description: `"${entry.title}" added to My Charts.` });
+            } catch (e) {
+              toast({ title: 'Save failed', description: String(e) });
+            }
+          }}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+          title="Save this chart to your library"
+        >
+          <Save size={10} />
+          Save
         </button>
         <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">
           {totalBars % 1 === 0 ? totalBars : totalBars.toFixed(2)} bars · {slots.length} slots
