@@ -1526,6 +1526,7 @@ function ScaleViewPanel({
 
 
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
+  const [selectedModePreview, setSelectedModePreview] = useState<string>('Ionian');
 
   // Persisted descriptions for drop voicings
   const [dropDescriptions, setDropDescriptions] = useState<Record<string, string>>(() => {
@@ -2041,41 +2042,54 @@ function ScaleViewPanel({
               <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
                 Modes are scales created by starting the major scale on a different degree. They are useful when learning to visualise the fretboard as they all link together. They can also be used compositionally as they can offer interesting tonal colours.
               </p>
-              <div className="flex flex-col gap-0.5 mt-0.5">
-                {[
-                  { num: 'I', mode: 'Ionian', desc: 'Bright, stable — the major scale.', color: SCALE_DEGREE_COLORS[0] },
-                  { num: 'II', mode: 'Dorian', desc: 'Jazzy minor with a natural 6th.', color: SCALE_DEGREE_COLORS[1] },
-                  { num: 'III', mode: 'Phrygian', desc: 'Dark, Spanish-flavoured (♭2).', color: SCALE_DEGREE_COLORS[2] },
-                  { num: 'IV', mode: 'Lydian', desc: 'Bright, floating (♯4).', color: SCALE_DEGREE_COLORS[3] },
-                  { num: 'V', mode: 'Mixolydian', desc: 'Bluesy dominant (♭7).', color: SCALE_DEGREE_COLORS[4] },
-                  { num: 'VI', mode: 'Aeolian', desc: 'Natural minor — melancholic.', color: SCALE_DEGREE_COLORS[5] },
-                  { num: 'VII', mode: 'Locrian', desc: 'Dark, unstable (♭2, ♭5).', color: SCALE_DEGREE_COLORS[6] },
-                ].map(d => (
-                  <div key={d.mode} className="relative group flex items-center gap-1.5 text-[9px] font-mono leading-tight cursor-help">
-                    <span
-                      className="px-1.5 h-4 rounded flex items-center justify-center font-bold text-[9px] shrink-0 gap-0.5"
-                      style={{ backgroundColor: `hsl(${d.color})`, color: 'hsl(var(--background))' }}
-                    >
-                      <span>{d.num}</span>
-                      <span>-</span>
-                      <span>{d.mode}</span>
-                    </span>
-                    <span className="text-muted-foreground truncate">— {d.desc}</span>
-                    <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute right-full top-1/2 -translate-y-1/2 mr-2 z-50 rounded-md border bg-popover p-2 shadow-md flex flex-col gap-1.5 w-max">
-                      <div className="flex items-center gap-1.5">
+              <div className="flex items-start gap-3 mt-0.5">
+                <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                  {[
+                    { num: 'I', mode: 'Ionian', desc: 'Bright, stable — the major scale.', color: SCALE_DEGREE_COLORS[0] },
+                    { num: 'II', mode: 'Dorian', desc: 'Jazzy minor with a natural 6th.', color: SCALE_DEGREE_COLORS[1] },
+                    { num: 'III', mode: 'Phrygian', desc: 'Dark, Spanish-flavoured (♭2).', color: SCALE_DEGREE_COLORS[2] },
+                    { num: 'IV', mode: 'Lydian', desc: 'Bright, floating (♯4).', color: SCALE_DEGREE_COLORS[3] },
+                    { num: 'V', mode: 'Mixolydian', desc: 'Bluesy dominant (♭7).', color: SCALE_DEGREE_COLORS[4] },
+                    { num: 'VI', mode: 'Aeolian', desc: 'Natural minor — melancholic.', color: SCALE_DEGREE_COLORS[5] },
+                    { num: 'VII', mode: 'Locrian', desc: 'Dark, unstable (♭2, ♭5).', color: SCALE_DEGREE_COLORS[6] },
+                  ].map(d => {
+                    const isActive = selectedModePreview === d.mode;
+                    return (
+                      <div
+                        key={d.mode}
+                        onMouseEnter={() => setSelectedModePreview(d.mode)}
+                        onClick={() => setSelectedModePreview(d.mode)}
+                        className={`flex items-center gap-1.5 text-[9px] font-mono leading-tight cursor-pointer rounded px-0.5 py-0.5 transition-colors ${isActive ? 'bg-muted/60' : 'hover:bg-muted/30'}`}
+                      >
                         <span
-                          className="px-1.5 h-4 rounded flex items-center justify-center font-bold text-[9px]"
+                          className="px-1.5 h-4 rounded flex items-center justify-center font-bold text-[9px] shrink-0 gap-0.5"
                           style={{ backgroundColor: `hsl(${d.color})`, color: 'hsl(var(--background))' }}
                         >
-                          {d.mode}
+                          <span>{d.num}</span>
+                          <span>-</span>
+                          <span>{d.mode}</span>
                         </span>
-                        <span className="text-[10px] font-mono text-foreground/90">{MODE_ACCIDENTALS[d.mode]}</span>
+                        <span className="text-muted-foreground truncate">— {d.desc}</span>
                       </div>
-                      
-                      <ModeDiagram mode={d.mode} />
-                    </div>
+                    );
+                  })}
+                  <div className="text-[8px] font-mono text-muted-foreground/70 italic mt-1 leading-tight">
+                    The first 6 modes can all be built by adding just 2 notes to the major or minor pentatonic scale.
                   </div>
-                ))}
+                </div>
+                <div className="shrink-0 flex flex-col items-center gap-1">
+                  <div
+                    className="px-1.5 h-4 rounded flex items-center justify-center font-bold text-[9px]"
+                    style={{
+                      backgroundColor: `hsl(${SCALE_DEGREE_COLORS[['Ionian','Dorian','Phrygian','Lydian','Mixolydian','Aeolian','Locrian'].indexOf(selectedModePreview)] ?? SCALE_DEGREE_COLORS[0]})`,
+                      color: 'hsl(var(--background))',
+                    }}
+                  >
+                    {selectedModePreview}
+                  </div>
+                  <div className="text-[9px] font-mono text-foreground/80">{MODE_ACCIDENTALS[selectedModePreview]}</div>
+                  <ModeDiagram mode={selectedModePreview} />
+                </div>
               </div>
             </div>
           </div>
