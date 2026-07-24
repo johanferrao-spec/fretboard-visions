@@ -8,6 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { ChordBuilder } from '@/components/ChordReference';
 import { ScaleRootSelector } from '@/components/ControlPanel';
+import type { TimelineChord } from '@/hooks/useSongTimeline';
+
+const STORAGE_KEY = 'chartsView.state.v1';
 
 interface DiatonicChord {
   root: NoteName;
