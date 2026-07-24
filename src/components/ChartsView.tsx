@@ -399,7 +399,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     }
   };
 
-  const startResize = (slotId: string, startBars: number, e: React.MouseEvent) => {
+  const startResize = (slotId: string, startBars: number, edge: 'right' | 'left', e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const grid = gridRef.current;
@@ -409,14 +409,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     const unitWidth = (grid.clientWidth - gap * (COLS - 1)) / COLS;
     const startX = e.clientX;
     let lastBars = startBars;
+    let snapped = false;
 
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX;
-      const delta = Math.round(dx / unitWidth);
+      // Left handle: dragging left grows, dragging right shrinks.
+      const delta = edge === 'right' ? Math.round(dx / unitWidth) : Math.round(-dx / unitWidth);
       const nextBars = Math.max(1, startBars + delta);
       if (nextBars !== lastBars) {
+        if (!snapped) { snapshot(); snapped = true; }
         lastBars = nextBars;
-        resizeSlot(slotId, nextBars);
+        resizeSlotEdge(slotId, nextBars, edge);
       }
     };
 
@@ -427,6 +430,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   };
+
 
 
   // Cumulative unit offset (1/8 bar) at start of each slot.
