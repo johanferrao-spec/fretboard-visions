@@ -800,7 +800,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   {
     let cursor = 0;
     for (let r = 0; r < totalLogicalRows; r++) {
-      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('0.9rem'); cursor += 1; }
+      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('2.25rem'); cursor += 1; }
       cursor += 1;
       renderRowOfLogical[r] = cursor;
       rowHeights.push('3rem');
@@ -1313,7 +1313,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
           <div
             ref={gridRef}
-            className="grid gap-1.5"
+            className="grid gap-1.5 pt-4 pb-2"
             style={{
               gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
               gridTemplateRows: rowHeights.join(' '),
@@ -1329,7 +1329,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: `2px solid hsla(${seg.color}, 0.75)`,
                   background: `hsla(${seg.color}, 0.12)`,
-                  margin: '-3px',
+                  margin: '-8px -6px',
+                  zIndex: 0,
+                }}
                   zIndex: 0,
                 }}
               >
