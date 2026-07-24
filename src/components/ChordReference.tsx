@@ -2121,7 +2121,7 @@ function ScaleViewPanel({
                           <span>-</span>
                           <span>{d.mode}</span>
                         </span>
-                        <span className="text-muted-foreground truncate">— {d.desc}</span>
+                        <span className="text-muted-foreground truncate">{d.desc}</span>
                       </div>
                     );
                   })}
