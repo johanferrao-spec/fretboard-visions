@@ -102,6 +102,9 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
   const [tempo, setTempo] = useState(120);
   const [timeSig, setTimeSig] = useState('4/4');
   const [feel, setFeel] = useState('Straight');
+  const [readingChart, setReadingChart] = useState(false);
+  const [readDragOver, setReadDragOver] = useState(false);
+  const readInputRef = useRef<HTMLInputElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const presetRef = useRef<HTMLDivElement | null>(null);
