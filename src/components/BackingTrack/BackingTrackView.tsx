@@ -35,6 +35,8 @@ interface BackingTrackViewProps {
     prewarm: () => Promise<void>;
     previewNote: (trackId: TrackId, pitch: number, velocity?: number) => void;
   }) => void;
+  /** Arrangement sections synced from the Chart, colored bars underline each range. */
+  sections?: { id: string; name: string; color: string; startBeat: number; lengthBeats: number }[];
 }
 
 export default function BackingTrackView({
