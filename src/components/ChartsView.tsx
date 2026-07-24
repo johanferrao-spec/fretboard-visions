@@ -590,8 +590,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts }: Char
       <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-card shrink-0">
         <span className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">Charts</span>
         <span className="text-[9px] font-mono text-muted-foreground/70">
-          Drag degree chips into a slot. Double-click to type a chord. Click a chord to edit extensions. Drag the right edge to resize (1/8 bar steps).
+          Drag degree chips into a slot. Double-click to type a chord. Click a chord to edit extensions. Drag either edge to resize (1/8 bar steps).
         </span>
+        <button
+          onClick={undo}
+          disabled={historyRef.current.length === 0}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Undo (⌘Z / Ctrl+Z)"
+        >
+          <Undo2 size={10} />
+          Undo
+        </button>
         <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">
           {totalBars % 1 === 0 ? totalBars : totalBars.toFixed(2)} bars · {slots.length} slots
         </span>
