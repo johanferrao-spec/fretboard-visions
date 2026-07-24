@@ -15,7 +15,7 @@ import ChromaticTuner from '@/components/ChromaticTuner';
 import InstrumentSamplers from '@/components/BackingTrack/InstrumentSamplers';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
 import { ensureToneAudioContext } from '@/hooks/engine/audioContext';
-import { ChevronUp } from 'lucide-react';
+import { ChevronUp, Settings } from 'lucide-react';
 import type { NoteName } from '@/lib/music';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
@@ -39,6 +39,10 @@ const Index = () => {
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomePulse, setMetronomePulse] = useState(0);
   const [metronomeFlash, setMetronomeFlash] = useState<'accent' | 'beat' | null>(null);
+  const [timeSigNum, setTimeSigNum] = useState(4);
+  const [subdivision, setSubdivision] = useState<1 | 2 | 3 | 4>(1);
+  const [currentMetroBeat, setCurrentMetroBeat] = useState(-1);
+  const tapTimesRef = useRef<number[]>([]);
   const metronomeFlashTimerRef = useRef<number | null>(null);
   const [bpmDragging, setBpmDragging] = useState(false);
   const bpmDragRef = useRef<{ startY: number; startBpm: number }>({ startY: 0, startBpm: 120 });
@@ -129,11 +133,17 @@ const Index = () => {
   // Metronome — fully standalone (independent of any timeline / playback)
   const { primeAudio: primeMetronomeAudio } = useMetronome({
     enabled: metronomeOn,
-    bpm: metronomeBpm,
+    bpm: metronomeBpm * subdivision,
+    beatsPerBar: timeSigNum * subdivision,
     onTick: (i) => {
       setMetronomePulse(i + 1);
-      // Flash on every beat; downbeat (i % 4 === 0) is accent (green), others yellow.
-      const kind: 'accent' | 'beat' = i % 4 === 0 ? 'accent' : 'beat';
+      const isMainBeat = i % subdivision === 0;
+      if (isMainBeat) {
+        const beatIdx = Math.floor(i / subdivision) % timeSigNum;
+        setCurrentMetroBeat(beatIdx);
+      }
+      const isDownbeat = i % (timeSigNum * subdivision) === 0;
+      const kind: 'accent' | 'beat' = isDownbeat ? 'accent' : 'beat';
       setMetronomeFlash(kind);
       if (metronomeFlashTimerRef.current !== null) {
         window.clearTimeout(metronomeFlashTimerRef.current);
@@ -144,6 +154,29 @@ const Index = () => {
       }, 90);
     },
   });
+
+  // Reset visual beat indicator when metronome turns off
+  useEffect(() => {
+    if (!metronomeOn) setCurrentMetroBeat(-1);
+  }, [metronomeOn]);
+
+  // Tap tempo — averages last 4 taps, ignores gaps > 2s
+  const handleTapTempo = useCallback(() => {
+    const now = performance.now();
+    const taps = tapTimesRef.current;
+    if (taps.length > 0 && now - taps[taps.length - 1] > 2000) {
+      taps.length = 0;
+    }
+    taps.push(now);
+    if (taps.length > 4) taps.shift();
+    if (taps.length >= 2) {
+      const intervals: number[] = [];
+      for (let i = 1; i < taps.length; i++) intervals.push(taps[i] - taps[i - 1]);
+      const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const bpm = Math.round(60000 / avg);
+      setMetronomeBpm(Math.max(40, Math.min(300, bpm)));
+    }
+  }, []);
 
   // Metronome BPM drag (toolbar)
   useEffect(() => {
@@ -394,9 +427,80 @@ const Index = () => {
                 }`}
                 title={metronomeOn ? 'Metronome ON — click to mute' : 'Metronome OFF — click to enable'}
               >
-                <span aria-hidden>🎵</span>
-                <span>{metronomeOn ? 'On' : 'Off'}</span>
+                <span>Metronome</span>
               </button>
+
+              {/* Settings gear with hover dropdown */}
+              <div className="relative group">
+                <button
+                  className="p-1 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                  title="Metronome settings"
+                  aria-label="Metronome settings"
+                >
+                  <Settings size={12} />
+                </button>
+                <div className="absolute left-0 top-full mt-1 z-50 hidden group-hover:block pt-1">
+                  <div className="w-56 rounded-md border border-border bg-popover text-popover-foreground shadow-lg p-3 space-y-3">
+                    <div>
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Time signature</div>
+                      <div className="flex flex-wrap gap-1">
+                        {[2, 3, 4, 5, 6, 7].map(n => (
+                          <button
+                            key={n}
+                            onClick={() => setTimeSigNum(n)}
+                            className={`w-7 h-7 rounded text-[10px] font-mono ${timeSigNum === n ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                          >
+                            {n}/4
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Subdivision</div>
+                      <div className="flex gap-1">
+                        {([[1, '♩'], [2, '♪♪'], [3, '3'], [4, '16']] as const).map(([v, label]) => (
+                          <button
+                            key={v}
+                            onClick={() => setSubdivision(v)}
+                            className={`flex-1 h-7 rounded text-[10px] font-mono ${subdivision === v ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                            title={v === 1 ? 'Quarter notes' : v === 2 ? 'Eighth notes' : v === 3 ? 'Triplets' : 'Sixteenth notes'}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Tap tempo</div>
+                      <button
+                        onClick={handleTapTempo}
+                        className="w-full h-8 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 text-[10px] font-mono uppercase tracking-wider"
+                      >
+                        Tap ({metronomeBpm} BPM)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Beat indicator (parallel with metronome, not in dropdown) */}
+              <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-secondary/40 border border-border">
+                {Array.from({ length: timeSigNum }).map((_, i) => {
+                  const active = metronomeOn && currentMetroBeat === i;
+                  const isDown = i === 0;
+                  const bg = active
+                    ? (isDown ? 'hsl(var(--beginner-green))' : 'hsl(var(--beginner-yellow))')
+                    : undefined;
+                  return (
+                    <div
+                      key={i}
+                      className={`w-2.5 h-2.5 rounded-full transition-all duration-75 ${active ? '' : isDown ? 'bg-muted-foreground/40' : 'bg-muted-foreground/20'}`}
+                      style={active ? { backgroundColor: bg, boxShadow: `0 0 6px ${bg}` } : undefined}
+                    />
+                  );
+                })}
+              </div>
+
               <div
                 className={`w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center select-none cursor-ns-resize ${bpmDragging ? 'ring-1 ring-primary' : ''}`}
                 style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
