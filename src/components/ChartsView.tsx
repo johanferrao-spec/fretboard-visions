@@ -275,10 +275,10 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
       {/* Body: vertical toolbar + slot grid */}
       <div className="flex-1 overflow-hidden flex">
         {/* Vertical toolbar */}
-        <div className="w-12 shrink-0 border-r border-border bg-card flex flex-col items-center gap-2 py-2">
+        <div className="w-20 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-1.5 overflow-y-auto">
           <button
             onClick={() => { setSectionMode(m => !m); setSectionStartIdx(null); }}
-            className={`w-9 h-9 rounded flex items-center justify-center border transition-colors ${
+            className={`h-9 rounded flex items-center justify-center gap-1 border transition-colors ${
               sectionMode
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-background text-foreground border-border hover:bg-muted'
@@ -287,8 +287,36 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
               ? (sectionStartIdx === null ? 'Click first slot of section' : 'Click last slot of section')
               : 'Group into section'}
           >
-            {sectionMode && sectionStartIdx !== null ? <Check size={16} /> : <Group size={16} />}
+            {sectionMode && sectionStartIdx !== null ? <Check size={14} /> : <Group size={14} />}
           </button>
+
+          {/* Diatonic chord palette */}
+          {diatonicChords.length > 0 && (
+            <div className="flex flex-col gap-1 mt-1 border-t border-border pt-2">
+              <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Diatonic</div>
+              {diatonicChords.slice(0, 7).map((dc, i) => {
+                const chordType = i === 4 ? 'Dominant 7' : dc.type;
+                const color = getChordColor({ root: dc.root, chordType });
+                return (
+                  <button
+                    key={i}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/diatonic-degree', JSON.stringify({ degree: i }));
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
+                    className="rounded px-1 py-1 flex flex-col items-center leading-tight cursor-grab active:cursor-grabbing hover:brightness-110 transition"
+                    style={{ background: `hsl(${color})`, color: '#000' }}
+                    title={`${dc.roman} — ${dc.symbol} (drag into a slot)`}
+                  >
+                    <span className="text-[9px] font-mono font-bold opacity-80">{dc.roman}</span>
+                    <span className="text-[11px] font-mono font-bold">{dc.symbol}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
 
           {sections.length > 0 && (
             <div className="w-full flex flex-col items-center gap-1 mt-1 border-t border-border pt-2">
