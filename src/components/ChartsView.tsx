@@ -81,7 +81,7 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
-export default function ChartsView({ diatonicChords, getChordColor }: ChartsViewProps) {
+export default function ChartsView({ diatonicChords, getChordColor, onToggleCharts }: ChartsViewProps) {
   const [slots, setSlots] = useState<ChartSlot[]>(() => makeSlots(DEFAULT_SLOT_COUNT));
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
