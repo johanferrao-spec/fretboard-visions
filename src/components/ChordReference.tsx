@@ -59,13 +59,14 @@ function ModeDiagram({ mode }: { mode: string }) {
   const skeleton = MODE_SKELETON[mode];
   const defining = new Set(MODE_DEFINING[mode]);
   const tuning = [0, 5, 10, 15, 19, 24]; // low E to high e semitones
-  const root = 5; // A
+  const root = 5; // arbitrary anchor — no key shown
   const startFret = 4;
   const frets = 5;
   const modeSet = new Set(intervals);
-  const cellW = 20, cellH = 14, padL = 18, padT = 8;
-  const width = padL + cellW * frets + 8;
-  const height = padT + cellH * 6 + 8;
+  const cellW = 24, cellH = 16, padL = 6, padT = 6, padR = 6, padB = 6;
+  const width = padL + cellW * frets + padR;
+  const height = padT + cellH * 6 + padB;
+  const DEFAULT_MARKER = '35, 85%, 55%'; // pentatonic default (amber/orange)
 
   const markers: JSX.Element[] = [];
   for (let s = 0; s < 6; s++) {
@@ -73,43 +74,34 @@ function ModeDiagram({ mode }: { mode: string }) {
       const absFret = startFret + f;
       const interval = ((tuning[s] + absFret) - root + 120) % 12;
       if (!modeSet.has(interval)) continue;
-      const displayString = 5 - s; // top row = high e
+      const displayString = 5 - s;
       const cx = padL + f * cellW + cellW / 2;
       const cy = padT + displayString * cellH + cellH / 2;
       const isRoot = interval === 0;
-      const isDef = defining.has(interval);
       const inSkel = skeleton.has(interval);
-      const color = SCALE_DEGREE_COLORS[INTERVAL_DEGREE_IDX[interval]];
-      let fill = 'hsl(var(--muted))';
-      let stroke = 'hsl(var(--border))';
-      let textColor = 'hsl(var(--muted-foreground))';
-      if (isRoot) { fill = `hsl(${SCALE_DEGREE_COLORS[0]})`; textColor = 'hsl(var(--background))'; stroke = 'transparent'; }
-      else if (isDef) { fill = `hsl(${color})`; textColor = 'hsl(var(--background))'; stroke = 'transparent'; }
-      else if (inSkel) { fill = 'hsl(var(--foreground) / 0.15)'; stroke = 'hsl(var(--foreground) / 0.4)'; textColor = 'hsl(var(--foreground))'; }
-      else { fill = `hsl(${color} / 0.2)`; stroke = `hsl(${color} / 0.5)`; textColor = `hsl(${color})`; }
+      const isDef = defining.has(interval);
+      let fill: string;
+      if (isRoot) fill = `hsl(${SCALE_DEGREE_COLORS[0]})`;
+      else if (inSkel) fill = `hsl(${DEFAULT_MARKER})`;
+      else if (isDef) fill = `hsl(${SCALE_DEGREE_COLORS[INTERVAL_DEGREE_IDX[interval]]})`;
+      else fill = `hsl(${DEFAULT_MARKER})`;
       markers.push(
-        <g key={`${s}-${f}`}>
-          <circle cx={cx} cy={cy} r={6} fill={fill} stroke={stroke} strokeWidth={1} />
-          <text x={cx} y={cy + 2.5} textAnchor="middle" fontSize={6.5} fontFamily="monospace" fontWeight="bold" fill={textColor}>
-            {INTERVAL_LABEL[interval]}
-          </text>
-        </g>
+        <circle key={`${s}-${f}`} cx={cx} cy={cy} r={5.5} fill={fill} />
       );
     }
   }
   const strings: JSX.Element[] = [];
   for (let s = 0; s < 6; s++) {
     const y = padT + s * cellH + cellH / 2;
-    strings.push(<line key={`s${s}`} x1={padL} y1={y} x2={padL + cellW * frets} y2={y} stroke="hsl(var(--border))" strokeWidth={0.5} />);
+    strings.push(<line key={`s${s}`} x1={padL} y1={y} x2={padL + cellW * frets} y2={y} stroke="hsl(var(--fretboard-string))" strokeWidth={0.6} opacity={0.75} />);
   }
   const fretLines: JSX.Element[] = [];
   for (let f = 0; f <= frets; f++) {
     const x = padL + f * cellW;
-    fretLines.push(<line key={`f${f}`} x1={x} y1={padT + cellH / 2} x2={x} y2={padT + cellH * 5 + cellH / 2} stroke="hsl(var(--border))" strokeWidth={0.5} />);
-    fretLines.push(<text key={`ft${f}`} x={x + cellW / 2} y={padT + cellH * 6 + 4} textAnchor="middle" fontSize={6} fontFamily="monospace" fill="hsl(var(--muted-foreground))">{f === frets ? '' : startFret + f}</text>);
+    fretLines.push(<line key={`f${f}`} x1={x} y1={padT + cellH / 2} x2={x} y2={padT + cellH * 5 + cellH / 2} stroke="hsl(var(--fretboard-fret))" strokeWidth={1} />);
   }
   return (
-    <svg width={width} height={height} className="block">
+    <svg width={width} height={height} className="block rounded" style={{ background: 'hsl(var(--fretboard-wood))' }}>
       {fretLines}
       {strings}
       {markers}
@@ -2079,7 +2071,7 @@ function ScaleViewPanel({
                         </span>
                         <span className="text-[10px] font-mono text-foreground/90">{MODE_ACCIDENTALS[d.mode]}</span>
                       </div>
-                      <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">A {d.mode} — first position</div>
+                      
                       <ModeDiagram mode={d.mode} />
                     </div>
                   </div>
