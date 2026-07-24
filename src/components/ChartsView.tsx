@@ -1041,7 +1041,6 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                       : inDragSel
                         ? 'inset 0 0 0 2px hsl(var(--primary))'
                         : undefined,
-                    borderTop: section ? `3px solid hsl(${section.color})` : undefined,
                   }}
                   className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
                     sectionMode ? 'cursor-crosshair select-none ' : slot.chord ? 'cursor-pointer ' : ''
