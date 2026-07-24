@@ -12,7 +12,7 @@ import {
   analyzeProgression, identifyArpeggioFromNotes,
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
   getDiatonicChords, generate7thInversions, generateDrop3Inversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
-  STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS, MAJOR_MODE_NAMES, MINOR_MODE_NAMES, SCALE_DESCRIPTIONS,
+  STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS, MAJOR_MODE_NAMES, MINOR_MODE_NAMES, SCALE_DESCRIPTIONS,
   generateVoiceLeadingVoicings,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
   type ArpeggioPosition, type StringGroup, type InversionVoicing,
@@ -114,6 +114,54 @@ function ModeDiagram({ mode }: { mode: string }) {
       </svg>
       <div className="text-[9px] font-mono text-muted-foreground">{pentLabel}</div>
     </div>
+  );
+}
+
+// Vertical nut diagram used inside Drop 2 / Drop 3 string-group buttons.
+// Shows all 6 strings (E A D G B e) with a box enclosing the active strings;
+// disabled/muted strings are greyed out.
+function NutDiagram({ active, disabled }: { active: number[]; disabled: number[] }) {
+  const labels = ['E', 'A', 'D', 'G', 'B', 'e'];
+  const w = 108, h = 46;
+  const padX = 8, padTop = 12, padBot = 8;
+  const step = (w - padX * 2) / 5;
+  const nutY = padTop;
+  const stringBot = h - padBot;
+  const activeSet = new Set(active);
+  const disabledSet = new Set(disabled);
+  const minA = Math.min(...active);
+  const maxA = Math.max(...active);
+  const boxX = padX + minA * step - step * 0.35;
+  const boxW = (maxA - minA) * step + step * 0.7;
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block">
+      {/* box enclosing active strings */}
+      <rect
+        x={boxX} y={nutY - 5} width={boxW} height={stringBot - nutY + 10}
+        rx={4} ry={4}
+        fill="hsl(var(--accent) / 0.18)"
+        stroke="hsl(var(--accent))"
+        strokeWidth={1.25}
+      />
+      {/* nut bar */}
+      <rect x={padX - 4} y={nutY} width={w - (padX - 4) * 2} height={3} fill="hsl(var(--fretboard-fret))" />
+      {labels.map((lb, i) => {
+        const x = padX + i * step;
+        const isActive = activeSet.has(i);
+        const isDisabled = disabledSet.has(i);
+        const stroke = isActive ? 'hsl(var(--fretboard-string))' : 'hsl(var(--fretboard-string) / 0.25)';
+        const textFill = isActive ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground) / 0.5)';
+        return (
+          <g key={i}>
+            <text x={x} y={nutY - 3} textAnchor="middle" fontSize={8} fontFamily="monospace" fontWeight={700} fill={textFill}>{lb}</text>
+            <line x1={x} y1={nutY + 3} x2={x} y2={stringBot} stroke={stroke} strokeWidth={isActive ? 1.4 : 1} strokeLinecap="round" />
+            {isDisabled && activeSet.size > 0 && i > minA && i < maxA && (
+              <text x={x} y={stringBot - 2} textAnchor="middle" fontSize={9} fontWeight={700} fill="hsl(0 70% 55%)">✕</text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -1838,29 +1886,30 @@ function ScaleViewPanel({
         {/* Right: drop mode content panel */}
         {dropMode && (
           <div className="flex gap-2 flex-1 min-w-0">
-            {/* Description + string groups */}
-            <div className="w-32 shrink-0 space-y-2">
-              <textarea
-                value={dropDescriptions[dropMode] || ''}
-                onChange={(e) => handleDropDescChange(dropMode, e.target.value)}
-                placeholder={`Describe ${dropMode === 'drop2' ? 'Drop 2' : 'Drop 3'} voicings...`}
-                className="w-full h-20 rounded-lg border border-border bg-muted/40 text-[10px] font-mono text-foreground p-2 resize-none placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              <div className="space-y-1">
-                {(dropMode === 'drop3' ? (['lower', 'mid'] as StringGroup[]) : (['upper', 'mid', 'lower'] as StringGroup[])).map(sg => (
+            {/* String group selectors with nut diagrams */}
+            <div className="w-32 shrink-0 space-y-1.5">
+              {(dropMode === 'drop3' ? (['lower', 'mid'] as StringGroup[]) : (['upper', 'mid', 'lower'] as StringGroup[])).map(sg => {
+                const cfg = dropMode === 'drop3'
+                  ? DROP3_STRING_GROUP_CONFIG[sg as 'lower' | 'mid']
+                  : STRING_GROUP_CONFIG[sg];
+                const isSel = inversionStringGroup === sg;
+                return (
                   <button
                     key={sg}
-                    onClick={() => setInversionStringGroup(inversionStringGroup === sg ? null : sg)}
-                    className="w-full px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border"
+                    onClick={() => setInversionStringGroup(isSel ? null : sg)}
+                    title={STRING_GROUP_CONFIG[sg].label}
+                    className="w-full p-1.5 rounded-lg transition-all border flex items-center justify-center"
                     style={{
-                      backgroundColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--secondary))',
-                      borderColor: inversionStringGroup === sg ? 'hsl(var(--accent))' : 'hsl(var(--border))',
-                      color: inversionStringGroup === sg ? 'hsl(var(--accent-foreground))' : 'hsl(var(--secondary-foreground))',
+                      backgroundColor: isSel ? 'hsl(var(--accent) / 0.25)' : 'hsl(var(--secondary))',
+                      borderColor: isSel ? 'hsl(var(--accent))' : 'hsl(var(--border))',
                     }}
-                  >{STRING_GROUP_CONFIG[sg].label}</button>
-                ))}
-              </div>
+                  >
+                    <NutDiagram active={cfg.strings} disabled={cfg.disabled} />
+                  </button>
+                );
+              })}
             </div>
+
 
             {/* Voicings panel */}
             {inversionStringGroup && (
