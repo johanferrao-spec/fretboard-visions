@@ -96,9 +96,17 @@ export default function ChartsView({ diatonicChords, getChordColor, onToggleChar
   const [arrDragOverIdx, setArrDragOverIdx] = useState<number | null>(null);
   const [editorSlotId, setEditorSlotId] = useState<string | null>(null);
   const [editorPos, setEditorPos] = useState<{ top: number; left: number } | null>(null);
+  // Chart metadata
+  const [title, setTitle] = useState('Untitled');
+  const [composer, setComposer] = useState('');
+  const [tempo, setTempo] = useState(120);
+  const [timeSig, setTimeSig] = useState('4/4');
+  const [feel, setFeel] = useState('Straight');
   const gridRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const presetRef = useRef<HTMLDivElement | null>(null);
+
+
 
 
   const setSlotChord = useCallback((slotId: string, chord: ChartChord | undefined) => {
