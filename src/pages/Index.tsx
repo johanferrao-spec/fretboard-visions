@@ -11,6 +11,7 @@ import NoteInfoPanel from '@/components/NoteInfoPanel';
 import ChordReference from '@/components/ChordReference';
 import SongTimeline from '@/components/SongTimeline';
 import BackingTrackView from '@/components/BackingTrack/BackingTrackView';
+import ChromaticTuner from '@/components/ChromaticTuner';
 import InstrumentSamplers from '@/components/BackingTrack/InstrumentSamplers';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
 import { ensureToneAudioContext } from '@/hooks/engine/audioContext';
