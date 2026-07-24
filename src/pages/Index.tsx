@@ -39,8 +39,22 @@ const Index = () => {
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomePulse, setMetronomePulse] = useState(0);
   const [metronomeFlash, setMetronomeFlash] = useState<'accent' | 'beat' | null>(null);
-  const [timeSigNum, setTimeSigNum] = useState(4);
+  const [timeSignature, setTimeSignature] = useState('4/4');
   const [subdivision, setSubdivision] = useState<1 | 2 | 3 | 4>(1);
+  const timeSignatures = useMemo(() => [
+    { sig: '2/4', beats: 2, subdiv: 1 },
+    { sig: '3/4', beats: 3, subdiv: 1 },
+    { sig: '4/4', beats: 4, subdiv: 1 },
+    { sig: '5/4', beats: 5, subdiv: 1 },
+    { sig: '6/8', beats: 2, subdiv: 3 },
+    { sig: '7/8', beats: 7, subdiv: 1 },
+    { sig: '12/8', beats: 4, subdiv: 3 },
+  ], []);
+  const { beats: timeSigBeats, subdiv: timeSigSubdiv } = useMemo(
+    () => timeSignatures.find(t => t.sig === timeSignature) || timeSignatures[2],
+    [timeSignature, timeSignatures],
+  );
+  const effectiveSubdivision = timeSignature.endsWith('/8') ? timeSigSubdiv : subdivision;
   const [currentMetroBeat, setCurrentMetroBeat] = useState(-1);
   const tapTimesRef = useRef<number[]>([]);
   const metronomeFlashTimerRef = useRef<number | null>(null);
@@ -133,16 +147,16 @@ const Index = () => {
   // Metronome — fully standalone (independent of any timeline / playback)
   const { primeAudio: primeMetronomeAudio } = useMetronome({
     enabled: metronomeOn,
-    bpm: metronomeBpm * subdivision,
-    beatsPerBar: timeSigNum * subdivision,
+    bpm: metronomeBpm * effectiveSubdivision,
+    beatsPerBar: timeSigBeats * effectiveSubdivision,
     onTick: (i) => {
       setMetronomePulse(i + 1);
-      const isMainBeat = i % subdivision === 0;
+      const isMainBeat = i % effectiveSubdivision === 0;
       if (isMainBeat) {
-        const beatIdx = Math.floor(i / subdivision) % timeSigNum;
+        const beatIdx = Math.floor(i / effectiveSubdivision) % timeSigBeats;
         setCurrentMetroBeat(beatIdx);
       }
-      const isDownbeat = i % (timeSigNum * subdivision) === 0;
+      const isDownbeat = i % (timeSigBeats * effectiveSubdivision) === 0;
       const kind: 'accent' | 'beat' = isDownbeat ? 'accent' : 'beat';
       setMetronomeFlash(kind);
       if (metronomeFlashTimerRef.current !== null) {
@@ -444,13 +458,13 @@ const Index = () => {
                     <div>
                       <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Time signature</div>
                       <div className="flex flex-wrap gap-1">
-                        {[2, 3, 4, 5, 6, 7].map(n => (
+                        {timeSignatures.map(t => (
                           <button
-                            key={n}
-                            onClick={() => setTimeSigNum(n)}
-                            className={`w-7 h-7 rounded text-[10px] font-mono ${timeSigNum === n ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                            key={t.sig}
+                            onClick={() => setTimeSignature(t.sig)}
+                            className={`w-9 h-7 rounded text-[10px] font-mono ${timeSignature === t.sig ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
                           >
-                            {n}/4
+                            {t.sig}
                           </button>
                         ))}
                       </div>
@@ -462,7 +476,8 @@ const Index = () => {
                           <button
                             key={v}
                             onClick={() => setSubdivision(v)}
-                            className={`flex-1 h-7 rounded text-[10px] font-mono ${subdivision === v ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                            disabled={timeSignature.endsWith('/8')}
+                            className={`flex-1 h-7 rounded text-[10px] font-mono ${timeSignature.endsWith('/8') ? 'opacity-40 cursor-not-allowed' : ''} ${subdivision === v ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
                             title={v === 1 ? 'Quarter notes' : v === 2 ? 'Eighth notes' : v === 3 ? 'Triplets' : 'Sixteenth notes'}
                           >
                             {label}
@@ -485,7 +500,7 @@ const Index = () => {
 
               {/* Beat indicator (parallel with metronome, not in dropdown) */}
               <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-secondary/40 border border-border">
-                {Array.from({ length: timeSigNum }).map((_, i) => {
+                {Array.from({ length: timeSigBeats }).map((_, i) => {
                   const active = metronomeOn && currentMetroBeat === i;
                   const isDown = i === 0;
                   const bg = active
