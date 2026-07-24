@@ -1082,21 +1082,42 @@ export default function Fretboard({
                   )}
                 </button>
                 <button
-                  onClick={(e) => {
+                  data-power-degree={posKey}
+                  onPointerDown={(e) => {
                     e.stopPropagation();
+                    e.preventDefault();
+                    const shouldHide = !isHidden;
                     setHiddenDegrees(prev => {
                       const next = new Set(prev);
-                      if (next.has(posKey)) next.delete(posKey);
-                      else next.add(posKey);
+                      if (shouldHide) next.add(posKey); else next.delete(posKey);
                       return next;
                     });
+                    const handleMove = (ev: PointerEvent) => {
+                      const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
+                      const btn = el?.closest('[data-power-degree]') as HTMLElement | null;
+                      const key = btn?.dataset.powerDegree;
+                      if (!key) return;
+                      setHiddenDegrees(prev => {
+                        if (shouldHide ? prev.has(key) : !prev.has(key)) return prev;
+                        const next = new Set(prev);
+                        if (shouldHide) next.add(key); else next.delete(key);
+                        return next;
+                      });
+                    };
+                    const handleUp = () => {
+                      window.removeEventListener('pointermove', handleMove);
+                      window.removeEventListener('pointerup', handleUp);
+                    };
+                    window.addEventListener('pointermove', handleMove);
+                    window.addEventListener('pointerup', handleUp);
                   }}
                   className={`transition-colors ${isHidden ? 'text-destructive' : 'text-muted-foreground/50 hover:text-foreground'}`}
-                  title={isHidden ? `Show ${d.label} on fretboard` : `Hide ${d.label} from fretboard`}
+                  title={isHidden ? `Show ${d.label} (drag to toggle multiple)` : `Hide ${d.label} (drag to toggle multiple)`}
                   aria-label={isHidden ? `Show ${d.label}` : `Hide ${d.label}`}
                 >
                   <Power size={8} strokeWidth={2.5} />
                 </button>
+
               </div>
             );
           })}
