@@ -395,145 +395,136 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
   // Resize by growing/shrinking from a specific edge.
   // Behaviour:
-  //  • Within the slot's own bar, we grow/shrink the slot itself (consuming
-  //    adjacent EMPTY neighbors when growing).
-  //  • Past the bar boundary, chords are replicated across subsequent bar-aligned
-  //    full-bar cells so each bar remains its own visually separate cell.
-  //  • Shrinking removes those replicated copies.
-  // `targetBars` is the total desired chain length in 1/8 units.
+  //  • `targetBars` is the total desired CHAIN length in 1/8-bar units.
+  //  • The anchor slot grows/shrinks within its own bar first.
+  //  • Any additional units past the anchor's bar spill into subsequent (or
+  //    preceding) bars as replicated chord cells — one cell per bar so each
+  //    bar stays visually separate. The last replica may be a partial-bar
+  //    (1/8-step) so chains can be any 1/8-unit length across the row.
   const resizeSlotEdge = useCallback((slotId: string, targetBars: number, edge: 'right' | 'left') => {
     setSlots(prev => {
       const idx = prev.findIndex(sl => sl.id === slotId);
       if (idx < 0) return prev;
       const current = prev[idx];
-      const desired = Math.max(1, targetBars);
       const chord = current.chord;
+      const desired = Math.max(1, targetBars);
 
-      // Absolute unit position of this slot in the flattened grid.
-      let before = 0;
-      for (let i = 0; i < idx; i++) before += prev[i].bars;
-      const offsetInBar = before % UNITS_PER_BAR;
+      // Absolute unit position of the anchor slot.
+      let slotStartUnit = 0;
+      for (let i = 0; i < idx; i++) slotStartUnit += prev[i].bars;
+      const slotEndUnit = slotStartUnit + current.bars;
+      const offsetInBar = slotStartUnit % UNITS_PER_BAR;
+      const anchorBarStart = slotStartUnit - offsetInBar;
+      const anchorBarEnd = anchorBarStart + UNITS_PER_BAR;
 
-      let next = prev.slice();
+      // Row this chain lives in.
+      const rowStart = Math.floor(slotStartUnit / COLS) * COLS;
+      const rowEnd = rowStart + COLS;
 
       if (edge === 'right') {
-        const maxOwnBars = UNITS_PER_BAR - offsetInBar;
-        const ownDesired = Math.min(desired, maxOwnBars);
-        const extraFullBars = chord
-          ? Math.max(0, Math.round((desired - maxOwnBars) / UNITS_PER_BAR))
-          : 0;
+        // Region = [anchor slot .. end of row]
+        const maxOwnBars = anchorBarEnd - slotStartUnit; // extend anchor to its bar end
+        const clampedDesired = Math.min(desired, rowEnd - slotStartUnit);
+        const ownDesired = Math.min(clampedDesired, maxOwnBars);
+        const extraUnits = chord ? Math.max(0, clampedDesired - maxOwnBars) : 0;
 
-        // 1) Resize the slot itself within its own bar.
-        if (ownDesired !== current.bars) {
-          if (ownDesired > current.bars) {
-            let need = ownDesired - current.bars;
-            let cursor = idx + 1;
-            while (need > 0 && cursor < next.length && !next[cursor].chord) {
-              // Stop at the current-bar boundary — don't consume into next bar here.
-              let cs = 0; for (let i = 0; i < cursor; i++) cs += next[i].bars;
-              if (cs % UNITS_PER_BAR === 0 && cs !== before) break;
-              const nb = next[cursor];
-              if (nb.bars <= need) { need -= nb.bars; next.splice(cursor, 1); }
-              else { next[cursor] = { ...nb, bars: nb.bars - need }; need = 0; }
-            }
-            next[idx] = { ...current, bars: ownDesired - need };
+        // Collect region slots (idx .. endIdx) totalling `rowEnd - slotStartUnit`
+        // units. Because no slot crosses a bar (or therefore a row) boundary,
+        // the region is a clean, whole set of slots.
+        let endIdx = idx;
+        let acc = 0;
+        for (let i = idx; i < prev.length; i++) {
+          acc += prev[i].bars;
+          endIdx = i;
+          if (acc >= rowEnd - slotStartUnit) break;
+        }
+
+        const region: ChartSlot[] = [];
+        region.push({ ...current, bars: ownDesired });
+        let placed = ownDesired;
+
+        // Fill remainder of anchor's bar with empty if the anchor didn't reach it.
+        if (ownDesired < maxOwnBars) {
+          region.push({ id: uid('slot'), bars: maxOwnBars - ownDesired });
+          placed = maxOwnBars;
+        }
+
+        // Now `placed` is bar-aligned. Fill remaining bars in the row.
+        let remainingExtra = extraUnits;
+        const regionUnits = rowEnd - slotStartUnit;
+        while (placed < regionUnits) {
+          const barUnits = UNITS_PER_BAR;
+          if (remainingExtra >= barUnits) {
+            region.push({ id: uid('slot'), bars: barUnits, chord: { ...chord! } });
+            remainingExtra -= barUnits;
+          } else if (remainingExtra > 0) {
+            region.push({ id: uid('slot'), bars: remainingExtra, chord: { ...chord! } });
+            region.push({ id: uid('slot'), bars: barUnits - remainingExtra });
+            remainingExtra = 0;
           } else {
-            const freed = current.bars - ownDesired;
-            next[idx] = { ...current, bars: ownDesired };
-            if (next[idx + 1] && !next[idx + 1].chord) {
-              next[idx + 1] = { ...next[idx + 1], bars: next[idx + 1].bars + freed };
-            } else {
-              next.splice(idx + 1, 0, { id: uid('slot'), bars: freed });
-            }
+            region.push({ id: uid('slot'), bars: barUnits });
           }
+          placed += barUnits;
         }
 
-        // 2) Replicate chord into subsequent bar-aligned full-bar cells.
-        if (chord) {
-          const curIdx = next.findIndex(sl => sl.id === slotId);
-          let pos = 0; for (let i = 0; i <= curIdx; i++) pos += next[i].bars;
-          let cursor = curIdx + 1;
-          let placed = 0;
-          while (placed < extraFullBars && cursor < next.length) {
-            if (pos % UNITS_PER_BAR !== 0) break;
-            const nb = next[cursor];
-            if (nb.bars === UNITS_PER_BAR && (!nb.chord || chordsEqual(nb.chord, chord))) {
-              if (!chordsEqual(nb.chord, chord)) next[cursor] = { ...nb, chord: { ...chord } };
-              placed++; pos += nb.bars; cursor++;
-            } else break;
-          }
-          // Clear any further replicated copies beyond the desired chain.
-          while (cursor < next.length && pos % UNITS_PER_BAR === 0) {
-            const nb = next[cursor];
-            if (nb.bars === UNITS_PER_BAR && chordsEqual(nb.chord, chord)) {
-              next[cursor] = { ...nb, chord: undefined };
-              pos += nb.bars; cursor++;
-            } else break;
-          }
-        }
+        const next = prev.slice();
+        next.splice(idx, endIdx - idx + 1, ...region);
+        return next;
       } else {
-        // LEFT edge — symmetric. Chain grows to the LEFT of the anchor slot.
-        const maxOwnBars = current.bars + offsetInBar;
-        const ownDesired = Math.min(desired, maxOwnBars);
-        const extraFullBars = chord
-          ? Math.max(0, Math.round((desired - maxOwnBars) / UNITS_PER_BAR))
-          : 0;
+        // LEFT edge — region = [start of row .. anchor slot].
+        const maxOwnBars = slotEndUnit - anchorBarStart; // extend anchor to its bar start
+        const clampedDesired = Math.min(desired, slotEndUnit - rowStart);
+        const ownDesired = Math.min(clampedDesired, maxOwnBars);
+        const extraUnits = chord ? Math.max(0, clampedDesired - maxOwnBars) : 0;
 
-        let curIdxLocal = idx;
-        if (ownDesired !== current.bars) {
-          if (ownDesired > current.bars) {
-            let need = ownDesired - current.bars;
-            let cursor = curIdxLocal - 1;
-            while (need > 0 && cursor >= 0 && !next[cursor].chord) {
-              let cs = 0; for (let i = 0; i < cursor; i++) cs += next[i].bars;
-              const cend = cs + next[cursor].bars;
-              if (cend % UNITS_PER_BAR === 0 && cend !== before) break;
-              const nb = next[cursor];
-              if (nb.bars <= need) {
-                need -= nb.bars; next.splice(cursor, 1); curIdxLocal--; cursor--;
-              } else {
-                next[cursor] = { ...nb, bars: nb.bars - need }; need = 0;
-              }
-            }
-            next[curIdxLocal] = { ...current, bars: ownDesired - need };
+        // Collect region slots (startIdx .. idx) totalling `slotEndUnit - rowStart`.
+        let startIdx = idx;
+        let acc = current.bars;
+        for (let i = idx - 1; i >= 0; i--) {
+          acc += prev[i].bars;
+          startIdx = i;
+          if (acc >= slotEndUnit - rowStart) break;
+        }
+
+        const region: ChartSlot[] = [];
+        const barsBeforeAnchor = (anchorBarStart - rowStart) / UNITS_PER_BAR;
+
+        // Fill each full bar to the left of anchor's bar with empty, then
+        // overwrite from the RIGHT with chord replicas until extraUnits is spent.
+        const bars: ChartSlot[][] = [];
+        for (let b = 0; b < barsBeforeAnchor; b++) {
+          bars.push([{ id: uid('slot'), bars: UNITS_PER_BAR }]);
+        }
+        let toFill = extraUnits;
+        let bIdx = barsBeforeAnchor - 1;
+        while (toFill > 0 && bIdx >= 0) {
+          if (toFill >= UNITS_PER_BAR) {
+            bars[bIdx] = [{ id: uid('slot'), bars: UNITS_PER_BAR, chord: { ...chord! } }];
+            toFill -= UNITS_PER_BAR;
           } else {
-            const freed = current.bars - ownDesired;
-            next[curIdxLocal] = { ...current, bars: ownDesired };
-            if (curIdxLocal > 0 && !next[curIdxLocal - 1].chord) {
-              next[curIdxLocal - 1] = { ...next[curIdxLocal - 1], bars: next[curIdxLocal - 1].bars + freed };
-            } else {
-              next.splice(curIdxLocal, 0, { id: uid('slot'), bars: freed });
-              curIdxLocal++;
-            }
+            bars[bIdx] = [
+              { id: uid('slot'), bars: UNITS_PER_BAR - toFill },
+              { id: uid('slot'), bars: toFill, chord: { ...chord! } },
+            ];
+            toFill = 0;
           }
+          bIdx--;
         }
+        for (const b of bars) region.push(...b);
 
-        if (chord) {
-          const curIdx = next.findIndex(sl => sl.id === slotId);
-          let posStart = 0; for (let i = 0; i < curIdx; i++) posStart += next[i].bars;
-          let cursor = curIdx - 1;
-          let cursorEnd = posStart;
-          let placed = 0;
-          while (placed < extraFullBars && cursor >= 0) {
-            if (cursorEnd % UNITS_PER_BAR !== 0) break;
-            const nb = next[cursor];
-            if (nb.bars === UNITS_PER_BAR && (!nb.chord || chordsEqual(nb.chord, chord))) {
-              if (!chordsEqual(nb.chord, chord)) next[cursor] = { ...nb, chord: { ...chord } };
-              placed++; cursorEnd -= nb.bars; cursor--;
-            } else break;
-          }
-          while (cursor >= 0 && cursorEnd % UNITS_PER_BAR === 0) {
-            const nb = next[cursor];
-            if (nb.bars === UNITS_PER_BAR && chordsEqual(nb.chord, chord)) {
-              next[cursor] = { ...nb, chord: undefined };
-              cursorEnd -= nb.bars; cursor--;
-            } else break;
-          }
+        // Anchor's own bar: optional empty filler to the left of the anchor.
+        if (ownDesired < maxOwnBars) {
+          region.push({ id: uid('slot'), bars: maxOwnBars - ownDesired });
         }
+        region.push({ ...current, bars: ownDesired });
+
+        const next = prev.slice();
+        next.splice(startIdx, idx - startIdx + 1, ...region);
+        return next;
       }
-      return next;
     });
   }, []);
+
 
 
   const handleDrop = (slotId: string, e: React.DragEvent) => {
