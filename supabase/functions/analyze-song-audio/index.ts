@@ -76,14 +76,67 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: false, error: 'Could not read uploaded audio.' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-    const buf = new Uint8Array(await dl.data.arrayBuffer());
-    // base64-encode without blowing the stack on large files
-    let bin = '';
-    const CHUNK = 0x8000;
-    for (let i = 0; i < buf.length; i += CHUNK) {
-      bin += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + CHUNK)) as unknown as number[]);
+    const audioBlob = dl.data;
+    const numBytes = audioBlob.size;
+
+    // Upload to Gemini Files API (avoids holding a huge base64 string in memory).
+    const startRes = await fetch(
+      `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'X-Goog-Upload-Protocol': 'resumable',
+          'X-Goog-Upload-Command': 'start',
+          'X-Goog-Upload-Header-Content-Length': String(numBytes),
+          'X-Goog-Upload-Header-Content-Type': normMime,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ file: { display_name: audioPath.split('/').pop() ?? 'audio' } }),
+      },
+    );
+    if (!startRes.ok) {
+      const t = await startRes.text();
+      console.error('Gemini upload start failed:', startRes.status, t);
+      return new Response(JSON.stringify({ success: false, error: 'Failed to start audio upload.' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-    const base64Audio = btoa(bin);
+    const uploadUrl = startRes.headers.get('x-goog-upload-url');
+    if (!uploadUrl) {
+      return new Response(JSON.stringify({ success: false, error: 'No upload URL from Gemini.' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const finalizeRes = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Length': String(numBytes),
+        'X-Goog-Upload-Offset': '0',
+        'X-Goog-Upload-Command': 'upload, finalize',
+      },
+      body: audioBlob.stream(),
+    });
+    if (!finalizeRes.ok) {
+      const t = await finalizeRes.text();
+      console.error('Gemini upload finalize failed:', finalizeRes.status, t);
+      return new Response(JSON.stringify({ success: false, error: 'Failed to upload audio to Gemini.' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const fileInfo = await finalizeRes.json();
+    const fileUri: string | undefined = fileInfo?.file?.uri;
+    const fileName: string | undefined = fileInfo?.file?.name;
+    let fileState: string = fileInfo?.file?.state ?? 'ACTIVE';
+    if (!fileUri) {
+      return new Response(JSON.stringify({ success: false, error: 'Gemini file upload returned no URI.' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    // Poll for ACTIVE state (audio may need processing).
+    for (let i = 0; i < 20 && fileState === 'PROCESSING'; i++) {
+      await new Promise((r) => setTimeout(r, 1500));
+      const s = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GEMINI_API_KEY}`);
+      if (s.ok) {
+        const j = await s.json();
+        fileState = j?.state ?? fileState;
+      }
+    }
 
     const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
@@ -98,7 +151,7 @@ Deno.serve(async (req) => {
             {
               parts: [
                 { text: buildPrompt(detectedBpm) },
-                { inline_data: { mime_type: normMime, data: base64Audio } },
+                { file_data: { mime_type: normMime, file_uri: fileUri } },
               ],
             },
           ],
