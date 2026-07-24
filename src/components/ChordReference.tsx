@@ -1617,8 +1617,8 @@ function ScaleViewPanel({
                   minHeight: 40,
                 }}
               >
-                <span className="text-[14px] font-black">{chord.roman}</span>
-                <span className="text-[9px] font-mono opacity-80 truncate w-full text-center">
+                <span className="text-[16px] font-black">{chord.roman}</span>
+                <span className="text-[11px] font-mono opacity-80 truncate w-full text-center">
                   {threeNpsMode ? modeName : chord.label7}
                 </span>
               </button>
