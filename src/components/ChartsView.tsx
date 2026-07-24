@@ -1324,7 +1324,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                 key={seg.key}
                 className="pointer-events-none rounded-lg relative"
                 style={{
-                  gridRow: seg.row,
+                  gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: `3px solid hsl(${seg.color} / 0.85)`,
                   background: `hsl(${seg.color} / 0.08)`,
@@ -1334,7 +1334,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               >
                 {seg.showLabel && (
                   <span
-                    onDoubleClick={(e) => { e.stopPropagation(); renameSection(seg.key.split('-r')[0]); }}
+                    onDoubleClick={(e) => { e.stopPropagation(); renameSection(seg.key.split('-box')[0]); }}
                     className="pointer-events-auto cursor-text absolute -top-2.5 left-2 px-1.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-background rounded select-none"
                     style={{ color: `hsl(${seg.color})` }}
                     title="Double-click to rename"
