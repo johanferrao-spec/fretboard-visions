@@ -336,7 +336,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
   const beginEdit = useCallback((slot: ChartSlot) => {
     setEditingSlot(slot.id);
-    setEditValue(slot.chord ? formatChordLabel(slot.chord) : '');
+    setEditValue(slot.chord ? formatChordLabel(slot.chord, chartKey, keyMode) : '');
   }, []);
 
   const commitEdit = useCallback(async (slotId: string, raw: string) => {
@@ -1204,7 +1204,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                       : 'bg-muted/20 border border-dashed border-border/50 hover:border-primary/60 hover:bg-muted/30'
                   }`}
                   title={slot.chord
-                    ? `${formatChordLabel(slot.chord)} — click to edit extensions`
+                    ? `${formatChordLabel(slot.chord, chartKey, keyMode)} — click to edit extensions`
                     : 'Double-click to type a chord, or drop one here'}
                 >
                   {/* Section tint + framing */}
@@ -1274,7 +1274,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     />
                   ) : slot.chord ? (
                     <span className="text-[13px] font-mono font-bold pointer-events-none" style={{ color: '#000' }}>
-                      {formatChordLabel(slot.chord)}
+                      {formatChordLabel(slot.chord, chartKey, keyMode)}
                     </span>
                   ) : null}
 
@@ -1441,7 +1441,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             handleSelectChord={(ct) => {
               setSlotChord(editorSlot.id, { root: editorChord.root, chordType: ct });
             }}
-            getChordCellLabel={(ct) => formatChordLabel({ root: editorChord.root, chordType: ct })}
+            getChordCellLabel={(ct) => formatChordLabel({ root: editorChord.root, chordType: ct }, chartKey, keyMode)}
             draggable={false}
           />
         </div>
