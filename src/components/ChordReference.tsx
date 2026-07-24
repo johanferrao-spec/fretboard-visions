@@ -1909,16 +1909,27 @@ function ScaleViewPanel({
           </div>
         )}
 
-        {/* Default empty-space content: functional harmony description */}
+        {/* Default empty-space content: three-column help */}
         {!dropMode && !threeNpsMode && !voiceLeadingMode && (
-          <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex flex-col gap-3 min-w-0">
-            <div className="flex-1">
-              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">What is Functional Harmony?</div>
+          <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex gap-0 min-w-0">
+            <div className="flex-1 min-w-0 px-3 flex flex-col gap-1.5">
+              <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Functional Harmony</div>
               <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
-                Functional harmony organizes chords into roles based on how they function within a key. Each degree (I–VII) has a specific harmonic purpose—<span className="text-primary font-bold">tonic</span> chords provide resolution, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension.
+                Chords are organized by their role within a key. Each degree (I–VII) has a job—<span className="text-primary font-bold">tonic</span> chords resolve, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension back to the tonic.
               </p>
-              <p className="text-[11px] font-mono text-foreground/80 leading-relaxed mt-2">
-                Click any degree above to highlight its chord tones on the fretboard. Use Drop 2 / Drop 3 to explore jazz voicings, or 3-Notes-Per-String to see modal patterns.
+            </div>
+            <div className="w-px bg-border/60 self-stretch my-1" />
+            <div className="flex-1 min-w-0 px-3 flex flex-col gap-1.5">
+              <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Drop 2 & Drop 3</div>
+              <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
+                Jazz voicings built by dropping the second or third highest note of a close-position chord down an octave. Drop 2 spreads the chord across four adjacent strings; Drop 3 leaves a string gap for a wider, more open sound.
+              </p>
+            </div>
+            <div className="w-px bg-border/60 self-stretch my-1" />
+            <div className="flex-1 min-w-0 px-3 flex flex-col gap-1.5">
+              <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Modes</div>
+              <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
+                Modes are scales created by starting the major scale on a different degree. Each mode has its own tonal color—Dorian is jazzy and minor, Mixolydian is bluesy with a dominant feel, and Lydian sounds bright and floating.
               </p>
             </div>
           </div>
