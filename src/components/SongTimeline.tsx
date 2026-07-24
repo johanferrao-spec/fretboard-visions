@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight, RefreshCw, Sparkles, Loader2 } from 'lucide-react';
+import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight, Sparkles, Loader2 } from 'lucide-react';
 import type { TimelineChord, SnapValue, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
@@ -52,7 +52,6 @@ interface SongTimelineProps {
   backingTrackActive?: boolean;
   onOpenBackingTrack?: () => void;
   onCloseBackingTrack?: () => void;
-  onRegenerateBackingMidi?: () => void;
   onSaveBackingTrack?: (name: string) => void;
   onLoadBackingTrack?: (id: string) => void;
   onDeleteBackingTrack?: (id: string) => void;
@@ -70,7 +69,6 @@ export default function SongTimeline({
   volume, onVolumeChange, timelineKey, setTimelineKey, keyMode, setKeyMode,
   onSeek, onSetChordBass,
   backingTrackActive, onOpenBackingTrack, onCloseBackingTrack,
-  onRegenerateBackingMidi,
   onSaveBackingTrack, onLoadBackingTrack, onDeleteBackingTrack, savedBackingTracks = [],
   chartsActive, onToggleCharts,
 }: SongTimelineProps) {
