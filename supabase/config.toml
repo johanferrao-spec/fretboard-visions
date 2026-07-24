@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.parse-chord]
 verify_jwt = false
+
+[functions.read-chart]
+verify_jwt = false
