@@ -784,7 +784,8 @@ export default function Fretboard({
     // Position box: completely hide notes outside
     if (isOutsidePositionBox(stringIndex, fret)) return null;
 
-      return { backgroundColor: bg, opacity, ring: ring || isVoiceLeadingMelody, ringColor: isVoiceLeadingMelody ? melodyRingColor : ringColor, ringWidth: isVoiceLeadingMelody ? 4 : (ring ? 2 : 0), greyed };
+      const scaleAccidental: '' | '♯' | '♭' = displayMode === 'degrees' && (interval.startsWith('♭') || interval.startsWith('♯')) ? (interval[0] as '♯' | '♭') : '';
+      return { backgroundColor: bg, opacity, ring: ring || isVoiceLeadingMelody, ringColor: isVoiceLeadingMelody ? melodyRingColor : ringColor, ringWidth: isVoiceLeadingMelody ? 4 : (ring ? 2 : 0), greyed, accidental: scaleAccidental };
   }
 
   const handleNoteHover = (note: NoteName) => {
