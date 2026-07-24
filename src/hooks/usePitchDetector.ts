@@ -116,6 +116,13 @@ export function usePitchDetector() {
         await audioCtxRef.current.close().catch(() => {});
         audioCtxRef.current = null;
       }
+      // Safari: if the app previously set audioSession.type='playback' for the
+      // Tone engine, getUserMedia throws "AudioSession category is not
+      // compatible with audio capture". Switch to a capture-capable category
+      // before requesting the mic.
+      try {
+        if (navigator.audioSession) navigator.audioSession.type = 'play-and-record';
+      } catch { /* noop */ }
       const constraints: MediaStreamConstraints = {
         audio: deviceId
           ? { deviceId: { exact: deviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
