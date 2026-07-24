@@ -205,22 +205,23 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
     e.stopPropagation();
     const grid = gridRef.current;
     if (!grid) return;
-    // Compute bar width from the current grid: (grid width - gaps) / COLS.
+    // Compute one grid unit (1/8 bar) width from the current grid.
     const styles = window.getComputedStyle(grid);
     const gap = parseFloat(styles.columnGap || '0') || 0;
-    const barWidth = (grid.clientWidth - gap * (COLS - 1)) / COLS;
+    const unitWidth = (grid.clientWidth - gap * (COLS - 1)) / COLS;
     const startX = e.clientX;
     let lastBars = startBars;
 
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX;
-      const delta = Math.round(dx / barWidth);
+      const delta = Math.round(dx / unitWidth);
       const nextBars = Math.max(1, startBars + delta);
       if (nextBars !== lastBars) {
         lastBars = nextBars;
         resizeSlot(slotId, nextBars);
       }
     };
+
     const onUp = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
