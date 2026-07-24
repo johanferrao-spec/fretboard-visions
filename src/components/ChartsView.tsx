@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { X, Loader2, Group, Trash2, Check } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical } from 'lucide-react';
 
 import type { NoteName } from '@/lib/music';
 import { parseChordSymbol } from '@/lib/chordParser';
@@ -65,9 +65,19 @@ interface Section {
   color: string;    // hsl triple
 }
 
+interface ArrangementItem {
+  id: string;       // instance id
+  sectionId: string;
+}
+
 const SECTION_COLORS = [
   '210 80% 60%', '340 75% 60%', '45 90% 55%', '150 60% 50%',
   '280 60% 60%', '20 80% 55%', '190 70% 55%', '95 55% 50%',
+];
+
+const SECTION_PRESETS = [
+  'Intro', 'Verse', 'Chorus', 'Bridge', 'Middle 8',
+  'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
 export default function ChartsView({ diatonicChords, getChordColor }: ChartsViewProps) {
@@ -78,14 +88,16 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
   const [parsingSlot, setParsingSlot] = useState<string | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [sectionMode, setSectionMode] = useState(false);
-  const [sectionStartIdx, setSectionStartIdx] = useState<number | null>(null);
+  const [dragSel, setDragSel] = useState<{ start: number; end: number } | null>(null);
+  const [pendingRange, setPendingRange] = useState<{ startIdx: number; endIdx: number } | null>(null);
+  const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
+  const [arrangement, setArrangement] = useState<ArrangementItem[]>([]);
+  const [arrDragOverIdx, setArrDragOverIdx] = useState<number | null>(null);
   const [editorSlotId, setEditorSlotId] = useState<string | null>(null);
   const [editorPos, setEditorPos] = useState<{ top: number; left: number } | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
-
-
-
+  const presetRef = useRef<HTMLDivElement | null>(null);
 
 
   const setSlotChord = useCallback((slotId: string, chord: ChartChord | undefined) => {
@@ -103,11 +115,9 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
     setEditValue('');
     if (!text) return;
 
-    // Optimistic local parse for instant feedback.
     const local = parseChordSymbol(text);
     if (local) setSlotChord(slotId, { root: local.root, chordType: local.quality });
 
-    // AI resolution for anything ambiguous or verbose.
     setParsingSlot(slotId);
     try {
       const { data, error } = await supabase.functions.invoke('parse-chord', { body: { input: text } });
@@ -140,7 +150,6 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
       if (desired === current.bars) return prev;
 
       if (desired > current.bars) {
-        // Grow: consume following slots (each contributes its bars).
         let need = desired - current.bars;
         const next = prev.slice();
         let cursor = idx + 1;
@@ -150,8 +159,6 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
             need -= neighbor.bars;
             next.splice(cursor, 1);
           } else {
-            // Shouldn't happen since slots created by resize are 1 bar,
-            // but handle by shrinking the neighbor.
             next[cursor] = { ...neighbor, bars: neighbor.bars - need };
             need = 0;
           }
@@ -160,14 +167,12 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
         next[idx] = { ...current, bars: grown };
         return next;
       } else {
-        // Shrink: reclaim freed units as a single empty slot after.
         const freed = current.bars - desired;
         const next = prev.slice();
         next[idx] = { ...current, bars: desired };
         next.splice(idx + 1, 0, { id: uid('slot'), bars: freed });
         return next;
       }
-
     });
   }, []);
 
@@ -211,7 +216,6 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
     e.stopPropagation();
     const grid = gridRef.current;
     if (!grid) return;
-    // Compute one grid unit (1/8 bar) width from the current grid.
     const styles = window.getComputedStyle(grid);
     const gap = parseFloat(styles.columnGap || '0') || 0;
     const unitWidth = (grid.clientWidth - gap * (COLS - 1)) / COLS;
@@ -237,8 +241,6 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
   };
 
 
-
-
   // Cumulative unit offset (1/8 bar) at start of each slot.
   const startUnits: number[] = [];
   {
@@ -250,24 +252,70 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
   const sectionOfSlot = (idx: number): Section | undefined =>
     sections.find(sec => idx >= sec.startIdx && idx <= sec.endIdx);
 
-  const handleSlotClickForSection = (idx: number) => {
+  // Drag-to-select section range
+  const startSectionDrag = (idx: number, e: React.MouseEvent) => {
     if (!sectionMode) return;
-    if (sectionStartIdx === null) {
-      setSectionStartIdx(idx);
-      return;
-    }
-    const startIdx = Math.min(sectionStartIdx, idx);
-    const endIdx = Math.max(sectionStartIdx, idx);
-    const name = window.prompt('Section name', `Section ${String.fromCharCode(65 + sections.length)}`);
-    setSectionStartIdx(null);
-    setSectionMode(false);
-    if (!name) return;
-    // Remove any existing sections overlapping this range.
+    e.preventDefault();
+    setDragSel({ start: idx, end: idx });
+  };
+  const extendSectionDrag = (idx: number) => {
+    if (!sectionMode || !dragSel) return;
+    if (dragSel.end !== idx) setDragSel({ ...dragSel, end: idx });
+  };
+
+  useEffect(() => {
+    if (!sectionMode || !dragSel) return;
+    const onUp = (ev: MouseEvent) => {
+      const start = Math.min(dragSel.start, dragSel.end);
+      const end = Math.max(dragSel.start, dragSel.end);
+      setDragSel(null);
+      setPendingRange({ startIdx: start, endIdx: end });
+      // Position preset menu near cursor.
+      const left = Math.min(Math.max(8, ev.clientX), window.innerWidth - 220);
+      const top = Math.min(ev.clientY + 8, window.innerHeight - 320);
+      setPresetPos({ top, left });
+    };
+    window.addEventListener('mouseup', onUp);
+    return () => window.removeEventListener('mouseup', onUp);
+  }, [sectionMode, dragSel]);
+
+  const commitSection = (name: string) => {
+    if (!pendingRange) return;
+    const { startIdx, endIdx } = pendingRange;
     setSections(prev => [
       ...prev.filter(s => s.endIdx < startIdx || s.startIdx > endIdx),
-      { id: uid('sec'), name, startIdx, endIdx, color: SECTION_COLORS[sections.length % SECTION_COLORS.length] },
+      {
+        id: uid('sec'),
+        name,
+        startIdx,
+        endIdx,
+        color: SECTION_COLORS[prev.length % SECTION_COLORS.length],
+      },
     ]);
+    setPendingRange(null);
+    setPresetPos(null);
+    setSectionMode(false);
   };
+
+  const cancelPreset = () => {
+    setPendingRange(null);
+    setPresetPos(null);
+  };
+
+  // Close preset menu on outside click / Escape.
+  useEffect(() => {
+    if (!pendingRange) return;
+    const onDown = (ev: MouseEvent) => {
+      if (presetRef.current && !presetRef.current.contains(ev.target as Node)) cancelPreset();
+    };
+    const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') cancelPreset(); };
+    window.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousedown', onDown);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [pendingRange]);
 
   const renameSection = (id: string) => {
     const sec = sections.find(s => s.id === id);
@@ -275,6 +323,11 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
     const name = window.prompt('Rename section', sec.name);
     if (!name) return;
     setSections(prev => prev.map(s => s.id === id ? { ...s, name } : s));
+  };
+
+  const removeSection = (id: string) => {
+    setSections(prev => prev.filter(s => s.id !== id));
+    setArrangement(prev => prev.filter(a => a.sectionId !== id));
   };
 
   // Close editor on outside click / Escape.
@@ -299,7 +352,6 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
   const openChordEditor = (slot: ChartSlot, target: HTMLElement) => {
     if (!slot.chord) return;
     const rect = target.getBoundingClientRect();
-    // Prefer opening below, clamped to viewport.
     const width = 320;
     const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
     const top = Math.min(rect.bottom + 6, window.innerHeight - 300);
@@ -310,6 +362,35 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
   const editorSlot = editorSlotId ? slots.find(s => s.id === editorSlotId) : null;
   const editorChord = editorSlot?.chord ?? null;
   const totalBars = slots.reduce((n, s) => n + s.bars, 0) / UNITS_PER_BAR;
+
+  // Arrangement drag/drop
+  const onArrDropFromToolbar = (e: React.DragEvent, insertAt: number) => {
+    e.preventDefault();
+    setArrDragOverIdx(null);
+    const sectionId = e.dataTransfer.getData('application/chart-section');
+    const moveId = e.dataTransfer.getData('application/chart-arrangement-item');
+    if (sectionId) {
+      const item: ArrangementItem = { id: uid('arr'), sectionId };
+      setArrangement(prev => {
+        const next = prev.slice();
+        next.splice(insertAt, 0, item);
+        return next;
+      });
+    } else if (moveId) {
+      setArrangement(prev => {
+        const fromIdx = prev.findIndex(a => a.id === moveId);
+        if (fromIdx < 0) return prev;
+        const next = prev.slice();
+        const [it] = next.splice(fromIdx, 1);
+        const adjusted = fromIdx < insertAt ? insertAt - 1 : insertAt;
+        next.splice(adjusted, 0, it);
+        return next;
+      });
+    }
+  };
+
+  const dragSelStart = dragSel ? Math.min(dragSel.start, dragSel.end) : -1;
+  const dragSelEnd = dragSel ? Math.max(dragSel.start, dragSel.end) : -1;
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
@@ -325,21 +406,19 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
       </div>
 
       {/* Body: vertical toolbar + slot grid */}
-      <div className="flex-1 overflow-hidden flex">
+      <div className="flex-1 overflow-hidden flex min-h-0">
         {/* Vertical toolbar */}
         <div className="w-28 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-2 overflow-y-auto">
           <button
-            onClick={() => { setSectionMode(m => !m); setSectionStartIdx(null); }}
+            onClick={() => { setSectionMode(m => !m); setDragSel(null); }}
             className={`h-9 rounded flex items-center justify-center gap-1.5 border transition-colors text-[10px] font-mono uppercase tracking-wider ${
               sectionMode
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-background text-foreground border-border hover:bg-muted'
             }`}
-            title={sectionMode
-              ? (sectionStartIdx === null ? 'Click first slot of section' : 'Click last slot of section')
-              : 'Group into section'}
+            title={sectionMode ? 'Drag across slots to group' : 'Group into section'}
           >
-            {sectionMode && sectionStartIdx !== null ? <Check size={13} /> : <Group size={13} />}
+            <Group size={13} />
             <span>Section</span>
           </button>
 
@@ -372,18 +451,28 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
 
           {sections.length > 0 && (
             <div className="w-full flex flex-col items-stretch gap-1 mt-1 border-t border-border pt-2">
+              <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Sections</div>
               {sections.map(sec => (
-                <div key={sec.id} className="flex items-center gap-1 w-full">
+                <div
+                  key={sec.id}
+                  className="flex items-center gap-1 w-full"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/chart-section', sec.id);
+                    e.dataTransfer.effectAllowed = 'copy';
+                  }}
+                  title="Drag to arrangement"
+                >
                   <button
                     onClick={() => renameSection(sec.id)}
-                    className="flex-1 text-[9px] font-mono font-bold uppercase truncate rounded px-1 py-0.5 text-left"
+                    className="flex-1 text-[9px] font-mono font-bold uppercase truncate rounded px-1 py-0.5 text-left cursor-grab active:cursor-grabbing flex items-center gap-1"
                     style={{ background: `hsl(${sec.color} / 0.25)`, color: `hsl(${sec.color})` }}
-                    title={`Rename "${sec.name}"`}
                   >
-                    {sec.name}
+                    <GripVertical size={9} className="opacity-60 shrink-0" />
+                    <span className="truncate">{sec.name}</span>
                   </button>
                   <button
-                    onClick={() => setSections(prev => prev.filter(s => s.id !== sec.id))}
+                    onClick={() => removeSection(sec.id)}
                     className="text-muted-foreground hover:text-destructive shrink-0"
                     title="Delete section"
                   >
@@ -411,7 +500,7 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
               const isParsing = parsingSlot === slot.id;
               const color = slot.chord ? getChordColor(slot.chord) : null;
               const section = sectionOfSlot(idx);
-              const isSectionPickStart = sectionMode && sectionStartIdx === idx;
+              const inDragSel = sectionMode && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
               const startUnit = startUnits[idx];
               const barLabel = formatBarNumber(startUnit);
               return (
@@ -421,8 +510,10 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
                   onDragLeave={() => setHoverSlot(prev => prev === slot.id ? null : prev)}
                   onDrop={(e) => handleDrop(slot.id, e)}
                   onDoubleClick={() => { if (!sectionMode) beginEdit(slot); }}
+                  onMouseDown={(e) => startSectionDrag(idx, e)}
+                  onMouseEnter={() => extendSectionDrag(idx)}
                   onClick={(e) => {
-                    if (sectionMode) { handleSlotClickForSection(idx); return; }
+                    if (sectionMode) return;
                     if (slot.chord && !isEditing) openChordEditor(slot, e.currentTarget as HTMLElement);
                   }}
                   style={{
@@ -430,13 +521,13 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
                     background: color ? `hsl(${color})` : undefined,
                     boxShadow: isHover
                       ? 'inset 0 0 0 2px hsl(var(--primary))'
-                      : isSectionPickStart
+                      : inDragSel
                         ? 'inset 0 0 0 2px hsl(var(--primary))'
                         : undefined,
                     borderTop: section ? `3px solid hsl(${section.color})` : undefined,
                   }}
                   className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
-                    sectionMode ? 'cursor-crosshair ' : slot.chord ? 'cursor-pointer ' : ''
+                    sectionMode ? 'cursor-crosshair select-none ' : slot.chord ? 'cursor-pointer ' : ''
                   }${
                     color
                       ? 'brightness-100 hover:brightness-110'
@@ -446,7 +537,6 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
                     ? `${formatChordLabel(slot.chord)} — click to edit extensions`
                     : 'Double-click to type a chord, or drop one here'}
                 >
-                  {/* Bar number (top-left) */}
                   <span
                     className="absolute top-0.5 left-1 text-[9px] font-mono font-bold pointer-events-none select-none"
                     style={{ color: color ? 'rgba(0,0,0,0.65)' : undefined }}
@@ -454,7 +544,6 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
                     {barLabel}
                   </span>
 
-                  {/* Section label on first slot of a section */}
                   {section && section.startIdx === idx && (
                     <span
                       className="absolute top-0.5 right-2 text-[8px] font-mono font-bold uppercase tracking-wider pointer-events-none"
@@ -497,7 +586,6 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
                     </button>
                   )}
 
-                  {/* Right-edge resize handle */}
                   <div
                     onMouseDown={(e) => startResize(slot.id, slot.bars, e)}
                     className="absolute top-0 right-0 h-full w-2 cursor-ew-resize hover:bg-primary/40 transition-colors"
@@ -510,7 +598,112 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
         </div>
       </div>
 
-      {/* Chord editor popover — Logic-style Quality + Extensions builder */}
+      {/* Arrangement strip */}
+      <div className="shrink-0 border-t border-border bg-card px-3 py-2 flex items-center gap-2 min-h-[64px]">
+        <span className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider shrink-0">
+          Arrangement
+        </span>
+        <div
+          className="flex-1 flex items-center gap-1 overflow-x-auto min-h-[44px] rounded border border-dashed border-border/60 px-2 py-1"
+          onDragOver={(e) => {
+            if (
+              e.dataTransfer.types.includes('application/chart-section') ||
+              e.dataTransfer.types.includes('application/chart-arrangement-item')
+            ) {
+              e.preventDefault();
+              if (arrDragOverIdx === null) setArrDragOverIdx(arrangement.length);
+            }
+          }}
+          onDrop={(e) => onArrDropFromToolbar(e, arrDragOverIdx ?? arrangement.length)}
+          onDragLeave={() => setArrDragOverIdx(null)}
+        >
+          {arrangement.length === 0 && (
+            <span className="text-[10px] font-mono text-muted-foreground/60 px-2">
+              Drag sections here to build the song arrangement
+            </span>
+          )}
+          {arrangement.map((item, i) => {
+            const sec = sections.find(s => s.id === item.sectionId);
+            if (!sec) return null;
+            const isOver = arrDragOverIdx === i;
+            return (
+              <div key={item.id} className="flex items-center">
+                <div
+                  className={`h-1 w-1 rounded-full ${isOver ? 'bg-primary' : 'bg-transparent'}`}
+                  onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
+                />
+                <div
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/chart-arrangement-item', item.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
+                  className="group flex items-center gap-1 rounded px-2 py-1 cursor-grab active:cursor-grabbing"
+                  style={{ background: `hsl(${sec.color} / 0.3)`, color: `hsl(${sec.color})` }}
+                  title={`${sec.name} — drag to reorder`}
+                >
+                  <GripVertical size={10} className="opacity-60" />
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider">{sec.name}</span>
+                  <button
+                    onClick={() => setArrangement(prev => prev.filter(a => a.id !== item.id))}
+                    className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
+                    title="Remove"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {arrangement.length > 0 && (
+            <div
+              className="flex-1 min-w-[24px] h-full"
+              onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(arrangement.length); }}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Section preset picker */}
+      {pendingRange && presetPos && (
+        <div
+          ref={presetRef}
+          className="fixed z-50 rounded-lg border border-border bg-card shadow-xl p-2 w-[200px]"
+          style={{ top: presetPos.top, left: presetPos.left }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-2 px-1">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              Save section
+            </span>
+            <button onClick={cancelPreset} className="text-muted-foreground hover:text-foreground" title="Cancel">
+              <X size={12} />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            {SECTION_PRESETS.map((label) => (
+              <button
+                key={label}
+                onClick={() => {
+                  if (label === 'Custom…') {
+                    const name = window.prompt('Section name', `Section ${String.fromCharCode(65 + sections.length)}`);
+                    if (name) commitSection(name);
+                    else cancelPreset();
+                  } else {
+                    commitSection(label);
+                  }
+                }}
+                className="text-[10px] font-mono font-bold uppercase tracking-wider rounded px-2 py-1.5 bg-background border border-border hover:bg-muted hover:border-primary transition-colors"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Chord editor popover */}
       {editorSlot && editorChord && editorPos && (
         <div
           ref={editorRef}
@@ -544,5 +737,3 @@ export default function ChartsView({ diatonicChords, getChordColor }: ChartsView
     </div>
   );
 }
-
-
