@@ -482,10 +482,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     if (degreeData) {
       try {
         const { degree } = JSON.parse(degreeData);
-        const dc = diatonicChords[degree];
+        const dc = useSevenths ? diatonicSevenths[degree] : diatonicChords[degree];
         if (dc) {
-          const chordType = degree === 4 ? 'Dominant 7' : dc.type;
-          setSlotChord(slotId, { root: dc.root, chordType });
+          setSlotChord(slotId, { root: dc.root, chordType: dc.type });
         }
         return;
       } catch { /* ignore */ }
