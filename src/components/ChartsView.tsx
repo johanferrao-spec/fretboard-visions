@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2 } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2, Play, Square } from 'lucide-react';
 
 import { buildChartPdf, downloadPdf, type ChartPdfData } from '@/lib/chartPdf';
 import ChartPreview from '@/components/ChartPreview';
@@ -52,6 +52,10 @@ interface ChartsViewProps {
   /** Called when the user confirms a full chart reset, so the parent can also
       clear the backing-track timeline (which sits above the Charts panel). */
   onResetAll?: () => void;
+  /** Backing-track transport state / controls, surfaced next to the chart title. */
+  isPlaying?: boolean;
+  onPlay?: () => void;
+  onStop?: () => void;
 }
 
 /** 1 grid column = 1/8 bar. 32 columns per row = 4 bars per row. */
@@ -258,7 +262,7 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
-export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArrangementChange, onResetAll }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArrangementChange, onResetAll, isPlaying, onPlay, onStop }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
     slots: ChartSlot[];
@@ -1796,6 +1800,20 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                 </span>
               )}
             </div>
+            {(onPlay || onStop) && (
+              <button
+                onClick={() => (isPlaying ? onStop?.() : onPlay?.())}
+                title={isPlaying ? 'Stop backing track' : 'Play backing track'}
+                className={`self-center flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                  isPlaying
+                    ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                    : 'bg-success text-success-foreground hover:bg-success/90'
+                }`}
+              >
+                {isPlaying ? <Square className="w-3.5 h-3.5" fill="currentColor" /> : <Play className="w-3.5 h-3.5" fill="currentColor" />}
+                {isPlaying ? 'Stop' : 'Play'}
+              </button>
+            )}
             <div className="ml-auto flex items-center gap-3 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
               <span><span className="text-foreground font-bold">{tempo}</span> BPM</span>
               <span><span className="text-foreground font-bold">{timeSig}</span></span>

@@ -988,6 +988,9 @@ const Index = () => {
               currentKey={timelineKey}
               keyMode={keyMode}
               onToggleCharts={() => setShowCharts(v => !v)}
+              isPlaying={timeline.isPlaying}
+              onPlay={handlePlay}
+              onStop={handleStop}
               onArrangementChange={({ chords, measures, bpm, sections }) => {
                 timeline.setChords(chords);
                 timeline.setMeasures(measures);
