@@ -109,9 +109,9 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
   if (data.composer) doc.text(data.composer, PW - M, M + 4, { align: 'right' });
 
   doc.setFontSize(8);
-  doc.setTextColor(90);
+  doc.setTextColor(90, 90, 90);
   doc.text(`${data.timeSig}  •  ♩= ${data.tempo}`, M, M + 17);
-  doc.setTextColor(0);
+  doc.setTextColor(0, 0, 0);
 
   // ---- Grid ----
   const bars = buildBars(data);
@@ -123,13 +123,13 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
 
   const drawBarLine = (px: number, thick = false) => {
     doc.setLineWidth(thick ? 1.6 : 0.8);
-    doc.setDrawColor(0);
+    doc.setDrawColor(0, 0, 0);
     doc.line(px, y, px, y + 34);
   };
 
   const drawRepeatDots = (px: number, side: 'open' | 'close') => {
     const dx = side === 'open' ? px + 5 : px - 5;
-    doc.setFillColor(0);
+    doc.setFillColor(0, 0, 0);
     doc.circle(dx, y + 12, 1.6, 'F');
     doc.circle(dx, y + 22, 1.6, 'F');
   };
@@ -147,13 +147,13 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
 
     // Section letter box above the bar.
     if (bar.sectionStart && bar.sectionLetter) {
-      doc.setFillColor(0);
+      doc.setFillColor(0, 0, 0);
       doc.rect(x, y - 15, 13, 13, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.setTextColor(255);
+      doc.setTextColor(255, 255, 255);
       doc.text(bar.sectionLetter, x + 6.5, y - 5.5, { align: 'center' });
-      doc.setTextColor(0);
+      doc.setTextColor(0, 0, 0);
     }
 
     // Bar lines
@@ -193,9 +193,9 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
     if (bar.sectionStart && bar.sectionName) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.setTextColor(40);
+      doc.setTextColor(40, 40, 40);
       doc.text(bar.sectionName, x + 3, y + 46);
-      doc.setTextColor(0);
+      doc.setTextColor(0, 0, 0);
     }
 
     col++;
@@ -227,13 +227,13 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
     const ay = Math.min(y + 30, doc.internal.pageSize.getHeight() - 60);
     data.arrangement.forEach(secId => {
       const letter = letterFor.get(secId) ?? '?';
-      doc.setFillColor(0);
+      doc.setFillColor(0, 0, 0);
       doc.rect(ax, ay, 13, 13, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.setTextColor(255);
+      doc.setTextColor(255, 255, 255);
       doc.text(letter, ax + 6.5, ay + 9.5, { align: 'center' });
-      doc.setTextColor(0);
+      doc.setTextColor(0, 0, 0);
       ax += 19;
       if (ax > PW - M - 20) { ax = M; }
     });
