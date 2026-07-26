@@ -126,8 +126,11 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
       if (!norm[i].section) norm[i] = { ...norm[i], section: norm[i - 1].section };
     }
     // Per contiguous section run: move ending bars after the plain bars and
-    // renumber the distinct ending groups sequentially (1, 2, 3).
+    // renumber the ending groups. Numbering continues across later repeats of
+    // the SAME section label, so a repeated A section whose tail differs gets
+    // the next ending number (1. then 2. then 3.).
     const out: C[] = [];
+    const endingCount = new Map<string, number>();
     for (let i = 0; i < norm.length; ) {
       const label = norm[i].section;
       let j = i;
@@ -137,8 +140,10 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
       const withEnd = run.filter(c => c.ending);
       const order = [...new Set(withEnd.map(c => c.ending!))].sort((a, b) => a - b);
       out.push(...plain);
-      order.forEach((e, k) => {
-        const n = Math.min(3, k + 1);
+      const key = label ?? '';
+      order.forEach(e => {
+        const n = Math.min(3, (endingCount.get(key) ?? 0) + 1);
+        endingCount.set(key, n);
         withEnd.filter(c => c.ending === e).forEach(c => out.push({ ...c, ending: n }));
       });
       i = j + 1;
