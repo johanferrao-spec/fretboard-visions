@@ -949,6 +949,36 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       if (hasVoltaRow[r]) { cursor += 1; rowHeights.push('2.5rem'); }
     }
   }
+  // Detect sections that are near-copies of an earlier section (e.g. a second
+  // A section whose only difference is the final chord) so they can be marked A′.
+  const sectionVariation = (() => {
+    const map = new Map<string, { ofName: string; diffSlotIds: Set<string> }>();
+    const chordsOf = (sec: Section) =>
+      slots.slice(sec.startIdx, sec.endIdx + 1).filter(s => s.chord);
+    for (let a = 1; a < sections.length; a++) {
+      const cur = chordsOf(sections[a]);
+      if (cur.length < 3) continue;
+      for (let b = 0; b < a; b++) {
+        const prev = chordsOf(sections[b]);
+        if (prev.length !== cur.length) continue;
+        const diff = new Set<string>();
+        cur.forEach((s, i) => {
+          const p = prev[i].chord!;
+          const c = s.chord!;
+          if (p.root !== c.root || p.chordType !== c.chordType || p.bass !== c.bass) diff.add(s.id);
+        });
+        if (diff.size > 0 && diff.size <= Math.max(1, Math.floor(cur.length * 0.25))) {
+          map.set(sections[a].id, { ofName: sections[b].name, diffSlotIds: diff });
+          break;
+        }
+      }
+    }
+    return map;
+  })();
+  const variantSlotIds = new Set<string>(
+    [...sectionVariation.values()].flatMap(v => [...v.diffSlotIds]),
+  );
+
   // Precompute section overlay segments: one single box per section (spanning all rows it touches).
   const sectionSegments = sections.flatMap(sec => {
     if (sec.startIdx >= slots.length || sec.endIdx >= slots.length) return [];
@@ -970,6 +1000,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       const rr = renderRowOfLogical[logicalRowOf(i)] + (slots[i].ending === 2 ? 1 : 0);
       if (rr > lastRenderRow) lastRenderRow = rr;
     }
+    const variation = sectionVariation.get(sec.id);
     return [{
       key: `${sec.id}-box`,
       rowStart: renderRowOfLogical[startRow],
@@ -978,9 +1009,11 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       colEnd,
       color: sec.color,
       name: sec.name,
+      variation,
       showLabel: true,
     }];
   });
+
 
   // Volta (1st / 2nd ending) enclosure boxes — nested inside the section box.
   const voltaSegments = (() => {
