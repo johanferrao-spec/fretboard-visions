@@ -31,26 +31,39 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const prompt = `You are reading a chord chart / lead sheet image. Extract the song metadata AND the chord progression in reading order (left-to-right, top-to-bottom).
+    const prompt = `You are reading a chord chart / lead sheet image (often iReal Pro style). Extract the song metadata AND the chord progression in reading order (left-to-right, top-to-bottom).
+
+CRITICAL NOTATION RULES (iReal Pro / jazz lead sheet conventions):
+- Accidentals are drawn as a SMALL superscript ♭ or ♯ right after the letter. NEVER drop them: "E♭" is E flat, NOT E. Read every letter carefully for an attached flat/sharp.
+- "%" or "𝄎" (simile mark) means REPEAT THE PREVIOUS BAR. Output it as { "repeat": true, "bars": 1 } instead of guessing a chord.
+- "-" after a letter (e.g. "F-7", "G-") means MINOR. "F-7" = F Minor 7, "G-" = G Minor.
+- "Δ" or "△" means MAJOR 7 (e.g. "E♭Δ" = E♭ Major 7, "E♭Δ9" = E♭ Major 9).
+- Subscript/superscript numbers belong to the chord: "E♭5" = E♭ Power (5), "F-7" = F Minor 7, "E♭Δ9" = E♭ Major 9.
+- "ø" = Half-Dim 7, "o" = Dim 7, "+" = Augmented.
+- A small chord symbol printed ABOVE a bar is an alternative voicing/name for that bar — ignore it, use the large symbol in the bar.
+- "xN" (e.g. "x3") next to a barline means the preceding group repeats N times: output { "times": N } on the LAST chord of that repeated group.
+- Text under a rehearsal letter box (e.g. "Intro", "Verse 1", "Bridge", "Chorus") is the section NAME. Use that descriptive name as the "section" value (e.g. "Intro", "Verse 1", "Bridge", "Chorus"), not just the letter.
 
 Metadata ("meta" object, omit any field you cannot see):
 - "title": the song title printed at the top
 - "composer": the composer / writer credit (usually top-right)
 - "timeSig": the time signature, e.g. "4/4", "3/4", "6/8"
-- "style": the feel / style marking, e.g. "Medium Swing", "Bossa Nova", "Ballad", "Latin", "Straight"
+- "style": the feel / style marking, e.g. "Medium Swing", "Bossa Nova", "Pop - Soul", "Ballad"
 - "tempo": printed tempo in BPM (number) if shown
 
-For each chord return:
-- "root": one of ${VALID_ROOTS.join(', ')} (use SHARP form only; convert Db->C#, Eb->D#, Gb->F#, Ab->G#, Bb->A#)
+For each bar return one object:
+- "repeat": true if the bar is a simile "%" repeat of the previous bar. When repeat is true, omit root/chordType.
+- "root": the letter WITH its accidental exactly as printed: one of C, C#, Db, D, D#, Eb, E, F, F#, Gb, G, G#, Ab, A, A#, Bb, B. Keep flats as flats (write "Eb", not "D#").
 - "chordType": exactly one of: ${VALID_CHORD_TYPES.join(' | ')}
-- "bass": OPTIONAL. For slash chords (e.g. "C/E", "G7/B", "F-7/Bb") give the bass note after the slash, in the same SHARP form. Omit for normal chords. Never treat "6/9" as a slash chord — that is the chord type 6add9.
-- "bars": duration in bars (number, use fractions like 0.5 if the chord occupies half a bar; default 1 if unclear)
-- "section": OPTIONAL short label for the song section this chord belongs to (e.g. "A", "B", "C", "Intro", "Verse", "Chorus", "Bridge", "Outro"). Lead sheets often mark rehearsal letters like [A], (A), or "A Section" / "B Section" at the start of a system — assign every subsequent chord to that section until the next marker appears. Omit the field entirely if the chart has no visible section markers.
-- "ending": OPTIONAL number 1, 2 or 3. Charts often show volta brackets marked "1.", "2." (and sometimes "3.") — a horizontal bracket above one or more bars. Chords under the "1." bracket get "ending": 1, under "2." get 2, under "3." get 3. IMPORTANT: the later-numbered bars are ALTERNATIVES to the "1." bars — they are played on subsequent passes through the SAME section, so give them the SAME "section" label as the "1." bars, and list them in order (all 1. bars, then all 2. bars, then all 3. bars) immediately after each other. When a section (e.g. the A section) repeats later in the chart with only its last bars different, reuse the SAME section label and mark those differing final bars as the next ending number instead of inventing a new section. Omit "ending" entirely for normal bars.
+- "bass": OPTIONAL. For slash chords (e.g. "C/E", "F-7/B♭") give the bass note after the slash. Omit for normal chords. Never treat "6/9" as a slash chord — that is 6add9.
+- "bars": duration in bars (number, default 1).
+- "times": OPTIONAL repeat count from an "xN" marking.
+- "section": OPTIONAL label for the song section (use the printed name such as "Intro", "Verse 1", "Bridge", "Chorus"; fall back to the rehearsal letter if there is no name). Assign every subsequent bar to that section until the next marker.
+- "ending": OPTIONAL 1, 2 or 3 for volta brackets marked "1.", "2.", "3.". Bars under "1." get 1, under "2." get 2. Later-numbered bars are ALTERNATIVES played on later passes of the SAME section, so give them the SAME "section" label and list all 1. bars then all 2. bars. Omit for normal bars.
 
 Return STRICT JSON only:
-{ "meta": { "title": "...", "composer": "...", "timeSig": "4/4", "style": "Medium Swing", "tempo": 140 },
-  "chords": [ { "root": "...", "chordType": "...", "bass": "E", "bars": 1, "section": "A", "ending": 1 }, ... ] }
+{ "meta": { "title": "...", "composer": "...", "timeSig": "4/4", "style": "Pop - Soul", "tempo": 120 },
+  "chords": [ { "root": "Eb", "chordType": "Power (5)", "bars": 1, "section": "Intro" }, { "repeat": true, "bars": 1, "section": "Intro" } ] }
 
 No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
 
@@ -63,9 +76,9 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-pro',
         messages: [
-          { role: 'system', content: 'You extract chord progressions from images. Respond ONLY with valid JSON.' },
+          { role: 'system', content: 'You extract chord progressions from lead sheet images with extreme attention to accidentals (♭/♯) and repeat marks. Respond ONLY with valid JSON.' },
           { role: 'user', content: [
             { type: 'text', text: prompt },
             { type: 'image_url', image_url: { url: image } },
