@@ -1120,6 +1120,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       for (let v = 0; v < extraVoltaRows[r]; v++) { cursor += 1; rowHeights.push('2.5rem'); }
     }
   }
+  const fittedRowHeights = rowHeights.map((height) =>
+    height === '2rem' ? 'minmax(0, 0.45fr)' : 'minmax(0, 1fr)',
+  );
   // Detect sections that are near-copies of an earlier section (e.g. a second
   // A section whose only difference is the final chord) so they can be marked A′.
   const sectionVariation = (() => {
@@ -1796,9 +1799,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
 
 
         {/* Slot grid */}
-        <div className="flex-1 overflow-auto p-3 flex flex-col">
+        <div className="flex-1 min-h-0 overflow-hidden p-3 flex flex-col">
           {/* Chart metadata banner */}
-          <div className="mb-2 pb-2 border-b border-border flex items-baseline gap-4 flex-wrap">
+          <div className="mb-2 pb-2 border-b border-border flex items-baseline gap-4 flex-wrap shrink-0">
             <div className="flex flex-col">
               <span className="text-lg font-bold leading-tight text-foreground">{title || 'Untitled'}</span>
               {composer && (
@@ -1830,10 +1833,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
 
           <div
             ref={gridRef}
-            className="grid gap-1.5 pt-6 pb-2"
+            className="grid gap-1.5 pt-6 pb-2 flex-1 min-h-0 overflow-hidden"
             style={{
               gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
-              gridTemplateRows: rowHeights.join(' '),
+              gridTemplateRows: fittedRowHeights.join(' '),
             }}
           >
             {/* Section enclosure boxes — drawn above cells like the fretboard position-focus box. */}
