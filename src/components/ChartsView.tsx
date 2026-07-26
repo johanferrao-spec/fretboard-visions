@@ -883,14 +883,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   // sections, so groups are visually separated vertically.
   const logicalRowOf = (idx: number) => Math.floor(startUnits[idx] / COLS);
   const totalLogicalRows = slots.length > 0
-    ? Math.max(1, Math.ceil((startUnits[slots.length - 1] + slots[slots.length - 1].bars) / COLS))
+    ? Math.max(1, ...slots.map((s, i) => Math.ceil((startUnits[i] + s.bars) / COLS)))
     : 1;
   const firstSlotOnRow: number[] = new Array(totalLogicalRows).fill(-1);
   const lastSlotOnRow: number[] = new Array(totalLogicalRows).fill(-1);
-  slots.forEach((_, i) => {
+  // Rows that need an extra "second ending" row directly beneath them.
+  const hasVoltaRow: boolean[] = new Array(totalLogicalRows).fill(false);
+  slots.forEach((s, i) => {
     const r = logicalRowOf(i);
     if (firstSlotOnRow[r] === -1) firstSlotOnRow[r] = i;
     lastSlotOnRow[r] = i;
+    if (s.ending === 2) hasVoltaRow[r] = true;
   });
   const hasSpacerBefore: boolean[] = new Array(totalLogicalRows).fill(false);
   for (let r = 1; r < totalLogicalRows; r++) {
@@ -908,6 +911,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       cursor += 1;
       renderRowOfLogical[r] = cursor;
       rowHeights.push('2.5rem');
+      if (hasVoltaRow[r]) { cursor += 1; rowHeights.push('2.5rem'); }
     }
   }
   // Precompute section overlay segments: one single box per section (spanning all rows it touches).
@@ -918,12 +922,19 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     const singleRow = startRow === endRow;
     const colStart = singleRow ? (startUnits[sec.startIdx] % COLS) + 1 : 1;
     const colEnd = singleRow
-      ? (startUnits[sec.endIdx] % COLS) + slots[sec.endIdx].bars + 1
+      ? Math.max(
+          (startUnits[sec.endIdx] % COLS) + slots[sec.endIdx].bars + 1,
+          // A second-ending run can extend further right than the last slot.
+          ...slots.slice(sec.startIdx, sec.endIdx + 1)
+            .map((s, k) => (startUnits[sec.startIdx + k] % COLS) + s.bars + 1),
+        )
       : COLS + 1;
     return [{
       key: `${sec.id}-box`,
       rowStart: renderRowOfLogical[startRow],
-      rowEnd: renderRowOfLogical[endRow] + 1,
+      // Wrap the second-ending row too when the section ends on a volta row.
+      rowEnd: renderRowOfLogical[endRow] + 1 + (hasVoltaRow[endRow] ? 1 : 0),
+
       colStart,
       colEnd,
       color: sec.color,
