@@ -103,7 +103,7 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
       bass: typeof c.bass === 'string' && VALID_ROOTS.includes(c.bass) ? c.bass : undefined,
       bars: typeof c.bars === 'number' && c.bars > 0 ? c.bars : 1,
       section: typeof (c as any).section === 'string' && (c as any).section.trim() ? (c as any).section.trim() : undefined,
-      ending: c.ending === 1 || c.ending === 2 ? c.ending : undefined,
+      ending: c.ending === 1 || c.ending === 2 || c.ending === 3 ? c.ending : undefined,
     }));
 
     const str = (v: unknown, max = 80) =>
