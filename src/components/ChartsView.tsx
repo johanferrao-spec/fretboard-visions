@@ -482,11 +482,18 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       });
       const { data, error } = await supabase.functions.invoke('read-chart', { body: { image: dataUrl } });
       if (error) throw error;
-      const chords: Array<{ root: NoteName; chordType: string; bars: number; section?: string; ending?: 1 | 2 }> = data?.chords ?? [];
+      const chords: Array<{ root: NoteName; chordType: string; bass?: NoteName; bars: number; section?: string; ending?: 1 | 2 }> = data?.chords ?? [];
+      const meta: { title?: string; composer?: string; timeSig?: string; style?: string; tempo?: number } = data?.meta ?? {};
       if (chords.length === 0) {
         toast({ title: 'No chords detected', description: 'Try a clearer image or crop to the chord chart.', variant: 'destructive' });
         return;
       }
+      // Song metadata read off the sheet (title / composer / time signature / feel).
+      if (meta.title) setTitle(meta.title);
+      if (meta.composer) setComposer(meta.composer);
+      if (meta.timeSig) setTimeSig(meta.timeSig);
+      if (meta.style) setFeel(meta.style);
+      if (typeof meta.tempo === 'number' && meta.tempo > 20 && meta.tempo < 400) setTempo(meta.tempo);
       // Convert to slots (1 bar = UNITS_PER_BAR eighths). Snap fractional bars to nearest 1/8.
       // Track which slot index each chord landed on so we can build sections.
       const newSlots: ChartSlot[] = [];
@@ -496,11 +503,12 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         newSlots.push({
           id: uid('slot'),
           bars: units,
-          chord: { root: c.root, chordType: c.chordType },
+          chord: { root: c.root, chordType: c.chordType, ...(c.bass ? { bass: c.bass } : {}) },
           ...(c.ending === 1 || c.ending === 2 ? { ending: c.ending } : {}),
         });
         slotSectionLabels.push(c.section);
       });
+
 
       // Pad with empty bars up to at least DEFAULT_SLOT_COUNT bars.
       const usedUnits = newSlots.reduce((n, s) => n + s.bars, 0);
