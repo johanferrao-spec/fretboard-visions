@@ -1633,7 +1633,40 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         </div>
       )}
 
+      {/* iReal-style PDF preview */}
+      {exportUrl && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-6"
+          onClick={closeExport}
+        >
+          <div
+            className="bg-card border border-border rounded-lg shadow-2xl flex flex-col overflow-hidden"
+            style={{ width: 'min(880px, 92vw)', height: 'min(90vh, 1000px)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                Chart preview · {title || 'Untitled'}
+              </span>
+              <button
+                onClick={downloadExport}
+                className="ml-auto flex items-center gap-1 rounded border border-primary/60 bg-primary/15 hover:bg-primary/25 text-primary px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider"
+              >
+                <FileDown size={11} />
+                Download PDF
+              </button>
+              <button onClick={closeExport} className="text-muted-foreground hover:text-foreground" title="Close">
+                <X size={13} />
+              </button>
+            </div>
+            <iframe title="Chart PDF" src={exportUrl} className="flex-1 w-full bg-white" />
+          </div>
+        </div>
+      )}
+
     </div>
+
+
 
   );
 }
