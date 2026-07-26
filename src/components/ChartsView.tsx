@@ -264,6 +264,34 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
+const normalizeSectionRanges = (input: Section[]): Section[] => {
+  const ordered = input
+    .map((sec, order) => ({ ...sec, order }))
+    .sort((a, b) => a.startIdx - b.startIdx || a.endIdx - b.endIdx || a.order - b.order);
+
+  const trimmed = ordered.map(({ order, ...sec }) => ({ ...sec }));
+  for (let i = 1; i < trimmed.length; i++) {
+    const prev = trimmed[i - 1];
+    const current = trimmed[i];
+    if (current.startIdx <= prev.endIdx) {
+      prev.endIdx = current.startIdx - 1;
+    }
+  }
+
+  return trimmed.filter(sec => sec.startIdx <= sec.endIdx);
+};
+
+const sectionsMatch = (a: Section[], b: Section[]): boolean =>
+  a.length === b.length && a.every((sec, i) => {
+    const other = b[i];
+    return !!other
+      && sec.id === other.id
+      && sec.name === other.name
+      && sec.startIdx === other.startIdx
+      && sec.endIdx === other.endIdx
+      && sec.color === other.color;
+  });
+
 const normalizeSectionLabel = (raw?: string): string | undefined => {
   if (!raw) return undefined;
   let t = raw.trim().replace(/^[\[\(\{]|[\]\)\}]$/g, '').trim();
@@ -340,6 +368,13 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
   const [pendingRange, setPendingRange] = useState<{ startIdx: number; endIdx: number } | null>(null);
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
   const [arrangement, setArrangement] = useState<ArrangementItem[]>(persisted.arrangement ?? []);
+
+  useEffect(() => {
+    const normalized = normalizeSectionRanges(sections);
+    if (!sectionsMatch(sections, normalized)) {
+      setSections(normalized);
+    }
+  }, [sections]);
 
   // Auto-recognise a repeat of an earlier section: a run of unsectioned bars
   // whose chords match an existing section becomes another occurrence of that
@@ -1186,7 +1221,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
     [...sectionVariation.values()].flatMap(v => [...v.diffSlotIds]),
   );
 
-  // Precompute section overlay segments: one single box per section (spanning all rows it touches).
+  // Precompute section overlay segments per occupied render row. A section that
+  // starts mid-row and continues below must not draw a full-width rectangle on
+  // its first row, otherwise it covers earlier cells/volta endings (e.g. Bridge
+  // beginning after a 1st/2nd ending pair).
   const sectionSegments = sections.flatMap(sec => {
     if (slots.length === 0) return [];
     // Clamp to the current slot range — indices can drift after merges/resizes,
@@ -1194,37 +1232,31 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
     const secStart = Math.max(0, Math.min(sec.startIdx, slots.length - 1));
     const secEnd = Math.max(secStart, Math.min(sec.endIdx, slots.length - 1));
     sec = { ...sec, startIdx: secStart, endIdx: secEnd };
-    const startRow = logicalRowOf(sec.startIdx);
-    const endRow = logicalRowOf(sec.endIdx);
-    const singleRow = startRow === endRow;
-    const colStart = singleRow ? (startUnits[sec.startIdx] % COLS) + 1 : 1;
-
-    const colEnd = singleRow
-      ? Math.max(
-          (startUnits[sec.endIdx] % COLS) + slots[sec.endIdx].bars + 1,
-          // A second-ending run can extend further right than the last slot.
-          ...slots.slice(sec.startIdx, sec.endIdx + 1)
-            .map((s, k) => (startUnits[sec.startIdx + k] % COLS) + s.bars + 1),
-        )
-      : COLS + 1;
-    // Wrap tightly to the lowest render row actually occupied by this section.
-    let lastRenderRow = renderRowOfLogical[startRow];
+    const byRenderRow = new Map<number, { colStart: number; colEnd: number }>();
     for (let i = sec.startIdx; i <= sec.endIdx; i++) {
       const rr = renderRowOfLogical[logicalRowOf(i)] + endingRowOffset(i);
-      if (rr > lastRenderRow) lastRenderRow = rr;
+      const colStart = (startUnits[i] % COLS) + 1;
+      const colEnd = colStart + slots[i].bars;
+      const prev = byRenderRow.get(rr);
+      byRenderRow.set(rr, prev
+        ? { colStart: Math.min(prev.colStart, colStart), colEnd: Math.max(prev.colEnd, colEnd) }
+        : { colStart, colEnd });
     }
     const variation = sectionVariation.get(sec.id);
-    return [{
-      key: `${sec.id}-box`,
-      rowStart: renderRowOfLogical[startRow],
-      rowEnd: lastRenderRow + 1,
-      colStart,
-      colEnd,
-      color: sec.color,
-      name: sec.name,
-      variation,
-      showLabel: true,
-    }];
+    return [...byRenderRow.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([row, cols], idx) => ({
+        key: `${sec.id}-box-${row}`,
+        sectionId: sec.id,
+        rowStart: row,
+        rowEnd: row + 1,
+        colStart: cols.colStart,
+        colEnd: cols.colEnd,
+        color: sec.color,
+        name: sec.name,
+        variation,
+        showLabel: idx === 0,
+      }));
   });
 
 
@@ -1265,8 +1297,8 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
   })();
 
 
-  // Orphan runs: consecutive chord bars that belong to no section still get a
-  // single enclosure box (a run of 2+ bars reads as its own group).
+  // Orphan runs: consecutive chord bars that belong to no section still get
+  // enclosure boxes, split per occupied row so they never cover unrelated cells.
   const orphanSegments = (() => {
     const out: {
       key: string; rowStart: number; rowEnd: number; colStart: number; colEnd: number;
@@ -1277,17 +1309,24 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       let j = i;
       while (j + 1 < slots.length && slots[j + 1].chord && !sectionOfSlot(j + 1)) j++;
       if (j > i) {
-        const rows = [];
-        for (let k = i; k <= j; k++) rows.push(renderRowOfLogical[logicalRowOf(k)] + endingRowOffset(k));
-        const rowStart = Math.min(...rows);
-        const rowEnd = Math.max(...rows) + 1;
-        const singleRow = rowEnd - rowStart === 1;
-        out.push({
-          key: `orphan-${slots[i].id}`,
-          rowStart,
-          rowEnd,
-          colStart: singleRow ? (startUnits[i] % COLS) + 1 : 1,
-          colEnd: singleRow ? (startUnits[j] % COLS) + slots[j].bars + 1 : COLS + 1,
+        const byRenderRow = new Map<number, { colStart: number; colEnd: number }>();
+        for (let k = i; k <= j; k++) {
+          const row = renderRowOfLogical[logicalRowOf(k)] + endingRowOffset(k);
+          const colStart = (startUnits[k] % COLS) + 1;
+          const colEnd = colStart + slots[k].bars;
+          const prev = byRenderRow.get(row);
+          byRenderRow.set(row, prev
+            ? { colStart: Math.min(prev.colStart, colStart), colEnd: Math.max(prev.colEnd, colEnd) }
+            : { colStart, colEnd });
+        }
+        byRenderRow.forEach((cols, row) => {
+          out.push({
+            key: `orphan-${slots[i].id}-${row}`,
+            rowStart: row,
+            rowEnd: row + 1,
+            colStart: cols.colStart,
+            colEnd: cols.colEnd,
+          });
         });
       }
       i = j + 1;
@@ -1883,13 +1922,13 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   border: `3px ${seg.variation ? 'dashed' : 'solid'} hsl(${seg.color} / 0.85)`,
                   background: `hsl(${seg.color} / 0.08)`,
                   margin: '-6px -4px',
-                  zIndex: 3,
+                  zIndex: 2,
                 }}
               >
                 {seg.showLabel && (
                   <span
-                    onDoubleClick={(e) => { e.stopPropagation(); renameSection(seg.key.split('-box')[0]); }}
-                    className="pointer-events-auto cursor-text absolute top-1 left-2 px-1.5 text-[9px] font-mono font-bold uppercase tracking-wider bg-background/90 rounded select-none"
+                    onDoubleClick={(e) => { e.stopPropagation(); renameSection(seg.sectionId); }}
+                    className="pointer-events-auto cursor-text absolute -top-4 left-2 px-1.5 text-[9px] font-mono font-bold uppercase tracking-wider bg-background/95 rounded select-none"
                     style={{ color: `hsl(${seg.color})` }}
                     title={seg.variation ? `Variation of ${seg.variation.ofName} — differing bars highlighted` : 'Double-click to rename'}
                   >
@@ -1936,7 +1975,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   border: '3px solid hsl(220 15% 60% / 0.7)',
                   background: 'hsl(220 15% 60% / 0.07)',
                   margin: '-6px -4px',
-                  zIndex: 3,
+                  zIndex: 2,
                 }}
               />
             ))}
