@@ -262,7 +262,7 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
-export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArrangementChange, onResetAll }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArrangementChange, onResetAll, isPlaying, onPlay, onStop }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
     slots: ChartSlot[];
