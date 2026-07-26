@@ -1516,6 +1516,24 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     {barLabel}
                   </span>
 
+                  {slot.ending && (
+                    <>
+                      <span
+                        className="absolute top-0 left-0 right-0 pointer-events-none"
+                        style={{ height: 2, background: 'rgba(0,0,0,0.55)' }}
+                      />
+                      {isEndingRunStart && (
+                        <span
+                          className="absolute top-[3px] right-1 text-[9px] font-mono font-bold pointer-events-none select-none"
+                          style={{ color: color ? 'rgba(0,0,0,0.75)' : 'hsl(var(--foreground))' }}
+                        >
+                          {slot.ending}.
+                        </span>
+                      )}
+                    </>
+                  )}
+
+
                   {section && section.startIdx === idx && (
                     <span
                       className="sr-only"
