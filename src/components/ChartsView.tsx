@@ -137,15 +137,24 @@ const spellRootInKey = (root: NoteName, key: NoteName, keyMode: KeyMode): string
   }
 };
 
+const CHORD_ABBR: Record<string, string> = {
+  'Major': '', 'Minor': 'm', 'Diminished': 'dim', 'Dim 7': 'dim7', 'Half-Dim 7': 'm7♭5',
+  'Augmented': 'aug', 'Aug 7': 'aug7', 'Sus2': 'sus2', 'Sus4': 'sus4', '7sus4': '7sus4',
+  'Major 7': 'maj7', 'Major 9': 'maj9', 'Maj11': 'maj11', 'Maj13': 'maj13',
+  'Minor 7': 'm7', 'Minor 9': 'm9', 'Minor 11': 'm11', 'Minor 13': 'm13', 'Minor 6': 'm6',
+  'Dominant 7': '7', 'Dominant 9': '9', '11': '11', '13': '13',
+  'Major 6': '6', '6add9': '6/9', 'Add9': 'add9', 'Madd9': 'madd9', 'Power (5)': '5',
+  'Min/Maj 7': 'mMaj7',
+};
+
+const abbrForType = (t: string) => CHORD_ABBR[t] ?? t.replace(/\s+/g, '');
+
 const formatChordLabel = (c: ChartChord, key?: NoteName, keyMode?: KeyMode): string => {
   const spell = (n: NoteName) => (key && keyMode ? spellRootInKey(n, key, keyMode) : n);
   const root = spell(c.root);
-  const suffix =
-    c.chordType === 'Major' ? '' :
-    c.chordType === 'Minor' ? 'm' :
-    ` ${c.chordType}`;
-  return `${root}${suffix}${c.bass ? `/${spell(c.bass)}` : ''}`;
+  return `${root}${abbrForType(c.chordType)}${c.bass ? `/${spell(c.bass)}` : ''}`;
 };
+
 
 
 
