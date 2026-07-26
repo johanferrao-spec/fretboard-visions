@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileMusic, Music4, ListMusic, Trash2, Plus, X, Play } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import type { BackingTrack } from '@/lib/backingTrackTypes';
 
 const LIBRARY_KEY = 'mf-charts-library';
@@ -44,10 +45,47 @@ export default function MyCharts() {
   const [setlists, setSetlists] = useState<Setlist[]>(() => readJSON<Setlist[]>(SETLISTS_KEY, []));
   const [activeSetlistId, setActiveSetlistId] = useState<string | null>(null);
   const [tab, setTab] = useState<'charts' | 'tracks' | 'setlists'>('charts');
+  // Guard: never let the initial render flush empty arrays over saved data.
+  const hydrated = useRef(false);
 
-  useEffect(() => writeJSON(LIBRARY_KEY, charts), [charts]);
-  useEffect(() => writeJSON(SETLISTS_KEY, setlists), [setlists]);
-  useEffect(() => writeJSON(BACKING_KEY, tracks), [tracks]);
+  // Pull the cloud copy on mount and merge it in (localStorage may have been
+  // cleared by the browser even though the account still holds the data).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const uid = userData.user?.id;
+        if (!uid) return;
+        const { data } = await supabase
+          .from('user_snapshots')
+          .select('charts_library, backing_tracks_data, setlists')
+          .eq('user_id', uid)
+          .maybeSingle();
+        if (cancelled || !data) return;
+        const d = data as any;
+        const mergeById = <T extends { id: string }>(local: T[], cloud: unknown): T[] => {
+          if (!Array.isArray(cloud)) return local;
+          const map = new Map<string, T>();
+          [...(cloud as T[]), ...local].forEach(item => item?.id && map.set(item.id, item));
+          return [...map.values()];
+        };
+        setCharts(prev => mergeById(prev, d.charts_library));
+        setTracks(prev => mergeById(prev, d.backing_tracks_data));
+        setSetlists(prev => mergeById(prev, d.setlists));
+      } catch {
+        /* offline — local copy still works */
+      } finally {
+        if (!cancelled) hydrated.current = true;
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => { if (hydrated.current) writeJSON(LIBRARY_KEY, charts); }, [charts]);
+  useEffect(() => { if (hydrated.current) writeJSON(SETLISTS_KEY, setlists); }, [setlists]);
+  useEffect(() => { if (hydrated.current) writeJSON(BACKING_KEY, tracks); }, [tracks]);
+
 
   const activeSetlist = useMemo(
     () => setlists.find(s => s.id === activeSetlistId) ?? null,
