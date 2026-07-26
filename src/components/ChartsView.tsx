@@ -25,7 +25,10 @@ interface DiatonicChord {
 export interface ChartChord {
   root: NoteName;
   chordType: string;
+  /** Slash-chord bass note (e.g. Gmaj7/B). */
+  bass?: NoteName;
 }
+
 
 export interface ChartSlot {
   id: string;
