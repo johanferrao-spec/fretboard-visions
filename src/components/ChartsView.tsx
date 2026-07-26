@@ -1125,8 +1125,14 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       let j = i;
       while (j + 1 < slots.length && slots[j + 1].ending === e) j++;
       const row = renderRowOfLogical[logicalRowOf(i)] + (e === 2 ? 1 : 0);
-      const colStart = (startUnits[i] % COLS) + 1;
+      // A 1st-ending bracket only covers the bars the 2nd ending replaces,
+      // so it starts where the (right-aligned) 2nd-ending run starts.
+      const nextIsEnd2 = e === 1 && j + 1 < slots.length && slots[j + 1].ending === 2;
+      const colStart = nextIsEnd2
+        ? (startUnits[j + 1] % COLS) + 1
+        : (startUnits[i] % COLS) + 1;
       const colEnd = (startUnits[j] % COLS) + slots[j].bars + 1;
+
       const sec = sectionOfSlot(i);
       out.push({
         key: `volta-${slots[i].id}`,
