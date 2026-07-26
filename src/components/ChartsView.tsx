@@ -1582,7 +1582,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       {/* Body: vertical toolbar + slot grid */}
       <div className="flex-1 overflow-hidden flex min-h-0">
         {/* Vertical toolbar */}
-        <div className="w-44 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-2 overflow-y-auto">
+        <div className="w-44 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-1.5 py-1.5 px-2 overflow-hidden">
           {/* Key selector */}
           <div className="flex flex-col gap-1 chart-key-selector">
             <div className="flex items-center justify-center gap-1.5">
@@ -1882,7 +1882,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: `3px ${seg.variation ? 'dashed' : 'solid'} hsl(${seg.color} / 0.85)`,
                   background: `hsl(${seg.color} / 0.08)`,
-                  margin: '-4px 2px',
+                  margin: '2px 3px',
                   zIndex: 3,
                 }}
               >
@@ -1913,7 +1913,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: `2px dashed hsl(${seg.color} / 0.9)`,
-                  margin: '1px 4px',
+                  margin: '4px 6px',
                   zIndex: 4,
                 }}
               >
@@ -1935,7 +1935,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: '3px solid hsl(220 15% 60% / 0.7)',
                   background: 'hsl(220 15% 60% / 0.07)',
-                  margin: '-4px 2px',
+                  margin: '2px 3px',
                   zIndex: 3,
                 }}
               />
