@@ -38,7 +38,7 @@ export interface ChartSlot {
   chord?: ChartChord;
   /** Volta / repeat ending: 1 = first time round, 2 = second time round.
       Ending-2 slots are laid out directly beneath their ending-1 counterparts. */
-  ending?: 1 | 2;
+  ending?: 1 | 2 | 3;
 }
 
 
@@ -552,7 +552,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       });
       const { data, error } = await supabase.functions.invoke('read-chart', { body: { image: dataUrl } });
       if (error) throw error;
-      const chords: Array<{ root: NoteName; chordType: string; bass?: NoteName; bars: number; section?: string; ending?: 1 | 2 }> = data?.chords ?? [];
+      const chords: Array<{ root: NoteName; chordType: string; bass?: NoteName; bars: number; section?: string; ending?: 1 | 2 | 3 }> = data?.chords ?? [];
       const meta: { title?: string; composer?: string; timeSig?: string; style?: string; tempo?: number } = data?.meta ?? {};
       if (chords.length === 0) {
         toast({ title: 'No chords detected', description: 'Try a clearer image or crop to the chord chart.', variant: 'destructive' });
@@ -574,7 +574,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
           id: uid('slot'),
           bars: units,
           chord: { root: c.root, chordType: c.chordType, ...(c.bass ? { bass: c.bass } : {}) },
-          ...(c.ending === 1 || c.ending === 2 ? { ending: c.ending } : {}),
+          ...(c.ending === 1 || c.ending === 2 || c.ending === 3 ? { ending: c.ending } : {}),
         });
         slotSectionLabels.push(c.section);
       });
@@ -950,15 +950,20 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   {
     let n = 0;
     let voltaCursor: number | null = null;
+    let voltaEnding: number | null = null;
     slots.forEach((s, i) => {
-      if (s.ending === 2) {
-        if (voltaCursor === null) {
+      if (s.ending && s.ending >= 2) {
+        if (voltaCursor === null || voltaEnding !== s.ending) {
+          voltaEnding = s.ending;
           // Align the 2nd ending with the TAIL of the 1st ending: both endings
           // replace the same number of bars, so the run is right-aligned to
           // where the 1st ending finishes.
           let total2 = 0;
-          for (let k = i; k < slots.length && slots[k].ending === 2; k++) total2 += slots[k].bars;
+          for (let k = i; k < slots.length && slots[k].ending === s.ending; k++) total2 += slots[k].bars;
+          // Walk back over any earlier ending runs (3rd ending sits after the
+          // 2nd) until the 1st-ending run is found — that's the anchor.
           let j = i - 1;
+          while (j >= 0 && (slots[j].ending ?? 0) >= 2) j--;
           let end1: number | null = null;
           let anchor: number | null = null;
           while (j >= 0 && slots[j].ending === 1) {
@@ -966,6 +971,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             anchor = startUnits[j];
             j--;
           }
+
           voltaCursor = end1 !== null
             ? Math.max(anchor ?? 0, end1 - total2)
             : Math.floor(n / COLS) * COLS;
@@ -976,6 +982,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       } else {
 
         voltaCursor = null;
+        voltaEnding = null;
         startUnits.push(n);
         n += s.bars;
       }
@@ -1014,12 +1021,12 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const firstSlotOnRow: number[] = new Array(totalLogicalRows).fill(-1);
   const lastSlotOnRow: number[] = new Array(totalLogicalRows).fill(-1);
   // Rows that need an extra "second ending" row directly beneath them.
-  const hasVoltaRow: boolean[] = new Array(totalLogicalRows).fill(false);
+  const extraVoltaRows: number[] = new Array(totalLogicalRows).fill(0);
   slots.forEach((s, i) => {
     const r = logicalRowOf(i);
     if (firstSlotOnRow[r] === -1) firstSlotOnRow[r] = i;
     lastSlotOnRow[r] = i;
-    if (s.ending === 2) hasVoltaRow[r] = true;
+    if (s.ending && s.ending >= 2) extraVoltaRows[r] = Math.max(extraVoltaRows[r], s.ending - 1);
   });
   const hasSpacerBefore: boolean[] = new Array(totalLogicalRows).fill(false);
   for (let r = 1; r < totalLogicalRows; r++) {
@@ -1037,7 +1044,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       cursor += 1;
       renderRowOfLogical[r] = cursor;
       rowHeights.push('2.5rem');
-      if (hasVoltaRow[r]) { cursor += 1; rowHeights.push('2.5rem'); }
+      for (let v = 0; v < extraVoltaRows[r]; v++) { cursor += 1; rowHeights.push('2.5rem'); }
     }
   }
   // Detect sections that are near-copies of an earlier section (e.g. a second
@@ -1094,7 +1101,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     // Wrap tightly to the lowest render row actually occupied by this section.
     let lastRenderRow = renderRowOfLogical[startRow];
     for (let i = sec.startIdx; i <= sec.endIdx; i++) {
-      const rr = renderRowOfLogical[logicalRowOf(i)] + (slots[i].ending === 2 ? 1 : 0);
+      const rr = renderRowOfLogical[logicalRowOf(i)] + (slots[i].ending ? slots[i].ending - 1 : 0);
       if (rr > lastRenderRow) lastRenderRow = rr;
     }
     const variation = sectionVariation.get(sec.id);
@@ -1124,11 +1131,11 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       if (!e) { i++; continue; }
       let j = i;
       while (j + 1 < slots.length && slots[j + 1].ending === e) j++;
-      const row = renderRowOfLogical[logicalRowOf(i)] + (e === 2 ? 1 : 0);
+      const row = renderRowOfLogical[logicalRowOf(i)] + (e - 1);
       // A 1st-ending bracket only covers the bars the 2nd ending replaces,
       // so it starts where the (right-aligned) 2nd-ending run starts.
-      const nextIsEnd2 = e === 1 && j + 1 < slots.length && slots[j + 1].ending === 2;
-      const colStart = nextIsEnd2
+      const nextIsLaterEnding = e === 1 && j + 1 < slots.length && (slots[j + 1].ending ?? 0) >= 2;
+      const colStart = nextIsLaterEnding
         ? (startUnits[j + 1] % COLS) + 1
         : (startUnits[i] % COLS) + 1;
       const colEnd = (startUnits[j] % COLS) + slots[j].bars + 1;
@@ -1162,7 +1169,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       while (j + 1 < slots.length && slots[j + 1].chord && !sectionOfSlot(j + 1)) j++;
       if (j > i) {
         const rows = [];
-        for (let k = i; k <= j; k++) rows.push(renderRowOfLogical[logicalRowOf(k)] + (slots[k].ending === 2 ? 1 : 0));
+        for (let k = i; k <= j; k++) rows.push(renderRowOfLogical[logicalRowOf(k)] + (slots[k].ending ? slots[k].ending! - 1 : 0));
         const rowStart = Math.min(...rows);
         const rowEnd = Math.max(...rows) + 1;
         const singleRow = rowEnd - rowStart === 1;
@@ -1823,7 +1830,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               const startUnit = startUnits[idx];
               const barLabel = formatBarNumber(startUnit);
               const logicalRow = logicalRowOf(idx);
-              const gridRowIndex = renderRowOfLogical[logicalRow] + (slot.ending === 2 ? 1 : 0);
+              const gridRowIndex = renderRowOfLogical[logicalRow] + (slot.ending ? slot.ending - 1 : 0);
               
 
               return (

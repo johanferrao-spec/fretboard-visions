@@ -46,7 +46,7 @@ For each chord return:
 - "bass": OPTIONAL. For slash chords (e.g. "C/E", "G7/B", "F-7/Bb") give the bass note after the slash, in the same SHARP form. Omit for normal chords. Never treat "6/9" as a slash chord — that is the chord type 6add9.
 - "bars": duration in bars (number, use fractions like 0.5 if the chord occupies half a bar; default 1 if unclear)
 - "section": OPTIONAL short label for the song section this chord belongs to (e.g. "A", "B", "C", "Intro", "Verse", "Chorus", "Bridge", "Outro"). Lead sheets often mark rehearsal letters like [A], (A), or "A Section" / "B Section" at the start of a system — assign every subsequent chord to that section until the next marker appears. Omit the field entirely if the chart has no visible section markers.
-- "ending": OPTIONAL number 1 or 2. Charts often show volta brackets marked "1." and "2." (a horizontal bracket above one or more bars). Chords under the "1." bracket get "ending": 1, chords under the "2." bracket get "ending": 2. IMPORTANT: the "2." bars are an ALTERNATIVE to the "1." bars — they are played the second time through the SAME section, so give them the SAME "section" label as the "1." bars, and list them immediately after all the "1." bars in the output. Omit "ending" entirely for normal bars.
+- "ending": OPTIONAL number 1, 2 or 3. Charts often show volta brackets marked "1.", "2." (and sometimes "3.") — a horizontal bracket above one or more bars. Chords under the "1." bracket get "ending": 1, under "2." get 2, under "3." get 3. IMPORTANT: the later-numbered bars are ALTERNATIVES to the "1." bars — they are played on subsequent passes through the SAME section, so give them the SAME "section" label as the "1." bars, and list them in order (all 1. bars, then all 2. bars, then all 3. bars) immediately after each other. When a section (e.g. the A section) repeats later in the chart with only its last bars different, reuse the SAME section label and mark those differing final bars as the next ending number instead of inventing a new section. Omit "ending" entirely for normal bars.
 
 Return STRICT JSON only:
 { "meta": { "title": "...", "composer": "...", "timeSig": "4/4", "style": "Medium Swing", "tempo": 140 },
@@ -103,7 +103,7 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
       bass: typeof c.bass === 'string' && VALID_ROOTS.includes(c.bass) ? c.bass : undefined,
       bars: typeof c.bars === 'number' && c.bars > 0 ? c.bars : 1,
       section: typeof (c as any).section === 'string' && (c as any).section.trim() ? (c as any).section.trim() : undefined,
-      ending: c.ending === 1 || c.ending === 2 ? c.ending : undefined,
+      ending: c.ending === 1 || c.ending === 2 || c.ending === 3 ? c.ending : undefined,
     }));
 
     const str = (v: unknown, max = 80) =>
