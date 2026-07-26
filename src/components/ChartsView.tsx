@@ -1452,7 +1452,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
 
   return (
 
-    <div className="h-full flex flex-col overflow-hidden bg-background">
+    <div className="absolute inset-0 flex flex-col overflow-hidden bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-card shrink-0">
         <span className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">Charts</span>
