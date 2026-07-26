@@ -114,10 +114,12 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
     const normRoot = (v: unknown): string | undefined => {
       if (typeof v !== 'string') return undefined;
       const t = v.trim().replace(/♭/g, 'b').replace(/♯/g, '#');
-      const key = (t[0]?.toUpperCase() ?? '') + (t.slice(1, 2).toLowerCase() === 'b' ? 'B' : t.slice(1, 2));
-      const mapped = FLAT_MAP[key.toUpperCase()];
-      if (mapped) return mapped;
-      const plain = (t[0]?.toUpperCase() ?? '') + (t[1] === '#' ? '#' : '');
+      const letter = t[0]?.toUpperCase();
+      if (!letter || !'ABCDEFG'.includes(letter)) return undefined;
+      const acc = t[1] === 'b' || t[1] === 'B' ? 'b' : t[1] === '#' ? '#' : '';
+      const key = (letter + acc).toUpperCase();
+      if (FLAT_MAP[key]) return FLAT_MAP[key];
+      const plain = letter + (acc === '#' ? '#' : '');
       return VALID_ROOTS.includes(plain) ? plain : undefined;
     };
 
