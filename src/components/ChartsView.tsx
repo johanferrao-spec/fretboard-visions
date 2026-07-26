@@ -1887,13 +1887,13 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   border: `3px ${seg.variation ? 'dashed' : 'solid'} hsl(${seg.color} / 0.85)`,
                   background: `hsl(${seg.color} / 0.08)`,
                   margin: '-6px -4px',
-                  zIndex: 3,
+                  zIndex: 2,
                 }}
               >
                 {seg.showLabel && (
                   <span
-                    onDoubleClick={(e) => { e.stopPropagation(); renameSection(seg.key.split('-box')[0]); }}
-                    className="pointer-events-auto cursor-text absolute top-1 left-2 px-1.5 text-[9px] font-mono font-bold uppercase tracking-wider bg-background/90 rounded select-none"
+                    onDoubleClick={(e) => { e.stopPropagation(); renameSection(seg.sectionId); }}
+                    className="pointer-events-auto cursor-text absolute -top-4 left-2 px-1.5 text-[9px] font-mono font-bold uppercase tracking-wider bg-background/95 rounded select-none"
                     style={{ color: `hsl(${seg.color})` }}
                     title={seg.variation ? `Variation of ${seg.variation.ofName} — differing bars highlighted` : 'Double-click to rename'}
                   >
@@ -1940,7 +1940,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   border: '3px solid hsl(220 15% 60% / 0.7)',
                   background: 'hsl(220 15% 60% / 0.07)',
                   margin: '-6px -4px',
-                  zIndex: 3,
+                  zIndex: 2,
                 }}
               />
             ))}
