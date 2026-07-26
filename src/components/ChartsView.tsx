@@ -1564,7 +1564,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               const barLabel = formatBarNumber(startUnit);
               const logicalRow = logicalRowOf(idx);
               const gridRowIndex = renderRowOfLogical[logicalRow] + (slot.ending === 2 ? 1 : 0);
-              const isEndingRunStart = !!slot.ending && slots[idx - 1]?.ending !== slot.ending;
+              
 
               return (
                 <div
