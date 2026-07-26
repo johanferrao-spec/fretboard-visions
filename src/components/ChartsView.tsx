@@ -161,6 +161,54 @@ const formatChordLabel = (c: ChartChord, key?: NoteName, keyMode?: KeyMode): str
 const ROMANS_UP = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
 
+/** Reduce a chord type to a broad family for key matching. */
+const chordFamily = (t: string): 'maj' | 'min' | 'dom' | 'dim' | 'other' => {
+  const s = t.toLowerCase();
+  if (/half|m7b5|m7♭5|dim/.test(s)) return 'dim';
+  if (/^min|^m(?!aj)/.test(s)) return 'min';
+  if (/dominant|^7|^9$|^11$|^13$|7sus/.test(s)) return 'dom';
+  if (/maj|major|^6|add9|power/.test(s)) return 'maj';
+  return 'other';
+};
+
+/**
+ * Guess the key of a progression from the chords used.
+ * Scores every candidate tonic on diatonic fit (root + quality), weighted by
+ * bar length, with bonuses for starting/ending on the tonic and for a V7.
+ */
+const detectKeyFromChords = (
+  entries: { chord: ChartChord; bars: number }[],
+  keyMode: KeyMode,
+): NoteName | null => {
+  if (entries.length < 2) return null;
+  let best: NoteName | null = null;
+  let bestScore = -Infinity;
+  for (const candidate of NOTE_NAMES) {
+    const dia = getDiatonicChords(candidate, keyMode);
+    const rootMap = new Map<NoteName, string>();
+    dia.forEach(d => rootMap.set(d.root, chordFamily(d.type)));
+    let score = 0;
+    entries.forEach((e, i) => {
+      const w = Math.max(1, e.bars) / UNITS_PER_BAR;
+      const fam = rootMap.get(e.chord.root);
+      if (fam === undefined) { score -= 2 * w; return; }
+      score += 2 * w;
+      const cf = chordFamily(e.chord.chordType);
+      if (cf === fam) score += 1.5 * w;
+      // Dominant 7 on the 5th degree is a strong tonal signal.
+      if (e.chord.root === dia[4].root && cf === 'dom') score += 2;
+      if (e.chord.root === candidate) {
+        score += 1;
+        if (i === 0) score += 2;
+        if (i === entries.length - 1) score += 3;
+      }
+    });
+    if (score > bestScore) { bestScore = score; best = candidate; }
+  }
+  return best;
+};
+
+
 const romanForChord = (chord: ChartChord, key: NoteName): string => {
   const keyIdx = NOTE_NAMES.indexOf(key);
   const rootIdx = NOTE_NAMES.indexOf(chord.root);
@@ -230,7 +278,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   }, []);
 
   const [chartKey, setChartKey] = useState<NoteName>(persisted.chartKey ?? currentKey);
+  // Auto key detection stays on until the user picks a key by hand.
+  const [autoKey, setAutoKey] = useState(true);
   const [useSevenths, setUseSevenths] = useState(false);
+
   const diatonicChords = useMemo(() => getDiatonicChords(chartKey, keyMode), [chartKey, keyMode]);
   const diatonicSevenths = useMemo(() => getDiatonicSevenths(chartKey, keyMode), [chartKey, keyMode]);
   const spelledRoots = useMemo(() => spellDiatonicRoots(chartKey, keyMode), [chartKey, keyMode]);
@@ -240,6 +291,15 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   }, [chartKey, keyMode]);
 
   const [slots, setSlots] = useState<ChartSlot[]>(() => persisted.slots?.length ? persisted.slots! : makeSlots(DEFAULT_SLOT_COUNT));
+
+  // Detect the key from the chords in use (unless the user chose one manually).
+  useEffect(() => {
+    if (!autoKey) return;
+    const entries = slots.filter(s => s.chord).map(s => ({ chord: s.chord!, bars: s.bars }));
+    const detected = detectKeyFromChords(entries, keyMode);
+    if (detected && detected !== chartKey) setChartKey(detected);
+  }, [slots, keyMode, autoKey, chartKey]);
+
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -1249,6 +1309,8 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             setSections([]);
             setArrangement([]);
             setChartKey(currentKey);
+            setAutoKey(true);
+
             setTitle('Untitled');
             setComposer('');
             setTempo(120);
@@ -1284,8 +1346,18 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         <div className="w-44 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-2 overflow-y-auto">
           {/* Key selector */}
           <div className="flex flex-col gap-1 chart-key-selector">
-            <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Key</div>
-            <ScaleRootSelector selectedRoot={chartKey} onSelect={(n) => setChartKey(n)} />
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">Key</span>
+              <button
+                onClick={() => setAutoKey(a => !a)}
+                title="Detect the key automatically from the chords used"
+                className={`px-1 rounded text-[8px] font-mono uppercase tracking-wider border transition-colors ${
+                  autoKey ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'
+                }`}
+              >Auto</button>
+            </div>
+            <ScaleRootSelector selectedRoot={chartKey} onSelect={(n) => { setAutoKey(false); setChartKey(n); }} />
+
           </div>
 
           <button
