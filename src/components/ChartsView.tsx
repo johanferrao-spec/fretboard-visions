@@ -1335,7 +1335,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               toast({ title: 'Save failed', description: String(e) });
             }
           }}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+          className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider bg-success text-success-foreground hover:bg-success/90 transition-colors shadow-sm"
           title="Save this chart to your library"
         >
           <Save size={10} />
@@ -1360,7 +1360,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             onResetAll?.();
             toast({ title: 'Chart reset', description: 'A fresh blank chart has been created.' });
           }}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
+          className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors shadow-sm"
           title="Reset the current chart to a blank state"
         >
           <RotateCcw size={10} />
