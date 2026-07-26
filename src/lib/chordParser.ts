@@ -4,10 +4,13 @@ import { NOTE_NAMES } from './music';
 export interface ParsedChord {
   root: NoteName;
   quality: string; // matches values used in CHORD_QUALITIES (Major / Minor / Dominant 7 / Major 7 / Minor 7 / Diminished / Augmented / Sus2 / Sus4 …)
+  /** Slash-chord bass note, e.g. "C/E" → bass "E". */
+  bass?: NoteName;
   raw: string;
 }
 
 const ROOT_REGEX = /^([A-Ga-g])(#|b|♯|♭)?/;
+
 
 const SUFFIX_MAP: { test: RegExp; quality: string }[] = [
   { test: /^maj13/i, quality: 'Maj13' },
