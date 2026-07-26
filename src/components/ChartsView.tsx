@@ -470,7 +470,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       });
       const { data, error } = await supabase.functions.invoke('read-chart', { body: { image: dataUrl } });
       if (error) throw error;
-      const chords: Array<{ root: NoteName; chordType: string; bars: number; section?: string }> = data?.chords ?? [];
+      const chords: Array<{ root: NoteName; chordType: string; bars: number; section?: string; ending?: 1 | 2 }> = data?.chords ?? [];
       if (chords.length === 0) {
         toast({ title: 'No chords detected', description: 'Try a clearer image or crop to the chord chart.', variant: 'destructive' });
         return;
@@ -481,9 +481,15 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       const slotSectionLabels: (string | undefined)[] = [];
       chords.forEach(c => {
         const units = Math.max(1, Math.round(c.bars * UNITS_PER_BAR));
-        newSlots.push({ id: uid('slot'), bars: units, chord: { root: c.root, chordType: c.chordType } });
+        newSlots.push({
+          id: uid('slot'),
+          bars: units,
+          chord: { root: c.root, chordType: c.chordType },
+          ...(c.ending === 1 || c.ending === 2 ? { ending: c.ending } : {}),
+        });
         slotSectionLabels.push(c.section);
       });
+
       // Pad with empty bars up to at least DEFAULT_SLOT_COUNT bars.
       const usedUnits = newSlots.reduce((n, s) => n + s.bars, 0);
       const minUnits = DEFAULT_SLOT_COUNT * UNITS_PER_BAR;
