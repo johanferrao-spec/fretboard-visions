@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2 } from 'lucide-react';
+
 import { buildChartPdf, downloadPdf, type ChartPdfData } from '@/lib/chartPdf';
 import ChartPreview from '@/components/ChartPreview';
 
@@ -1254,7 +1255,45 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const dragSelStart = dragSel ? Math.min(dragSel.start, dragSel.end) : -1;
   const dragSelEnd = dragSel ? Math.max(dragSel.start, dragSel.end) : -1;
 
+  const shareChart = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id;
+    if (!uid) {
+      toast({ title: 'Sign in required', description: 'Create an account to share charts with the community.' });
+      return;
+    }
+    let author = localStorage.getItem('mf-share-author') || '';
+    if (!author) {
+      author = window.prompt('Enter your display name for the community library:')?.trim() || '';
+      if (!author) return;
+      localStorage.setItem('mf-share-author', author);
+    }
+    if (!confirm(`Share "${title || 'Untitled'}" with the community?`)) return;
+
+    const payload = {
+      user_id: uid,
+      author_name: author,
+      kind: 'chart',
+      title: title || 'Untitled',
+      composer: composer || null,
+      tempo: tempo || null,
+      time_sig: timeSig || null,
+      feel: feel || null,
+      genre: null,
+      description: null,
+      data: { slots, sections, arrangement, chartKey, title, composer, tempo, timeSig, feel } as never,
+    };
+    const { error } = await supabase.from('shared_charts').insert(payload);
+
+    if (error) {
+      toast({ title: 'Share failed', description: error.message });
+      return;
+    }
+    toast({ title: 'Shared with the community', description: `"${payload.title}" is now public.` });
+  };
+
   return (
+
     <div className="h-full flex flex-col overflow-hidden bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-card shrink-0">
@@ -1296,7 +1335,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               toast({ title: 'Save failed', description: String(e) });
             }
           }}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+          className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider bg-success text-success-foreground hover:bg-success/90 transition-colors shadow-sm"
           title="Save this chart to your library"
         >
           <Save size={10} />
@@ -1321,13 +1360,22 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             onResetAll?.();
             toast({ title: 'Chart reset', description: 'A fresh blank chart has been created.' });
           }}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
+          className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors shadow-sm"
           title="Reset the current chart to a blank state"
         >
           <RotateCcw size={10} />
           Reset
         </button>
+        <button
+          onClick={shareChart}
+          className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider bg-info text-info-foreground hover:bg-info/90 transition-colors shadow-sm"
+          title="Share this chart with the community"
+        >
+          <Share2 size={10} />
+          Share
+        </button>
         <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">
+
           {totalBars % 1 === 0 ? totalBars : totalBars.toFixed(2)} bars · {slots.length} slots
         </span>
         <button
