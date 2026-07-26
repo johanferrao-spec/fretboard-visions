@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight, Sparkles, Loader2 } from 'lucide-react';
+import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight, Sparkles, Loader2, Search } from 'lucide-react';
 import type { TimelineChord, SnapValue, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
@@ -73,6 +73,23 @@ export default function SongTimeline({
   chartsActive, onToggleCharts,
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
+  // Horizontal timeline zoom (1 = fit to width). The measure-label strip and the
+  // chord grid scroll together so bar numbers always sit above their bars.
+  const [zoom, setZoom] = useState(1);
+  const labelScrollRef = useRef<HTMLDivElement>(null);
+  const gridScrollRef = useRef<HTMLDivElement>(null);
+  const syncingRef = useRef(false);
+  const syncScroll = (from: 'labels' | 'grid') => {
+    if (syncingRef.current) return;
+    const src = from === 'labels' ? labelScrollRef.current : gridScrollRef.current;
+    const dst = from === 'labels' ? gridScrollRef.current : labelScrollRef.current;
+    if (!src || !dst) return;
+    syncingRef.current = true;
+    dst.scrollLeft = src.scrollLeft;
+    requestAnimationFrame(() => { syncingRef.current = false; });
+  };
+  const syncFromLabels = () => syncScroll('labels');
+  const syncFromGrid = () => syncScroll('grid');
   const [dragChord, setDragChord] = useState<{ id: string; offsetBeats: number } | null>(null);
   const [zHeld, setZHeld] = useState(false);
   const [xHeld, setXHeld] = useState(false);
@@ -846,6 +863,23 @@ export default function SongTimeline({
 
 
         <div className="ml-auto flex items-center gap-1 relative">
+          {!cellView && (
+            <div className="flex items-center gap-1.5 mr-2" title="Timeline zoom">
+              <Search size={10} className="text-muted-foreground" />
+              <input
+                type="range"
+                min={1}
+                max={4}
+                step={0.25}
+                value={zoom}
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                onDoubleClick={() => setZoom(1)}
+                className="w-24"
+                aria-label="Timeline zoom"
+              />
+              <span className="text-[9px] font-mono text-muted-foreground w-7">{zoom.toFixed(1)}x</span>
+            </div>
+          )}
           {backingTrackActive && (
             <>
               <button
@@ -1013,12 +1047,14 @@ export default function SongTimeline({
             </div>
           )}
           {!cellView && (
-            <div className="flex-1 flex items-center">
-              {Array.from({ length: measures }, (_, m) => (
-                <div key={m} className="flex-1 text-center border-l border-border/50 first:border-l-0">
-                  <span className="text-[9px] font-mono text-muted-foreground">{m + 1}</span>
-                </div>
-              ))}
+            <div ref={labelScrollRef} className="flex-1 overflow-x-auto no-scrollbar" onScroll={syncFromLabels}>
+              <div className="flex items-center" style={{ width: `${zoom * 100}%` }}>
+                {Array.from({ length: measures }, (_, m) => (
+                  <div key={m} className="flex-1 text-center border-l border-border/50 first:border-l-0">
+                    <span className="text-[9px] font-mono text-muted-foreground">{m + 1}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -1064,9 +1100,11 @@ export default function SongTimeline({
               diatonicChords={diatonicChords}
             />
           ) : (
+          <div ref={gridScrollRef} className="flex-1 min-w-0 overflow-x-auto" onScroll={syncFromGrid}>
           <div
             ref={gridRef}
-            className="relative flex-1 bg-secondary/20 border-t border-border/30"
+            className="relative h-full bg-secondary/20 border-t border-border/30"
+            style={{ width: `${zoom * 100}%` }}
             onDrop={handleGridDrop}
             onDragOver={handleGridDragOver}
             onDragLeave={handleGridDragLeave}
@@ -1300,6 +1338,7 @@ export default function SongTimeline({
               </span>
             </div>
           )}
+        </div>
         </div>
         )}
         </div>
