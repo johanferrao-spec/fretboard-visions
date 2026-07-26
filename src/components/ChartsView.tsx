@@ -1129,6 +1129,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       });
       i = j + 1;
     }
+    return out;
+  })();
+
 
   // Orphan runs: consecutive chord bars that belong to no section still get a
   // single enclosure box (a run of 2+ bars reads as its own group).
