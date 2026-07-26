@@ -311,6 +311,55 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const [pendingRange, setPendingRange] = useState<{ startIdx: number; endIdx: number } | null>(null);
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
   const [arrangement, setArrangement] = useState<ArrangementItem[]>(persisted.arrangement ?? []);
+
+  // Auto-recognise a repeat of an earlier section: a run of unsectioned bars
+  // whose chords match an existing section becomes another occurrence of that
+  // section, with the differing tail bars marked as the next volta ending.
+  useEffect(() => {
+    const secOf = (i: number) => sections.find(s => i >= s.startIdx && i <= s.endIdx);
+    const runs: { start: number; end: number }[] = [];
+    for (let i = 0; i < slots.length; i++) {
+      if (!slots[i].chord || secOf(i)) continue;
+      let j = i;
+      while (j + 1 < slots.length && slots[j + 1].chord && !secOf(j + 1)) j++;
+      if (j - i + 1 >= 4) runs.push({ start: i, end: j });
+      i = j;
+    }
+    if (!runs.length) return;
+    const same = (a?: ChartChord, b?: ChartChord) =>
+      !!a && !!b && a.root === b.root && a.chordType === b.chordType && a.bass === b.bass;
+    const added: Section[] = [];
+    const endingUpdates = new Map<string, 1 | 2 | 3>();
+    for (const run of runs) {
+      for (const sec of sections) {
+        const base: ChartSlot[] = [];
+        for (let k = Math.max(0, sec.startIdx); k <= Math.min(sec.endIdx, slots.length - 1); k++) {
+          if (slots[k].chord && !slots[k].ending) base.push(slots[k]);
+        }
+        if (base.length < 4) continue;
+        const runSlots = slots.slice(run.start, run.end + 1).filter(s => s.chord);
+        if (runSlots.length < base.length) continue;
+        let hits = 0;
+        for (let k = 0; k < base.length; k++) if (same(base[k].chord, runSlots[k]?.chord)) hits++;
+        if (hits / base.length < 0.75) continue;
+        let maxEnding = 0;
+        for (let k = Math.max(0, sec.startIdx); k <= Math.min(sec.endIdx, slots.length - 1); k++) {
+          maxEnding = Math.max(maxEnding, slots[k].ending ?? 0);
+        }
+        const next = Math.min(3, maxEnding + 1) as 1 | 2 | 3;
+        runSlots.slice(base.length).forEach(s => { if (s.ending !== next) endingUpdates.set(s.id, next); });
+        added.push({ id: uid('sec'), name: sec.name, color: sec.color, startIdx: run.start, endIdx: run.end });
+        break;
+      }
+    }
+    if (!added.length) return;
+    setSections(prev => [...prev, ...added]);
+    if (endingUpdates.size) {
+      setSlots(prev => prev.map(s => (endingUpdates.has(s.id) ? { ...s, ending: endingUpdates.get(s.id) } : s)));
+    }
+    setArrangement(prev => [...prev, ...added.map(s => ({ id: uid('arr'), sectionId: s.id }))]);
+  }, [slots, sections]);
+
   const [arrDragOverIdx, setArrDragOverIdx] = useState<number | null>(null);
   const [editorSlotId, setEditorSlotId] = useState<string | null>(null);
   const [editorPos, setEditorPos] = useState<{ top: number; left: number } | null>(null);
@@ -943,6 +992,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
 
 
+  // A 2nd/3rd ending only stacks on a new row when it directly follows a
+  // 1st-ending run. A lone later ending (e.g. the "3." at the end of a repeated
+  // section) stays inline in the normal flow with just its dotted bracket.
+  const stackedEnding: boolean[] = slots.map((s, i) => {
+    if (!s.ending || s.ending < 2) return false;
+    let j = i - 1;
+    while (j >= 0 && (slots[j].ending ?? 0) >= 2) j--;
+    return j >= 0 && slots[j].ending === 1;
+  });
+  const endingRowOffset = (i: number) => (stackedEnding[i] ? slots[i].ending! - 1 : 0);
+
   // Cumulative unit offset (1/8 bar) at start of each slot.
   // Ending-2 (volta) slots do NOT advance the flow: they are an alternative to
   // the preceding ending-1 bars, so they reuse the same columns one row below.
@@ -952,8 +1012,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     let voltaCursor: number | null = null;
     let voltaEnding: number | null = null;
     slots.forEach((s, i) => {
-      if (s.ending && s.ending >= 2) {
+      if (s.ending && s.ending >= 2 && stackedEnding[i]) {
         if (voltaCursor === null || voltaEnding !== s.ending) {
+
           voltaEnding = s.ending;
           // Align the 2nd ending with the TAIL of the 1st ending: both endings
           // replace the same number of bars, so the run is right-aligned to
@@ -1026,7 +1087,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     const r = logicalRowOf(i);
     if (firstSlotOnRow[r] === -1) firstSlotOnRow[r] = i;
     lastSlotOnRow[r] = i;
-    if (s.ending && s.ending >= 2) extraVoltaRows[r] = Math.max(extraVoltaRows[r], s.ending - 1);
+    if (s.ending && s.ending >= 2 && stackedEnding[i]) extraVoltaRows[r] = Math.max(extraVoltaRows[r], s.ending - 1);
   });
   const hasSpacerBefore: boolean[] = new Array(totalLogicalRows).fill(false);
   for (let r = 1; r < totalLogicalRows; r++) {
@@ -1101,7 +1162,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     // Wrap tightly to the lowest render row actually occupied by this section.
     let lastRenderRow = renderRowOfLogical[startRow];
     for (let i = sec.startIdx; i <= sec.endIdx; i++) {
-      const rr = renderRowOfLogical[logicalRowOf(i)] + (slots[i].ending ? slots[i].ending - 1 : 0);
+      const rr = renderRowOfLogical[logicalRowOf(i)] + endingRowOffset(i);
       if (rr > lastRenderRow) lastRenderRow = rr;
     }
     const variation = sectionVariation.get(sec.id);
@@ -1131,7 +1192,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       if (!e) { i++; continue; }
       let j = i;
       while (j + 1 < slots.length && slots[j + 1].ending === e) j++;
-      const row = renderRowOfLogical[logicalRowOf(i)] + (e - 1);
+      const row = renderRowOfLogical[logicalRowOf(i)] + endingRowOffset(i);
       // A 1st-ending bracket only covers the bars the 2nd ending replaces,
       // so it starts where the (right-aligned) 2nd-ending run starts.
       const nextIsLaterEnding = e === 1 && j + 1 < slots.length && (slots[j + 1].ending ?? 0) >= 2;
@@ -1169,7 +1230,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       while (j + 1 < slots.length && slots[j + 1].chord && !sectionOfSlot(j + 1)) j++;
       if (j > i) {
         const rows = [];
-        for (let k = i; k <= j; k++) rows.push(renderRowOfLogical[logicalRowOf(k)] + (slots[k].ending ? slots[k].ending! - 1 : 0));
+        for (let k = i; k <= j; k++) rows.push(renderRowOfLogical[logicalRowOf(k)] + endingRowOffset(k));
         const rowStart = Math.min(...rows);
         const rowEnd = Math.max(...rows) + 1;
         const singleRow = rowEnd - rowStart === 1;
@@ -1830,7 +1891,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               const startUnit = startUnits[idx];
               const barLabel = formatBarNumber(startUnit);
               const logicalRow = logicalRowOf(idx);
-              const gridRowIndex = renderRowOfLogical[logicalRow] + (slot.ending ? slot.ending - 1 : 0);
+              const gridRowIndex = renderRowOfLogical[logicalRow] + endingRowOffset(idx);
               
 
               return (
@@ -2016,33 +2077,46 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               }
               endingsBySection.set(sec.id, [...set].sort((a, b) => a - b));
             });
+            const total = new Map<string, number>();
+            arrangement.forEach(a => total.set(a.sectionId, (total.get(a.sectionId) ?? 0) + 1));
             const occurrence = new Map<string, number>();
-            return arrangement.map((item, i) => {
+            // A section that holds several endings is played once per ending, so
+            // its last arrangement entry expands into one chip per remaining ending.
+            const chips: { item: ArrangementItem; idx: number; sec: Section; ending: number | null; key: string }[] = [];
+            arrangement.forEach((item, i) => {
               const sec = sections.find(s => s.id === item.sectionId);
-              if (!sec) return null;
+              if (!sec) return;
               const n = occurrence.get(sec.id) ?? 0;
               occurrence.set(sec.id, n + 1);
               const list = endingsBySection.get(sec.id) ?? [];
-              const ending = list.length ? (list[Math.min(n, list.length - 1)]) : null;
+              const isLast = n === (total.get(sec.id) ?? 1) - 1;
+              const mine = isLast ? list.slice(n) : list.slice(n, n + 1);
+              if (!mine.length) {
+                chips.push({ item, idx: i, sec, ending: null, key: item.id });
+              } else {
+                mine.forEach(e => chips.push({ item, idx: i, sec, ending: e, key: `${item.id}-${e}` }));
+              }
+            });
+            return chips.map(({ item, idx: i, sec, ending, key }) => {
               const isOver = arrDragOverIdx === i;
               return (
-                <div key={item.id} className="flex items-center">
+                <div key={key} className="flex items-center">
                   <div
                     className={`h-1 w-1 rounded-full ${isOver ? 'bg-primary' : 'bg-transparent'}`}
                     onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
                   />
-                  <div
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('application/chart-arrangement-item', item.id);
-                      e.dataTransfer.effectAllowed = 'move';
-                    }}
-                    onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
-                    className="group flex flex-col items-center rounded px-2 py-1 cursor-grab active:cursor-grabbing"
-                    style={{ background: `hsl(${sec.color} / 0.3)`, color: `hsl(${sec.color})` }}
-                    title={`${sec.name}${ending ? ` — ${ending}${ending === 1 ? 'st' : ending === 2 ? 'nd' : 'rd'} ending` : ''} — drag to reorder`}
-                  >
-                    <div className="flex items-center gap-1">
+                  <div className="flex flex-col items-stretch gap-0.5">
+                    <div
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/chart-arrangement-item', item.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
+                      className="group flex items-center gap-1 rounded px-2 py-1 cursor-grab active:cursor-grabbing"
+                      style={{ background: `hsl(${sec.color} / 0.3)`, color: `hsl(${sec.color})` }}
+                      title={`${sec.name} — drag to reorder`}
+                    >
                       <GripVertical size={10} className="opacity-60" />
                       <span className="text-[11px] font-mono font-bold uppercase tracking-wider">{sec.name}</span>
                       <button
@@ -2054,15 +2128,19 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                       </button>
                     </div>
                     {ending && (
-                      <span className="mt-0.5 rounded-sm border border-current/40 px-1 text-[9px] font-mono leading-tight opacity-80">
+                      <div
+                        className="rounded border border-dashed px-1 py-[1px] text-center text-[9px] font-mono leading-tight"
+                        style={{ borderColor: `hsl(${sec.color} / 0.6)`, color: `hsl(${sec.color})` }}
+                      >
                         {ending}. ending
-                      </span>
+                      </div>
                     )}
                   </div>
                 </div>
               );
             });
           })()}
+
 
           {arrangement.length > 0 && (
             <div
