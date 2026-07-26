@@ -264,6 +264,34 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
+const normalizeSectionRanges = (input: Section[]): Section[] => {
+  const ordered = input
+    .map((sec, order) => ({ ...sec, order }))
+    .sort((a, b) => a.startIdx - b.startIdx || a.endIdx - b.endIdx || a.order - b.order);
+
+  const trimmed = ordered.map(({ order, ...sec }) => ({ ...sec }));
+  for (let i = 1; i < trimmed.length; i++) {
+    const prev = trimmed[i - 1];
+    const current = trimmed[i];
+    if (current.startIdx <= prev.endIdx) {
+      prev.endIdx = current.startIdx - 1;
+    }
+  }
+
+  return trimmed.filter(sec => sec.startIdx <= sec.endIdx);
+};
+
+const sectionsMatch = (a: Section[], b: Section[]): boolean =>
+  a.length === b.length && a.every((sec, i) => {
+    const other = b[i];
+    return !!other
+      && sec.id === other.id
+      && sec.name === other.name
+      && sec.startIdx === other.startIdx
+      && sec.endIdx === other.endIdx
+      && sec.color === other.color;
+  });
+
 const normalizeSectionLabel = (raw?: string): string | undefined => {
   if (!raw) return undefined;
   let t = raw.trim().replace(/^[\[\(\{]|[\]\)\}]$/g, '').trim();
@@ -340,6 +368,13 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
   const [pendingRange, setPendingRange] = useState<{ startIdx: number; endIdx: number } | null>(null);
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
   const [arrangement, setArrangement] = useState<ArrangementItem[]>(persisted.arrangement ?? []);
+
+  useEffect(() => {
+    const normalized = normalizeSectionRanges(sections);
+    if (!sectionsMatch(sections, normalized)) {
+      setSections(normalized);
+    }
+  }, [sections]);
 
   // Auto-recognise a repeat of an earlier section: a run of unsectioned bars
   // whose chords match an existing section becomes another occurrence of that
