@@ -987,7 +987,7 @@ const Index = () => {
             <ChartsView
               currentKey={timelineKey}
               keyMode={keyMode}
-              onToggleCharts={() => setShowCharts(v => !v)}
+              onKeyChange={(k) => setTimelineKey(k)}
               isPlaying={timeline.isPlaying}
               onPlay={handlePlay}
               onStop={handleStop}
