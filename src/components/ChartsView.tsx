@@ -1635,7 +1635,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                       ? 'inset 0 0 0 2px hsl(var(--primary))'
                       : inDragSel
                         ? 'inset 0 0 0 2px hsl(var(--primary))'
-                        : undefined,
+                        : variantSlotIds.has(slot.id)
+                          ? 'inset 0 0 0 2px hsl(45 95% 60%)'
+                          : undefined,
+
                     zIndex: 1,
                   }}
                   className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
