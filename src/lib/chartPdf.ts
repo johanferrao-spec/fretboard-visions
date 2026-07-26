@@ -84,10 +84,11 @@ function buildBars(data: ChartPdfData): Bar[] {
 }
 
 /** Split a chord symbol into base text and the superscript/quality tail. */
-function splitSymbol(sym: string): { base: string; tail: string } {
-  const m = sym.match(/^([A-G][♭♯#b]?)(.*)$/);
-  if (!m) return { base: sym, tail: '' };
-  return { base: m[1], tail: m[2] };
+function splitSymbol(sym: string): { base: string; accidental: string; tail: string } {
+  const m = sym.match(/^([A-G])([♭♯#b]?)(.*)$/);
+  if (!m) return { base: sym, accidental: '', tail: '' };
+  const acc = m[2] === '♭' ? 'b' : m[2] === '♯' ? '#' : m[2];
+  return { base: m[1], accidental: acc, tail: m[3] };
 }
 
 export function buildChartPdf(data: ChartPdfData): jsPDF {
@@ -110,12 +111,12 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
 
   doc.setFontSize(8);
   doc.setTextColor(90, 90, 90);
-  doc.text(`${data.timeSig}  •  ♩= ${data.tempo}`, M, M + 17);
+  doc.text(`${data.timeSig}   Tempo ${data.tempo}`, M, M + 17);
   doc.setTextColor(0, 0, 0);
 
   // ---- Grid ----
   const bars = buildBars(data);
-  const rowH = 62;
+  const rowH = 74;
   let y = M + 42;
   let x = M;
   let col = 0;
@@ -148,11 +149,11 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
     // Section letter box above the bar.
     if (bar.sectionStart && bar.sectionLetter) {
       doc.setFillColor(0, 0, 0);
-      doc.rect(x, y - 15, 13, 13, 'F');
+      doc.rect(x, y - 16, 13, 13, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(255, 255, 255);
-      doc.text(bar.sectionLetter, x + 6.5, y - 5.5, { align: 'center' });
+      doc.text(bar.sectionLetter, x + 6.5, y - 6.5, { align: 'center' });
       doc.setTextColor(0, 0, 0);
     }
 
@@ -162,18 +163,38 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
 
     // Chords
     const drawChord = (label: string, cx: number) => {
-      const { base, tail } = splitSymbol(label);
+      const { base, accidental, tail } = splitSymbol(label);
+      // 'Δ' has no glyph in the core PDF fonts — draw it as a small triangle.
+      const hasTriangle = tail.startsWith('Δ');
+      const tailText = (hasTriangle ? tail.slice(1) : tail).replace(/Δ/g, '');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(20);
       const bw = doc.getTextWidth(base);
       doc.setFontSize(11);
-      const tw = tail ? doc.getTextWidth(tail) : 0;
-      const startX = cx - (bw + tw) / 2;
+      const aw = accidental ? doc.getTextWidth(accidental) : 0;
+      const triW = hasTriangle ? 8 : 0;
+      const tw = tailText ? doc.getTextWidth(tailText) : 0;
+      const total = bw + aw + triW + tw;
+      let cursor = cx - total / 2;
       doc.setFontSize(20);
-      doc.text(base, startX, y + 26);
-      if (tail) {
+      doc.text(base, cursor, y + 26);
+      cursor += bw;
+      if (accidental) {
         doc.setFontSize(11);
-        doc.text(tail, startX + bw + 1, y + 19);
+        doc.text(accidental, cursor, y + 17);
+        cursor += aw;
+      }
+      if (hasTriangle) {
+        const tx = cursor + 1;
+        const ty = y + 20;
+        doc.setLineWidth(0.9);
+        doc.setDrawColor(0, 0, 0);
+        doc.lines([[3, -7], [3, 7], [-6, 0]], tx, ty);
+        cursor += triW;
+      }
+      if (tailText) {
+        doc.setFontSize(11);
+        doc.text(tailText, cursor + 0.5, y + 19);
       }
     };
 
@@ -194,7 +215,7 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(40, 40, 40);
-      doc.text(bar.sectionName, x + 3, y + 46);
+      doc.text(bar.sectionName, x + 3, y + 47);
       doc.setTextColor(0, 0, 0);
     }
 
