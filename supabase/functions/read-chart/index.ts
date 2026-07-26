@@ -106,6 +106,50 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
       ending: c.ending === 1 || c.ending === 2 || c.ending === 3 ? c.ending : undefined,
     }));
 
+    // ---- Normalisation so ANY chart the model reads lands in a shape the
+    // chart editor can lay out: canonical section labels, sections inherited by
+    // volta bars, and ending runs grouped contiguously + renumbered 1..3.
+    const canonSection = (raw?: string) => {
+      if (!raw) return undefined;
+      let t = raw.trim().replace(/^[\[\(\{]|[\]\)\}]$/g, '').trim();
+      t = t.replace(/\s*section\s*$/i, '').trim();
+      // "A2", "A'", "A′", "A (repeat)" all fold back onto "A".
+      const m = t.match(/^([A-Za-z])\s*['′’]*\s*\d*$/);
+      if (m) return m[1].toUpperCase();
+      return t.replace(/\s+/g, ' ').slice(0, 24);
+    };
+
+    type C = typeof chords[number];
+    let norm: C[] = chords.map(c => ({ ...c, section: canonSection(c.section) }));
+    // Volta bars with no label inherit the section of the preceding chord.
+    for (let i = 1; i < norm.length; i++) {
+      if (!norm[i].section) norm[i] = { ...norm[i], section: norm[i - 1].section };
+    }
+    // Per contiguous section run: move ending bars after the plain bars and
+    // renumber the ending groups. Numbering continues across later repeats of
+    // the SAME section label, so a repeated A section whose tail differs gets
+    // the next ending number (1. then 2. then 3.).
+    const out: C[] = [];
+    const endingCount = new Map<string, number>();
+    for (let i = 0; i < norm.length; ) {
+      const label = norm[i].section;
+      let j = i;
+      while (j + 1 < norm.length && norm[j + 1].section === label) j++;
+      const run = norm.slice(i, j + 1);
+      const plain = run.filter(c => !c.ending);
+      const withEnd = run.filter(c => c.ending);
+      const order = [...new Set(withEnd.map(c => c.ending!))].sort((a, b) => a - b);
+      out.push(...plain);
+      const key = label ?? '';
+      order.forEach(e => {
+        const n = Math.min(3, (endingCount.get(key) ?? 0) + 1);
+        endingCount.set(key, n);
+        withEnd.filter(c => c.ending === e).forEach(c => out.push({ ...c, ending: n }));
+      });
+      i = j + 1;
+    }
+    norm = out;
+
     const str = (v: unknown, max = 80) =>
       typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined;
     const rawMeta = parsed?.meta ?? {};
@@ -118,7 +162,7 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
         ? Math.round(rawMeta.tempo) : undefined,
     };
 
-    return new Response(JSON.stringify({ chords, meta, raw }),
+    return new Response(JSON.stringify({ chords: norm, meta, raw }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (err) {
