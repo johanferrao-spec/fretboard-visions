@@ -12,7 +12,11 @@ export default function ChartPreview({ data }: { data: ChartPdfData }) {
     const out: (typeof bars)[] = [];
     let cur: typeof bars = [];
     bars.forEach(bar => {
-      if ((bar.sectionStart && cur.length) || cur.length === CHART_BARS_PER_ROW) {
+      const prev = cur[cur.length - 1];
+      if (
+        ((bar.sectionStart || (prev && prev.ending !== bar.ending)) && cur.length) ||
+        cur.length === CHART_BARS_PER_ROW
+      ) {
         out.push(cur);
         cur = [];
       }
@@ -65,6 +69,11 @@ export default function ChartPreview({ data }: { data: ChartPdfData }) {
             <div className="flex h-4">
               {row.map(bar => (
                 <div key={`h${bar.chords[0]?.label ?? ''}${Math.random()}`} className="flex-1">
+                  {bar.ending && (
+                    <span className="block border-t-2 border-l-2 border-black h-[10px] text-[9px] leading-none pl-[2px]">
+                      {row[0] === bar || bar.sectionStart ? `${bar.ending}.` : ''}
+                    </span>
+                  )}
                   {bar.sectionStart && bar.sectionLetter && (
                     <span className="inline-flex items-center justify-center w-[15px] h-[15px] bg-black text-white text-[10px] font-bold">
                       {bar.sectionLetter}
