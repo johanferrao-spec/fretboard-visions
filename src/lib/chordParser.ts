@@ -4,10 +4,13 @@ import { NOTE_NAMES } from './music';
 export interface ParsedChord {
   root: NoteName;
   quality: string; // matches values used in CHORD_QUALITIES (Major / Minor / Dominant 7 / Major 7 / Minor 7 / Diminished / Augmented / Sus2 / Sus4 …)
+  /** Slash-chord bass note, e.g. "C/E" → bass "E". */
+  bass?: NoteName;
   raw: string;
 }
 
 const ROOT_REGEX = /^([A-Ga-g])(#|b|♯|♭)?/;
+
 
 const SUFFIX_MAP: { test: RegExp; quality: string }[] = [
   { test: /^maj13/i, quality: 'Maj13' },
@@ -39,33 +42,48 @@ const SUFFIX_MAP: { test: RegExp; quality: string }[] = [
   { test: /^5/, quality: 'Power (5)' },
 ];
 
-export function parseChordSymbol(input: string): ParsedChord | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  const m = trimmed.match(ROOT_REGEX);
-  if (!m) return null;
-  const letter = m[1].toUpperCase();
-  const acc = m[2] ?? '';
-  let rootStr = letter;
-  if (acc === '#' || acc === '♯') rootStr = `${letter}#`;
+const noteToSharp = (letter: string, acc: string): NoteName | null => {
+  const L = letter.toUpperCase();
+  let s = L;
+  if (acc === '#' || acc === '♯') s = `${L}#`;
   else if (acc === 'b' || acc === '♭') {
-    // Convert to sharp equivalent in our NOTE_NAMES list
     const flatToSharp: Record<string, NoteName> = {
       'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#', 'Cb': 'B', 'Fb': 'E',
     };
-    const key = `${letter}b`;
-    rootStr = flatToSharp[key] ?? letter;
+    s = flatToSharp[`${L}b`] ?? L;
   }
-  if (!NOTE_NAMES.includes(rootStr as NoteName)) return null;
-  const root = rootStr as NoteName;
+  return NOTE_NAMES.includes(s as NoteName) ? (s as NoteName) : null;
+};
+
+export function parseChordSymbol(input: string): ParsedChord | null {
+  let trimmed = input.trim();
+  if (!trimmed) return null;
+
+  // Slash chord: only a trailing "/<note>" counts (so "6/9" stays an extension).
+  let bass: NoteName | undefined;
+  const slash = trimmed.match(/\/([A-Ga-g])(#|b|♯|♭)?\s*$/);
+  if (slash) {
+    const b = noteToSharp(slash[1], slash[2] ?? '');
+    if (b) {
+      bass = b;
+      trimmed = trimmed.slice(0, slash.index).trim();
+    }
+  }
+
+  const m = trimmed.match(ROOT_REGEX);
+  if (!m) return null;
+  const root = noteToSharp(m[1], m[2] ?? '');
+  if (!root) return null;
   const rest = trimmed.slice(m[0].length);
-  if (rest.length === 0) return { root, quality: 'Major', raw: trimmed };
+  const raw = input.trim();
+  if (rest.length === 0) return { root, quality: 'Major', bass, raw };
   for (const s of SUFFIX_MAP) {
-    if (s.test.test(rest)) return { root, quality: s.quality, raw: trimmed };
+    if (s.test.test(rest)) return { root, quality: s.quality, bass, raw };
   }
   // Unknown suffix → assume Major
-  return { root, quality: 'Major', raw: trimmed };
+  return { root, quality: 'Major', bass, raw };
 }
+
 
 export function chordToShortLabel(root: NoteName, quality: string): string {
   const map: Record<string, string> = {

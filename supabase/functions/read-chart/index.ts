@@ -31,19 +31,29 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const prompt = `You are reading a chord chart / lead sheet image. Extract the chord progression in reading order (left-to-right, top-to-bottom).
+    const prompt = `You are reading a chord chart / lead sheet image. Extract the song metadata AND the chord progression in reading order (left-to-right, top-to-bottom).
+
+Metadata ("meta" object, omit any field you cannot see):
+- "title": the song title printed at the top
+- "composer": the composer / writer credit (usually top-right)
+- "timeSig": the time signature, e.g. "4/4", "3/4", "6/8"
+- "style": the feel / style marking, e.g. "Medium Swing", "Bossa Nova", "Ballad", "Latin", "Straight"
+- "tempo": printed tempo in BPM (number) if shown
 
 For each chord return:
 - "root": one of ${VALID_ROOTS.join(', ')} (use SHARP form only; convert Db->C#, Eb->D#, Gb->F#, Ab->G#, Bb->A#)
 - "chordType": exactly one of: ${VALID_CHORD_TYPES.join(' | ')}
+- "bass": OPTIONAL. For slash chords (e.g. "C/E", "G7/B", "F-7/Bb") give the bass note after the slash, in the same SHARP form. Omit for normal chords. Never treat "6/9" as a slash chord — that is the chord type 6add9.
 - "bars": duration in bars (number, use fractions like 0.5 if the chord occupies half a bar; default 1 if unclear)
 - "section": OPTIONAL short label for the song section this chord belongs to (e.g. "A", "B", "C", "Intro", "Verse", "Chorus", "Bridge", "Outro"). Lead sheets often mark rehearsal letters like [A], (A), or "A Section" / "B Section" at the start of a system — assign every subsequent chord to that section until the next marker appears. Omit the field entirely if the chart has no visible section markers.
 - "ending": OPTIONAL number 1 or 2. Charts often show volta brackets marked "1." and "2." (a horizontal bracket above one or more bars). Chords under the "1." bracket get "ending": 1, chords under the "2." bracket get "ending": 2. IMPORTANT: the "2." bars are an ALTERNATIVE to the "1." bars — they are played the second time through the SAME section, so give them the SAME "section" label as the "1." bars, and list them immediately after all the "1." bars in the output. Omit "ending" entirely for normal bars.
 
 Return STRICT JSON only:
-{ "chords": [ { "root": "...", "chordType": "...", "bars": 1, "section": "A", "ending": 1 }, ... ] }
+{ "meta": { "title": "...", "composer": "...", "timeSig": "4/4", "style": "Medium Swing", "tempo": 140 },
+  "chords": [ { "root": "...", "chordType": "...", "bass": "E", "bars": 1, "section": "A", "ending": 1 }, ... ] }
 
 No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
+
 
 
     const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -74,7 +84,10 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
 
     const data = await aiRes.json();
     const raw: string = data?.choices?.[0]?.message?.content ?? '';
-    let parsed: { chords?: Array<{ root?: string; chordType?: string; bars?: number; section?: string; ending?: number }> } | null = null;
+    let parsed: {
+      chords?: Array<{ root?: string; chordType?: string; bass?: string; bars?: number; section?: string; ending?: number }>;
+      meta?: { title?: string; composer?: string; timeSig?: string; style?: string; tempo?: number };
+    } | null = null;
     try { parsed = JSON.parse(raw); } catch {
       const m = raw.match(/\{[\s\S]*\}/);
       if (m) { try { parsed = JSON.parse(m[0]); } catch { /* ignore */ } }
@@ -87,14 +100,27 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
     ).map(c => ({
       root: c.root!,
       chordType: c.chordType!,
+      bass: typeof c.bass === 'string' && VALID_ROOTS.includes(c.bass) ? c.bass : undefined,
       bars: typeof c.bars === 'number' && c.bars > 0 ? c.bars : 1,
       section: typeof (c as any).section === 'string' && (c as any).section.trim() ? (c as any).section.trim() : undefined,
       ending: c.ending === 1 || c.ending === 2 ? c.ending : undefined,
     }));
 
+    const str = (v: unknown, max = 80) =>
+      typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined;
+    const rawMeta = parsed?.meta ?? {};
+    const meta = {
+      title: str(rawMeta.title),
+      composer: str(rawMeta.composer),
+      timeSig: /^\d{1,2}\/\d{1,2}$/.test(String(rawMeta.timeSig ?? '')) ? String(rawMeta.timeSig) : undefined,
+      style: str(rawMeta.style, 40),
+      tempo: typeof rawMeta.tempo === 'number' && rawMeta.tempo > 20 && rawMeta.tempo < 400
+        ? Math.round(rawMeta.tempo) : undefined,
+    };
 
-    return new Response(JSON.stringify({ chords, raw }),
+    return new Response(JSON.stringify({ chords, meta, raw }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
   } catch (err) {
     return new Response(JSON.stringify({ error: (err as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

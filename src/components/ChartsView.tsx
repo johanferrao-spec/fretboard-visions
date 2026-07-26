@@ -25,7 +25,10 @@ interface DiatonicChord {
 export interface ChartChord {
   root: NoteName;
   chordType: string;
+  /** Slash-chord bass note (e.g. Gmaj7/B). */
+  bass?: NoteName;
 }
+
 
 export interface ChartSlot {
   id: string;
@@ -135,13 +138,15 @@ const spellRootInKey = (root: NoteName, key: NoteName, keyMode: KeyMode): string
 };
 
 const formatChordLabel = (c: ChartChord, key?: NoteName, keyMode?: KeyMode): string => {
-  const root = key && keyMode ? spellRootInKey(c.root, key, keyMode) : c.root;
+  const spell = (n: NoteName) => (key && keyMode ? spellRootInKey(n, key, keyMode) : n);
+  const root = spell(c.root);
   const suffix =
     c.chordType === 'Major' ? '' :
     c.chordType === 'Minor' ? 'm' :
     ` ${c.chordType}`;
-  return `${root}${suffix}`;
+  return `${root}${suffix}${c.bass ? `/${spell(c.bass)}` : ''}`;
 };
+
 
 
 const ROMANS_UP = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
@@ -255,7 +260,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   // ---- iReal-style PDF export ----
   const [exportData, setExportData] = useState<ChartPdfData | null>(null);
 
-  const irealLabel = useCallback((c: { root: string; chordType: string }) => {
+  const irealLabel = useCallback((c: { root: string; chordType: string; bass?: string }) => {
     const root = spellRootInKey(c.root as NoteName, chartKey, keyMode);
     const map: Record<string, string> = {
       'Major': '', 'Minor': '-', 'Minor 7': '-7', 'Minor 9': '-9', 'Minor 11': '-11',
@@ -265,8 +270,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       'Sus2': 'sus2', 'Sus4': 'sus4', '7sus4': '7sus4', 'Add9': 'add9',
       'Major 6': '6', '6add9': '6/9', 'Madd9': '-add9', 'Power (5)': '5',
     };
-    return `${root}${map[c.chordType] ?? c.chordType}`;
+    const bass = c.bass ? `/${spellRootInKey(c.bass as NoteName, chartKey, keyMode)}` : '';
+    return `${root}${map[c.chordType] ?? c.chordType}${bass}`;
   }, [chartKey, keyMode]);
+
 
   const openExport = useCallback(() => {
     try {
@@ -431,17 +438,22 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     if (!text) return;
 
     const local = parseChordSymbol(text);
-    if (local) setSlotChord(slotId, { root: local.root, chordType: local.quality });
+    if (local) setSlotChord(slotId, { root: local.root, chordType: local.quality, bass: local.bass });
 
     setParsingSlot(slotId);
     try {
       const { data, error } = await supabase.functions.invoke('parse-chord', { body: { input: text } });
       if (error) throw error;
       if (data?.root && data?.chordType) {
-        setSlotChord(slotId, { root: data.root as NoteName, chordType: data.chordType });
+        setSlotChord(slotId, {
+          root: data.root as NoteName,
+          chordType: data.chordType,
+          bass: (data.bass as NoteName) ?? local?.bass,
+        });
       } else if (!local) {
         toast({ title: 'Chord not recognised', description: text, variant: 'destructive' });
       }
+
     } catch (err) {
       if (!local) {
         toast({
@@ -470,11 +482,18 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       });
       const { data, error } = await supabase.functions.invoke('read-chart', { body: { image: dataUrl } });
       if (error) throw error;
-      const chords: Array<{ root: NoteName; chordType: string; bars: number; section?: string; ending?: 1 | 2 }> = data?.chords ?? [];
+      const chords: Array<{ root: NoteName; chordType: string; bass?: NoteName; bars: number; section?: string; ending?: 1 | 2 }> = data?.chords ?? [];
+      const meta: { title?: string; composer?: string; timeSig?: string; style?: string; tempo?: number } = data?.meta ?? {};
       if (chords.length === 0) {
         toast({ title: 'No chords detected', description: 'Try a clearer image or crop to the chord chart.', variant: 'destructive' });
         return;
       }
+      // Song metadata read off the sheet (title / composer / time signature / feel).
+      if (meta.title) setTitle(meta.title);
+      if (meta.composer) setComposer(meta.composer);
+      if (meta.timeSig) setTimeSig(meta.timeSig);
+      if (meta.style) setFeel(meta.style);
+      if (typeof meta.tempo === 'number' && meta.tempo > 20 && meta.tempo < 400) setTempo(meta.tempo);
       // Convert to slots (1 bar = UNITS_PER_BAR eighths). Snap fractional bars to nearest 1/8.
       // Track which slot index each chord landed on so we can build sections.
       const newSlots: ChartSlot[] = [];
@@ -484,11 +503,12 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         newSlots.push({
           id: uid('slot'),
           bars: units,
-          chord: { root: c.root, chordType: c.chordType },
+          chord: { root: c.root, chordType: c.chordType, ...(c.bass ? { bass: c.bass } : {}) },
           ...(c.ending === 1 || c.ending === 2 ? { ending: c.ending } : {}),
         });
         slotSectionLabels.push(c.section);
       });
+
 
       // Pad with empty bars up to at least DEFAULT_SLOT_COUNT bars.
       const usedUnits = newSlots.reduce((n, s) => n + s.bars, 0);
@@ -935,12 +955,16 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             .map((s, k) => (startUnits[sec.startIdx + k] % COLS) + s.bars + 1),
         )
       : COLS + 1;
+    // Wrap tightly to the lowest render row actually occupied by this section.
+    let lastRenderRow = renderRowOfLogical[startRow];
+    for (let i = sec.startIdx; i <= sec.endIdx; i++) {
+      const rr = renderRowOfLogical[logicalRowOf(i)] + (slots[i].ending === 2 ? 1 : 0);
+      if (rr > lastRenderRow) lastRenderRow = rr;
+    }
     return [{
       key: `${sec.id}-box`,
       rowStart: renderRowOfLogical[startRow],
-      // Wrap the second-ending row too when the section ends on a volta row.
-      rowEnd: renderRowOfLogical[endRow] + 1 + (hasVoltaRow[endRow] ? 1 : 0),
-
+      rowEnd: lastRenderRow + 1,
       colStart,
       colEnd,
       color: sec.color,
@@ -948,6 +972,37 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       showLabel: true,
     }];
   });
+
+  // Volta (1st / 2nd ending) enclosure boxes — nested inside the section box.
+  const voltaSegments = (() => {
+    const out: {
+      key: string; rowStart: number; rowEnd: number; colStart: number; colEnd: number;
+      color: string; label: string;
+    }[] = [];
+    let i = 0;
+    while (i < slots.length) {
+      const e = slots[i].ending;
+      if (!e) { i++; continue; }
+      let j = i;
+      while (j + 1 < slots.length && slots[j + 1].ending === e) j++;
+      const row = renderRowOfLogical[logicalRowOf(i)] + (e === 2 ? 1 : 0);
+      const colStart = (startUnits[i] % COLS) + 1;
+      const colEnd = (startUnits[j] % COLS) + slots[j].bars + 1;
+      const sec = sectionOfSlot(i);
+      out.push({
+        key: `volta-${slots[i].id}`,
+        rowStart: row,
+        rowEnd: row + 1,
+        colStart,
+        colEnd,
+        color: sec?.color ?? '220, 15%, 60%',
+        label: `${e}.`,
+      });
+      i = j + 1;
+    }
+    return out;
+  })();
+
 
 
 
@@ -1476,6 +1531,28 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                 )}
               </div>
             ))}
+            {/* Volta (1st / 2nd ending) boxes nested inside the section box. */}
+            {voltaSegments.map(seg => (
+              <div
+                key={seg.key}
+                className="pointer-events-none rounded-md relative"
+                style={{
+                  gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
+                  gridColumn: `${seg.colStart} / ${seg.colEnd}`,
+                  border: `2px dashed hsl(${seg.color} / 0.9)`,
+                  margin: '-2px -2px',
+                  zIndex: 4,
+                }}
+              >
+                <span
+                  className="absolute -top-2 left-1.5 px-1 text-[9px] font-mono font-bold bg-background rounded select-none"
+                  style={{ color: `hsl(${seg.color})` }}
+                >
+                  {seg.label}
+                </span>
+              </div>
+            ))}
+
             {slots.map((slot, idx) => {
               const isHover = hoverSlot === slot.id;
               const isEditing = editingSlot === slot.id;
@@ -1487,7 +1564,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               const barLabel = formatBarNumber(startUnit);
               const logicalRow = logicalRowOf(idx);
               const gridRowIndex = renderRowOfLogical[logicalRow] + (slot.ending === 2 ? 1 : 0);
-              const isEndingRunStart = !!slot.ending && slots[idx - 1]?.ending !== slot.ending;
+              
 
               return (
                 <div
@@ -1555,22 +1632,8 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     {barLabel}
                   </span>
 
-                  {slot.ending && (
-                    <>
-                      <span
-                        className="absolute top-0 left-0 right-0 pointer-events-none"
-                        style={{ height: 2, background: 'rgba(0,0,0,0.55)' }}
-                      />
-                      {isEndingRunStart && (
-                        <span
-                          className="absolute top-[3px] right-1 text-[9px] font-mono font-bold pointer-events-none select-none"
-                          style={{ color: color ? 'rgba(0,0,0,0.75)' : 'hsl(var(--foreground))' }}
-                        >
-                          {slot.ending}.
-                        </span>
-                      )}
-                    </>
-                  )}
+                  {/* Volta brackets are drawn as their own enclosure boxes (see voltaSegments). */}
+
 
 
                   {section && section.startIdx === idx && (
