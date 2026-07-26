@@ -955,12 +955,16 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             .map((s, k) => (startUnits[sec.startIdx + k] % COLS) + s.bars + 1),
         )
       : COLS + 1;
+    // Wrap tightly to the lowest render row actually occupied by this section.
+    let lastRenderRow = renderRowOfLogical[startRow];
+    for (let i = sec.startIdx; i <= sec.endIdx; i++) {
+      const rr = renderRowOfLogical[logicalRowOf(i)] + (slots[i].ending === 2 ? 1 : 0);
+      if (rr > lastRenderRow) lastRenderRow = rr;
+    }
     return [{
       key: `${sec.id}-box`,
       rowStart: renderRowOfLogical[startRow],
-      // Wrap the second-ending row too when the section ends on a volta row.
-      rowEnd: renderRowOfLogical[endRow] + 1 + (hasVoltaRow[endRow] ? 1 : 0),
-
+      rowEnd: lastRenderRow + 1,
       colStart,
       colEnd,
       color: sec.color,
@@ -968,6 +972,37 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       showLabel: true,
     }];
   });
+
+  // Volta (1st / 2nd ending) enclosure boxes — nested inside the section box.
+  const voltaSegments = (() => {
+    const out: {
+      key: string; rowStart: number; rowEnd: number; colStart: number; colEnd: number;
+      color: string; label: string;
+    }[] = [];
+    let i = 0;
+    while (i < slots.length) {
+      const e = slots[i].ending;
+      if (!e) { i++; continue; }
+      let j = i;
+      while (j + 1 < slots.length && slots[j + 1].ending === e) j++;
+      const row = renderRowOfLogical[logicalRowOf(i)] + (e === 2 ? 1 : 0);
+      const colStart = (startUnits[i] % COLS) + 1;
+      const colEnd = (startUnits[j] % COLS) + slots[j].bars + 1;
+      const sec = sectionOfSlot(i);
+      out.push({
+        key: `volta-${slots[i].id}`,
+        rowStart: row,
+        rowEnd: row + 1,
+        colStart,
+        colEnd,
+        color: sec?.color ?? '220, 15%, 60%',
+        label: `${e}.`,
+      });
+      i = j + 1;
+    }
+    return out;
+  })();
+
 
 
 
