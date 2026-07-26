@@ -663,18 +663,13 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       const minUnits = DEFAULT_SLOT_COUNT * UNITS_PER_BAR;
       let padUnits = Math.max(0, minUnits - usedUnits);
       while (padUnits > 0) {
-        newSlots.push({ id: uid('slot'), bars: UNITS_PER_BAR });
-        slotSectionLabels.push(undefined);
+          newSlots.push({ id: uid('slot'), bars: UNITS_PER_BAR });
+          slotSectionLabels.push(undefined);
         padUnits -= UNITS_PER_BAR;
       }
 
       // Build sections from contiguous runs of the same section label.
-      // A label like "A" -> "A Section", full names ("Verse") pass through.
-      const expandName = (raw: string) => {
-        const t = raw.trim();
-        if (/^[A-Z]$/i.test(t)) return `${t.toUpperCase()} Section`;
-        return t.charAt(0).toUpperCase() + t.slice(1);
-      };
+      // iReal shorthand "In" is Intro; single letters become A/B/C Section.
       const newSections: Section[] = [];
       const newArrangement: ArrangementItem[] = [];
       // Repeated labels reuse the same name + colour, but every contiguous run
@@ -684,18 +679,19 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       let runLabel: string | undefined;
       const flushRun = (endIdxExclusive: number) => {
         if (runStart < 0 || !runLabel) return;
-        const name = expandName(runLabel);
-        let color = labelToColor.get(runLabel);
+        const labelKey = normalizeSectionLabel(runLabel) ?? runLabel;
+        const name = sectionDisplayName(labelKey);
+        let color = labelToColor.get(labelKey);
         if (!color) {
           color = SECTION_COLORS[labelToColor.size % SECTION_COLORS.length];
-          labelToColor.set(runLabel, color);
+          labelToColor.set(labelKey, color);
         }
         const secId = uid('sec');
         newSections.push({ id: secId, name, startIdx: runStart, endIdx: endIdxExclusive - 1, color });
         newArrangement.push({ id: uid('arr'), sectionId: secId });
       };
       for (let i = 0; i < slotSectionLabels.length; i++) {
-        const lbl = slotSectionLabels[i];
+        const lbl = normalizeSectionLabel(slotSectionLabels[i]);
         if (lbl !== runLabel) {
           flushRun(i);
           runStart = lbl ? i : -1;
