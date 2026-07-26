@@ -1013,12 +1013,14 @@ export default function SongTimeline({
             </div>
           )}
           {!cellView && (
-            <div className="flex-1 flex items-center">
-              {Array.from({ length: measures }, (_, m) => (
-                <div key={m} className="flex-1 text-center border-l border-border/50 first:border-l-0">
-                  <span className="text-[9px] font-mono text-muted-foreground">{m + 1}</span>
-                </div>
-              ))}
+            <div ref={labelScrollRef} className="flex-1 overflow-x-auto no-scrollbar" onScroll={syncFromLabels}>
+              <div className="flex items-center" style={{ width: `${zoom * 100}%` }}>
+                {Array.from({ length: measures }, (_, m) => (
+                  <div key={m} className="flex-1 text-center border-l border-border/50 first:border-l-0">
+                    <span className="text-[9px] font-mono text-muted-foreground">{m + 1}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
