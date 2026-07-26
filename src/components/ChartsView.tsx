@@ -848,11 +848,30 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
 
   // Cumulative unit offset (1/8 bar) at start of each slot.
+  // Ending-2 (volta) slots do NOT advance the flow: they are an alternative to
+  // the preceding ending-1 bars, so they reuse the same columns one row below.
   const startUnits: number[] = [];
   {
     let n = 0;
-    for (const s of slots) { startUnits.push(n); n += s.bars; }
+    let voltaCursor: number | null = null;
+    slots.forEach((s, i) => {
+      if (s.ending === 2) {
+        if (voltaCursor === null) {
+          let j = i - 1;
+          let anchor = n;
+          while (j >= 0 && slots[j].ending === 1) { anchor = startUnits[j]; j--; }
+          voltaCursor = anchor;
+        }
+        startUnits.push(voltaCursor);
+        voltaCursor += s.bars;
+      } else {
+        voltaCursor = null;
+        startUnits.push(n);
+        n += s.bars;
+      }
+    });
   }
+
 
 
   const sectionOfSlot = (idx: number): Section | undefined =>
