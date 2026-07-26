@@ -52,6 +52,10 @@ interface ChartsViewProps {
   /** Called when the user confirms a full chart reset, so the parent can also
       clear the backing-track timeline (which sits above the Charts panel). */
   onResetAll?: () => void;
+  /** Backing-track transport state / controls, surfaced next to the chart title. */
+  isPlaying?: boolean;
+  onPlay?: () => void;
+  onStop?: () => void;
 }
 
 /** 1 grid column = 1/8 bar. 32 columns per row = 4 bars per row. */
