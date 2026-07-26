@@ -106,18 +106,52 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
       if (m) { try { parsed = JSON.parse(m[0]); } catch { /* ignore */ } }
     }
 
-    const chords = (parsed?.chords ?? []).filter(c =>
-      c.root && c.chordType &&
-      VALID_ROOTS.includes(c.root) &&
-      VALID_CHORD_TYPES.includes(c.chordType)
-    ).map(c => ({
-      root: c.root!,
-      chordType: c.chordType!,
-      bass: typeof c.bass === 'string' && VALID_ROOTS.includes(c.bass) ? c.bass : undefined,
-      bars: typeof c.bars === 'number' && c.bars > 0 ? c.bars : 1,
-      section: typeof (c as any).section === 'string' && (c as any).section.trim() ? (c as any).section.trim() : undefined,
-      ending: c.ending === 1 || c.ending === 2 || c.ending === 3 ? c.ending : undefined,
-    }));
+    // Accept flat spellings from the model and convert to the app's sharp form.
+    const FLAT_MAP: Record<string, string> = {
+      'DB': 'C#', 'EB': 'D#', 'GB': 'F#', 'AB': 'G#', 'BB': 'A#',
+      'CB': 'B', 'FB': 'E', 'E#': 'F', 'B#': 'C',
+    };
+    const normRoot = (v: unknown): string | undefined => {
+      if (typeof v !== 'string') return undefined;
+      const t = v.trim().replace(/♭/g, 'b').replace(/♯/g, '#');
+      const key = (t[0]?.toUpperCase() ?? '') + (t.slice(1, 2).toLowerCase() === 'b' ? 'B' : t.slice(1, 2));
+      const mapped = FLAT_MAP[key.toUpperCase()];
+      if (mapped) return mapped;
+      const plain = (t[0]?.toUpperCase() ?? '') + (t[1] === '#' ? '#' : '');
+      return VALID_ROOTS.includes(plain) ? plain : undefined;
+    };
+
+    type RawC = { root?: string; chordType?: string; bass?: string; bars?: number; section?: string; ending?: number; repeat?: boolean; times?: number };
+    const rawList = (parsed?.chords ?? []) as RawC[];
+
+    const chords: Array<{ root: string; chordType: string; bass?: string; bars: number; section?: string; ending?: number }> = [];
+    for (const c of rawList) {
+      const section = typeof c.section === 'string' && c.section.trim() ? c.section.trim() : undefined;
+      const ending = c.ending === 1 || c.ending === 2 || c.ending === 3 ? c.ending : undefined;
+      const bars = typeof c.bars === 'number' && c.bars > 0 ? c.bars : 1;
+      const times = typeof c.times === 'number' && c.times > 1 && c.times <= 8 ? Math.round(c.times) : 1;
+
+      let entry: { root: string; chordType: string; bass?: string; bars: number; section?: string; ending?: number } | null = null;
+      if (c.repeat === true || (!c.root && !c.chordType)) {
+        // Simile "%" — repeat the previous bar.
+        const prev = chords[chords.length - 1];
+        if (!prev) continue;
+        entry = { ...prev, bars, section: section ?? prev.section, ending: ending ?? prev.ending };
+      } else {
+        const root = normRoot(c.root);
+        if (!root || !c.chordType || !VALID_CHORD_TYPES.includes(c.chordType)) continue;
+        entry = {
+          root,
+          chordType: c.chordType,
+          bass: normRoot(c.bass),
+          bars,
+          section,
+          ending,
+        };
+      }
+      for (let t = 0; t < times; t++) chords.push({ ...entry });
+    }
+
 
     // ---- Normalisation so ANY chart the model reads lands in a shape the
     // chart editor can lay out: canonical section labels, sections inherited by
