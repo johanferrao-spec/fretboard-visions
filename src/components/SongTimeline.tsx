@@ -1083,9 +1083,11 @@ export default function SongTimeline({
               diatonicChords={diatonicChords}
             />
           ) : (
+          <div ref={gridScrollRef} className="flex-1 min-w-0 overflow-x-auto" onScroll={syncFromGrid}>
           <div
             ref={gridRef}
-            className="relative flex-1 bg-secondary/20 border-t border-border/30"
+            className="relative h-full bg-secondary/20 border-t border-border/30"
+            style={{ width: `${zoom * 100}%` }}
             onDrop={handleGridDrop}
             onDragOver={handleGridDragOver}
             onDragLeave={handleGridDragLeave}
