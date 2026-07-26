@@ -264,6 +264,24 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
+const normalizeSectionLabel = (raw?: string): string | undefined => {
+  if (!raw) return undefined;
+  let t = raw.trim().replace(/^[\[\(\{]|[\]\)\}]$/g, '').trim();
+  t = t.replace(/\s*section\s*$/i, '').trim();
+  if (!t) return undefined;
+  if (/^(in|int|intro|introduction|i)$/i.test(t)) return 'Intro';
+  if (/^(out|outro|ending)$/i.test(t)) return 'Outro';
+  const letter = t.match(/^([A-HJ-Z])\s*['′’]*\s*\d*$/i);
+  if (letter) return letter[1].toUpperCase();
+  return t.replace(/\s+/g, ' ').slice(0, 24);
+};
+
+const sectionDisplayName = (raw: string): string => {
+  const normalized = normalizeSectionLabel(raw) ?? raw.trim();
+  if (/^[A-Z]$/.test(normalized)) return `${normalized} Section`;
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
 export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, onPlay, onStop }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
@@ -613,6 +631,11 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       const { data, error } = await supabase.functions.invoke('read-chart', { body: { image: dataUrl } });
       if (error) throw error;
       const chords: Array<{ root: NoteName; chordType: string; bass?: NoteName; bars: number; section?: string; ending?: 1 | 2 | 3 }> = data?.chords ?? [];
+      const arrangementLabels: string[] = Array.isArray(data?.arrangement)
+        ? data.arrangement
+        : Array.isArray(data?.structure)
+          ? data.structure
+          : [];
       const meta: { title?: string; composer?: string; timeSig?: string; style?: string; tempo?: number } = data?.meta ?? {};
       if (chords.length === 0) {
         toast({ title: 'No chords detected', description: 'Try a clearer image or crop to the chord chart.', variant: 'destructive' });
@@ -636,7 +659,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
           chord: { root: c.root, chordType: c.chordType, ...(c.bass ? { bass: c.bass } : {}) },
           ...(c.ending === 1 || c.ending === 2 || c.ending === 3 ? { ending: c.ending } : {}),
         });
-        slotSectionLabels.push(c.section);
+        slotSectionLabels.push(normalizeSectionLabel(c.section));
       });
 
 
@@ -645,39 +668,37 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       const minUnits = DEFAULT_SLOT_COUNT * UNITS_PER_BAR;
       let padUnits = Math.max(0, minUnits - usedUnits);
       while (padUnits > 0) {
-        newSlots.push({ id: uid('slot'), bars: UNITS_PER_BAR });
-        slotSectionLabels.push(undefined);
+          newSlots.push({ id: uid('slot'), bars: UNITS_PER_BAR });
+          slotSectionLabels.push(undefined);
         padUnits -= UNITS_PER_BAR;
       }
 
       // Build sections from contiguous runs of the same section label.
-      // A label like "A" -> "A Section", full names ("Verse") pass through.
-      const expandName = (raw: string) => {
-        const t = raw.trim();
-        if (/^[A-Z]$/i.test(t)) return `${t.toUpperCase()} Section`;
-        return t.charAt(0).toUpperCase() + t.slice(1);
-      };
+      // iReal shorthand "In" is Intro; single letters become A/B/C Section.
       const newSections: Section[] = [];
-      const newArrangement: ArrangementItem[] = [];
+      const defaultArrangement: ArrangementItem[] = [];
       // Repeated labels reuse the same name + colour, but every contiguous run
       // becomes its OWN section so each pass gets its own enclosure box.
       const labelToColor = new Map<string, string>();
+      const labelToSectionIds = new Map<string, string[]>();
       let runStart = -1;
       let runLabel: string | undefined;
       const flushRun = (endIdxExclusive: number) => {
         if (runStart < 0 || !runLabel) return;
-        const name = expandName(runLabel);
-        let color = labelToColor.get(runLabel);
+        const labelKey = normalizeSectionLabel(runLabel) ?? runLabel;
+        const name = sectionDisplayName(labelKey);
+        let color = labelToColor.get(labelKey);
         if (!color) {
           color = SECTION_COLORS[labelToColor.size % SECTION_COLORS.length];
-          labelToColor.set(runLabel, color);
+          labelToColor.set(labelKey, color);
         }
         const secId = uid('sec');
         newSections.push({ id: secId, name, startIdx: runStart, endIdx: endIdxExclusive - 1, color });
-        newArrangement.push({ id: uid('arr'), sectionId: secId });
+        labelToSectionIds.set(labelKey, [...(labelToSectionIds.get(labelKey) ?? []), secId]);
+        defaultArrangement.push({ id: uid('arr'), sectionId: secId });
       };
       for (let i = 0; i < slotSectionLabels.length; i++) {
-        const lbl = slotSectionLabels[i];
+        const lbl = normalizeSectionLabel(slotSectionLabels[i]);
         if (lbl !== runLabel) {
           flushRun(i);
           runStart = lbl ? i : -1;
@@ -685,6 +706,20 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
         }
       }
       flushRun(slotSectionLabels.length);
+
+      const normalizedArrangement = arrangementLabels
+        .map(label => normalizeSectionLabel(label))
+        .filter((label): label is string => !!label);
+      const arrangementCursor = new Map<string, number>();
+      const structureArrangement = normalizedArrangement.flatMap(label => {
+        const ids = labelToSectionIds.get(label) ?? [];
+        if (!ids.length) return [];
+        const occurrence = arrangementCursor.get(label) ?? 0;
+        arrangementCursor.set(label, occurrence + 1);
+        const sectionId = ids[Math.min(occurrence, ids.length - 1)];
+        return [{ id: uid('arr'), sectionId }];
+      });
+      const newArrangement = structureArrangement.length > 0 ? structureArrangement : defaultArrangement;
 
       snapshot();
       setSlots(newSlots);
@@ -1113,16 +1148,14 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
   {
     let cursor = 0;
     for (let r = 0; r < totalLogicalRows; r++) {
-      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('2rem'); cursor += 1; }
+      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('clamp(0.35rem, 1vh, 0.7rem)'); cursor += 1; }
       cursor += 1;
       renderRowOfLogical[r] = cursor;
-      rowHeights.push('2.5rem');
-      for (let v = 0; v < extraVoltaRows[r]; v++) { cursor += 1; rowHeights.push('2.5rem'); }
+      rowHeights.push('clamp(1.85rem, 4.6vh, 2.65rem)');
+      for (let v = 0; v < extraVoltaRows[r]; v++) { cursor += 1; rowHeights.push('clamp(1.85rem, 4.6vh, 2.65rem)'); }
     }
   }
-  const fittedRowHeights = rowHeights.map((height) =>
-    height === '2rem' ? 'minmax(0, 0.45fr)' : 'minmax(0, 1fr)',
-  );
+  const fittedRowHeights = rowHeights;
   // Detect sections that are near-copies of an earlier section (e.g. a second
   // A section whose only difference is the final chord) so they can be marked A′.
   const sectionVariation = (() => {
@@ -1549,7 +1582,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       {/* Body: vertical toolbar + slot grid */}
       <div className="flex-1 overflow-hidden flex min-h-0">
         {/* Vertical toolbar */}
-        <div className="w-44 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-2 overflow-y-auto">
+        <div className="w-44 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-1.5 py-1.5 px-2 overflow-hidden">
           {/* Key selector */}
           <div className="flex flex-col gap-1 chart-key-selector">
             <div className="flex items-center justify-center gap-1.5">
@@ -1833,7 +1866,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
 
           <div
             ref={gridRef}
-            className="grid gap-1.5 pt-6 pb-2 flex-1 min-h-0 overflow-hidden"
+            className="grid gap-x-1.5 gap-y-2 px-4 py-6 flex-1 min-h-0 overflow-hidden content-center"
             style={{
               gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
               gridTemplateRows: fittedRowHeights.join(' '),
@@ -1849,14 +1882,14 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: `3px ${seg.variation ? 'dashed' : 'solid'} hsl(${seg.color} / 0.85)`,
                   background: `hsl(${seg.color} / 0.08)`,
-                  margin: '-6px -5px',
+                  margin: '2px 3px',
                   zIndex: 3,
                 }}
               >
                 {seg.showLabel && (
                   <span
                     onDoubleClick={(e) => { e.stopPropagation(); renameSection(seg.key.split('-box')[0]); }}
-                    className="pointer-events-auto cursor-text absolute -top-2.5 left-2 px-1.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-background rounded select-none"
+                    className="pointer-events-auto cursor-text absolute top-1 left-2 px-1.5 text-[9px] font-mono font-bold uppercase tracking-wider bg-background/90 rounded select-none"
                     style={{ color: `hsl(${seg.color})` }}
                     title={seg.variation ? `Variation of ${seg.variation.ofName} — differing bars highlighted` : 'Double-click to rename'}
                   >
@@ -1880,12 +1913,12 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: `2px dashed hsl(${seg.color} / 0.9)`,
-                  margin: '-2px -2px',
+                  margin: '4px 6px',
                   zIndex: 4,
                 }}
               >
                 <span
-                  className="absolute -top-2 left-1.5 px-1 text-[9px] font-mono font-bold bg-background rounded select-none"
+                  className="absolute top-1 left-1.5 px-1 text-[8px] font-mono font-bold bg-background/90 rounded select-none"
                   style={{ color: `hsl(${seg.color})` }}
                 >
                   {seg.label}
@@ -1902,7 +1935,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: '3px solid hsl(220 15% 60% / 0.7)',
                   background: 'hsl(220 15% 60% / 0.07)',
-                  margin: '-6px -5px',
+                  margin: '2px 3px',
                   zIndex: 3,
                 }}
               />
