@@ -1449,7 +1449,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               const inDragSel = sectionMode && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
               const startUnit = startUnits[idx];
               const barLabel = formatBarNumber(startUnit);
-              const gridRowIndex = renderRowOfLogical[logicalRowOf(idx)];
+              const logicalRow = logicalRowOf(idx);
+              const gridRowIndex = renderRowOfLogical[logicalRow] + (slot.ending === 2 ? 1 : 0);
+              const isEndingRunStart = !!slot.ending && slots[idx - 1]?.ending !== slot.ending;
+
               return (
                 <div
                   key={slot.id}
