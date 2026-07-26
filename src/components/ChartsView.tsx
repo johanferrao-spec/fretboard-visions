@@ -1148,16 +1148,14 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
   {
     let cursor = 0;
     for (let r = 0; r < totalLogicalRows; r++) {
-      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('2rem'); cursor += 1; }
+      if (r > 0 && hasSpacerBefore[r]) { rowHeights.push('clamp(0.35rem, 1vh, 0.7rem)'); cursor += 1; }
       cursor += 1;
       renderRowOfLogical[r] = cursor;
-      rowHeights.push('2.5rem');
-      for (let v = 0; v < extraVoltaRows[r]; v++) { cursor += 1; rowHeights.push('2.5rem'); }
+      rowHeights.push('clamp(1.85rem, 4.6vh, 2.65rem)');
+      for (let v = 0; v < extraVoltaRows[r]; v++) { cursor += 1; rowHeights.push('clamp(1.85rem, 4.6vh, 2.65rem)'); }
     }
   }
-  const fittedRowHeights = rowHeights.map((height) =>
-    height === '2rem' ? 'minmax(0, 0.45fr)' : 'minmax(0, 1fr)',
-  );
+  const fittedRowHeights = rowHeights;
   // Detect sections that are near-copies of an earlier section (e.g. a second
   // A section whose only difference is the final chord) so they can be marked A′.
   const sectionVariation = (() => {
@@ -1868,7 +1866,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
 
           <div
             ref={gridRef}
-            className="grid gap-1.5 pt-6 pb-2 flex-1 min-h-0 overflow-hidden"
+            className="grid gap-x-1.5 gap-y-2 px-4 py-6 flex-1 min-h-0 overflow-hidden content-center"
             style={{
               gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
               gridTemplateRows: fittedRowHeights.join(' '),
@@ -1884,14 +1882,14 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: `3px ${seg.variation ? 'dashed' : 'solid'} hsl(${seg.color} / 0.85)`,
                   background: `hsl(${seg.color} / 0.08)`,
-                  margin: '-6px -5px',
+                  margin: '-4px 2px',
                   zIndex: 3,
                 }}
               >
                 {seg.showLabel && (
                   <span
                     onDoubleClick={(e) => { e.stopPropagation(); renameSection(seg.key.split('-box')[0]); }}
-                    className="pointer-events-auto cursor-text absolute -top-2.5 left-2 px-1.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-background rounded select-none"
+                    className="pointer-events-auto cursor-text absolute top-1 left-2 px-1.5 text-[9px] font-mono font-bold uppercase tracking-wider bg-background/90 rounded select-none"
                     style={{ color: `hsl(${seg.color})` }}
                     title={seg.variation ? `Variation of ${seg.variation.ofName} — differing bars highlighted` : 'Double-click to rename'}
                   >
@@ -1915,12 +1913,12 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: `2px dashed hsl(${seg.color} / 0.9)`,
-                  margin: '-2px -2px',
+                  margin: '1px 4px',
                   zIndex: 4,
                 }}
               >
                 <span
-                  className="absolute -top-2 left-1.5 px-1 text-[9px] font-mono font-bold bg-background rounded select-none"
+                  className="absolute top-1 left-1.5 px-1 text-[8px] font-mono font-bold bg-background/90 rounded select-none"
                   style={{ color: `hsl(${seg.color})` }}
                 >
                   {seg.label}
@@ -1937,7 +1935,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: '3px solid hsl(220 15% 60% / 0.7)',
                   background: 'hsl(220 15% 60% / 0.07)',
-                  margin: '-6px -5px',
+                  margin: '-4px 2px',
                   zIndex: 3,
                 }}
               />
