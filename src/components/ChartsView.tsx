@@ -1555,7 +1555,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                 style={{
                   gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
-                  border: `3px solid hsl(${seg.color} / 0.85)`,
+                  border: `3px ${seg.variation ? 'dashed' : 'solid'} hsl(${seg.color} / 0.85)`,
                   background: `hsl(${seg.color} / 0.08)`,
                   margin: '-6px -5px',
                   zIndex: 3,
@@ -1566,11 +1566,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     onDoubleClick={(e) => { e.stopPropagation(); renameSection(seg.key.split('-box')[0]); }}
                     className="pointer-events-auto cursor-text absolute -top-2.5 left-2 px-1.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-background rounded select-none"
                     style={{ color: `hsl(${seg.color})` }}
-                    title="Double-click to rename"
+                    title={seg.variation ? `Variation of ${seg.variation.ofName} — differing bars highlighted` : 'Double-click to rename'}
                   >
-                    {seg.name}
+                    {seg.name}{seg.variation ? '′' : ''}
+                    {seg.variation && (
+                      <span className="ml-1 normal-case tracking-normal opacity-80">
+                        (var. of {seg.variation.ofName})
+                      </span>
+                    )}
                   </span>
                 )}
+
               </div>
             ))}
             {/* Volta (1st / 2nd ending) boxes nested inside the section box. */}
