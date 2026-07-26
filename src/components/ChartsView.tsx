@@ -1366,7 +1366,16 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
           <RotateCcw size={10} />
           Reset
         </button>
+        <button
+          onClick={shareChart}
+          className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase tracking-wider bg-info text-info-foreground hover:bg-info/90 transition-colors shadow-sm"
+          title="Share this chart with the community"
+        >
+          <Share2 size={10} />
+          Share
+        </button>
         <span className="ml-auto text-[9px] font-mono text-muted-foreground/70">
+
           {totalBars % 1 === 0 ? totalBars : totalBars.toFixed(2)} bars · {slots.length} slots
         </span>
         <button
