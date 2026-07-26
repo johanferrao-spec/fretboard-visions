@@ -94,6 +94,17 @@ export default function CloudHydrator({ children }: { children: React.ReactNode 
         try {
           const raw = localStorage.getItem(key);
           const parsed = raw ? JSON.parse(raw) : null;
+          // Never let an empty library/setlist array clobber saved cloud data.
+          if ((key === LIBRARY_KEY || key === SETLISTS_KEY) && Array.isArray(parsed) && parsed.length === 0) {
+            const col = key === LIBRARY_KEY ? 'charts_library' : 'setlists';
+            const { data: existing } = await supabase
+              .from('user_snapshots')
+              .select(col)
+              .eq('user_id', uid)
+              .maybeSingle();
+            const cur = (existing as any)?.[col];
+            if (Array.isArray(cur) && cur.length > 0) return;
+          }
           const patch: any = { user_id: uid };
           if (key === CHART_KEY) patch.charts_data = parsed;
           if (key === BACKING_KEY) patch.backing_tracks_data = parsed;
