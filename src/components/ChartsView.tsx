@@ -1210,6 +1210,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             </div>
           )}
 
+          <button
+            onClick={openExport}
+            className="mt-1 w-full flex items-center justify-center gap-1 rounded border border-primary/60 bg-primary/15 hover:bg-primary/25 text-primary px-1.5 py-1 text-[9px] font-mono font-bold uppercase tracking-wider transition"
+            title="Export this chart as an iReal Pro style PDF"
+          >
+            <FileDown size={11} />
+            Export Chart
+          </button>
+
+
+
           {sections.length > 0 && (
             <div className="w-full flex flex-col items-stretch gap-1 mt-1 border-t border-border pt-2">
               <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Sections</div>
