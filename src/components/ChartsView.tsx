@@ -438,17 +438,22 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     if (!text) return;
 
     const local = parseChordSymbol(text);
-    if (local) setSlotChord(slotId, { root: local.root, chordType: local.quality });
+    if (local) setSlotChord(slotId, { root: local.root, chordType: local.quality, bass: local.bass });
 
     setParsingSlot(slotId);
     try {
       const { data, error } = await supabase.functions.invoke('parse-chord', { body: { input: text } });
       if (error) throw error;
       if (data?.root && data?.chordType) {
-        setSlotChord(slotId, { root: data.root as NoteName, chordType: data.chordType });
+        setSlotChord(slotId, {
+          root: data.root as NoteName,
+          chordType: data.chordType,
+          bass: (data.bass as NoteName) ?? local?.bass,
+        });
       } else if (!local) {
         toast({ title: 'Chord not recognised', description: text, variant: 'destructive' });
       }
+
     } catch (err) {
       if (!local) {
         toast({
