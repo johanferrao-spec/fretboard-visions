@@ -246,7 +246,7 @@ interface ChordReferenceProps {
 }
 
 type VoicingTab = 'full' | 'shell';
-type MainTab = 'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tuning' | null;
+type MainTab = 'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'community' | 'tuning' | null;
 type OctaveRange = 1 | 2 | 3;
 
 const DEFAULT_ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
@@ -1183,6 +1183,7 @@ export default function ChordReference({
           { key: 'identify' as MainTab, label: "What's This?" },
           { key: 'changes' as MainTab, label: 'Progression Analyser' },
           { key: 'backing' as MainTab, label: 'Backing Track' },
+          { key: 'community' as MainTab, label: 'Charts' },
           { key: 'tuning' as MainTab, label: 'Alternate Tuning' },
         ]).map(tab => (
           <button
