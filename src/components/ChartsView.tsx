@@ -1087,7 +1087,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     const r = logicalRowOf(i);
     if (firstSlotOnRow[r] === -1) firstSlotOnRow[r] = i;
     lastSlotOnRow[r] = i;
-    if (s.ending && s.ending >= 2) extraVoltaRows[r] = Math.max(extraVoltaRows[r], s.ending - 1);
+    if (s.ending && s.ending >= 2 && stackedEnding[i]) extraVoltaRows[r] = Math.max(extraVoltaRows[r], s.ending - 1);
   });
   const hasSpacerBefore: boolean[] = new Array(totalLogicalRows).fill(false);
   for (let r = 1; r < totalLogicalRows; r++) {
@@ -1162,7 +1162,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     // Wrap tightly to the lowest render row actually occupied by this section.
     let lastRenderRow = renderRowOfLogical[startRow];
     for (let i = sec.startIdx; i <= sec.endIdx; i++) {
-      const rr = renderRowOfLogical[logicalRowOf(i)] + (slots[i].ending ? slots[i].ending - 1 : 0);
+      const rr = renderRowOfLogical[logicalRowOf(i)] + endingRowOffset(i);
       if (rr > lastRenderRow) lastRenderRow = rr;
     }
     const variation = sectionVariation.get(sec.id);
@@ -1192,7 +1192,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       if (!e) { i++; continue; }
       let j = i;
       while (j + 1 < slots.length && slots[j + 1].ending === e) j++;
-      const row = renderRowOfLogical[logicalRowOf(i)] + (e - 1);
+      const row = renderRowOfLogical[logicalRowOf(i)] + endingRowOffset(i);
       // A 1st-ending bracket only covers the bars the 2nd ending replaces,
       // so it starts where the (right-aligned) 2nd-ending run starts.
       const nextIsLaterEnding = e === 1 && j + 1 < slots.length && (slots[j + 1].ending ?? 0) >= 2;
@@ -1230,7 +1230,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       while (j + 1 < slots.length && slots[j + 1].chord && !sectionOfSlot(j + 1)) j++;
       if (j > i) {
         const rows = [];
-        for (let k = i; k <= j; k++) rows.push(renderRowOfLogical[logicalRowOf(k)] + (slots[k].ending ? slots[k].ending! - 1 : 0));
+        for (let k = i; k <= j; k++) rows.push(renderRowOfLogical[logicalRowOf(k)] + endingRowOffset(k));
         const rowStart = Math.min(...rows);
         const rowEnd = Math.max(...rows) + 1;
         const singleRow = rowEnd - rowStart === 1;
@@ -1891,7 +1891,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               const startUnit = startUnits[idx];
               const barLabel = formatBarNumber(startUnit);
               const logicalRow = logicalRowOf(idx);
-              const gridRowIndex = renderRowOfLogical[logicalRow] + (slot.ending ? slot.ending - 1 : 0);
+              const gridRowIndex = renderRowOfLogical[logicalRow] + endingRowOffset(idx);
               
 
               return (
