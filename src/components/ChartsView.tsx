@@ -79,6 +79,32 @@ const formatDuration = (units: number): string => {
 const chordsEqual = (a?: ChartChord, b?: ChartChord): boolean =>
   !!a && !!b && a.root === b.root && a.chordType === b.chordType;
 
+/**
+ * Collapse adjacent empty slots that live inside the same bar into a single
+ * cell, and absorb sub-bar empty slivers into the neighbouring empty cell.
+ * Without this, resizing can leave 1/8-wide "ghost" cells (e.g. 9½, 9⅝).
+ */
+const mergeEmptySlots = (list: ChartSlot[]): ChartSlot[] => {
+  const out: ChartSlot[] = [];
+  let unit = 0;
+  for (const slot of list) {
+    const prev = out[out.length - 1];
+    const prevStart = unit - (prev?.bars ?? 0);
+    const sameBar =
+      prev &&
+      !prev.chord &&
+      !slot.chord &&
+      Math.floor(prevStart / UNITS_PER_BAR) === Math.floor(unit / UNITS_PER_BAR);
+    if (sameBar) {
+      out[out.length - 1] = { ...prev, bars: prev.bars + slot.bars };
+    } else {
+      out.push(slot);
+    }
+    unit += slot.bars;
+  }
+  return out;
+};
+
 const SHARP_TO_FLAT: Record<string, string> = {
   'C#': 'D♭', 'D#': 'E♭', 'F#': 'G♭', 'G#': 'A♭', 'A#': 'B♭',
 };
