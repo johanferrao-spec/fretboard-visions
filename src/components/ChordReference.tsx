@@ -1329,6 +1329,8 @@ export default function ChordReference({
           chordOctaveShift={chordOctaveShift}
           setChordOctaveShift={setChordOctaveShift}
         />
+      ) : activeTab === 'community' ? (
+        <CommunityCharts />
       ) : activeTab === 'tuning' ? (
         <TuningPanel
           tuningName={tuningName}
