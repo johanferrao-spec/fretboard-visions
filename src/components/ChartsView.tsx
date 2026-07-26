@@ -161,6 +161,54 @@ const formatChordLabel = (c: ChartChord, key?: NoteName, keyMode?: KeyMode): str
 const ROMANS_UP = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
 
+/** Reduce a chord type to a broad family for key matching. */
+const chordFamily = (t: string): 'maj' | 'min' | 'dom' | 'dim' | 'other' => {
+  const s = t.toLowerCase();
+  if (/half|m7b5|m7♭5|dim/.test(s)) return 'dim';
+  if (/^min|^m(?!aj)/.test(s)) return 'min';
+  if (/dominant|^7|^9$|^11$|^13$|7sus/.test(s)) return 'dom';
+  if (/maj|major|^6|add9|power/.test(s)) return 'maj';
+  return 'other';
+};
+
+/**
+ * Guess the key of a progression from the chords used.
+ * Scores every candidate tonic on diatonic fit (root + quality), weighted by
+ * bar length, with bonuses for starting/ending on the tonic and for a V7.
+ */
+const detectKeyFromChords = (
+  entries: { chord: ChartChord; bars: number }[],
+  keyMode: KeyMode,
+): NoteName | null => {
+  if (entries.length < 2) return null;
+  let best: NoteName | null = null;
+  let bestScore = -Infinity;
+  for (const candidate of NOTE_NAMES) {
+    const dia = getDiatonicChords(candidate, keyMode);
+    const rootMap = new Map<NoteName, string>();
+    dia.forEach(d => rootMap.set(d.root, chordFamily(d.type)));
+    let score = 0;
+    entries.forEach((e, i) => {
+      const w = Math.max(1, e.bars) / UNITS_PER_BAR;
+      const fam = rootMap.get(e.chord.root);
+      if (fam === undefined) { score -= 2 * w; return; }
+      score += 2 * w;
+      const cf = chordFamily(e.chord.chordType);
+      if (cf === fam) score += 1.5 * w;
+      // Dominant 7 on the 5th degree is a strong tonal signal.
+      if (e.chord.root === dia[4].root && cf === 'dom') score += 2;
+      if (e.chord.root === candidate) {
+        score += 1;
+        if (i === 0) score += 2;
+        if (i === entries.length - 1) score += 3;
+      }
+    });
+    if (score > bestScore) { bestScore = score; best = candidate; }
+  }
+  return best;
+};
+
+
 const romanForChord = (chord: ChartChord, key: NoteName): string => {
   const keyIdx = NOTE_NAMES.indexOf(key);
   const rootIdx = NOTE_NAMES.indexOf(chord.root);
