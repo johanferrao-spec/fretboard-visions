@@ -46,6 +46,8 @@ interface ChartsViewProps {
   currentKey: NoteName;
   keyMode: KeyMode;
   onToggleCharts?: () => void;
+  /** Charts and backing tracks share a key — fired whenever the chart's key changes. */
+  onKeyChange?: (key: NoteName) => void;
   /** Fired whenever the arrangement (or its underlying chords) change, so the
       parent can push the resulting chord progression into the backing-track timeline. */
   onArrangementChange?: (data: { chords: TimelineChord[]; measures: number; bpm: number; sections: { id: string; name: string; color: string; startBeat: number; lengthBeats: number }[] }) => void;
@@ -304,6 +306,11 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     const detected = detectKeyFromChords(entries, keyMode);
     if (detected && detected !== chartKey) setChartKey(detected);
   }, [slots, keyMode, autoKey, chartKey]);
+
+  // Charts and backing tracks are linked: push the chart key up to the timeline.
+  useEffect(() => {
+    if (chartKey !== currentKey) onKeyChange?.(chartKey);
+  }, [chartKey]);
 
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
