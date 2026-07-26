@@ -74,7 +74,7 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
 
     const data = await aiRes.json();
     const raw: string = data?.choices?.[0]?.message?.content ?? '';
-    let parsed: { chords?: Array<{ root?: string; chordType?: string; bars?: number; section?: string }> } | null = null;
+    let parsed: { chords?: Array<{ root?: string; chordType?: string; bars?: number; section?: string; ending?: number }> } | null = null;
     try { parsed = JSON.parse(raw); } catch {
       const m = raw.match(/\{[\s\S]*\}/);
       if (m) { try { parsed = JSON.parse(m[0]); } catch { /* ignore */ } }
@@ -89,7 +89,9 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
       chordType: c.chordType!,
       bars: typeof c.bars === 'number' && c.bars > 0 ? c.bars : 1,
       section: typeof (c as any).section === 'string' && (c as any).section.trim() ? (c as any).section.trim() : undefined,
+      ending: c.ending === 1 || c.ending === 2 ? c.ending : undefined,
     }));
+
 
     return new Response(JSON.stringify({ chords, raw }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
