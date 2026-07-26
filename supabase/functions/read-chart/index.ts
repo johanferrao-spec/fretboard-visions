@@ -42,7 +42,8 @@ CRITICAL NOTATION RULES (iReal Pro / jazz lead sheet conventions):
 - "ø" = Half-Dim 7, "o" = Dim 7, "+" = Augmented.
 - A small chord symbol printed ABOVE a bar is an alternative voicing/name for that bar — ignore it, use the large symbol in the bar.
 - "xN" (e.g. "x3") next to a barline means the preceding group repeats N times: output { "times": N } on the LAST chord of that repeated group.
-- Text under a rehearsal letter box (e.g. "Intro", "Verse 1", "Bridge", "Chorus") is the section NAME. Use that descriptive name as the "section" value (e.g. "Intro", "Verse 1", "Bridge", "Chorus"), not just the letter.
+- Text under a rehearsal letter box (e.g. "In", "Intro", "Verse 1", "Bridge", "Chorus") is the section NAME. "In" ALWAYS means Intro. Use that descriptive name as the "section" value where possible.
+- If the bottom of the sheet has a song structure / form listing (for example "In A B A C"), return it as an "arrangement" array of section labels in order. "In" in this list means "Intro".
 
 Metadata ("meta" object, omit any field you cannot see):
 - "title": the song title printed at the top
@@ -63,6 +64,7 @@ For each bar return one object:
 
 Return STRICT JSON only:
 { "meta": { "title": "...", "composer": "...", "timeSig": "4/4", "style": "Pop - Soul", "tempo": 120 },
+  "arrangement": ["Intro", "A", "B", "A", "C"],
   "chords": [ { "root": "Eb", "chordType": "Power (5)", "bars": 1, "section": "Intro" }, { "repeat": true, "bars": 1, "section": "Intro" } ] }
 
 No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
@@ -100,6 +102,8 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
     let parsed: {
       chords?: Array<{ root?: string; chordType?: string; bass?: string; bars?: number; section?: string; ending?: number }>;
       meta?: { title?: string; composer?: string; timeSig?: string; style?: string; tempo?: number };
+      arrangement?: string[];
+      structure?: string[];
     } | null = null;
     try { parsed = JSON.parse(raw); } catch {
       const m = raw.match(/\{[\s\S]*\}/);
@@ -162,6 +166,8 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
       if (!raw) return undefined;
       let t = raw.trim().replace(/^[\[\(\{]|[\]\)\}]$/g, '').trim();
       t = t.replace(/\s*section\s*$/i, '').trim();
+      if (/^(in|int|intro|introduction|i)$/i.test(t)) return 'Intro';
+      if (/^(out|outro|ending)$/i.test(t)) return 'Outro';
       // "A2", "A'", "A′", "A (repeat)" all fold back onto "A".
       const m = t.match(/^([A-Za-z])\s*['′’]*\s*\d*$/);
       if (m) return m[1].toUpperCase();
@@ -211,7 +217,11 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
         ? Math.round(rawMeta.tempo) : undefined,
     };
 
-    return new Response(JSON.stringify({ chords: norm, meta, raw }),
+    const arrangement = ((Array.isArray(parsed?.arrangement) ? parsed?.arrangement : parsed?.structure) ?? [])
+      .map(label => canonSection(label))
+      .filter(Boolean);
+
+    return new Response(JSON.stringify({ chords: norm, meta, arrangement, raw }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (err) {
