@@ -137,15 +137,24 @@ const spellRootInKey = (root: NoteName, key: NoteName, keyMode: KeyMode): string
   }
 };
 
+const CHORD_ABBR: Record<string, string> = {
+  'Major': '', 'Minor': 'm', 'Diminished': 'dim', 'Dim 7': 'dim7', 'Half-Dim 7': 'm7♭5',
+  'Augmented': 'aug', 'Aug 7': 'aug7', 'Sus2': 'sus2', 'Sus4': 'sus4', '7sus4': '7sus4',
+  'Major 7': 'maj7', 'Major 9': 'maj9', 'Maj11': 'maj11', 'Maj13': 'maj13',
+  'Minor 7': 'm7', 'Minor 9': 'm9', 'Minor 11': 'm11', 'Minor 13': 'm13', 'Minor 6': 'm6',
+  'Dominant 7': '7', 'Dominant 9': '9', '11': '11', '13': '13',
+  'Major 6': '6', '6add9': '6/9', 'Add9': 'add9', 'Madd9': 'madd9', 'Power (5)': '5',
+  'Min/Maj 7': 'mMaj7',
+};
+
+const abbrForType = (t: string) => CHORD_ABBR[t] ?? t.replace(/\s+/g, '');
+
 const formatChordLabel = (c: ChartChord, key?: NoteName, keyMode?: KeyMode): string => {
   const spell = (n: NoteName) => (key && keyMode ? spellRootInKey(n, key, keyMode) : n);
   const root = spell(c.root);
-  const suffix =
-    c.chordType === 'Major' ? '' :
-    c.chordType === 'Minor' ? 'm' :
-    ` ${c.chordType}`;
-  return `${root}${suffix}${c.bass ? `/${spell(c.bass)}` : ''}`;
+  return `${root}${abbrForType(c.chordType)}${c.bass ? `/${spell(c.bass)}` : ''}`;
 };
+
 
 
 
@@ -940,6 +949,36 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       if (hasVoltaRow[r]) { cursor += 1; rowHeights.push('2.5rem'); }
     }
   }
+  // Detect sections that are near-copies of an earlier section (e.g. a second
+  // A section whose only difference is the final chord) so they can be marked A′.
+  const sectionVariation = (() => {
+    const map = new Map<string, { ofName: string; diffSlotIds: Set<string> }>();
+    const chordsOf = (sec: Section) =>
+      slots.slice(sec.startIdx, sec.endIdx + 1).filter(s => s.chord);
+    for (let a = 1; a < sections.length; a++) {
+      const cur = chordsOf(sections[a]);
+      if (cur.length < 3) continue;
+      for (let b = 0; b < a; b++) {
+        const prev = chordsOf(sections[b]);
+        if (prev.length !== cur.length) continue;
+        const diff = new Set<string>();
+        cur.forEach((s, i) => {
+          const p = prev[i].chord!;
+          const c = s.chord!;
+          if (p.root !== c.root || p.chordType !== c.chordType || p.bass !== c.bass) diff.add(s.id);
+        });
+        if (diff.size > 0 && diff.size <= Math.max(1, Math.floor(cur.length * 0.25))) {
+          map.set(sections[a].id, { ofName: sections[b].name, diffSlotIds: diff });
+          break;
+        }
+      }
+    }
+    return map;
+  })();
+  const variantSlotIds = new Set<string>(
+    [...sectionVariation.values()].flatMap(v => [...v.diffSlotIds]),
+  );
+
   // Precompute section overlay segments: one single box per section (spanning all rows it touches).
   const sectionSegments = sections.flatMap(sec => {
     if (sec.startIdx >= slots.length || sec.endIdx >= slots.length) return [];
@@ -961,6 +1000,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       const rr = renderRowOfLogical[logicalRowOf(i)] + (slots[i].ending === 2 ? 1 : 0);
       if (rr > lastRenderRow) lastRenderRow = rr;
     }
+    const variation = sectionVariation.get(sec.id);
     return [{
       key: `${sec.id}-box`,
       rowStart: renderRowOfLogical[startRow],
@@ -969,9 +1009,11 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       colEnd,
       color: sec.color,
       name: sec.name,
+      variation,
       showLabel: true,
     }];
   });
+
 
   // Volta (1st / 2nd ending) enclosure boxes — nested inside the section box.
   const voltaSegments = (() => {
@@ -1513,7 +1555,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                 style={{
                   gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
-                  border: `3px solid hsl(${seg.color} / 0.85)`,
+                  border: `3px ${seg.variation ? 'dashed' : 'solid'} hsl(${seg.color} / 0.85)`,
                   background: `hsl(${seg.color} / 0.08)`,
                   margin: '-6px -5px',
                   zIndex: 3,
@@ -1524,11 +1566,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     onDoubleClick={(e) => { e.stopPropagation(); renameSection(seg.key.split('-box')[0]); }}
                     className="pointer-events-auto cursor-text absolute -top-2.5 left-2 px-1.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-background rounded select-none"
                     style={{ color: `hsl(${seg.color})` }}
-                    title="Double-click to rename"
+                    title={seg.variation ? `Variation of ${seg.variation.ofName} — differing bars highlighted` : 'Double-click to rename'}
                   >
-                    {seg.name}
+                    {seg.name}{seg.variation ? '′' : ''}
+                    {seg.variation && (
+                      <span className="ml-1 normal-case tracking-normal opacity-80">
+                        (var. of {seg.variation.ofName})
+                      </span>
+                    )}
                   </span>
                 )}
+
               </div>
             ))}
             {/* Volta (1st / 2nd ending) boxes nested inside the section box. */}
@@ -1587,7 +1635,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                       ? 'inset 0 0 0 2px hsl(var(--primary))'
                       : inDragSel
                         ? 'inset 0 0 0 2px hsl(var(--primary))'
-                        : undefined,
+                        : variantSlotIds.has(slot.id)
+                          ? 'inset 0 0 0 2px hsl(45 95% 60%)'
+                          : undefined,
+
                     zIndex: 1,
                   }}
                   className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
