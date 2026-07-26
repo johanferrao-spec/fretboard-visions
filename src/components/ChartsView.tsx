@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown } from 'lucide-react';
+import { buildChartPdf } from '@/lib/chartPdf';
+
 
 import type { NoteName, KeyMode } from '@/lib/music';
 import { getDiatonicChords, getDiatonicSevenths, spellDiatonicRoots, getChordDegree, SCALE_DEGREE_COLORS, NOTE_NAMES } from '@/lib/music';
@@ -218,6 +220,53 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const [readingChart, setReadingChart] = useState(false);
   const [readDragOver, setReadDragOver] = useState(false);
   const readInputRef = useRef<HTMLInputElement | null>(null);
+
+  // ---- iReal-style PDF export ----
+  const [exportUrl, setExportUrl] = useState<string | null>(null);
+  const exportDocRef = useRef<ReturnType<typeof buildChartPdf> | null>(null);
+
+  const irealLabel = useCallback((c: { root: string; chordType: string }) => {
+    const root = spellRootInKey(c.root as NoteName, chartKey, keyMode);
+    const map: Record<string, string> = {
+      'Major': '', 'Minor': '-', 'Minor 7': '-7', 'Minor 9': '-9', 'Minor 11': '-11',
+      'Minor 6': '-6', 'Major 7': 'Δ', 'Major 9': 'Δ9', 'Maj11': 'Δ11', 'Maj13': 'Δ13',
+      'Dominant 7': '7', 'Dominant 9': '9', '11': '11', '13': '13',
+      'Diminished': '°', 'Dim 7': '°7', 'Half-Dim 7': 'ø7', 'Augmented': '+', 'Aug 7': '+7',
+      'Sus2': 'sus2', 'Sus4': 'sus4', '7sus4': '7sus4', 'Add9': 'add9',
+      'Major 6': '6', '6add9': '6/9', 'Madd9': '-add9', 'Power (5)': '5',
+    };
+    return `${root}${map[c.chordType] ?? c.chordType}`;
+  }, [chartKey, keyMode]);
+
+  const openExport = useCallback(() => {
+    try {
+      const doc = buildChartPdf({
+        title,
+        composer,
+        style: feel,
+        tempo,
+        timeSig,
+        slots,
+        sections: sections.map(s => ({ id: s.id, name: s.name, startIdx: s.startIdx, endIdx: s.endIdx })),
+        arrangement: arrangement.map(a => a.sectionId),
+        label: irealLabel,
+      });
+      exportDocRef.current = doc;
+      const url = URL.createObjectURL(doc.output('blob'));
+      setExportUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
+    } catch (e) {
+      toast({ title: 'Export failed', description: String(e) });
+    }
+  }, [title, composer, feel, tempo, timeSig, slots, sections, arrangement, irealLabel]);
+
+  const closeExport = useCallback(() => {
+    setExportUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+  }, []);
+
+  const downloadExport = useCallback(() => {
+    exportDocRef.current?.save(`${(title || 'chart').replace(/[^\w\-]+/g, '_')}.pdf`);
+  }, [title]);
+
 
   // (Song audio analysis feature removed.)
 
@@ -1210,6 +1259,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             </div>
           )}
 
+          <button
+            onClick={openExport}
+            className="mt-1 w-full flex items-center justify-center gap-1 rounded border border-primary/60 bg-primary/15 hover:bg-primary/25 text-primary px-1.5 py-1 text-[9px] font-mono font-bold uppercase tracking-wider transition"
+            title="Export this chart as an iReal Pro style PDF"
+          >
+            <FileDown size={11} />
+            Export Chart
+          </button>
+
+
+
           {sections.length > 0 && (
             <div className="w-full flex flex-col items-stretch gap-1 mt-1 border-t border-border pt-2">
               <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Sections</div>
@@ -1622,7 +1682,40 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         </div>
       )}
 
+      {/* iReal-style PDF preview */}
+      {exportUrl && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-6"
+          onClick={closeExport}
+        >
+          <div
+            className="bg-card border border-border rounded-lg shadow-2xl flex flex-col overflow-hidden"
+            style={{ width: 'min(880px, 92vw)', height: 'min(90vh, 1000px)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                Chart preview · {title || 'Untitled'}
+              </span>
+              <button
+                onClick={downloadExport}
+                className="ml-auto flex items-center gap-1 rounded border border-primary/60 bg-primary/15 hover:bg-primary/25 text-primary px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider"
+              >
+                <FileDown size={11} />
+                Download PDF
+              </button>
+              <button onClick={closeExport} className="text-muted-foreground hover:text-foreground" title="Close">
+                <X size={13} />
+              </button>
+            </div>
+            <iframe title="Chart PDF" src={exportUrl} className="flex-1 w-full bg-white" />
+          </div>
+        </div>
+      )}
+
     </div>
+
+
 
   );
 }
