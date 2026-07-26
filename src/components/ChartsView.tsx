@@ -1800,6 +1800,20 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                 </span>
               )}
             </div>
+            {(onPlay || onStop) && (
+              <button
+                onClick={() => (isPlaying ? onStop?.() : onPlay?.())}
+                title={isPlaying ? 'Stop backing track' : 'Play backing track'}
+                className={`self-center flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                  isPlaying
+                    ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                    : 'bg-success text-success-foreground hover:bg-success/90'
+                }`}
+              >
+                {isPlaying ? <Square className="w-3.5 h-3.5" fill="currentColor" /> : <Play className="w-3.5 h-3.5" fill="currentColor" />}
+                {isPlaying ? 'Stop' : 'Play'}
+              </button>
+            )}
             <div className="ml-auto flex items-center gap-3 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
               <span><span className="text-foreground font-bold">{tempo}</span> BPM</span>
               <span><span className="text-foreground font-bold">{timeSig}</span></span>
