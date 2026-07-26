@@ -131,14 +131,19 @@ export default function CommunityCharts() {
     const name = author.trim() || 'Anonymous';
     localStorage.setItem('mf-share-author', name);
 
-    let payload: Record<string, unknown>;
+    type Insert = {
+      user_id: string; author_name: string; kind: Kind; title: string;
+      composer: string | null; tempo: number | null; time_sig: string | null;
+      feel: string | null; genre: string | null; description: string | null; data: never;
+    };
+    let payload: Insert;
     if (pickKind === 'chart') {
       const c = localCharts.find(x => x.id === pickId);
       if (!c) { setPublishing(false); toast.error('Chart not found'); return; }
       payload = {
         user_id: uid, author_name: name, kind: 'chart', title: c.title || 'Untitled',
         composer: c.composer ?? null, tempo: c.tempo ?? null, time_sig: c.timeSig ?? null,
-        feel: c.feel ?? null, genre: null, description: description.trim() || null, data: c.data,
+        feel: c.feel ?? null, genre: null, description: description.trim() || null, data: c.data as never,
       };
     } else {
       const t = localTracks.find(x => x.id === pickId);
@@ -146,7 +151,7 @@ export default function CommunityCharts() {
       payload = {
         user_id: uid, author_name: name, kind: 'track', title: t.name || 'Untitled',
         composer: null, tempo: (t.bpm as number) ?? null, time_sig: null, feel: null,
-        genre: (t.genre as string) ?? null, description: description.trim() || null, data: t,
+        genre: (t.genre as string) ?? null, description: description.trim() || null, data: t as never,
       };
     }
 
