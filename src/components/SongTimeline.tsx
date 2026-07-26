@@ -863,23 +863,6 @@ export default function SongTimeline({
 
 
         <div className="ml-auto flex items-center gap-1 relative">
-          {!cellView && (
-            <div className="flex items-center gap-1.5 mr-2" title="Timeline zoom">
-              <Search size={10} className="text-muted-foreground" />
-              <input
-                type="range"
-                min={1}
-                max={4}
-                step={0.25}
-                value={zoom}
-                onChange={(e) => setZoom(parseFloat(e.target.value))}
-                onDoubleClick={() => setZoom(1)}
-                className="w-24"
-                aria-label="Timeline zoom"
-              />
-              <span className="text-[9px] font-mono text-muted-foreground w-7">{zoom.toFixed(1)}x</span>
-            </div>
-          )}
           {backingTrackActive && (
             <>
               <button
@@ -1064,9 +1047,26 @@ export default function SongTimeline({
           {!cellView && (
             <div
               style={{ width: 200, minWidth: 200 }}
-              className="border-r border-border/30 bg-card/40 flex items-center justify-center"
+              className="border-r border-border/30 bg-card/40 flex flex-col items-center justify-center gap-2"
               onMouseDown={(e) => e.stopPropagation()}
             >
+              {/* Timeline zoom — above the Chart button */}
+              {!cellView && (
+                <div className="flex flex-col items-center gap-1" title="Timeline zoom">
+                  <span className="text-[9px] font-mono text-muted-foreground">{zoom.toFixed(1)}x</span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={4}
+                    step={0.25}
+                    value={zoom}
+                    onChange={(e) => setZoom(parseFloat(e.target.value))}
+                    onDoubleClick={() => setZoom(1)}
+                    className="w-24"
+                    aria-label="Timeline zoom"
+                  />
+                </div>
+              )}
               {/* Chart toggle — centered in the left header column, always visible. */}
               <button
                 onClick={() => onToggleCharts?.()}
