@@ -157,7 +157,7 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
         ? Math.round(rawMeta.tempo) : undefined,
     };
 
-    return new Response(JSON.stringify({ chords, meta, raw }),
+    return new Response(JSON.stringify({ chords: norm, meta, raw }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (err) {
