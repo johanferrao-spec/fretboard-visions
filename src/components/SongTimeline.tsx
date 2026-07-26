@@ -863,23 +863,6 @@ export default function SongTimeline({
 
 
         <div className="ml-auto flex items-center gap-1 relative">
-          {!cellView && (
-            <div className="flex items-center gap-1.5 mr-2" title="Timeline zoom">
-              <Search size={10} className="text-muted-foreground" />
-              <input
-                type="range"
-                min={1}
-                max={4}
-                step={0.25}
-                value={zoom}
-                onChange={(e) => setZoom(parseFloat(e.target.value))}
-                onDoubleClick={() => setZoom(1)}
-                className="w-24"
-                aria-label="Timeline zoom"
-              />
-              <span className="text-[9px] font-mono text-muted-foreground w-7">{zoom.toFixed(1)}x</span>
-            </div>
-          )}
           {backingTrackActive && (
             <>
               <button
