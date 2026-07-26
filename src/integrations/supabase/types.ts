@@ -142,6 +142,60 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_charts: {
+        Row: {
+          author_name: string
+          composer: string | null
+          created_at: string
+          data: Json
+          description: string | null
+          downloads: number
+          feel: string | null
+          genre: string | null
+          id: string
+          kind: string
+          tempo: number | null
+          time_sig: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          author_name?: string
+          composer?: string | null
+          created_at?: string
+          data: Json
+          description?: string | null
+          downloads?: number
+          feel?: string | null
+          genre?: string | null
+          id?: string
+          kind: string
+          tempo?: number | null
+          time_sig?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          author_name?: string
+          composer?: string | null
+          created_at?: string
+          data?: Json
+          description?: string | null
+          downloads?: number
+          feel?: string | null
+          genre?: string | null
+          id?: string
+          kind?: string
+          tempo?: number | null
+          time_sig?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -246,6 +300,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_shared_chart_downloads: {
+        Args: { _id: string }
+        Returns: undefined
       }
     }
     Enums: {
