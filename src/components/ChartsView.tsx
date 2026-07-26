@@ -1779,6 +1779,23 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                 </span>
               </div>
             ))}
+            {/* Unsectioned runs of consecutive chords still get one enclosure box. */}
+            {orphanSegments.map(seg => (
+              <div
+                key={seg.key}
+                className="pointer-events-none rounded-lg"
+                style={{
+                  gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
+                  gridColumn: `${seg.colStart} / ${seg.colEnd}`,
+                  border: '3px solid hsl(220 15% 60% / 0.7)',
+                  background: 'hsl(220 15% 60% / 0.07)',
+                  margin: '-6px -5px',
+                  zIndex: 3,
+                }}
+              />
+            ))}
+
+
 
             {slots.map((slot, idx) => {
               const isHover = hoverSlot === slot.id;
