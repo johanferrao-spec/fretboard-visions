@@ -704,7 +704,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
         const next = prev.slice();
         next.splice(startIdx, idx - startIdx + 1, ...region);
-        return next;
+        return mergeEmptySlots(next);
       }
 
     });
