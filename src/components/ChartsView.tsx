@@ -221,6 +221,53 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const [readDragOver, setReadDragOver] = useState(false);
   const readInputRef = useRef<HTMLInputElement | null>(null);
 
+  // ---- iReal-style PDF export ----
+  const [exportUrl, setExportUrl] = useState<string | null>(null);
+  const exportDocRef = useRef<ReturnType<typeof buildChartPdf> | null>(null);
+
+  const irealLabel = useCallback((c: { root: string; chordType: string }) => {
+    const root = spellRootInKey(c.root as NoteName, chartKey, keyMode);
+    const map: Record<string, string> = {
+      'Major': '', 'Minor': '-', 'Minor 7': '-7', 'Minor 9': '-9', 'Minor 11': '-11',
+      'Minor 6': '-6', 'Major 7': 'Δ', 'Major 9': 'Δ9', 'Maj11': 'Δ11', 'Maj13': 'Δ13',
+      'Dominant 7': '7', 'Dominant 9': '9', '11': '11', '13': '13',
+      'Diminished': '°', 'Dim 7': '°7', 'Half-Dim 7': 'ø7', 'Augmented': '+', 'Aug 7': '+7',
+      'Sus2': 'sus2', 'Sus4': 'sus4', '7sus4': '7sus4', 'Add9': 'add9',
+      'Major 6': '6', '6add9': '6/9', 'Madd9': '-add9', 'Power (5)': '5',
+    };
+    return `${root}${map[c.chordType] ?? c.chordType}`;
+  }, [chartKey, keyMode]);
+
+  const openExport = useCallback(() => {
+    try {
+      const doc = buildChartPdf({
+        title,
+        composer,
+        style: feel,
+        tempo,
+        timeSig,
+        slots,
+        sections: sections.map(s => ({ id: s.id, name: s.name, startIdx: s.startIdx, endIdx: s.endIdx })),
+        arrangement: arrangement.map(a => a.sectionId),
+        label: irealLabel,
+      });
+      exportDocRef.current = doc;
+      const url = URL.createObjectURL(doc.output('blob'));
+      setExportUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
+    } catch (e) {
+      toast({ title: 'Export failed', description: String(e) });
+    }
+  }, [title, composer, feel, tempo, timeSig, slots, sections, arrangement, irealLabel]);
+
+  const closeExport = useCallback(() => {
+    setExportUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+  }, []);
+
+  const downloadExport = useCallback(() => {
+    exportDocRef.current?.save(`${(title || 'chart').replace(/[^\w\-]+/g, '_')}.pdf`);
+  }, [title]);
+
+
   // (Song audio analysis feature removed.)
 
   const gridRef = useRef<HTMLDivElement | null>(null);
