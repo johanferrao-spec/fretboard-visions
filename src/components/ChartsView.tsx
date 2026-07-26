@@ -992,16 +992,24 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
 
 
+  // A 2nd/3rd ending only stacks on a new row when it directly follows a
+  // 1st-ending run. A lone later ending (e.g. the "3." at the end of a repeated
+  // section) stays inline in the normal flow with just its dotted bracket.
+  const stackedEnding: boolean[] = slots.map((s, i) => {
+    if (!s.ending || s.ending < 2) return false;
+    let j = i - 1;
+    while (j >= 0 && (slots[j].ending ?? 0) >= 2) j--;
+    return j >= 0 && slots[j].ending === 1;
+  });
+  const endingRowOffset = (i: number) => (stackedEnding[i] ? slots[i].ending! - 1 : 0);
+
   // Cumulative unit offset (1/8 bar) at start of each slot.
   // Ending-2 (volta) slots do NOT advance the flow: they are an alternative to
   // the preceding ending-1 bars, so they reuse the same columns one row below.
   const startUnits: number[] = [];
   {
     let n = 0;
-    let voltaCursor: number | null = null;
-    let voltaEnding: number | null = null;
-    slots.forEach((s, i) => {
-      if (s.ending && s.ending >= 2) {
+
         if (voltaCursor === null || voltaEnding !== s.ending) {
           voltaEnding = s.ending;
           // Align the 2nd ending with the TAIL of the 1st ending: both endings
