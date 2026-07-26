@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 
 export interface PdfChord { root: string; chordType: string; bass?: string }
-export interface PdfSlot { id: string; bars: number; chord?: PdfChord; ending?: 1 | 2 }
+export interface PdfSlot { id: string; bars: number; chord?: PdfChord; ending?: 1 | 2 | 3 }
 export interface PdfSection { id: string; name: string; startIdx: number; endIdx: number }
 
 export interface ChartPdfData {
@@ -34,7 +34,7 @@ export interface Bar {
   sectionName?: string;
   sectionLetter?: string;
   /** Volta / repeat ending bracket (1. or 2.). */
-  ending?: 1 | 2;
+  ending?: 1 | 2 | 3;
 }
 
 export type ChartBar = Bar;
