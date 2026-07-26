@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import BeginnerModePanel from './BeginnerMode';
+import CommunityCharts from './CommunityCharts';
 
 
 import {
@@ -246,7 +247,7 @@ interface ChordReferenceProps {
 }
 
 type VoicingTab = 'full' | 'shell';
-type MainTab = 'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'tuning' | null;
+type MainTab = 'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'community' | 'tuning' | null;
 type OctaveRange = 1 | 2 | 3;
 
 const DEFAULT_ARPEGGIO_COLUMNS: { label: string; types: string[] }[] = [
@@ -1183,6 +1184,7 @@ export default function ChordReference({
           { key: 'identify' as MainTab, label: "What's This?" },
           { key: 'changes' as MainTab, label: 'Progression Analyser' },
           { key: 'backing' as MainTab, label: 'Backing Track' },
+          { key: 'community' as MainTab, label: 'Charts' },
           { key: 'tuning' as MainTab, label: 'Alternate Tuning' },
         ]).map(tab => (
           <button
@@ -1328,6 +1330,8 @@ export default function ChordReference({
           chordOctaveShift={chordOctaveShift}
           setChordOctaveShift={setChordOctaveShift}
         />
+      ) : activeTab === 'community' ? (
+        <CommunityCharts />
       ) : activeTab === 'tuning' ? (
         <TuningPanel
           tuningName={tuningName}
