@@ -138,13 +138,15 @@ const spellRootInKey = (root: NoteName, key: NoteName, keyMode: KeyMode): string
 };
 
 const formatChordLabel = (c: ChartChord, key?: NoteName, keyMode?: KeyMode): string => {
-  const root = key && keyMode ? spellRootInKey(c.root, key, keyMode) : c.root;
+  const spell = (n: NoteName) => (key && keyMode ? spellRootInKey(n, key, keyMode) : n);
+  const root = spell(c.root);
   const suffix =
     c.chordType === 'Major' ? '' :
     c.chordType === 'Minor' ? 'm' :
     ` ${c.chordType}`;
-  return `${root}${suffix}`;
+  return `${root}${suffix}${c.bass ? `/${spell(c.bass)}` : ''}`;
 };
+
 
 
 const ROMANS_UP = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
