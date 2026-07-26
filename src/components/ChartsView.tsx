@@ -1273,7 +1273,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     const payload = {
       user_id: uid,
       author_name: author,
-      kind: 'chart' as const,
+      kind: 'chart',
       title: title || 'Untitled',
       composer: composer || null,
       tempo: tempo || null,
@@ -1281,9 +1281,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       feel: feel || null,
       genre: null,
       description: null,
-      data: { slots, sections, arrangement, chartKey, title, composer, tempo, timeSig, feel },
+      data: { slots, sections, arrangement, chartKey, title, composer, tempo, timeSig, feel } as never,
     };
     const { error } = await supabase.from('shared_charts').insert(payload);
+
     if (error) {
       toast({ title: 'Share failed', description: error.message });
       return;
