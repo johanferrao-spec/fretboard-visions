@@ -73,6 +73,23 @@ export default function SongTimeline({
   chartsActive, onToggleCharts,
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
+  // Horizontal timeline zoom (1 = fit to width). The measure-label strip and the
+  // chord grid scroll together so bar numbers always sit above their bars.
+  const [zoom, setZoom] = useState(1);
+  const labelScrollRef = useRef<HTMLDivElement>(null);
+  const gridScrollRef = useRef<HTMLDivElement>(null);
+  const syncingRef = useRef(false);
+  const syncScroll = (from: 'labels' | 'grid') => {
+    if (syncingRef.current) return;
+    const src = from === 'labels' ? labelScrollRef.current : gridScrollRef.current;
+    const dst = from === 'labels' ? gridScrollRef.current : labelScrollRef.current;
+    if (!src || !dst) return;
+    syncingRef.current = true;
+    dst.scrollLeft = src.scrollLeft;
+    requestAnimationFrame(() => { syncingRef.current = false; });
+  };
+  const syncFromLabels = () => syncScroll('labels');
+  const syncFromGrid = () => syncScroll('grid');
   const [dragChord, setDragChord] = useState<{ id: string; offsetBeats: number } | null>(null);
   const [zHeld, setZHeld] = useState(false);
   const [xHeld, setXHeld] = useState(false);
