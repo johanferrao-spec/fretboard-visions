@@ -1009,8 +1009,12 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const startUnits: number[] = [];
   {
     let n = 0;
-
+    let voltaCursor: number | null = null;
+    let voltaEnding: number | null = null;
+    slots.forEach((s, i) => {
+      if (s.ending && s.ending >= 2 && stackedEnding[i]) {
         if (voltaCursor === null || voltaEnding !== s.ending) {
+
           voltaEnding = s.ending;
           // Align the 2nd ending with the TAIL of the 1st ending: both endings
           // replace the same number of bars, so the run is right-aligned to
