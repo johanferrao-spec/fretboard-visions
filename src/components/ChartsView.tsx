@@ -953,14 +953,18 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     slots.forEach((s, i) => {
       if (s.ending === 2) {
         if (voltaCursor === null) {
+          // Prefer aligning under the matching 1st-ending bars. If those were
+          // never tagged, fall back to the start of the current row so the
+          // "2." bracket sits on the LEFT rather than trailing off to the right.
           let j = i - 1;
-          let anchor = n;
+          let anchor: number | null = null;
           while (j >= 0 && slots[j].ending === 1) { anchor = startUnits[j]; j--; }
-          voltaCursor = anchor;
+          voltaCursor = anchor ?? Math.floor(n / COLS) * COLS;
         }
         startUnits.push(voltaCursor);
         voltaCursor += s.bars;
       } else {
+
         voltaCursor = null;
         startUnits.push(n);
         n += s.bars;
