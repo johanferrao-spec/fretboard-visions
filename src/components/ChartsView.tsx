@@ -631,6 +631,11 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       const { data, error } = await supabase.functions.invoke('read-chart', { body: { image: dataUrl } });
       if (error) throw error;
       const chords: Array<{ root: NoteName; chordType: string; bass?: NoteName; bars: number; section?: string; ending?: 1 | 2 | 3 }> = data?.chords ?? [];
+      const arrangementLabels: string[] = Array.isArray(data?.arrangement)
+        ? data.arrangement
+        : Array.isArray(data?.structure)
+          ? data.structure
+          : [];
       const meta: { title?: string; composer?: string; timeSig?: string; style?: string; tempo?: number } = data?.meta ?? {};
       if (chords.length === 0) {
         toast({ title: 'No chords detected', description: 'Try a clearer image or crop to the chord chart.', variant: 'destructive' });
@@ -654,7 +659,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
           chord: { root: c.root, chordType: c.chordType, ...(c.bass ? { bass: c.bass } : {}) },
           ...(c.ending === 1 || c.ending === 2 || c.ending === 3 ? { ending: c.ending } : {}),
         });
-        slotSectionLabels.push(c.section);
+        slotSectionLabels.push(normalizeSectionLabel(c.section));
       });
 
 
@@ -671,10 +676,11 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       // Build sections from contiguous runs of the same section label.
       // iReal shorthand "In" is Intro; single letters become A/B/C Section.
       const newSections: Section[] = [];
-      const newArrangement: ArrangementItem[] = [];
+      const defaultArrangement: ArrangementItem[] = [];
       // Repeated labels reuse the same name + colour, but every contiguous run
       // becomes its OWN section so each pass gets its own enclosure box.
       const labelToColor = new Map<string, string>();
+      const labelToSectionIds = new Map<string, string[]>();
       let runStart = -1;
       let runLabel: string | undefined;
       const flushRun = (endIdxExclusive: number) => {
@@ -688,7 +694,8 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
         }
         const secId = uid('sec');
         newSections.push({ id: secId, name, startIdx: runStart, endIdx: endIdxExclusive - 1, color });
-        newArrangement.push({ id: uid('arr'), sectionId: secId });
+        labelToSectionIds.set(labelKey, [...(labelToSectionIds.get(labelKey) ?? []), secId]);
+        defaultArrangement.push({ id: uid('arr'), sectionId: secId });
       };
       for (let i = 0; i < slotSectionLabels.length; i++) {
         const lbl = normalizeSectionLabel(slotSectionLabels[i]);
@@ -699,6 +706,20 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
         }
       }
       flushRun(slotSectionLabels.length);
+
+      const normalizedArrangement = arrangementLabels
+        .map(label => normalizeSectionLabel(label))
+        .filter((label): label is string => !!label);
+      const arrangementCursor = new Map<string, number>();
+      const structureArrangement = normalizedArrangement.flatMap(label => {
+        const ids = labelToSectionIds.get(label) ?? [];
+        if (!ids.length) return [];
+        const occurrence = arrangementCursor.get(label) ?? 0;
+        arrangementCursor.set(label, occurrence + 1);
+        const sectionId = ids[Math.min(occurrence, ids.length - 1)];
+        return [{ id: uid('arr'), sectionId }];
+      });
+      const newArrangement = structureArrangement.length > 0 ? structureArrangement : defaultArrangement;
 
       snapshot();
       setSlots(newSlots);
