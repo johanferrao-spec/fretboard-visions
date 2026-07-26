@@ -1346,8 +1346,18 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         <div className="w-44 shrink-0 border-r border-border bg-card flex flex-col items-stretch gap-2 py-2 px-2 overflow-y-auto">
           {/* Key selector */}
           <div className="flex flex-col gap-1 chart-key-selector">
-            <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Key</div>
-            <ScaleRootSelector selectedRoot={chartKey} onSelect={(n) => setChartKey(n)} />
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">Key</span>
+              <button
+                onClick={() => setAutoKey(a => !a)}
+                title="Detect the key automatically from the chords used"
+                className={`px-1 rounded text-[8px] font-mono uppercase tracking-wider border transition-colors ${
+                  autoKey ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'
+                }`}
+              >Auto</button>
+            </div>
+            <ScaleRootSelector selectedRoot={chartKey} onSelect={(n) => { setAutoKey(false); setChartKey(n); }} />
+
           </div>
 
           <button
