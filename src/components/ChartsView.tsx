@@ -1309,6 +1309,8 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             setSections([]);
             setArrangement([]);
             setChartKey(currentKey);
+            setAutoKey(true);
+
             setTitle('Untitled');
             setComposer('');
             setTempo(120);
