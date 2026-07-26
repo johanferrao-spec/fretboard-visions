@@ -1186,7 +1186,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
     [...sectionVariation.values()].flatMap(v => [...v.diffSlotIds]),
   );
 
-  // Precompute section overlay segments: one single box per section (spanning all rows it touches).
+  // Precompute section overlay segments per occupied render row. A section that
+  // starts mid-row and continues below must not draw a full-width rectangle on
+  // its first row, otherwise it covers earlier cells/volta endings (e.g. Bridge
+  // beginning after a 1st/2nd ending pair).
   const sectionSegments = sections.flatMap(sec => {
     if (slots.length === 0) return [];
     // Clamp to the current slot range — indices can drift after merges/resizes,
@@ -1194,37 +1197,31 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
     const secStart = Math.max(0, Math.min(sec.startIdx, slots.length - 1));
     const secEnd = Math.max(secStart, Math.min(sec.endIdx, slots.length - 1));
     sec = { ...sec, startIdx: secStart, endIdx: secEnd };
-    const startRow = logicalRowOf(sec.startIdx);
-    const endRow = logicalRowOf(sec.endIdx);
-    const singleRow = startRow === endRow;
-    const colStart = singleRow ? (startUnits[sec.startIdx] % COLS) + 1 : 1;
-
-    const colEnd = singleRow
-      ? Math.max(
-          (startUnits[sec.endIdx] % COLS) + slots[sec.endIdx].bars + 1,
-          // A second-ending run can extend further right than the last slot.
-          ...slots.slice(sec.startIdx, sec.endIdx + 1)
-            .map((s, k) => (startUnits[sec.startIdx + k] % COLS) + s.bars + 1),
-        )
-      : COLS + 1;
-    // Wrap tightly to the lowest render row actually occupied by this section.
-    let lastRenderRow = renderRowOfLogical[startRow];
+    const byRenderRow = new Map<number, { colStart: number; colEnd: number }>();
     for (let i = sec.startIdx; i <= sec.endIdx; i++) {
       const rr = renderRowOfLogical[logicalRowOf(i)] + endingRowOffset(i);
-      if (rr > lastRenderRow) lastRenderRow = rr;
+      const colStart = (startUnits[i] % COLS) + 1;
+      const colEnd = colStart + slots[i].bars;
+      const prev = byRenderRow.get(rr);
+      byRenderRow.set(rr, prev
+        ? { colStart: Math.min(prev.colStart, colStart), colEnd: Math.max(prev.colEnd, colEnd) }
+        : { colStart, colEnd });
     }
     const variation = sectionVariation.get(sec.id);
-    return [{
-      key: `${sec.id}-box`,
-      rowStart: renderRowOfLogical[startRow],
-      rowEnd: lastRenderRow + 1,
-      colStart,
-      colEnd,
-      color: sec.color,
-      name: sec.name,
-      variation,
-      showLabel: true,
-    }];
+    return [...byRenderRow.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([row, cols], idx) => ({
+        key: `${sec.id}-box-${row}`,
+        sectionId: sec.id,
+        rowStart: row,
+        rowEnd: row + 1,
+        colStart: cols.colStart,
+        colEnd: cols.colEnd,
+        color: sec.color,
+        name: sec.name,
+        variation,
+        showLabel: idx === 0,
+      }));
   });
 
 
@@ -1265,8 +1262,8 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
   })();
 
 
-  // Orphan runs: consecutive chord bars that belong to no section still get a
-  // single enclosure box (a run of 2+ bars reads as its own group).
+  // Orphan runs: consecutive chord bars that belong to no section still get
+  // enclosure boxes, split per occupied row so they never cover unrelated cells.
   const orphanSegments = (() => {
     const out: {
       key: string; rowStart: number; rowEnd: number; colStart: number; colEnd: number;
@@ -1277,17 +1274,24 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       let j = i;
       while (j + 1 < slots.length && slots[j + 1].chord && !sectionOfSlot(j + 1)) j++;
       if (j > i) {
-        const rows = [];
-        for (let k = i; k <= j; k++) rows.push(renderRowOfLogical[logicalRowOf(k)] + endingRowOffset(k));
-        const rowStart = Math.min(...rows);
-        const rowEnd = Math.max(...rows) + 1;
-        const singleRow = rowEnd - rowStart === 1;
-        out.push({
-          key: `orphan-${slots[i].id}`,
-          rowStart,
-          rowEnd,
-          colStart: singleRow ? (startUnits[i] % COLS) + 1 : 1,
-          colEnd: singleRow ? (startUnits[j] % COLS) + slots[j].bars + 1 : COLS + 1,
+        const byRenderRow = new Map<number, { colStart: number; colEnd: number }>();
+        for (let k = i; k <= j; k++) {
+          const row = renderRowOfLogical[logicalRowOf(k)] + endingRowOffset(k);
+          const colStart = (startUnits[k] % COLS) + 1;
+          const colEnd = colStart + slots[k].bars;
+          const prev = byRenderRow.get(row);
+          byRenderRow.set(row, prev
+            ? { colStart: Math.min(prev.colStart, colStart), colEnd: Math.max(prev.colEnd, colEnd) }
+            : { colStart, colEnd });
+        }
+        byRenderRow.forEach((cols, row) => {
+          out.push({
+            key: `orphan-${slots[i].id}-${row}`,
+            rowStart: row,
+            rowEnd: row + 1,
+            colStart: cols.colStart,
+            colEnd: cols.colEnd,
+          });
         });
       }
       i = j + 1;
