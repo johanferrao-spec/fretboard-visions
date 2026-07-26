@@ -32,7 +32,11 @@ export interface ChartSlot {
   /** How many 1/8-bar units this slot spans (min 1). 8 = one bar. */
   bars: number;
   chord?: ChartChord;
+  /** Volta / repeat ending: 1 = first time round, 2 = second time round.
+      Ending-2 slots are laid out directly beneath their ending-1 counterparts. */
+  ending?: 1 | 2;
 }
+
 
 interface ChartsViewProps {
   currentKey: NoteName;
@@ -466,7 +470,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       });
       const { data, error } = await supabase.functions.invoke('read-chart', { body: { image: dataUrl } });
       if (error) throw error;
-      const chords: Array<{ root: NoteName; chordType: string; bars: number; section?: string }> = data?.chords ?? [];
+      const chords: Array<{ root: NoteName; chordType: string; bars: number; section?: string; ending?: 1 | 2 }> = data?.chords ?? [];
       if (chords.length === 0) {
         toast({ title: 'No chords detected', description: 'Try a clearer image or crop to the chord chart.', variant: 'destructive' });
         return;
@@ -477,9 +481,15 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       const slotSectionLabels: (string | undefined)[] = [];
       chords.forEach(c => {
         const units = Math.max(1, Math.round(c.bars * UNITS_PER_BAR));
-        newSlots.push({ id: uid('slot'), bars: units, chord: { root: c.root, chordType: c.chordType } });
+        newSlots.push({
+          id: uid('slot'),
+          bars: units,
+          chord: { root: c.root, chordType: c.chordType },
+          ...(c.ending === 1 || c.ending === 2 ? { ending: c.ending } : {}),
+        });
         slotSectionLabels.push(c.section);
       });
+
       // Pad with empty bars up to at least DEFAULT_SLOT_COUNT bars.
       const usedUnits = newSlots.reduce((n, s) => n + s.bars, 0);
       const minUnits = DEFAULT_SLOT_COUNT * UNITS_PER_BAR;
@@ -844,11 +854,30 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
 
   // Cumulative unit offset (1/8 bar) at start of each slot.
+  // Ending-2 (volta) slots do NOT advance the flow: they are an alternative to
+  // the preceding ending-1 bars, so they reuse the same columns one row below.
   const startUnits: number[] = [];
   {
     let n = 0;
-    for (const s of slots) { startUnits.push(n); n += s.bars; }
+    let voltaCursor: number | null = null;
+    slots.forEach((s, i) => {
+      if (s.ending === 2) {
+        if (voltaCursor === null) {
+          let j = i - 1;
+          let anchor = n;
+          while (j >= 0 && slots[j].ending === 1) { anchor = startUnits[j]; j--; }
+          voltaCursor = anchor;
+        }
+        startUnits.push(voltaCursor);
+        voltaCursor += s.bars;
+      } else {
+        voltaCursor = null;
+        startUnits.push(n);
+        n += s.bars;
+      }
+    });
   }
+
 
 
   const sectionOfSlot = (idx: number): Section | undefined =>
@@ -860,14 +889,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   // sections, so groups are visually separated vertically.
   const logicalRowOf = (idx: number) => Math.floor(startUnits[idx] / COLS);
   const totalLogicalRows = slots.length > 0
-    ? Math.max(1, Math.ceil((startUnits[slots.length - 1] + slots[slots.length - 1].bars) / COLS))
+    ? Math.max(1, ...slots.map((s, i) => Math.ceil((startUnits[i] + s.bars) / COLS)))
     : 1;
   const firstSlotOnRow: number[] = new Array(totalLogicalRows).fill(-1);
   const lastSlotOnRow: number[] = new Array(totalLogicalRows).fill(-1);
-  slots.forEach((_, i) => {
+  // Rows that need an extra "second ending" row directly beneath them.
+  const hasVoltaRow: boolean[] = new Array(totalLogicalRows).fill(false);
+  slots.forEach((s, i) => {
     const r = logicalRowOf(i);
     if (firstSlotOnRow[r] === -1) firstSlotOnRow[r] = i;
     lastSlotOnRow[r] = i;
+    if (s.ending === 2) hasVoltaRow[r] = true;
   });
   const hasSpacerBefore: boolean[] = new Array(totalLogicalRows).fill(false);
   for (let r = 1; r < totalLogicalRows; r++) {
@@ -885,6 +917,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       cursor += 1;
       renderRowOfLogical[r] = cursor;
       rowHeights.push('2.5rem');
+      if (hasVoltaRow[r]) { cursor += 1; rowHeights.push('2.5rem'); }
     }
   }
   // Precompute section overlay segments: one single box per section (spanning all rows it touches).
@@ -895,12 +928,19 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     const singleRow = startRow === endRow;
     const colStart = singleRow ? (startUnits[sec.startIdx] % COLS) + 1 : 1;
     const colEnd = singleRow
-      ? (startUnits[sec.endIdx] % COLS) + slots[sec.endIdx].bars + 1
+      ? Math.max(
+          (startUnits[sec.endIdx] % COLS) + slots[sec.endIdx].bars + 1,
+          // A second-ending run can extend further right than the last slot.
+          ...slots.slice(sec.startIdx, sec.endIdx + 1)
+            .map((s, k) => (startUnits[sec.startIdx + k] % COLS) + s.bars + 1),
+        )
       : COLS + 1;
     return [{
       key: `${sec.id}-box`,
       rowStart: renderRowOfLogical[startRow],
-      rowEnd: renderRowOfLogical[endRow] + 1,
+      // Wrap the second-ending row too when the section ends on a volta row.
+      rowEnd: renderRowOfLogical[endRow] + 1 + (hasVoltaRow[endRow] ? 1 : 0),
+
       colStart,
       colEnd,
       color: sec.color,
@@ -1445,7 +1485,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               const inDragSel = sectionMode && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
               const startUnit = startUnits[idx];
               const barLabel = formatBarNumber(startUnit);
-              const gridRowIndex = renderRowOfLogical[logicalRowOf(idx)];
+              const logicalRow = logicalRowOf(idx);
+              const gridRowIndex = renderRowOfLogical[logicalRow] + (slot.ending === 2 ? 1 : 0);
+              const isEndingRunStart = !!slot.ending && slots[idx - 1]?.ending !== slot.ending;
+
               return (
                 <div
                   key={slot.id}
@@ -1511,6 +1554,24 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                   >
                     {barLabel}
                   </span>
+
+                  {slot.ending && (
+                    <>
+                      <span
+                        className="absolute top-0 left-0 right-0 pointer-events-none"
+                        style={{ height: 2, background: 'rgba(0,0,0,0.55)' }}
+                      />
+                      {isEndingRunStart && (
+                        <span
+                          className="absolute top-[3px] right-1 text-[9px] font-mono font-bold pointer-events-none select-none"
+                          style={{ color: color ? 'rgba(0,0,0,0.75)' : 'hsl(var(--foreground))' }}
+                        >
+                          {slot.ending}.
+                        </span>
+                      )}
+                    </>
+                  )}
+
 
                   {section && section.startIdx === idx && (
                     <span

@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 
 export interface PdfChord { root: string; chordType: string }
-export interface PdfSlot { id: string; bars: number; chord?: PdfChord }
+export interface PdfSlot { id: string; bars: number; chord?: PdfChord; ending?: 1 | 2 }
 export interface PdfSection { id: string; name: string; startIdx: number; endIdx: number }
 
 export interface ChartPdfData {
@@ -33,6 +33,8 @@ export interface Bar {
   sectionEnd: boolean;
   sectionName?: string;
   sectionLetter?: string;
+  /** Volta / repeat ending bracket (1. or 2.). */
+  ending?: 1 | 2;
 }
 
 export type ChartBar = Bar;
@@ -58,6 +60,7 @@ export function buildBars(data: ChartPdfData): Bar[] {
       bar.sectionId = bar.sectionId ?? sec?.id;
       bar.sectionName = bar.sectionName ?? sec?.name;
       bar.sectionLetter = bar.sectionLetter ?? (sec ? letterFor.get(sec.id) : undefined);
+      bar.ending = bar.ending ?? slot.ending;
       bar.chords.push({ label: data.label(slot.chord), unit: unit % UNITS_PER_BAR });
     }
     unit += Math.max(1, slot.bars);
@@ -75,6 +78,7 @@ export function buildBars(data: ChartPdfData): Bar[] {
     if (
       prev &&
       !bar.sectionStart &&
+      prev.ending === bar.ending &&
       prev.chords.length === 1 &&
       bar.chords.length === 1 &&
       prev.chords[0].label === bar.chords[0].label
@@ -139,8 +143,10 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
   };
 
   bars.forEach((bar, i) => {
-    // Force a new row when a section starts mid-row.
-    if (bar.sectionStart && col !== 0) {
+    // Force a new row when a section starts mid-row, or when a volta
+    // (1. / 2. ending) bracket begins, so 2nd-time bars sit under the 1st.
+    const prevBar = bars[i - 1];
+    if ((bar.sectionStart || bar.ending !== prevBar?.ending) && col !== 0) {
       col = 0;
       x = M;
       y += rowH;
@@ -158,6 +164,21 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
       doc.setTextColor(255, 255, 255);
       doc.text(bar.sectionLetter, x + 6.5, y - 6.5, { align: 'center' });
       doc.setTextColor(0, 0, 0);
+    }
+
+    // Volta bracket + number above the bar.
+    if (bar.ending && bar.ending !== bars[i - 1]?.ending) {
+      doc.setLineWidth(0.9);
+      doc.setDrawColor(0, 0, 0);
+      doc.line(x, y - 8, x + barW, y - 8);
+      doc.line(x, y - 8, x, y - 2);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`${bar.ending}.`, x + 2.5, y - 1.5);
+    } else if (bar.ending) {
+      doc.setLineWidth(0.9);
+      doc.setDrawColor(0, 0, 0);
+      doc.line(x, y - 8, x + barW, y - 8);
     }
 
     // Bar lines

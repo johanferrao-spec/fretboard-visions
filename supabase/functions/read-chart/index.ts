@@ -38,11 +38,13 @@ For each chord return:
 - "chordType": exactly one of: ${VALID_CHORD_TYPES.join(' | ')}
 - "bars": duration in bars (number, use fractions like 0.5 if the chord occupies half a bar; default 1 if unclear)
 - "section": OPTIONAL short label for the song section this chord belongs to (e.g. "A", "B", "C", "Intro", "Verse", "Chorus", "Bridge", "Outro"). Lead sheets often mark rehearsal letters like [A], (A), or "A Section" / "B Section" at the start of a system — assign every subsequent chord to that section until the next marker appears. Omit the field entirely if the chart has no visible section markers.
+- "ending": OPTIONAL number 1 or 2. Charts often show volta brackets marked "1." and "2." (a horizontal bracket above one or more bars). Chords under the "1." bracket get "ending": 1, chords under the "2." bracket get "ending": 2. IMPORTANT: the "2." bars are an ALTERNATIVE to the "1." bars — they are played the second time through the SAME section, so give them the SAME "section" label as the "1." bars, and list them immediately after all the "1." bars in the output. Omit "ending" entirely for normal bars.
 
 Return STRICT JSON only:
-{ "chords": [ { "root": "...", "chordType": "...", "bars": 1, "section": "A" }, ... ] }
+{ "chords": [ { "root": "...", "chordType": "...", "bars": 1, "section": "A", "ending": 1 }, ... ] }
 
 No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
+
 
     const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -72,7 +74,7 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
 
     const data = await aiRes.json();
     const raw: string = data?.choices?.[0]?.message?.content ?? '';
-    let parsed: { chords?: Array<{ root?: string; chordType?: string; bars?: number; section?: string }> } | null = null;
+    let parsed: { chords?: Array<{ root?: string; chordType?: string; bars?: number; section?: string; ending?: number }> } | null = null;
     try { parsed = JSON.parse(raw); } catch {
       const m = raw.match(/\{[\s\S]*\}/);
       if (m) { try { parsed = JSON.parse(m[0]); } catch { /* ignore */ } }
@@ -87,7 +89,9 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
       chordType: c.chordType!,
       bars: typeof c.bars === 'number' && c.bars > 0 ? c.bars : 1,
       section: typeof (c as any).section === 'string' && (c as any).section.trim() ? (c as any).section.trim() : undefined,
+      ending: c.ending === 1 || c.ending === 2 ? c.ending : undefined,
     }));
+
 
     return new Response(JSON.stringify({ chords, raw }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
