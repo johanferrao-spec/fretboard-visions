@@ -278,7 +278,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   }, []);
 
   const [chartKey, setChartKey] = useState<NoteName>(persisted.chartKey ?? currentKey);
+  // Auto key detection stays on until the user picks a key by hand.
+  const [autoKey, setAutoKey] = useState(true);
   const [useSevenths, setUseSevenths] = useState(false);
+
   const diatonicChords = useMemo(() => getDiatonicChords(chartKey, keyMode), [chartKey, keyMode]);
   const diatonicSevenths = useMemo(() => getDiatonicSevenths(chartKey, keyMode), [chartKey, keyMode]);
   const spelledRoots = useMemo(() => spellDiatonicRoots(chartKey, keyMode), [chartKey, keyMode]);
