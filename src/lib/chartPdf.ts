@@ -34,8 +34,10 @@ interface Bar {
   sectionLetter?: string;
 }
 
+export type ChartBar = Bar;
+
 /** Group the 1/8-unit slots into bars, tagging section membership. */
-function buildBars(data: ChartPdfData): Bar[] {
+export function buildBars(data: ChartPdfData): Bar[] {
   const sectionOf = (slotIdx: number) =>
     data.sections.find(s => slotIdx >= s.startIdx && slotIdx <= s.endIdx);
 
