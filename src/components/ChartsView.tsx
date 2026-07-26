@@ -32,7 +32,11 @@ export interface ChartSlot {
   /** How many 1/8-bar units this slot spans (min 1). 8 = one bar. */
   bars: number;
   chord?: ChartChord;
+  /** Volta / repeat ending: 1 = first time round, 2 = second time round.
+      Ending-2 slots are laid out directly beneath their ending-1 counterparts. */
+  ending?: 1 | 2;
 }
+
 
 interface ChartsViewProps {
   currentKey: NoteName;
