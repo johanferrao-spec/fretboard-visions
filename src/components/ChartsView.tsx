@@ -960,7 +960,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
           // where the 1st ending finishes.
           let total2 = 0;
           for (let k = i; k < slots.length && slots[k].ending === s.ending; k++) total2 += slots[k].bars;
+          // Walk back over any earlier ending runs (3rd ending sits after the
+          // 2nd) until the 1st-ending run is found — that's the anchor.
           let j = i - 1;
+          while (j >= 0 && (slots[j].ending ?? 0) >= 2) j--;
           let end1: number | null = null;
           let anchor: number | null = null;
           while (j >= 0 && slots[j].ending === 1) {
@@ -968,6 +971,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
             anchor = startUnits[j];
             j--;
           }
+
           voltaCursor = end1 !== null
             ? Math.max(anchor ?? 0, end1 - total2)
             : Math.floor(n / COLS) * COLS;
