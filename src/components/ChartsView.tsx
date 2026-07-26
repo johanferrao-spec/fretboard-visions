@@ -264,6 +264,24 @@ const SECTION_PRESETS = [
   'A Section', 'B Section', 'C Section', 'Outro', 'Custom…',
 ];
 
+const normalizeSectionLabel = (raw?: string): string | undefined => {
+  if (!raw) return undefined;
+  let t = raw.trim().replace(/^[\[\(\{]|[\]\)\}]$/g, '').trim();
+  t = t.replace(/\s*section\s*$/i, '').trim();
+  if (!t) return undefined;
+  if (/^(in|int|intro|introduction|i)$/i.test(t)) return 'Intro';
+  if (/^(out|outro|ending)$/i.test(t)) return 'Outro';
+  const letter = t.match(/^([A-HJ-Z])\s*['′’]*\s*\d*$/i);
+  if (letter) return letter[1].toUpperCase();
+  return t.replace(/\s+/g, ' ').slice(0, 24);
+};
+
+const sectionDisplayName = (raw: string): string => {
+  const normalized = normalizeSectionLabel(raw) ?? raw.trim();
+  if (/^[A-Z]$/.test(normalized)) return `${normalized} Section`;
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
 export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, onPlay, onStop }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
