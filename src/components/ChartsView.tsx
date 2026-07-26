@@ -604,7 +604,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
         const next = prev.slice();
         next.splice(idx, endIdx - idx + 1, ...region);
-        return next;
+        return mergeEmptySlots(next);
       } else {
         // LEFT edge — region starts at rowStart OR just after the previous
         // different chord slot in this row, whichever is later.
