@@ -1531,6 +1531,28 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                 )}
               </div>
             ))}
+            {/* Volta (1st / 2nd ending) boxes nested inside the section box. */}
+            {voltaSegments.map(seg => (
+              <div
+                key={seg.key}
+                className="pointer-events-none rounded-md relative"
+                style={{
+                  gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
+                  gridColumn: `${seg.colStart} / ${seg.colEnd}`,
+                  border: `2px dashed hsl(${seg.color} / 0.9)`,
+                  margin: '-2px -2px',
+                  zIndex: 4,
+                }}
+              >
+                <span
+                  className="absolute -top-2 left-1.5 px-1 text-[9px] font-mono font-bold bg-background rounded select-none"
+                  style={{ color: `hsl(${seg.color})` }}
+                >
+                  {seg.label}
+                </span>
+              </div>
+            ))}
+
             {slots.map((slot, idx) => {
               const isHover = hoverSlot === slot.id;
               const isEditing = editingSlot === slot.id;
