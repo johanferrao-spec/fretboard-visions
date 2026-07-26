@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown } from 'lucide-react';
-import { buildChartPdf } from '@/lib/chartPdf';
+import { buildChartPdf, downloadPdf, type ChartPdfData } from '@/lib/chartPdf';
+import ChartPreview from '@/components/ChartPreview';
 
 
 import type { NoteName, KeyMode } from '@/lib/music';
@@ -222,8 +223,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const readInputRef = useRef<HTMLInputElement | null>(null);
 
   // ---- iReal-style PDF export ----
-  const [exportUrl, setExportUrl] = useState<string | null>(null);
-  const exportDocRef = useRef<ReturnType<typeof buildChartPdf> | null>(null);
+  const [exportData, setExportData] = useState<ChartPdfData | null>(null);
 
   const irealLabel = useCallback((c: { root: string; chordType: string }) => {
     const root = spellRootInKey(c.root as NoteName, chartKey, keyMode);
@@ -240,7 +240,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
   const openExport = useCallback(() => {
     try {
-      const doc = buildChartPdf({
+      setExportData({
         title,
         composer,
         style: feel,
@@ -251,21 +251,21 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
         arrangement: arrangement.map(a => a.sectionId),
         label: irealLabel,
       });
-      exportDocRef.current = doc;
-      const url = URL.createObjectURL(doc.output('blob'));
-      setExportUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
     } catch (e) {
       toast({ title: 'Export failed', description: String(e) });
     }
   }, [title, composer, feel, tempo, timeSig, slots, sections, arrangement, irealLabel]);
 
-  const closeExport = useCallback(() => {
-    setExportUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
-  }, []);
+  const closeExport = useCallback(() => setExportData(null), []);
 
   const downloadExport = useCallback(() => {
-    exportDocRef.current?.save(`${(title || 'chart').replace(/[^\w\-]+/g, '_')}.pdf`);
-  }, [title]);
+    if (!exportData) return;
+    try {
+      downloadPdf(buildChartPdf(exportData), `${(title || 'chart').replace(/[^\w\-]+/g, '_')}.pdf`);
+    } catch (e) {
+      toast({ title: 'Download failed', description: String(e) });
+    }
+  }, [exportData, title]);
 
 
   // (Song audio analysis feature removed.)
@@ -1683,7 +1683,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       )}
 
       {/* iReal-style PDF preview */}
-      {exportUrl && (
+      {exportData && (
         <div
           className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-6"
           onClick={closeExport}
@@ -1708,7 +1708,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                 <X size={13} />
               </button>
             </div>
-            <iframe title="Chart PDF" src={exportUrl} className="flex-1 w-full bg-white" />
+            <div className="flex-1 min-h-0 overflow-hidden bg-white">
+              <ChartPreview data={exportData} />
+            </div>
           </div>
         </div>
       )}
