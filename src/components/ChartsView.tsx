@@ -1255,7 +1255,44 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const dragSelStart = dragSel ? Math.min(dragSel.start, dragSel.end) : -1;
   const dragSelEnd = dragSel ? Math.max(dragSel.start, dragSel.end) : -1;
 
+  const shareChart = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id;
+    if (!uid) {
+      toast({ title: 'Sign in required', description: 'Create an account to share charts with the community.' });
+      return;
+    }
+    let author = localStorage.getItem('mf-share-author') || '';
+    if (!author) {
+      author = window.prompt('Enter your display name for the community library:')?.trim() || '';
+      if (!author) return;
+      localStorage.setItem('mf-share-author', author);
+    }
+    if (!confirm(`Share "${title || 'Untitled'}" with the community?`)) return;
+
+    const payload = {
+      user_id: uid,
+      author_name: author,
+      kind: 'chart' as const,
+      title: title || 'Untitled',
+      composer: composer || null,
+      tempo: tempo || null,
+      time_sig: timeSig || null,
+      feel: feel || null,
+      genre: null,
+      description: null,
+      data: { slots, sections, arrangement, chartKey, title, composer, tempo, timeSig, feel },
+    };
+    const { error } = await supabase.from('shared_charts').insert(payload);
+    if (error) {
+      toast({ title: 'Share failed', description: error.message });
+      return;
+    }
+    toast({ title: 'Shared with the community', description: `"${payload.title}" is now public.` });
+  };
+
   return (
+
     <div className="h-full flex flex-col overflow-hidden bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-card shrink-0">
