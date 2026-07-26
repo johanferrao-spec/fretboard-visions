@@ -291,6 +291,15 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   }, [chartKey, keyMode]);
 
   const [slots, setSlots] = useState<ChartSlot[]>(() => persisted.slots?.length ? persisted.slots! : makeSlots(DEFAULT_SLOT_COUNT));
+
+  // Detect the key from the chords in use (unless the user chose one manually).
+  useEffect(() => {
+    if (!autoKey) return;
+    const entries = slots.filter(s => s.chord).map(s => ({ chord: s.chord!, bars: s.bars }));
+    const detected = detectKeyFromChords(entries, keyMode);
+    if (detected && detected !== chartKey) setChartKey(detected);
+  }, [slots, keyMode, autoKey, chartKey]);
+
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
