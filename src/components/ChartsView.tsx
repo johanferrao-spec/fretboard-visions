@@ -260,7 +260,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   // ---- iReal-style PDF export ----
   const [exportData, setExportData] = useState<ChartPdfData | null>(null);
 
-  const irealLabel = useCallback((c: { root: string; chordType: string }) => {
+  const irealLabel = useCallback((c: { root: string; chordType: string; bass?: string }) => {
     const root = spellRootInKey(c.root as NoteName, chartKey, keyMode);
     const map: Record<string, string> = {
       'Major': '', 'Minor': '-', 'Minor 7': '-7', 'Minor 9': '-9', 'Minor 11': '-11',
@@ -270,8 +270,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       'Sus2': 'sus2', 'Sus4': 'sus4', '7sus4': '7sus4', 'Add9': 'add9',
       'Major 6': '6', '6add9': '6/9', 'Madd9': '-add9', 'Power (5)': '5',
     };
-    return `${root}${map[c.chordType] ?? c.chordType}`;
+    const bass = c.bass ? `/${spellRootInKey(c.bass as NoteName, chartKey, keyMode)}` : '';
+    return `${root}${map[c.chordType] ?? c.chordType}${bass}`;
   }, [chartKey, keyMode]);
+
 
   const openExport = useCallback(() => {
     try {
