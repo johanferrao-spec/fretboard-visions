@@ -977,6 +977,22 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const sectionOfSlot = (idx: number): Section | undefined =>
     sections.find(sec => idx >= sec.startIdx && idx <= sec.endIdx);
 
+  // Pickup bars: a chord that sits outside every section and leads straight
+  // back into a section (or is the final bar, looping back to the top).
+  const pickupSlotIds = new Set<string>(
+    slots
+      .filter((s, i) => {
+        if (!s.chord) return false;
+        if (sectionOfSlot(i)) return false;
+        const nextStartsSection = sections.some(sec => sec.startIdx === i + 1);
+        const isLastChord = !slots.slice(i + 1).some(n => n.chord);
+        return nextStartsSection || isLastChord;
+      })
+      .map(s => s.id),
+  );
+
+
+
   // ---- Section-aware row layout ----
   // Each logical row holds COLS units (BARS_PER_ROW bars). We add an extra
   // spacer row between consecutive logical rows when they belong to different
