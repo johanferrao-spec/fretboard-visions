@@ -84,7 +84,10 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
 
     const data = await aiRes.json();
     const raw: string = data?.choices?.[0]?.message?.content ?? '';
-    let parsed: { chords?: Array<{ root?: string; chordType?: string; bars?: number; section?: string; ending?: number }> } | null = null;
+    let parsed: {
+      chords?: Array<{ root?: string; chordType?: string; bass?: string; bars?: number; section?: string; ending?: number }>;
+      meta?: { title?: string; composer?: string; timeSig?: string; style?: string; tempo?: number };
+    } | null = null;
     try { parsed = JSON.parse(raw); } catch {
       const m = raw.match(/\{[\s\S]*\}/);
       if (m) { try { parsed = JSON.parse(m[0]); } catch { /* ignore */ } }
@@ -97,14 +100,27 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
     ).map(c => ({
       root: c.root!,
       chordType: c.chordType!,
+      bass: typeof c.bass === 'string' && VALID_ROOTS.includes(c.bass) ? c.bass : undefined,
       bars: typeof c.bars === 'number' && c.bars > 0 ? c.bars : 1,
       section: typeof (c as any).section === 'string' && (c as any).section.trim() ? (c as any).section.trim() : undefined,
       ending: c.ending === 1 || c.ending === 2 ? c.ending : undefined,
     }));
 
+    const str = (v: unknown, max = 80) =>
+      typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined;
+    const rawMeta = parsed?.meta ?? {};
+    const meta = {
+      title: str(rawMeta.title),
+      composer: str(rawMeta.composer),
+      timeSig: /^\d{1,2}\/\d{1,2}$/.test(String(rawMeta.timeSig ?? '')) ? String(rawMeta.timeSig) : undefined,
+      style: str(rawMeta.style, 40),
+      tempo: typeof rawMeta.tempo === 'number' && rawMeta.tempo > 20 && rawMeta.tempo < 400
+        ? Math.round(rawMeta.tempo) : undefined,
+    };
 
-    return new Response(JSON.stringify({ chords, raw }),
+    return new Response(JSON.stringify({ chords, meta, raw }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
   } catch (err) {
     return new Response(JSON.stringify({ error: (err as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
