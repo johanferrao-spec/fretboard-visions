@@ -2077,33 +2077,46 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               }
               endingsBySection.set(sec.id, [...set].sort((a, b) => a - b));
             });
+            const total = new Map<string, number>();
+            arrangement.forEach(a => total.set(a.sectionId, (total.get(a.sectionId) ?? 0) + 1));
             const occurrence = new Map<string, number>();
-            return arrangement.map((item, i) => {
+            // A section that holds several endings is played once per ending, so
+            // its last arrangement entry expands into one chip per remaining ending.
+            const chips: { item: ArrangementItem; idx: number; sec: Section; ending: number | null; key: string }[] = [];
+            arrangement.forEach((item, i) => {
               const sec = sections.find(s => s.id === item.sectionId);
-              if (!sec) return null;
+              if (!sec) return;
               const n = occurrence.get(sec.id) ?? 0;
               occurrence.set(sec.id, n + 1);
               const list = endingsBySection.get(sec.id) ?? [];
-              const ending = list.length ? (list[Math.min(n, list.length - 1)]) : null;
+              const isLast = n === (total.get(sec.id) ?? 1) - 1;
+              const mine = isLast ? list.slice(n) : list.slice(n, n + 1);
+              if (!mine.length) {
+                chips.push({ item, idx: i, sec, ending: null, key: item.id });
+              } else {
+                mine.forEach(e => chips.push({ item, idx: i, sec, ending: e, key: `${item.id}-${e}` }));
+              }
+            });
+            return chips.map(({ item, idx: i, sec, ending, key }) => {
               const isOver = arrDragOverIdx === i;
               return (
-                <div key={item.id} className="flex items-center">
+                <div key={key} className="flex items-center">
                   <div
                     className={`h-1 w-1 rounded-full ${isOver ? 'bg-primary' : 'bg-transparent'}`}
                     onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
                   />
-                  <div
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('application/chart-arrangement-item', item.id);
-                      e.dataTransfer.effectAllowed = 'move';
-                    }}
-                    onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
-                    className="group flex flex-col items-center rounded px-2 py-1 cursor-grab active:cursor-grabbing"
-                    style={{ background: `hsl(${sec.color} / 0.3)`, color: `hsl(${sec.color})` }}
-                    title={`${sec.name}${ending ? ` — ${ending}${ending === 1 ? 'st' : ending === 2 ? 'nd' : 'rd'} ending` : ''} — drag to reorder`}
-                  >
-                    <div className="flex items-center gap-1">
+                  <div className="flex flex-col items-stretch gap-0.5">
+                    <div
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/chart-arrangement-item', item.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
+                      className="group flex items-center gap-1 rounded px-2 py-1 cursor-grab active:cursor-grabbing"
+                      style={{ background: `hsl(${sec.color} / 0.3)`, color: `hsl(${sec.color})` }}
+                      title={`${sec.name} — drag to reorder`}
+                    >
                       <GripVertical size={10} className="opacity-60" />
                       <span className="text-[11px] font-mono font-bold uppercase tracking-wider">{sec.name}</span>
                       <button
@@ -2115,15 +2128,19 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                       </button>
                     </div>
                     {ending && (
-                      <span className="mt-0.5 rounded-sm border border-current/40 px-1 text-[9px] font-mono leading-tight opacity-80">
+                      <div
+                        className="rounded border border-dashed px-1 py-[1px] text-center text-[9px] font-mono leading-tight"
+                        style={{ borderColor: `hsl(${sec.color} / 0.6)`, color: `hsl(${sec.color})` }}
+                      >
                         {ending}. ending
-                      </span>
+                      </div>
                     )}
                   </div>
                 </div>
               );
             });
           })()}
+
 
           {arrangement.length > 0 && (
             <div
