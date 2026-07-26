@@ -648,20 +648,21 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       };
       const newSections: Section[] = [];
       const newArrangement: ArrangementItem[] = [];
-      // Map of label -> section id so repeated labels reuse the same section.
-      const labelToSectionId = new Map<string, string>();
+      // Repeated labels reuse the same name + colour, but every contiguous run
+      // becomes its OWN section so each pass gets its own enclosure box.
+      const labelToColor = new Map<string, string>();
       let runStart = -1;
       let runLabel: string | undefined;
       const flushRun = (endIdxExclusive: number) => {
         if (runStart < 0 || !runLabel) return;
         const name = expandName(runLabel);
-        let secId = labelToSectionId.get(runLabel);
-        if (!secId) {
-          secId = uid('sec');
-          const color = SECTION_COLORS[newSections.length % SECTION_COLORS.length];
-          newSections.push({ id: secId, name, startIdx: runStart, endIdx: endIdxExclusive - 1, color });
-          labelToSectionId.set(runLabel, secId);
+        let color = labelToColor.get(runLabel);
+        if (!color) {
+          color = SECTION_COLORS[labelToColor.size % SECTION_COLORS.length];
+          labelToColor.set(runLabel, color);
         }
+        const secId = uid('sec');
+        newSections.push({ id: secId, name, startIdx: runStart, endIdx: endIdxExclusive - 1, color });
         newArrangement.push({ id: uid('arr'), sectionId: secId });
       };
       for (let i = 0; i < slotSectionLabels.length; i++) {
