@@ -311,6 +311,55 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
   const [pendingRange, setPendingRange] = useState<{ startIdx: number; endIdx: number } | null>(null);
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
   const [arrangement, setArrangement] = useState<ArrangementItem[]>(persisted.arrangement ?? []);
+
+  // Auto-recognise a repeat of an earlier section: a run of unsectioned bars
+  // whose chords match an existing section becomes another occurrence of that
+  // section, with the differing tail bars marked as the next volta ending.
+  useEffect(() => {
+    const secOf = (i: number) => sections.find(s => i >= s.startIdx && i <= s.endIdx);
+    const runs: { start: number; end: number }[] = [];
+    for (let i = 0; i < slots.length; i++) {
+      if (!slots[i].chord || secOf(i)) continue;
+      let j = i;
+      while (j + 1 < slots.length && slots[j + 1].chord && !secOf(j + 1)) j++;
+      if (j - i + 1 >= 4) runs.push({ start: i, end: j });
+      i = j;
+    }
+    if (!runs.length) return;
+    const same = (a?: ChartChord, b?: ChartChord) =>
+      !!a && !!b && a.root === b.root && a.chordType === b.chordType && a.bass === b.bass;
+    const added: Section[] = [];
+    const endingUpdates = new Map<string, 1 | 2 | 3>();
+    for (const run of runs) {
+      for (const sec of sections) {
+        const base: ChartSlot[] = [];
+        for (let k = Math.max(0, sec.startIdx); k <= Math.min(sec.endIdx, slots.length - 1); k++) {
+          if (slots[k].chord && !slots[k].ending) base.push(slots[k]);
+        }
+        if (base.length < 4) continue;
+        const runSlots = slots.slice(run.start, run.end + 1).filter(s => s.chord);
+        if (runSlots.length < base.length) continue;
+        let hits = 0;
+        for (let k = 0; k < base.length; k++) if (same(base[k].chord, runSlots[k]?.chord)) hits++;
+        if (hits / base.length < 0.75) continue;
+        let maxEnding = 0;
+        for (let k = Math.max(0, sec.startIdx); k <= Math.min(sec.endIdx, slots.length - 1); k++) {
+          maxEnding = Math.max(maxEnding, slots[k].ending ?? 0);
+        }
+        const next = Math.min(3, maxEnding + 1) as 1 | 2 | 3;
+        runSlots.slice(base.length).forEach(s => { if (s.ending !== next) endingUpdates.set(s.id, next); });
+        added.push({ id: uid('sec'), name: sec.name, color: sec.color, startIdx: run.start, endIdx: run.end });
+        break;
+      }
+    }
+    if (!added.length) return;
+    setSections(prev => [...prev, ...added]);
+    if (endingUpdates.size) {
+      setSlots(prev => prev.map(s => (endingUpdates.has(s.id) ? { ...s, ending: endingUpdates.get(s.id) } : s)));
+    }
+    setArrangement(prev => [...prev, ...added.map(s => ({ id: uid('arr'), sectionId: s.id }))]);
+  }, [slots, sections]);
+
   const [arrDragOverIdx, setArrDragOverIdx] = useState<number | null>(null);
   const [editorSlotId, setEditorSlotId] = useState<string | null>(null);
   const [editorPos, setEditorPos] = useState<{ top: number; left: number } | null>(null);
