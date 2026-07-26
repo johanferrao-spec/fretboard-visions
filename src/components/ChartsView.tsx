@@ -1129,8 +1129,38 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       });
       i = j + 1;
     }
+
+  // Orphan runs: consecutive chord bars that belong to no section still get a
+  // single enclosure box (a run of 2+ bars reads as its own group).
+  const orphanSegments = (() => {
+    const out: {
+      key: string; rowStart: number; rowEnd: number; colStart: number; colEnd: number;
+    }[] = [];
+    let i = 0;
+    while (i < slots.length) {
+      if (!slots[i].chord || sectionOfSlot(i)) { i++; continue; }
+      let j = i;
+      while (j + 1 < slots.length && slots[j + 1].chord && !sectionOfSlot(j + 1)) j++;
+      if (j > i) {
+        const rows = [];
+        for (let k = i; k <= j; k++) rows.push(renderRowOfLogical[logicalRowOf(k)] + (slots[k].ending === 2 ? 1 : 0));
+        const rowStart = Math.min(...rows);
+        const rowEnd = Math.max(...rows) + 1;
+        const singleRow = rowEnd - rowStart === 1;
+        out.push({
+          key: `orphan-${slots[i].id}`,
+          rowStart,
+          rowEnd,
+          colStart: singleRow ? (startUnits[i] % COLS) + 1 : 1,
+          colEnd: singleRow ? (startUnits[j] % COLS) + slots[j].bars + 1 : COLS + 1,
+        });
+      }
+      i = j + 1;
+    }
     return out;
   })();
+
+
 
 
 
