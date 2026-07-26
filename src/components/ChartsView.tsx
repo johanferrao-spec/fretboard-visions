@@ -1829,7 +1829,24 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
                     {barLabel}
                   </span>
 
+                  {/* Pickup bar leading back into a section */}
+                  {pickupSlotIds.has(slot.id) && (
+                    <>
+                      <span
+                        className="absolute top-0.5 right-1 text-[8px] font-mono font-bold uppercase tracking-wider pointer-events-none select-none"
+                        style={{ color: 'rgba(0,0,0,0.7)' }}
+                      >
+                        Pickup →
+                      </span>
+                      <div
+                        className="absolute inset-0 rounded-md pointer-events-none"
+                        style={{ border: '2px dashed hsl(45 95% 55% / 0.95)' }}
+                      />
+                    </>
+                  )}
+
                   {/* Volta brackets are drawn as their own enclosure boxes (see voltaSegments). */}
+
 
 
 
