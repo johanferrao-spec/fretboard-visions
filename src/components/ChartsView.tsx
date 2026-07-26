@@ -953,14 +953,24 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
     slots.forEach((s, i) => {
       if (s.ending === 2) {
         if (voltaCursor === null) {
-          // Prefer aligning under the matching 1st-ending bars. If those were
-          // never tagged, fall back to the start of the current row so the
-          // "2." bracket sits on the LEFT rather than trailing off to the right.
+          // Align the 2nd ending with the TAIL of the 1st ending: both endings
+          // replace the same number of bars, so the run is right-aligned to
+          // where the 1st ending finishes.
+          let total2 = 0;
+          for (let k = i; k < slots.length && slots[k].ending === 2; k++) total2 += slots[k].bars;
           let j = i - 1;
+          let end1: number | null = null;
           let anchor: number | null = null;
-          while (j >= 0 && slots[j].ending === 1) { anchor = startUnits[j]; j--; }
-          voltaCursor = anchor ?? Math.floor(n / COLS) * COLS;
+          while (j >= 0 && slots[j].ending === 1) {
+            if (end1 === null) end1 = startUnits[j] + slots[j].bars;
+            anchor = startUnits[j];
+            j--;
+          }
+          voltaCursor = end1 !== null
+            ? Math.max(anchor ?? 0, end1 - total2)
+            : Math.floor(n / COLS) * COLS;
         }
+
         startUnits.push(voltaCursor);
         voltaCursor += s.bars;
       } else {
@@ -1115,8 +1125,14 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
       let j = i;
       while (j + 1 < slots.length && slots[j + 1].ending === e) j++;
       const row = renderRowOfLogical[logicalRowOf(i)] + (e === 2 ? 1 : 0);
-      const colStart = (startUnits[i] % COLS) + 1;
+      // A 1st-ending bracket only covers the bars the 2nd ending replaces,
+      // so it starts where the (right-aligned) 2nd-ending run starts.
+      const nextIsEnd2 = e === 1 && j + 1 < slots.length && slots[j + 1].ending === 2;
+      const colStart = nextIsEnd2
+        ? (startUnits[j + 1] % COLS) + 1
+        : (startUnits[i] % COLS) + 1;
       const colEnd = (startUnits[j] % COLS) + slots[j].bars + 1;
+
       const sec = sectionOfSlot(i);
       out.push({
         key: `volta-${slots[i].id}`,
