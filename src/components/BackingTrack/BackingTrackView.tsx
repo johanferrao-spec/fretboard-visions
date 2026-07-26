@@ -210,9 +210,13 @@ export default function BackingTrackView({
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* Mini info bar with dynamic arrangement section indicators synced to the timeline */}
-      <div className="flex items-center gap-3 px-3 py-1 border-b border-border bg-card shrink-0">
-        <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider shrink-0">Backing Track</span>
-        <span className="text-[7px] font-mono uppercase tracking-wider text-muted-foreground/70 shrink-0">Sections</span>
+      <div className="flex items-center py-1 border-b border-border bg-card shrink-0">
+        {/* 200px header column mirrors the chord-timeline / track-lane headers so
+            the section bar starts exactly at bar 1. */}
+        <div style={{ width: 200, minWidth: 200 }} className="flex items-center gap-2 px-3">
+          <span className="text-[9px] font-mono uppercase text-muted-foreground tracking-wider shrink-0">Backing Track</span>
+          <span className="text-[7px] font-mono uppercase tracking-wider text-muted-foreground/70 shrink-0">Sections</span>
+        </div>
         <div className="relative flex-1 h-4 min-w-0 rounded-sm bg-muted/30 overflow-hidden">
           {sections.length === 0 ? (
             <div className="absolute inset-0 flex items-center px-2 text-[8px] font-mono uppercase tracking-wider text-muted-foreground/60">
