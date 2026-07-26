@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown } from 'lucide-react';
+import { buildChartPdf } from '@/lib/chartPdf';
+
 
 import type { NoteName, KeyMode } from '@/lib/music';
 import { getDiatonicChords, getDiatonicSevenths, spellDiatonicRoots, getChordDegree, SCALE_DEGREE_COLORS, NOTE_NAMES } from '@/lib/music';
