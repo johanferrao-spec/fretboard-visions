@@ -1042,11 +1042,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
 
   // Precompute section overlay segments: one single box per section (spanning all rows it touches).
   const sectionSegments = sections.flatMap(sec => {
-    if (sec.startIdx >= slots.length || sec.endIdx >= slots.length) return [];
+    if (slots.length === 0) return [];
+    // Clamp to the current slot range — indices can drift after merges/resizes,
+    // and bailing out here used to silently drop the last section's box.
+    const secStart = Math.max(0, Math.min(sec.startIdx, slots.length - 1));
+    const secEnd = Math.max(secStart, Math.min(sec.endIdx, slots.length - 1));
+    sec = { ...sec, startIdx: secStart, endIdx: secEnd };
     const startRow = logicalRowOf(sec.startIdx);
     const endRow = logicalRowOf(sec.endIdx);
     const singleRow = startRow === endRow;
     const colStart = singleRow ? (startUnits[sec.startIdx] % COLS) + 1 : 1;
+
     const colEnd = singleRow
       ? Math.max(
           (startUnits[sec.endIdx] % COLS) + slots[sec.endIdx].bars + 1,
