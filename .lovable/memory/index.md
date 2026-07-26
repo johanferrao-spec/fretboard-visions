@@ -28,6 +28,7 @@
 - [Root Selector](mem://ui/root-selector) — E-to-D natural note ordering and accidental placement
 - [Toolbar Layout](mem://ui/toolbar-layout) — Global UI controls and master slider functionality
 - [Songwriting Timeline](mem://features/songwriting-timeline) — Draggable playhead, diatonic coloring, interactions
+- [Chart voltas & arrangement endings](mem://features/chart-voltas) — Volta numbering across section repeats, ending captions under arrangement chips
 - [Progression Analyser](mem://features/progression-analyser) — Split-view harmonic analysis and context explanations
 - [Scale Organization](mem://theory/scale-organization) — Thematic groupings and hover preview logic
 - [Volume Control](mem://ui/volume-control) — Dynamic physical slider with decibel mapping
