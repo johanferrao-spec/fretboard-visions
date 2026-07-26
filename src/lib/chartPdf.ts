@@ -20,9 +20,10 @@ export interface ChartPdfData {
 
 const UNITS_PER_BAR = 8;
 const BARS_PER_ROW = 4;
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+export const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+export const CHART_BARS_PER_ROW = 4;
 
-interface Bar {
+export interface Bar {
   chords: { label: string; unit: number }[];
   sectionId?: string;
   /** true when the bar repeats the previous bar of the same section. */
@@ -34,8 +35,10 @@ interface Bar {
   sectionLetter?: string;
 }
 
+export type ChartBar = Bar;
+
 /** Group the 1/8-unit slots into bars, tagging section membership. */
-function buildBars(data: ChartPdfData): Bar[] {
+export function buildBars(data: ChartPdfData): Bar[] {
   const sectionOf = (slotIdx: number) =>
     data.sections.find(s => slotIdx >= s.startIdx && slotIdx <= s.endIdx);
 
@@ -84,7 +87,7 @@ function buildBars(data: ChartPdfData): Bar[] {
 }
 
 /** Split a chord symbol into base text and the superscript/quality tail. */
-function splitSymbol(sym: string): { base: string; accidental: string; tail: string } {
+export function splitSymbol(sym: string): { base: string; accidental: string; tail: string } {
   const m = sym.match(/^([A-G])([♭♯#b]?)(.*)$/);
   if (!m) return { base: sym, accidental: '', tail: '' };
   const acc = m[2] === '♭' ? 'b' : m[2] === '♯' ? '#' : m[2];
@@ -261,4 +264,22 @@ export function buildChartPdf(data: ChartPdfData): jsPDF {
   }
 
   return doc;
+}
+
+/** Download a jsPDF doc reliably, even inside sandboxed preview iframes. */
+export function downloadPdf(doc: jsPDF, filename: string) {
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch {
+    window.open(url, '_blank', 'noopener');
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
