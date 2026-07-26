@@ -1866,7 +1866,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
 
           <div
             ref={gridRef}
-            className="grid gap-x-1.5 gap-y-2 px-4 py-6 flex-1 min-h-0 overflow-hidden content-center"
+            className="grid gap-x-3 gap-y-4 px-6 py-7 flex-1 min-h-0 overflow-hidden content-center"
             style={{
               gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
               gridTemplateRows: fittedRowHeights.join(' '),
@@ -1882,7 +1882,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: `3px ${seg.variation ? 'dashed' : 'solid'} hsl(${seg.color} / 0.85)`,
                   background: `hsl(${seg.color} / 0.08)`,
-                  margin: '2px 3px',
+                  margin: '-6px -4px',
                   zIndex: 3,
                 }}
               >
@@ -1913,7 +1913,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: `2px dashed hsl(${seg.color} / 0.9)`,
-                  margin: '4px 6px',
+                  margin: '-2px -1px',
                   zIndex: 4,
                 }}
               >
@@ -1935,7 +1935,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   gridColumn: `${seg.colStart} / ${seg.colEnd}`,
                   border: '3px solid hsl(220 15% 60% / 0.7)',
                   background: 'hsl(220 15% 60% / 0.07)',
-                  margin: '2px 3px',
+                  margin: '-6px -4px',
                   zIndex: 3,
                 }}
               />
