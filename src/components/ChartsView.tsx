@@ -2005,40 +2005,65 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onArra
               Drag sections here to build the song arrangement
             </span>
           )}
-          {arrangement.map((item, i) => {
-            const sec = sections.find(s => s.id === item.sectionId);
-            if (!sec) return null;
-            const isOver = arrDragOverIdx === i;
-            return (
-              <div key={item.id} className="flex items-center">
-                <div
-                  className={`h-1 w-1 rounded-full ${isOver ? 'bg-primary' : 'bg-transparent'}`}
-                  onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
-                />
-                <div
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('application/chart-arrangement-item', item.id);
-                    e.dataTransfer.effectAllowed = 'move';
-                  }}
-                  onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
-                  className="group flex items-center gap-1 rounded px-2 py-1 cursor-grab active:cursor-grabbing"
-                  style={{ background: `hsl(${sec.color} / 0.3)`, color: `hsl(${sec.color})` }}
-                  title={`${sec.name} — drag to reorder`}
-                >
-                  <GripVertical size={10} className="opacity-60" />
-                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider">{sec.name}</span>
-                  <button
-                    onClick={() => { snapshot(); setArrangement(prev => prev.filter(a => a.id !== item.id)); }}
-                    className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
-                    title="Remove"
+          {(() => {
+            // Endings available inside each section (sorted, distinct).
+            const endingsBySection = new Map<string, number[]>();
+            sections.forEach(sec => {
+              const set = new Set<number>();
+              for (let i = Math.max(0, sec.startIdx); i <= Math.min(slots.length - 1, sec.endIdx); i++) {
+                const e = slots[i]?.ending;
+                if (e) set.add(e);
+              }
+              endingsBySection.set(sec.id, [...set].sort((a, b) => a - b));
+            });
+            const occurrence = new Map<string, number>();
+            return arrangement.map((item, i) => {
+              const sec = sections.find(s => s.id === item.sectionId);
+              if (!sec) return null;
+              const n = occurrence.get(sec.id) ?? 0;
+              occurrence.set(sec.id, n + 1);
+              const list = endingsBySection.get(sec.id) ?? [];
+              const ending = list.length ? (list[Math.min(n, list.length - 1)]) : null;
+              const isOver = arrDragOverIdx === i;
+              return (
+                <div key={item.id} className="flex items-center">
+                  <div
+                    className={`h-1 w-1 rounded-full ${isOver ? 'bg-primary' : 'bg-transparent'}`}
+                    onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
+                  />
+                  <div
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/chart-arrangement-item', item.id);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragOver={(e) => { e.preventDefault(); setArrDragOverIdx(i); }}
+                    className="group flex flex-col items-center rounded px-2 py-1 cursor-grab active:cursor-grabbing"
+                    style={{ background: `hsl(${sec.color} / 0.3)`, color: `hsl(${sec.color})` }}
+                    title={`${sec.name}${ending ? ` — ${ending}${ending === 1 ? 'st' : ending === 2 ? 'nd' : 'rd'} ending` : ''} — drag to reorder`}
                   >
-                    <X size={10} />
-                  </button>
+                    <div className="flex items-center gap-1">
+                      <GripVertical size={10} className="opacity-60" />
+                      <span className="text-[11px] font-mono font-bold uppercase tracking-wider">{sec.name}</span>
+                      <button
+                        onClick={() => { snapshot(); setArrangement(prev => prev.filter(a => a.id !== item.id)); }}
+                        className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
+                        title="Remove"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                    {ending && (
+                      <span className="mt-0.5 rounded-sm border border-current/40 px-1 text-[9px] font-mono leading-tight opacity-80">
+                        {ending}. ending
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
+
           {arrangement.length > 0 && (
             <div
               className="flex-1 min-w-[24px] h-full"
