@@ -2042,7 +2042,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
               const isParsing = parsingSlot === slot.id;
               const color = slot.chord ? getChordColor(slot.chord) : null;
               const section = sectionOfSlot(idx);
-              const inDragSel = sectionMode && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
+              const inDragSel = (sectionMode || voltaMode) && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
               const startUnit = startUnits[idx];
               const barLabel = formatBarNumber(startUnit);
               const logicalRow = logicalRowOf(idx);
