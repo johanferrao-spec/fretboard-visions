@@ -1036,6 +1036,8 @@ export default function ChordReference({
   voiceLeadingMode, setVoiceLeadingMode, voiceLeadingMelody, setVoiceLeadingMelody,
   onApplyBeginnerPreset, onApplyOpenChord,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
+  showFretBox, fretBoxStart = 1, fretBoxSize = 5,
+
   onChordAddStateChange,
   chordOctaveShift, setChordOctaveShift,
   setArpAddReferenceNotes,
