@@ -189,7 +189,7 @@ export default function MyCharts() {
         </Link>
         <h1 className="text-lg font-fredoka">My Charts</h1>
         <div className="ml-auto flex gap-1">
-          {(['charts','tracks','setlists'] as const).map(t => (
+          {(['charts','tracks','uploads','setlists'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -197,9 +197,10 @@ export default function MyCharts() {
                 tab === t ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
               }`}
             >
-              {t === 'charts' ? 'Chord Charts' : t === 'tracks' ? 'Backing Tracks' : 'Setlists'}
+              {t === 'charts' ? 'Chord Charts' : t === 'tracks' ? 'Backing Tracks' : t === 'uploads' ? 'My Uploads' : 'Setlists'}
             </button>
           ))}
+
         </div>
       </header>
 
