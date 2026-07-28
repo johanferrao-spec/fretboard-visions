@@ -3591,6 +3591,64 @@ function IdentifyPanel({
 // PLAYING CHANGES PANEL
 // ============================================================
 
+type LocalKey = { root: NoteName; mode: 'major' | 'minor' };
+
+const isMinorSeventh = (t: string) => /^Minor( 7| 9| 11)?$/.test(t) || /^Min\/Maj/.test(t);
+const isDominant = (t: string) => /^(Dominant 7|Dominant 9|7sus4|11|13|9)$/.test(t);
+const isMajorish = (t: string) => /^(Major|Major 7|Major 9|Maj11|Maj13|Major 6|6add9|Add9)$/.test(t);
+const isMinorish = (t: string) => /^(Minor|Minor 6|Minor 7|Minor 9|Minor 11|Minor 13|Madd9|Min\/Maj 7)$/.test(t);
+
+/**
+ * Detect temporary key changes (tonicisations / modulations) inside a
+ * progression: a V7 → I (optionally preceded by its ii) that resolves to a
+ * tonic outside the home key marks those chords as being in the new key.
+ */
+function detectKeyRegions(
+  chords: { root: NoteName; chordType: string }[],
+  homeKey: NoteName,
+  homeMode: KeyMode,
+): (LocalKey | null)[] {
+  const regions: (LocalKey | null)[] = chords.map(() => null);
+  const idx = (n: NoteName) => NOTE_NAMES.indexOf(n);
+  const at = (n: number) => NOTE_NAMES[((n % 12) + 12) % 12];
+
+  for (let i = 0; i < chords.length - 1; i++) {
+    const v = chords[i];
+    const target = chords[i + 1];
+    if (!isDominant(v.chordType)) continue;
+    // Resolution down a 5th.
+    if (idx(target.root) !== (idx(v.root) + 5) % 12) continue;
+    const mode: 'major' | 'minor' = isMinorish(target.chordType) ? 'minor'
+      : isMajorish(target.chordType) ? 'major' : 'major';
+    const tonic = target.root;
+    // Only interesting if the tonic is not the home tonic.
+    const homeIsMinor = /minor|aeolian|phrygian|locrian|dorian/.test(homeMode);
+    if (tonic === homeKey && (mode === 'minor') === homeIsMinor) continue;
+    // Skip a plain diatonic V7 → I of the home key.
+    if (getChordDegree(homeKey, tonic, target.chordType, homeMode) >= 0
+      && getChordDegree(homeKey, v.root, v.chordType, homeMode) >= 0) continue;
+
+    regions[i] = { root: tonic, mode };
+    regions[i + 1] = { root: tonic, mode };
+    // Pull in a preceding ii (or iiø) of the new key.
+    const prev = chords[i - 1];
+    if (prev && idx(prev.root) === (idx(tonic) + 2) % 12
+      && (isMinorSeventh(prev.chordType) || /Half-Dim|m7b5/i.test(prev.chordType))) {
+      regions[i - 1] = { root: tonic, mode };
+    }
+    // Extend forward while the same chord repeats.
+    let j = i + 2;
+    while (j < chords.length && chords[j].root === target.root && chords[j].chordType === target.chordType) {
+      regions[j] = { root: tonic, mode };
+      j++;
+    }
+    void at;
+  }
+  return regions;
+}
+
+
+
 function PlayingChangesPanel({
   chords, currentBeat, isPlaying, timelineKey, keyMode, onApplyScale, onSeekToChord,
 }: {
