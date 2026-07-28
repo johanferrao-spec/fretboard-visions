@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2, Play, Square, Repeat } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2, Play, Square, Repeat, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 import { buildChartPdf, downloadPdf, type ChartPdfData } from '@/lib/chartPdf';
 import ChartPreview from '@/components/ChartPreview';
@@ -15,6 +15,33 @@ import { ScaleRootSelector } from '@/components/ControlPanel';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
 
 const STORAGE_KEY = 'chartsView.state.v1';
+
+/** Every mode the harmony engine supports, grouped by parent scale. */
+const KEY_MODE_OPTIONS: { value: KeyMode; label: string }[] = [
+  { value: 'major', label: 'Major' },
+  { value: 'minor', label: 'Minor' },
+  { value: 'ionian', label: 'Ionian' },
+  { value: 'dorian', label: 'Dorian' },
+  { value: 'phrygian', label: 'Phrygian' },
+  { value: 'lydian', label: 'Lydian' },
+  { value: 'mixolydian', label: 'Mixolydian' },
+  { value: 'aeolian', label: 'Aeolian' },
+  { value: 'locrian', label: 'Locrian' },
+  { value: 'harmonic_minor', label: 'Harmonic Minor' },
+  { value: 'locrian_nat6', label: 'Locrian ♮6' },
+  { value: 'ionian_sharp5', label: 'Ionian ♯5' },
+  { value: 'dorian_sharp4', label: 'Dorian ♯4' },
+  { value: 'phrygian_dominant', label: 'Phrygian Dominant' },
+  { value: 'lydian_sharp2', label: 'Lydian ♯2' },
+  { value: 'superlocrian_bb7', label: 'Superlocrian 𝄫7' },
+  { value: 'melodic_minor', label: 'Melodic Minor' },
+  { value: 'dorian_b2', label: 'Dorian ♭2' },
+  { value: 'lydian_augmented', label: 'Lydian Augmented' },
+  { value: 'lydian_dominant', label: 'Lydian Dominant' },
+  { value: 'mixolydian_b6', label: 'Mixolydian ♭6' },
+  { value: 'locrian_nat2', label: 'Locrian ♮2' },
+  { value: 'superlocrian', label: 'Superlocrian' },
+];
 
 interface DiatonicChord {
   root: NoteName;
@@ -310,7 +337,7 @@ const sectionDisplayName = (raw: string): string => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
-export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, onPlay, onStop }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, onPlay, onStop }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
     slots: ChartSlot[];
@@ -331,6 +358,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
   }, []);
 
   const [chartKey, setChartKey] = useState<NoteName>(persisted.chartKey ?? currentKey);
+  // The chart's mode can be any of the supported modes, independent of the app default.
+  const [keyMode, setKeyMode] = useState<KeyMode>(keyModeProp);
+  useEffect(() => { setKeyMode(keyModeProp); }, [keyModeProp]);
   // Auto key detection stays on until the user picks a key by hand.
   const [autoKey, setAutoKey] = useState(true);
   const [useSevenths, setUseSevenths] = useState(false);
@@ -1700,6 +1730,17 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
               >Auto</button>
             </div>
             <ScaleRootSelector selectedRoot={chartKey} onSelect={(n) => { setAutoKey(false); setChartKey(n); }} />
+            <select
+              value={keyMode}
+              onChange={(e) => setKeyMode(e.target.value as KeyMode)}
+              title="Mode"
+              className="w-full rounded border border-border bg-background text-foreground text-[9px] font-mono uppercase tracking-wider px-1 py-0.5 focus:border-primary outline-none"
+            >
+              {KEY_MODE_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+
 
           </div>
 
@@ -2364,53 +2405,62 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
           style={{ top: editorPos.top, left: editorPos.left, width: 320 }}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          {/* Collapsible bass-note panel (slash chords) */}
-          <div className="absolute right-full top-0 mr-2 flex items-start">
-            {bassOpen ? (
-              <div className="rounded-lg border border-border bg-card shadow-xl p-2 w-[150px]">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Bass</span>
-                  <button onClick={() => setBassOpen(false)} className="text-muted-foreground hover:text-foreground" title="Collapse">
-                    <X size={12} />
-                  </button>
-                </div>
-                <div className="grid grid-cols-3 gap-1">
-                  {NOTE_NAMES.map((n) => {
-                    const active = editorChord.bass === n;
-                    return (
-                      <button
-                        key={n}
-                        onClick={() => setSlotChord(editorSlot.id, { ...editorChord, bass: active ? undefined : (n as NoteName) })}
-                        className={`text-[11px] font-mono font-bold rounded px-1 py-1 border transition-colors ${
-                          active
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-background border-border hover:bg-muted hover:border-primary'
-                        }`}
-                      >
-                        {spellRootInKey(n as NoteName, chartKey, keyMode)}
+          {/* Collapsible bass-note panel (slash chords) — flips to the right when the
+              editor sits near the left edge so it stays on screen. */}
+          {(() => {
+            const onRight = editorPos.left < 200;
+            const sideClass = onRight ? 'left-full' : 'right-full';
+            const Arrow = onRight ? ChevronsRight : ChevronsLeft;
+            return (
+              <div className={`absolute ${sideClass} top-1/2 -translate-y-1/2 flex items-center`}>
+                {bassOpen ? (
+                  <div className={`rounded-lg border border-border bg-card shadow-xl p-2 w-[150px] ${onRight ? 'border-l-0 rounded-l-none' : 'border-r-0 rounded-r-none'}`}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Bass</span>
+                      <button onClick={() => setBassOpen(false)} className="text-muted-foreground hover:text-foreground" title="Collapse">
+                        <X size={12} />
                       </button>
-                    );
-                  })}
-                </div>
-                <button
-                  onClick={() => setSlotChord(editorSlot.id, { root: editorChord.root, chordType: editorChord.chordType })}
-                  disabled={!editorChord.bass}
-                  className="mt-1.5 w-full text-[10px] font-mono uppercase tracking-wider rounded px-2 py-1 bg-background border border-border hover:bg-muted disabled:opacity-40"
-                >
-                  Clear
-                </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {NOTE_NAMES.map((n) => {
+                        const active = editorChord.bass === n;
+                        return (
+                          <button
+                            key={n}
+                            onClick={() => setSlotChord(editorSlot.id, { ...editorChord, bass: active ? undefined : (n as NoteName) })}
+                            className={`text-[11px] font-mono font-bold rounded px-1 py-1 border transition-colors ${
+                              active
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background border-border hover:bg-muted hover:border-primary'
+                            }`}
+                          >
+                            {spellRootInKey(n as NoteName, chartKey, keyMode)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => setSlotChord(editorSlot.id, { root: editorChord.root, chordType: editorChord.chordType })}
+                      disabled={!editorChord.bass}
+                      className="mt-1.5 w-full text-[10px] font-mono uppercase tracking-wider rounded px-2 py-1 bg-background border border-border hover:bg-muted disabled:opacity-40"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setBassOpen(true)}
+                    className={`flex items-center justify-center border border-border bg-card shadow-xl py-3 px-0.5 text-muted-foreground hover:text-foreground hover:border-primary transition-colors ${
+                      onRight ? 'border-l-0 rounded-r-lg' : 'border-r-0 rounded-l-lg'
+                    }`}
+                    title={`Add bass note (slash chord)${editorChord.bass ? ` — currently /${spellRootInKey(editorChord.bass, chartKey, keyMode)}` : ''}`}
+                  >
+                    <Arrow size={14} />
+                  </button>
+                )}
               </div>
-            ) : (
-              <button
-                onClick={() => setBassOpen(true)}
-                className="rounded-lg border border-border bg-card shadow-xl px-2 py-2 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-primary"
-                style={{ writingMode: 'vertical-rl' }}
-                title="Add bass note (slash chord)"
-              >
-                Bass{editorChord.bass ? ` /${spellRootInKey(editorChord.bass, chartKey, keyMode)}` : ''}
-              </button>
-            )}
-          </div>
+            );
+          })()}
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
               Edit chord · {editorChord.root}
