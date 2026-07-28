@@ -1703,6 +1703,17 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
               >Auto</button>
             </div>
             <ScaleRootSelector selectedRoot={chartKey} onSelect={(n) => { setAutoKey(false); setChartKey(n); }} />
+            <select
+              value={keyMode}
+              onChange={(e) => setKeyMode(e.target.value as KeyMode)}
+              title="Mode"
+              className="w-full rounded border border-border bg-background text-foreground text-[9px] font-mono uppercase tracking-wider px-1 py-0.5 focus:border-primary outline-none"
+            >
+              {KEY_MODE_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+
 
           </div>
 
