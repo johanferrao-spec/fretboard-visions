@@ -84,6 +84,14 @@ export default function MyCharts() {
         setCharts(prev => mergeById(prev, d.charts_library));
         setTracks(prev => mergeById(prev, d.backing_tracks_data));
         setSetlists(prev => mergeById(prev, d.setlists));
+        // My uploads — charts/tracks this account published to Community.
+        const { data: mine } = await supabase
+          .from('shared_charts')
+          .select('id, title, kind, composer, downloads, created_at')
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false });
+        if (!cancelled && mine) setUploads(mine as Upload[]);
+
       } catch {
         /* offline — local copy still works */
       } finally {
