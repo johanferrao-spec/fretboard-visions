@@ -57,7 +57,12 @@ For each bar return one object:
 - "root": the letter WITH its accidental exactly as printed: one of C, C#, Db, D, D#, Eb, E, F, F#, Gb, G, G#, Ab, A, A#, Bb, B. Keep flats as flats (write "Eb", not "D#").
 - "chordType": exactly one of: ${VALID_CHORD_TYPES.join(' | ')}
 - "bass": OPTIONAL. For slash chords (e.g. "C/E", "F-7/B♭") give the bass note after the slash. Omit for normal chords. Never treat "6/9" as a slash chord — that is 6add9.
-- "bars": duration in bars (number, default 1).
+- "bars": duration in BARS as a number. COUNT THE BARLINES — this is the most error-prone part, so work bar by bar across each system:
+    * one chord filling a whole bar (measure) => 1
+    * two chords sharing one bar (split by a slash-less space, a small diagonal divider, or simply two symbols inside the same measure) => 0.5 each
+    * four chords in one bar => 0.25 each
+    * a chord held over N bars (the following measures are empty, or contain only "/" continuation slashes or repeat "%" marks you are merging) => N
+  Never default everything to 1: a system in 4/4 with 4 measures must total 4 bars, and the whole sheet's bar count must match the number of measures you can see.
 - "times": OPTIONAL repeat count from an "xN" marking.
 - "section": OPTIONAL label for the song section (use the printed name such as "Intro", "Verse 1", "Bridge", "Chorus"; fall back to the rehearsal letter if there is no name). Assign every subsequent bar to that section until the next marker.
 - "ending": OPTIONAL 1, 2 or 3 for volta brackets marked "1.", "2.", "3." (also written "1st ending", "2nd", "3rd", or as numbered brackets over the staff). Bars under "1." get 1, under "2." get 2, under "3." get 3. Later-numbered bars are ALTERNATIVES played on later passes of the SAME section, so give them the SAME "section" label and list all 1. bars, then all 2. bars, then all 3. bars. Omit for normal bars.
@@ -85,7 +90,7 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
+          model: 'google/gemini-3.6-flash',
           messages: [
             { role: 'system', content: 'You extract chord progressions from lead sheet images with extreme attention to accidentals (♭/♯) and repeat marks. Respond ONLY with valid JSON.' },
             { role: 'user', content: [
