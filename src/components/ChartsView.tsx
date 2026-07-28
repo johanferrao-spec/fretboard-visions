@@ -377,11 +377,6 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
 
   const [slots, setSlots] = useState<ChartSlot[]>(() => persisted.slots?.length ? persisted.slots! : makeSlots(DEFAULT_SLOT_COUNT));
 
-  /** Chord label honouring the "bass note" view toggle (playback keeps the bass). */
-  const displayChordLabel = useCallback(
-    (c: ChartChord) => formatChordLabel(showBassNotes ? c : { root: c.root, chordType: c.chordType }, chartKey, keyMode),
-    [showBassNotes, chartKey, keyMode],
-  );
 
   // Detect the key from the chords in use (unless the user chose one manually).
   useEffect(() => {
@@ -407,6 +402,11 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   const [showColours, setShowColours] = useState(true);
   const [showBassNotes, setShowBassNotes] = useState(true);
   const [followPlayhead, setFollowPlayhead] = useState(false);
+  /** Chord label honouring the "bass note" view toggle (playback keeps the bass). */
+  const displayChordLabel = useCallback(
+    (c: ChartChord) => formatChordLabel(showBassNotes ? c : { root: c.root, chordType: c.chordType }, chartKey, keyMode),
+    [showBassNotes, chartKey, keyMode],
+  );
   const [dragSel, setDragSel] = useState<{ start: number; end: number } | null>(null);
   const [pendingRange, setPendingRange] = useState<{ startIdx: number; endIdx: number } | null>(null);
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
