@@ -3829,7 +3829,12 @@ function PlayingChangesPanel({
             <div className="text-lg font-mono font-bold text-foreground mb-1">
               {formatChordLabel(currentChord)}
               <span className="text-[10px] text-muted-foreground ml-2 font-normal">
-                {analysis[currentIdx]?.roman} in {timelineKey} {keyMode}
+                {analysis[currentIdx]?.roman} in{' '}
+                {keyRegions[currentIdx]
+                  ? <span style={{ color: 'hsl(200, 85%, 65%)' }}>
+                      {keyRegions[currentIdx]!.root} {keyRegions[currentIdx]!.mode} (key change)
+                    </span>
+                  : `${timelineKey} ${keyMode}`}
               </span>
               {nextChord && (
                 <span className="text-[9px] text-muted-foreground ml-2 font-normal">
