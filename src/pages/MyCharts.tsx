@@ -226,12 +226,17 @@ export default function MyCharts() {
                             {c.tempo ?? '—'} BPM · {c.timeSig ?? '4/4'} · {c.feel ?? 'Straight'}
                           </div>
                         </div>
-                        <IconBtn title="Delete" onClick={() => deleteChart(c.id)}><Trash2 size={12} /></IconBtn>
+                        <div className="flex gap-1">
+                          <IconBtn title="Rename" onClick={() => renameChart(c)}><Pencil size={12} /></IconBtn>
+                          <IconBtn title="Delete" onClick={() => deleteChart(c.id)}><Trash2 size={12} /></IconBtn>
+                        </div>
                       </div>
                       <div className="mt-3 flex gap-2">
-                        <ActionBtn onClick={() => openChart(c)}><Play size={11} /> Open</ActionBtn>
+                        <ActionBtn onClick={() => openChart(c, 'backing')}><Play size={11} /> Open</ActionBtn>
+                        <ActionBtn onClick={() => openChart(c, 'edit')}><Pencil size={11} /> Edit</ActionBtn>
                         <ActionBtn onClick={() => addToSetlist({ refType: 'chart', refId: c.id })}><Plus size={11} /> Setlist</ActionBtn>
                       </div>
+
                     </Card>
                   ))}
                 </div>
