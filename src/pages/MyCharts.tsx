@@ -326,7 +326,18 @@ export default function MyCharts() {
                           <IconBtn title="Delete" onClick={() => deleteUpload(u.id)}><Trash2 size={12} /></IconBtn>
                         </div>
                       </div>
+                      <div className="mt-3 flex gap-2">
+                        {u.kind === 'chart' ? (
+                          <>
+                            <ActionBtn onClick={() => openUpload(u, 'backing')}><Play size={11} /> Open</ActionBtn>
+                            <ActionBtn onClick={() => openUpload(u, 'edit')}><Pencil size={11} /> Edit</ActionBtn>
+                          </>
+                        ) : (
+                          <ActionBtn onClick={() => openUpload(u)}><Plus size={11} /> Add to tracks</ActionBtn>
+                        )}
+                      </div>
                     </Card>
+
                   ))}
                 </div>
               )}
