@@ -1177,7 +1177,7 @@ export default function ChordReference({
         {([
           { key: 'beginner' as MainTab, label: 'Beginner' },
           { key: 'scales' as MainTab, label: 'Scales' },
-          { key: 'scaleview' as MainTab, label: 'Functional Harmony' },
+          { key: 'scaleview' as MainTab, label: 'Fretboard Mastery' },
           { key: 'chords' as MainTab, label: 'Chord Library' },
           { key: 'arpeggios' as MainTab, label: 'Arpeggio Positions' },
           
@@ -1587,6 +1587,17 @@ function ScaleViewPanel({
 
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
   const [selectedModePreview, setSelectedModePreview] = useState<string>('Ionian');
+  /** Left-hand section tabs for Fretboard Mastery. */
+  type SectionTab = 'harmony' | 'drop' | 'modes' | 'voiceleading';
+  const [sectionTab, setSectionTab] = useState<SectionTab>('harmony');
+  const selectSectionTab = (t: SectionTab) => {
+    setSectionTab(t);
+    setDropMode(null);
+    setInversionStringGroup(null);
+    onSetInversionVoicing?.(null);
+    setThreeNpsMode(false);
+    setVoiceLeadingMode(t === 'voiceleading');
+  };
 
   // Resizable widths for the three-column help panel (percentages, sum = 100)
   const helpPanelRef = useRef<HTMLDivElement>(null);
@@ -1853,72 +1864,86 @@ function ScaleViewPanel({
         </div>
       </div>
 
-      {/* Drop 2 / Drop 3 / 3-NPS — bigger vertical buttons with content to the right */}
+      {/* Section tabs — Functional Harmony / Drop Voicings / Modes / Voice Leading */}
       <div className="flex gap-2">
-        {/* Left column: mode buttons stacked vertically */}
+        {/* Left column: section tabs stacked vertically */}
         <div className="flex flex-col gap-1.5 shrink-0" style={{ width: 110 }}>
-          {(['drop2', 'drop3'] as const).map(dm => (
-            <button
-              key={dm}
-              onClick={() => {
-                setDropMode(dropMode === dm ? null : dm);
-                setInversionStringGroup(null);
-                onSetInversionVoicing?.(null);
-                if (threeNpsMode) setThreeNpsMode(false);
-              }}
-              className="py-5 rounded-xl text-base font-mono font-black uppercase tracking-wider transition-all border-2"
-              style={{
-                backgroundColor: dropMode === dm ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
-                borderColor: dropMode === dm ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)',
-                color: dropMode === dm ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
-                boxShadow: dropMode === dm ? '0 0 12px hsl(var(--primary) / 0.4)' : 'none',
-              }}
-            >{dm === 'drop2' ? 'Drop 2' : 'Drop 3'}</button>
-          ))}
+          {([
+            { key: 'harmony', label: 'Functional\nHarmony', color: 'var(--primary)' },
+            { key: 'drop', label: 'Drop\nVoicings', color: 'var(--primary)' },
+            { key: 'modes', label: 'Modes', color: 'var(--accent)' },
+          ] as const).map(t => {
+            const on = sectionTab === t.key;
+            const isAccent = t.color === 'var(--accent)';
+            return (
+              <button
+                key={t.key}
+                onClick={() => selectSectionTab(t.key)}
+                className="py-3 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight whitespace-pre-line"
+                style={{
+                  backgroundColor: on ? `hsl(${t.color})` : `hsl(${t.color} / 0.12)`,
+                  borderColor: on ? `hsl(${t.color})` : `hsl(${t.color} / 0.4)`,
+                  color: on ? `hsl(${isAccent ? 'var(--accent-foreground)' : 'var(--primary-foreground)'})` : `hsl(${t.color})`,
+                  boxShadow: on ? `0 0 12px hsl(${t.color} / 0.4)` : 'none',
+                }}
+              >{t.label}</button>
+            );
+          })}
           <button
-            onClick={() => {
-              const next = !threeNpsMode;
-              setThreeNpsMode(next);
-              if (next) {
-                setDropMode(null);
-                setInversionStringGroup(null);
-                onSetInversionVoicing?.(null);
-                setVoiceLeadingMode(false);
-              }
-            }}
+            onClick={() => selectSectionTab('voiceleading')}
             className="py-3 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight"
             style={{
-              backgroundColor: threeNpsMode ? 'hsl(var(--accent))' : 'hsl(var(--accent) / 0.12)',
-              borderColor: threeNpsMode ? 'hsl(var(--accent))' : 'hsl(var(--accent) / 0.4)',
-              color: threeNpsMode ? 'hsl(var(--accent-foreground))' : 'hsl(var(--accent))',
-              boxShadow: threeNpsMode ? '0 0 12px hsl(var(--accent) / 0.4)' : 'none',
-            }}
-            title="Show 3-notes-per-string mode patterns. Click a degree above to display its mode."
-          >3 Notes<br/>Per String</button>
-          <button
-            onClick={() => {
-              const next = !voiceLeadingMode;
-              setVoiceLeadingMode(next);
-              if (next) {
-                setDropMode(null);
-                setInversionStringGroup(null);
-                setThreeNpsMode(false);
-                onSetInversionVoicing?.(null);
-              }
-            }}
-            className="py-3 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight"
-            style={{
-              backgroundColor: voiceLeadingMode ? 'hsl(280 80% 60%)' : 'hsl(280 80% 60% / 0.12)',
-              borderColor: voiceLeadingMode ? 'hsl(280 80% 60%)' : 'hsl(280 80% 60% / 0.4)',
-              color: voiceLeadingMode ? 'white' : 'hsl(280 80% 70%)',
-              boxShadow: voiceLeadingMode ? '0 0 12px hsl(280 80% 60% / 0.5)' : 'none',
+              backgroundColor: sectionTab === 'voiceleading' ? 'hsl(280 80% 60%)' : 'hsl(280 80% 60% / 0.12)',
+              borderColor: sectionTab === 'voiceleading' ? 'hsl(280 80% 60%)' : 'hsl(280 80% 60% / 0.4)',
+              color: sectionTab === 'voiceleading' ? 'white' : 'hsl(280 80% 70%)',
+              boxShadow: sectionTab === 'voiceleading' ? '0 0 12px hsl(280 80% 60% / 0.5)' : 'none',
             }}
             title="Voice leading: pick a melody note on the fretboard + a degree to see jazz comping voicings"
           >Voice<br/>Leading</button>
         </div>
 
+        {/* Drop Voicings: Drop 2 / Drop 3 selector */}
+        {sectionTab === 'drop' && (
+          <div className="flex flex-col gap-1.5 shrink-0" style={{ width: 96 }}>
+            {(['drop2', 'drop3'] as const).map(dm => (
+              <button
+                key={dm}
+                onClick={() => {
+                  setDropMode(dropMode === dm ? null : dm);
+                  setInversionStringGroup(null);
+                  onSetInversionVoicing?.(null);
+                }}
+                className="py-5 rounded-xl text-base font-mono font-black uppercase tracking-wider transition-all border-2"
+                style={{
+                  backgroundColor: dropMode === dm ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.12)',
+                  borderColor: dropMode === dm ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)',
+                  color: dropMode === dm ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
+                  boxShadow: dropMode === dm ? '0 0 12px hsl(var(--primary) / 0.4)' : 'none',
+                }}
+              >{dm === 'drop2' ? 'Drop 2' : 'Drop 3'}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Modes: 3-notes-per-string toggle */}
+        {sectionTab === 'modes' && (
+          <div className="flex flex-col gap-1.5 shrink-0" style={{ width: 96 }}>
+            <button
+              onClick={() => setThreeNpsMode(!threeNpsMode)}
+              className="py-5 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight"
+              style={{
+                backgroundColor: threeNpsMode ? 'hsl(var(--accent))' : 'hsl(var(--accent) / 0.12)',
+                borderColor: threeNpsMode ? 'hsl(var(--accent))' : 'hsl(var(--accent) / 0.4)',
+                color: threeNpsMode ? 'hsl(var(--accent-foreground))' : 'hsl(var(--accent))',
+                boxShadow: threeNpsMode ? '0 0 12px hsl(var(--accent) / 0.4)' : 'none',
+              }}
+              title="Show 3-notes-per-string mode patterns. Click a degree above to display its mode."
+            >3 Notes<br/>Per String</button>
+          </div>
+        )}
+
         {/* Right: drop mode content panel */}
-        {dropMode && (
+        {sectionTab === 'drop' && dropMode && (
           <div className="flex gap-2 flex-1 min-w-0">
             {/* String group selectors with nut diagrams */}
             <div className="w-32 shrink-0 space-y-1.5">
@@ -2057,7 +2082,7 @@ function ScaleViewPanel({
           </div>
         )}
 
-        {threeNpsMode && !dropMode && (
+        {sectionTab === 'modes' && threeNpsMode && (
           <div className="flex-1 rounded-xl p-3 border-2 self-stretch flex items-center" style={{ borderColor: 'hsl(var(--accent) / 0.4)', backgroundColor: 'hsl(var(--accent) / 0.08)' }}>
             <div className="text-[11px] font-mono text-muted-foreground leading-relaxed">
               <span className="text-accent font-bold">3-Notes-Per-String mode active.</span> Click a degree above to highlight its full mode pattern on the fretboard. Each degree shows its parent rotation (I → Ionian, ii → Dorian, etc.) coloured to match.
@@ -2065,7 +2090,7 @@ function ScaleViewPanel({
           </div>
         )}
 
-        {voiceLeadingMode && !dropMode && !threeNpsMode && (
+        {sectionTab === 'voiceleading' && (
           <div className="flex-1 rounded-xl p-2 border-2 self-stretch min-w-0" style={{ borderColor: 'hsl(280 80% 60% / 0.4)', backgroundColor: 'hsl(280 80% 60% / 0.08)' }}>
             {degreeFilter === null ? (
               <div className="text-[11px] font-mono text-muted-foreground leading-relaxed p-1">
