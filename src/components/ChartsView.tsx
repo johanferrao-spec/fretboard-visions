@@ -1683,84 +1683,8 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
             <span>Section</span>
           </button>
 
-          {/* Chart metadata config */}
-          <div className="flex flex-col gap-1 mt-1 border-t border-border pt-2">
-            <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Chart Info</div>
-            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Title</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
-              placeholder="Untitled"
-            />
-            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Composer</label>
-            <input
-              value={composer}
-              onChange={(e) => setComposer(e.target.value)}
-              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
-              placeholder="—"
-            />
-            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Tempo (BPM)</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={tempoDraft}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^0-9]/g, '');
-                setTempoDraft(v);
-                if (v !== '') {
-                  const n = Math.max(20, Math.min(400, Number(v)));
-                  setTempo(n);
-                }
-              }}
-              onBlur={() => {
-                const n = Math.max(20, Math.min(400, Number(tempoDraft) || tempo));
-                setTempo(n);
-                setTempoDraft(String(n));
-              }}
-              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-              onMouseDown={(e) => {
-                const input = e.currentTarget;
-                const startY = e.clientY;
-                const startTempo = tempo;
-                let dragged = false;
-                const onMove = (ev: MouseEvent) => {
-                  const dy = startY - ev.clientY;
-                  if (!dragged && Math.abs(dy) < 3) return;
-                  dragged = true;
-                  const next = Math.max(20, Math.min(400, startTempo + Math.round(dy / 2)));
-                  setTempo(next);
-                  setTempoDraft(String(next));
-                };
-                const onUp = () => {
-                  window.removeEventListener('mousemove', onMove);
-                  window.removeEventListener('mouseup', onUp);
-                  if (dragged) input.blur();
-                };
-                window.addEventListener('mousemove', onMove);
-                window.addEventListener('mouseup', onUp);
-              }}
-              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary cursor-ns-resize"
-              title="Type a tempo, or click and drag up/down to change"
-            />
 
-            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Time Sig</label>
-            <select
-              value={timeSig}
-              onChange={(e) => setTimeSig(e.target.value)}
-              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
-            >
-              {['2/4','3/4','4/4','5/4','6/8','7/8','12/8'].map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Feel</label>
-            <select
-              value={feel}
-              onChange={(e) => setFeel(e.target.value)}
-              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
-            >
-              {['Straight','Swing','Shuffle','Ballad','Rock','Funk','Latin','Bossa Nova','Samba','Reggae','Jazz','Blues','Folk'].map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
+
 
           {/* Diatonic chord palette */}
 
