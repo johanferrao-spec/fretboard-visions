@@ -492,6 +492,23 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     setArrangement(prev => [...prev, ...added.map(s => ({ id: uid('arr'), sectionId: s.id }))]);
   }, [slots, sections]);
 
+  // A song with a single continuous chord progression and no sections yet gets
+  // one "A Section" box wrapped around the whole progression.
+  useEffect(() => {
+    if (sections.length) return;
+    const idxs = slots.map((s, i) => (s.chord ? i : -1)).filter(i => i >= 0);
+    if (idxs.length < 2) return;
+    const start = idxs[0];
+    const end = idxs[idxs.length - 1];
+    // Only when the chords form one unbroken run (a single progression).
+    if (end - start + 1 !== idxs.length) return;
+    const sec: Section = { id: uid('sec'), name: 'A', color: SECTION_COLORS[0], startIdx: start, endIdx: end };
+    setSections([sec]);
+    setArrangement(prev => (prev.length ? prev : [{ id: uid('arr'), sectionId: sec.id }]));
+  }, [slots, sections]);
+
+
+
   const [arrDragOverIdx, setArrDragOverIdx] = useState<number | null>(null);
   const [editorSlotId, setEditorSlotId] = useState<string | null>(null);
   const [editorPos, setEditorPos] = useState<{ top: number; left: number } | null>(null);
