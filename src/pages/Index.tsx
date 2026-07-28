@@ -999,7 +999,14 @@ const Index = () => {
                 timeline.setMeasures(measures);
                 if (bpm && bpm !== timeline.bpm) timeline.setBpm(bpm);
                 setArrangementSections(sections);
+                // A chart opened from "My Charts" auto-collapses into the
+                // backing-track view once its arrangement has synced.
+                if (pendingChartCollapse.current) {
+                  pendingChartCollapse.current = false;
+                  setShowCharts(false);
+                }
               }}
+
               onResetAll={() => {
                 timeline.clearTimeline();
                 setArrangementSections([]);
