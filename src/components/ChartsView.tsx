@@ -2405,51 +2405,62 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
           style={{ top: editorPos.top, left: editorPos.left, width: 320 }}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          {/* Collapsible bass-note panel (slash chords) */}
-          <div className="absolute right-full top-0 mr-2 flex items-start">
-            {bassOpen ? (
-              <div className="rounded-lg border border-border bg-card shadow-xl p-2 w-[150px]">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Bass</span>
-                  <button onClick={() => setBassOpen(false)} className="text-muted-foreground hover:text-foreground" title="Collapse">
-                    <X size={12} />
-                  </button>
-                </div>
-                <div className="grid grid-cols-3 gap-1">
-                  {NOTE_NAMES.map((n) => {
-                    const active = editorChord.bass === n;
-                    return (
-                      <button
-                        key={n}
-                        onClick={() => setSlotChord(editorSlot.id, { ...editorChord, bass: active ? undefined : (n as NoteName) })}
-                        className={`text-[11px] font-mono font-bold rounded px-1 py-1 border transition-colors ${
-                          active
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-background border-border hover:bg-muted hover:border-primary'
-                        }`}
-                      >
-                        {spellRootInKey(n as NoteName, chartKey, keyMode)}
+          {/* Collapsible bass-note panel (slash chords) — flips to the right when the
+              editor sits near the left edge so it stays on screen. */}
+          {(() => {
+            const onRight = editorPos.left < 200;
+            const sideClass = onRight ? 'left-full' : 'right-full';
+            const Arrow = onRight ? ChevronsRight : ChevronsLeft;
+            return (
+              <div className={`absolute ${sideClass} top-1/2 -translate-y-1/2 flex items-center`}>
+                {bassOpen ? (
+                  <div className={`rounded-lg border border-border bg-card shadow-xl p-2 w-[150px] ${onRight ? 'border-l-0 rounded-l-none' : 'border-r-0 rounded-r-none'}`}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Bass</span>
+                      <button onClick={() => setBassOpen(false)} className="text-muted-foreground hover:text-foreground" title="Collapse">
+                        <X size={12} />
                       </button>
-                    );
-                  })}
-                </div>
-                <button
-                  onClick={() => setSlotChord(editorSlot.id, { root: editorChord.root, chordType: editorChord.chordType })}
-                  disabled={!editorChord.bass}
-                  className="mt-1.5 w-full text-[10px] font-mono uppercase tracking-wider rounded px-2 py-1 bg-background border border-border hover:bg-muted disabled:opacity-40"
-                >
-                  Clear
-                </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {NOTE_NAMES.map((n) => {
+                        const active = editorChord.bass === n;
+                        return (
+                          <button
+                            key={n}
+                            onClick={() => setSlotChord(editorSlot.id, { ...editorChord, bass: active ? undefined : (n as NoteName) })}
+                            className={`text-[11px] font-mono font-bold rounded px-1 py-1 border transition-colors ${
+                              active
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background border-border hover:bg-muted hover:border-primary'
+                            }`}
+                          >
+                            {spellRootInKey(n as NoteName, chartKey, keyMode)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => setSlotChord(editorSlot.id, { root: editorChord.root, chordType: editorChord.chordType })}
+                      disabled={!editorChord.bass}
+                      className="mt-1.5 w-full text-[10px] font-mono uppercase tracking-wider rounded px-2 py-1 bg-background border border-border hover:bg-muted disabled:opacity-40"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setBassOpen(true)}
+                    className={`flex items-center justify-center border border-border bg-card shadow-xl py-3 px-0.5 text-muted-foreground hover:text-foreground hover:border-primary transition-colors ${
+                      onRight ? 'border-l-0 rounded-r-lg' : 'border-r-0 rounded-l-lg'
+                    }`}
+                    title={`Add bass note (slash chord)${editorChord.bass ? ` — currently /${spellRootInKey(editorChord.bass, chartKey, keyMode)}` : ''}`}
+                  >
+                    <Arrow size={14} />
+                  </button>
+                )}
               </div>
-            ) : (
-              <button
-                onClick={() => setBassOpen(true)}
-                className="rounded-lg border border-border bg-card shadow-xl px-2 py-2 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-primary"
-                style={{ writingMode: 'vertical-rl' }}
-                title="Add bass note (slash chord)"
-              >
-                Bass{editorChord.bass ? ` /${spellRootInKey(editorChord.bass, chartKey, keyMode)}` : ''}
-              </button>
+            );
+          })()}
             )}
           </div>
           <div className="flex items-center justify-between mb-2">
