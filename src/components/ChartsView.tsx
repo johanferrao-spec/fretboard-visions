@@ -1236,31 +1236,36 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
     const secStart = Math.max(0, Math.min(sec.startIdx, slots.length - 1));
     const secEnd = Math.max(secStart, Math.min(sec.endIdx, slots.length - 1));
     sec = { ...sec, startIdx: secStart, endIdx: secEnd };
-    const byRenderRow = new Map<number, { colStart: number; colEnd: number }>();
+    // One single enclosure box for the whole section: it spans from its first
+    // occupied render row down to its last (including stacked volta rows).
+    let minRow = Infinity, maxRow = -Infinity, minCol = Infinity, maxCol = -Infinity;
+    let firstRowMinCol = Infinity, lastRowMaxCol = -Infinity;
     for (let i = sec.startIdx; i <= sec.endIdx; i++) {
       const rr = renderRowOfLogical[logicalRowOf(i)] + endingRowOffset(i);
       const colStart = (startUnits[i] % COLS) + 1;
       const colEnd = colStart + slots[i].bars;
-      const prev = byRenderRow.get(rr);
-      byRenderRow.set(rr, prev
-        ? { colStart: Math.min(prev.colStart, colStart), colEnd: Math.max(prev.colEnd, colEnd) }
-        : { colStart, colEnd });
+      if (rr < minRow) { minRow = rr; firstRowMinCol = colStart; }
+      else if (rr === minRow) firstRowMinCol = Math.min(firstRowMinCol, colStart);
+      if (rr > maxRow) { maxRow = rr; lastRowMaxCol = colEnd; }
+      else if (rr === maxRow) lastRowMaxCol = Math.max(lastRowMaxCol, colEnd);
+      minCol = Math.min(minCol, colStart);
+      maxCol = Math.max(maxCol, colEnd);
     }
+    if (!isFinite(minRow)) return [];
+    const multiRow = maxRow > minRow;
     const variation = sectionVariation.get(sec.id);
-    return [...byRenderRow.entries()]
-      .sort(([a], [b]) => a - b)
-      .map(([row, cols], idx) => ({
-        key: `${sec.id}-box-${row}`,
-        sectionId: sec.id,
-        rowStart: row,
-        rowEnd: row + 1,
-        colStart: cols.colStart,
-        colEnd: cols.colEnd,
-        color: sec.color,
-        name: sec.name,
-        variation,
-        showLabel: idx === 0,
-      }));
+    return [{
+      key: `${sec.id}-box`,
+      sectionId: sec.id,
+      rowStart: minRow,
+      rowEnd: maxRow + 1,
+      colStart: multiRow ? 1 : minCol,
+      colEnd: multiRow ? COLS + 1 : maxCol,
+      color: sec.color,
+      name: sec.name,
+      variation,
+      showLabel: true,
+    }];
   });
 
 
