@@ -212,37 +212,60 @@ const chordFamily = (t: string): 'maj' | 'min' | 'dom' | 'dim' | 'other' => {
  * Scores every candidate tonic on diatonic fit (root + quality), weighted by
  * bar length, with bonuses for starting/ending on the tonic and for a V7.
  */
+const scoreKey = (
+  entries: { chord: ChartChord; bars: number }[],
+  candidate: NoteName,
+  keyMode: KeyMode,
+): number => {
+  const dia = getDiatonicChords(candidate, keyMode);
+  const rootMap = new Map<NoteName, string>();
+  dia.forEach(d => rootMap.set(d.root, chordFamily(d.type)));
+  let score = 0;
+  entries.forEach((e, i) => {
+    const w = Math.max(1, e.bars) / UNITS_PER_BAR;
+    const fam = rootMap.get(e.chord.root);
+    if (fam === undefined) { score -= 2 * w; return; }
+    score += 2 * w;
+    const cf = chordFamily(e.chord.chordType);
+    if (cf === fam) score += 1.5 * w;
+    // Dominant 7 on the 5th degree is a strong tonal signal.
+    if (e.chord.root === dia[4].root && cf === 'dom') score += 2;
+    if (e.chord.root === candidate) {
+      score += 1;
+      // Tonic quality agreement (major vs minor tonic triad) disambiguates
+      // relative major/minor keys.
+      if (cf === chordFamily(dia[0].type)) score += 2 * w;
+      if (i === 0) score += 2;
+      if (i === entries.length - 1) score += 3;
+    }
+  });
+  return score;
+};
+
+/**
+ * Detect both the tonic and whether the progression is major or minor.
+ * When the user has selected an exotic mode we keep that mode and only
+ * detect the tonic.
+ */
 const detectKeyFromChords = (
   entries: { chord: ChartChord; bars: number }[],
   keyMode: KeyMode,
-): NoteName | null => {
+): { root: NoteName; mode: KeyMode } | null => {
   if (entries.length < 2) return null;
-  let best: NoteName | null = null;
+  const isBasic = keyMode === 'major' || keyMode === 'minor'
+    || keyMode === 'ionian' || keyMode === 'aeolian';
+  const modes: KeyMode[] = isBasic ? ['major', 'minor'] : [keyMode];
+  let best: { root: NoteName; mode: KeyMode } | null = null;
   let bestScore = -Infinity;
-  for (const candidate of NOTE_NAMES) {
-    const dia = getDiatonicChords(candidate, keyMode);
-    const rootMap = new Map<NoteName, string>();
-    dia.forEach(d => rootMap.set(d.root, chordFamily(d.type)));
-    let score = 0;
-    entries.forEach((e, i) => {
-      const w = Math.max(1, e.bars) / UNITS_PER_BAR;
-      const fam = rootMap.get(e.chord.root);
-      if (fam === undefined) { score -= 2 * w; return; }
-      score += 2 * w;
-      const cf = chordFamily(e.chord.chordType);
-      if (cf === fam) score += 1.5 * w;
-      // Dominant 7 on the 5th degree is a strong tonal signal.
-      if (e.chord.root === dia[4].root && cf === 'dom') score += 2;
-      if (e.chord.root === candidate) {
-        score += 1;
-        if (i === 0) score += 2;
-        if (i === entries.length - 1) score += 3;
-      }
-    });
-    if (score > bestScore) { bestScore = score; best = candidate; }
+  for (const mode of modes) {
+    for (const candidate of NOTE_NAMES) {
+      const score = scoreKey(entries, candidate, mode);
+      if (score > bestScore) { bestScore = score; best = { root: candidate, mode }; }
+    }
   }
   return best;
 };
+
 
 
 const romanForChord = (chord: ChartChord, key: NoteName): string => {
@@ -383,7 +406,9 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     if (!autoKey) return;
     const entries = slots.filter(s => s.chord).map(s => ({ chord: s.chord!, bars: s.bars }));
     const detected = detectKeyFromChords(entries, keyMode);
-    if (detected && detected !== chartKey) setChartKey(detected);
+    if (!detected) return;
+    if (detected.root !== chartKey) setChartKey(detected.root);
+    if (detected.mode !== keyMode) setKeyMode(detected.mode);
   }, [slots, keyMode, autoKey, chartKey]);
 
   // Charts and backing tracks are linked: push the chart key up to the timeline.
@@ -466,6 +491,23 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     }
     setArrangement(prev => [...prev, ...added.map(s => ({ id: uid('arr'), sectionId: s.id }))]);
   }, [slots, sections]);
+
+  // A song with a single continuous chord progression and no sections yet gets
+  // one "A Section" box wrapped around the whole progression.
+  useEffect(() => {
+    if (sections.length) return;
+    const idxs = slots.map((s, i) => (s.chord ? i : -1)).filter(i => i >= 0);
+    if (idxs.length < 2) return;
+    const start = idxs[0];
+    const end = idxs[idxs.length - 1];
+    // Only when the chords form one unbroken run (a single progression).
+    if (end - start + 1 !== idxs.length) return;
+    const sec: Section = { id: uid('sec'), name: 'A', color: SECTION_COLORS[0], startIdx: start, endIdx: end };
+    setSections([sec]);
+    setArrangement(prev => (prev.length ? prev : [{ id: uid('arr'), sectionId: sec.id }]));
+  }, [slots, sections]);
+
+
 
   const [arrDragOverIdx, setArrDragOverIdx] = useState<number | null>(null);
   const [editorSlotId, setEditorSlotId] = useState<string | null>(null);
