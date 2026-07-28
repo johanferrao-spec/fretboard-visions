@@ -3660,7 +3660,24 @@ function PlayingChangesPanel({
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   onSeekToChord?: (beat: number) => void;
 }) {
-  const sorted = useMemo(() => [...chords].sort((a, b) => a.startBeat - b.startBeat), [chords]);
+  const rawSorted = useMemo(() => [...chords].sort((a, b) => a.startBeat - b.startBeat), [chords]);
+
+  // Merge consecutive repeats of the same chord (e.g. a chord held for two
+  // bars) so it appears once in the progression list.
+  const sorted = useMemo<TimelineChord[]>(() => {
+    const out: TimelineChord[] = [];
+    for (const c of rawSorted) {
+      const last = out[out.length - 1];
+      if (last && last.root === c.root && last.chordType === c.chordType
+        && (last as TimelineChord & { bassNote?: string }).bassNote === (c as TimelineChord & { bassNote?: string }).bassNote
+        && Math.abs(last.startBeat + last.duration - c.startBeat) < 0.01) {
+        out[out.length - 1] = { ...last, duration: last.duration + c.duration };
+        continue;
+      }
+      out.push({ ...c });
+    }
+    return out;
+  }, [rawSorted]);
 
   const currentChord = useMemo(() => {
     return sorted.find(c => currentBeat >= c.startBeat && currentBeat < c.startBeat + c.duration) || null;
