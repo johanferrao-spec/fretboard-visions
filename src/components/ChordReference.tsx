@@ -10,7 +10,7 @@ import {
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS, buildFormulaPcMap,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
   isVoicingTonallyValid, isPhysicallyPlayable, getTensionSuggestions, getChordTones,
-  analyzeProgression, identifyArpeggioFromNotes,
+  analyzeProgression, identifyArpeggioFromNotes, getChordDegree,
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
   getDiatonicChords, generate7thInversions, generateDrop3Inversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
   STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS, MAJOR_MODE_NAMES, MINOR_MODE_NAMES, SCALE_DESCRIPTIONS,
@@ -3591,6 +3591,64 @@ function IdentifyPanel({
 // PLAYING CHANGES PANEL
 // ============================================================
 
+type LocalKey = { root: NoteName; mode: 'major' | 'minor' };
+
+const isMinorSeventh = (t: string) => /^Minor( 7| 9| 11)?$/.test(t) || /^Min\/Maj/.test(t);
+const isDominant = (t: string) => /^(Dominant 7|Dominant 9|7sus4|11|13|9)$/.test(t);
+const isMajorish = (t: string) => /^(Major|Major 7|Major 9|Maj11|Maj13|Major 6|6add9|Add9)$/.test(t);
+const isMinorish = (t: string) => /^(Minor|Minor 6|Minor 7|Minor 9|Minor 11|Minor 13|Madd9|Min\/Maj 7)$/.test(t);
+
+/**
+ * Detect temporary key changes (tonicisations / modulations) inside a
+ * progression: a V7 → I (optionally preceded by its ii) that resolves to a
+ * tonic outside the home key marks those chords as being in the new key.
+ */
+function detectKeyRegions(
+  chords: { root: NoteName; chordType: string }[],
+  homeKey: NoteName,
+  homeMode: KeyMode,
+): (LocalKey | null)[] {
+  const regions: (LocalKey | null)[] = chords.map(() => null);
+  const idx = (n: NoteName) => NOTE_NAMES.indexOf(n);
+  const at = (n: number) => NOTE_NAMES[((n % 12) + 12) % 12];
+
+  for (let i = 0; i < chords.length - 1; i++) {
+    const v = chords[i];
+    const target = chords[i + 1];
+    if (!isDominant(v.chordType)) continue;
+    // Resolution down a 5th.
+    if (idx(target.root) !== (idx(v.root) + 5) % 12) continue;
+    const mode: 'major' | 'minor' = isMinorish(target.chordType) ? 'minor'
+      : isMajorish(target.chordType) ? 'major' : 'major';
+    const tonic = target.root;
+    // Only interesting if the tonic is not the home tonic.
+    const homeIsMinor = /minor|aeolian|phrygian|locrian|dorian/.test(homeMode);
+    if (tonic === homeKey && (mode === 'minor') === homeIsMinor) continue;
+    // Skip a plain diatonic V7 → I of the home key.
+    if (getChordDegree(homeKey, tonic, target.chordType, homeMode) >= 0
+      && getChordDegree(homeKey, v.root, v.chordType, homeMode) >= 0) continue;
+
+    regions[i] = { root: tonic, mode };
+    regions[i + 1] = { root: tonic, mode };
+    // Pull in a preceding ii (or iiø) of the new key.
+    const prev = chords[i - 1];
+    if (prev && idx(prev.root) === (idx(tonic) + 2) % 12
+      && (isMinorSeventh(prev.chordType) || /Half-Dim|m7b5/i.test(prev.chordType))) {
+      regions[i - 1] = { root: tonic, mode };
+    }
+    // Extend forward while the same chord repeats.
+    let j = i + 2;
+    while (j < chords.length && chords[j].root === target.root && chords[j].chordType === target.chordType) {
+      regions[j] = { root: tonic, mode };
+      j++;
+    }
+    void at;
+  }
+  return regions;
+}
+
+
+
 function PlayingChangesPanel({
   chords, currentBeat, isPlaying, timelineKey, keyMode, onApplyScale, onSeekToChord,
 }: {
@@ -3602,7 +3660,24 @@ function PlayingChangesPanel({
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   onSeekToChord?: (beat: number) => void;
 }) {
-  const sorted = useMemo(() => [...chords].sort((a, b) => a.startBeat - b.startBeat), [chords]);
+  const rawSorted = useMemo(() => [...chords].sort((a, b) => a.startBeat - b.startBeat), [chords]);
+
+  // Merge consecutive repeats of the same chord (e.g. a chord held for two
+  // bars) so it appears once in the progression list.
+  const sorted = useMemo<TimelineChord[]>(() => {
+    const out: TimelineChord[] = [];
+    for (const c of rawSorted) {
+      const last = out[out.length - 1];
+      if (last && last.root === c.root && last.chordType === c.chordType
+        && (last as TimelineChord & { bassNote?: string }).bassNote === (c as TimelineChord & { bassNote?: string }).bassNote
+        && Math.abs(last.startBeat + last.duration - c.startBeat) < 0.01) {
+        out[out.length - 1] = { ...last, duration: last.duration + c.duration };
+        continue;
+      }
+      out.push({ ...c });
+    }
+    return out;
+  }, [rawSorted]);
 
   const currentChord = useMemo(() => {
     return sorted.find(c => currentBeat >= c.startBeat && currentBeat < c.startBeat + c.duration) || null;
@@ -3638,10 +3713,26 @@ function PlayingChangesPanel({
     return sorted[(currentIdx + 1) % sorted.length] || null;
   }, [sorted, currentIdx]);
 
+  // Temporary key changes (e.g. a ii-V-I into D♭ major inside a C minor tune).
+  const keyRegions = useMemo(
+    () => detectKeyRegions(sorted.map(c => ({ root: c.root, chordType: c.chordType })), timelineKey, keyMode),
+    [sorted, timelineKey, keyMode],
+  );
+
   const analysis = useMemo(() => {
     if (sorted.length === 0) return [];
-    return analyzeProgression(timelineKey, keyMode, sorted.map(c => ({ root: c.root, chordType: c.chordType })));
-  }, [sorted, timelineKey, keyMode]);
+    const simple = sorted.map(c => ({ root: c.root, chordType: c.chordType }));
+    const base = analyzeProgression(timelineKey, keyMode, simple);
+    // Re-analyse chords that belong to a temporary key against that key.
+    keyRegions.forEach((region, i) => {
+      if (!region) return;
+      const localMode: KeyMode = region.mode === 'minor' ? 'minor' : 'major';
+      const local = analyzeProgression(region.root, localMode, [simple[i]])[0];
+      if (local) base[i] = local;
+    });
+    return base;
+  }, [sorted, timelineKey, keyMode, keyRegions]);
+
 
   const suggestions = useMemo(() => {
     if (!currentChord) return [];
@@ -3675,37 +3766,61 @@ function PlayingChangesPanel({
   return (
     <div className="flex gap-2" style={{ minHeight: 0 }}>
       {/* Left: chord list with roman numerals */}
-      <div className="w-20 shrink-0 space-y-0.5 overflow-y-auto max-h-[300px]">
+      <div className="w-24 shrink-0 space-y-0.5 overflow-y-auto max-h-[300px]">
         <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Progression</div>
         {sorted.map((chord, i) => {
           const a = analysis[i];
           const isCurrent = currentIdx === i;
-          const borrowed = a && !a.isDiatonic;
+          const region = keyRegions[i];
+          const borrowed = a && !a.isDiatonic && !region;
+          const regionStart = region && (!keyRegions[i - 1]
+            || keyRegions[i - 1]!.root !== region.root
+            || keyRegions[i - 1]!.mode !== region.mode);
+          const regionEnd = region && (!keyRegions[i + 1]
+            || keyRegions[i + 1]!.root !== region.root
+            || keyRegions[i + 1]!.mode !== region.mode);
           return (
-            <button
-              key={chord.id}
-              onClick={() => onSeekToChord?.(chord.startBeat)}
-              className={`w-full text-left px-1.5 py-1 rounded text-[10px] font-mono transition-all border cursor-pointer ${
-                isCurrent
-                  ? 'bg-primary/20 border-primary/50 text-foreground font-bold'
-                  : 'border-transparent text-muted-foreground hover:bg-muted/30'
-              }`}
-              style={borrowed ? {
-                backgroundColor: isCurrent ? 'hsl(50, 90%, 55%, 0.2)' : 'hsl(50, 90%, 55%, 0.08)',
-                borderColor: isCurrent ? 'hsl(50, 90%, 55%, 0.5)' : 'transparent',
-                boxShadow: isCurrent ? '0 0 6px hsl(50, 90%, 55%, 0.3)' : 'none',
-              } : {}}
-            >
-              <div className="flex items-center gap-1">
-                <span className={`font-bold ${borrowed ? 'text-yellow-400' : ''}`}>
-                  {a?.roman || '?'}
-                </span>
-                <span className="text-[8px] truncate">{formatChordLabel(chord)}</span>
-              </div>
-            </button>
+            <div key={chord.id}>
+              {regionStart && (
+                <div
+                  className="text-[7px] font-mono uppercase tracking-wider px-1 pt-1 pb-0.5 rounded-t"
+                  style={{ backgroundColor: 'hsl(200, 85%, 55%, 0.12)', color: 'hsl(200, 85%, 65%)' }}
+                >
+                  → {region.root} {region.mode}
+                </div>
+              )}
+              <button
+                onClick={() => onSeekToChord?.(chord.startBeat)}
+                className={`w-full text-left px-1.5 py-1 text-[10px] font-mono transition-all border cursor-pointer ${
+                  region ? (regionEnd ? 'rounded-b' : '') : 'rounded'
+                } ${
+                  isCurrent
+                    ? 'bg-primary/20 border-primary/50 text-foreground font-bold'
+                    : 'border-transparent text-muted-foreground hover:bg-muted/30'
+                }`}
+                style={region ? {
+                  backgroundColor: isCurrent ? 'hsl(200, 85%, 55%, 0.25)' : 'hsl(200, 85%, 55%, 0.1)',
+                  borderColor: isCurrent ? 'hsl(200, 85%, 55%, 0.5)' : 'transparent',
+                  boxShadow: isCurrent ? '0 0 6px hsl(200, 85%, 55%, 0.3)' : 'none',
+                } : borrowed ? {
+                  backgroundColor: isCurrent ? 'hsl(50, 90%, 55%, 0.2)' : 'hsl(50, 90%, 55%, 0.08)',
+                  borderColor: isCurrent ? 'hsl(50, 90%, 55%, 0.5)' : 'transparent',
+                  boxShadow: isCurrent ? '0 0 6px hsl(50, 90%, 55%, 0.3)' : 'none',
+                } : {}}
+              >
+                <div className="flex items-center gap-1">
+                  <span className={`font-bold ${borrowed ? 'text-yellow-400' : ''}`}
+                    style={region ? { color: 'hsl(200, 85%, 65%)' } : undefined}>
+                    {a?.roman || '?'}
+                  </span>
+                  <span className="text-[8px] truncate">{formatChordLabel(chord)}</span>
+                </div>
+              </button>
+            </div>
           );
         })}
       </div>
+
 
       {/* Right: detail for current chord */}
       <div className="flex-1 min-w-0 overflow-y-auto max-h-[300px]">
@@ -3714,7 +3829,12 @@ function PlayingChangesPanel({
             <div className="text-lg font-mono font-bold text-foreground mb-1">
               {formatChordLabel(currentChord)}
               <span className="text-[10px] text-muted-foreground ml-2 font-normal">
-                {analysis[currentIdx]?.roman} in {timelineKey} {keyMode}
+                {analysis[currentIdx]?.roman} in{' '}
+                {keyRegions[currentIdx]
+                  ? <span style={{ color: 'hsl(200, 85%, 65%)' }}>
+                      {keyRegions[currentIdx]!.root} {keyRegions[currentIdx]!.mode} (key change)
+                    </span>
+                  : `${timelineKey} ${keyMode}`}
               </span>
               {nextChord && (
                 <span className="text-[9px] text-muted-foreground ml-2 font-normal">
