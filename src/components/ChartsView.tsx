@@ -2077,7 +2077,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                     zIndex: 1,
                   }}
                   className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
-                    sectionMode ? 'cursor-crosshair select-none ' : slot.chord ? 'cursor-pointer ' : ''
+                    sectionMode || voltaMode ? 'cursor-crosshair select-none ' : slot.chord ? 'cursor-pointer ' : ''
                   }${
                     color
                       ? 'brightness-100 hover:brightness-110'
