@@ -3713,10 +3713,26 @@ function PlayingChangesPanel({
     return sorted[(currentIdx + 1) % sorted.length] || null;
   }, [sorted, currentIdx]);
 
+  // Temporary key changes (e.g. a ii-V-I into D♭ major inside a C minor tune).
+  const keyRegions = useMemo(
+    () => detectKeyRegions(sorted.map(c => ({ root: c.root, chordType: c.chordType })), timelineKey, keyMode),
+    [sorted, timelineKey, keyMode],
+  );
+
   const analysis = useMemo(() => {
     if (sorted.length === 0) return [];
-    return analyzeProgression(timelineKey, keyMode, sorted.map(c => ({ root: c.root, chordType: c.chordType })));
-  }, [sorted, timelineKey, keyMode]);
+    const simple = sorted.map(c => ({ root: c.root, chordType: c.chordType }));
+    const base = analyzeProgression(timelineKey, keyMode, simple);
+    // Re-analyse chords that belong to a temporary key against that key.
+    keyRegions.forEach((region, i) => {
+      if (!region) return;
+      const localMode: KeyMode = region.mode === 'minor' ? 'minor' : 'major';
+      const local = analyzeProgression(region.root, localMode, [simple[i]])[0];
+      if (local) base[i] = local;
+    });
+    return base;
+  }, [sorted, timelineKey, keyMode, keyRegions]);
+
 
   const suggestions = useMemo(() => {
     if (!currentChord) return [];
