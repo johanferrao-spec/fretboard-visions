@@ -2055,11 +2055,11 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   onDragOver={(e) => handleDragOver(slot.id, e)}
                   onDragLeave={() => setHoverSlot(prev => prev === slot.id ? null : prev)}
                   onDrop={(e) => handleDrop(slot.id, e)}
-                  onDoubleClick={() => { if (!sectionMode) beginEdit(slot); }}
+                  onDoubleClick={() => { if (!sectionMode && !voltaMode) beginEdit(slot); }}
                   onMouseDown={(e) => startSectionDrag(idx, e)}
                   onMouseEnter={() => extendSectionDrag(idx)}
                   onClick={(e) => {
-                    if (sectionMode) return;
+                    if (sectionMode || voltaMode) return;
                     if (slot.chord && !isEditing) openChordEditor(slot, e.currentTarget as HTMLElement);
                   }}
                   style={{
