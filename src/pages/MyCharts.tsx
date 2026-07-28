@@ -262,7 +262,10 @@ export default function MyCharts() {
                             {t.bpm} BPM · {t.measures} bars · {t.genre}
                           </div>
                         </div>
-                        <IconBtn title="Delete" onClick={() => deleteTrack(t.id)}><Trash2 size={12} /></IconBtn>
+                        <div className="flex gap-1">
+                          <IconBtn title="Rename" onClick={() => renameTrack(t)}><Pencil size={12} /></IconBtn>
+                          <IconBtn title="Delete" onClick={() => deleteTrack(t.id)}><Trash2 size={12} /></IconBtn>
+                        </div>
                       </div>
                       <div className="mt-3">
                         <ActionBtn onClick={() => addToSetlist({ refType: 'track', refId: t.id })}><Plus size={11} /> Setlist</ActionBtn>
@@ -273,6 +276,40 @@ export default function MyCharts() {
               )}
             </div>
           )}
+
+          {tab === 'uploads' && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-mono uppercase tracking-wider text-muted-foreground">My Uploads ({uploads.length})</h2>
+                <span className="text-[10px] text-muted-foreground">Everything you've shared to Community</span>
+              </div>
+              {uploads.length === 0 ? (
+                <EmptyState icon={<UploadIcon />} label="You haven't published anything to Community yet." />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {uploads.map(u => (
+                    <Card key={u.id}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-fredoka text-base">{u.title}</div>
+                          {u.composer && <div className="text-[10px] text-muted-foreground">{u.composer}</div>}
+                          <div className="text-[10px] text-muted-foreground/70 font-mono mt-1">
+                            {u.kind} · {u.downloads} download{u.downloads === 1 ? '' : 's'}
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <IconBtn title="Rename" onClick={() => renameUpload(u)}><Pencil size={12} /></IconBtn>
+                          <IconBtn title="Delete" onClick={() => deleteUpload(u.id)}><Trash2 size={12} /></IconBtn>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+
 
           {tab === 'setlists' && (
             <div>
