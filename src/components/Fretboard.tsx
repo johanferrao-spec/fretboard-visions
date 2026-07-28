@@ -1155,7 +1155,10 @@ export default function Fretboard({
             onClick={() => {
               if (!degreeColors) {
                 setDegreeColors(true);
-                DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (disabledDegrees.has(k)) toggleDegree(k); });
+                // Only restore everything if the user had turned every degree off
+                if (disabledDegrees.size === DEGREE_LEGEND.length) {
+                  DEGREE_LEGEND.forEach(d => toggleDegree(String(d.position)));
+                }
               } else {
                 setDegreeColors(false);
               }
