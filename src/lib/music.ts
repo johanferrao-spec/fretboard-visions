@@ -375,7 +375,22 @@ export function generateArpeggioPositions(
   const baseMidiArr = [40, 45, 50, 55, 59, 64].map((m, i) => 
     m + ((tuning[i] ?? STANDARD_TUNING[i]) - STANDARD_TUNING[i])
   );
-  return deduped.sort((a, b) => {
+
+  // Every position must span a complete octave: from its lowest root note up to
+  // (at least) the same root an octave higher. Partial shapes that stop short of
+  // the next octave are not valid arpeggio positions.
+  const rootClass = rootIdx % 12;
+  const spansOctave = deduped.filter(p => {
+    const midis = p.notes.map(n => baseMidiArr[n.stringIndex] + n.fret);
+    const rootMidis = midis.filter(m => m % 12 === rootClass);
+    if (rootMidis.length === 0) return false;
+    const lowestRoot = Math.min(...rootMidis);
+    const highest = Math.max(...midis);
+    return highest >= lowestRoot + 12;
+  });
+
+  return spansOctave.sort((a, b) => {
+
     // Find lowest root note midi in each position
     const rootIdxA = NOTE_NAMES.indexOf(root);
     const aRoots = a.notes.filter(n => (baseMidiArr[n.stringIndex] + n.fret) % 12 === rootIdxA % 12);
