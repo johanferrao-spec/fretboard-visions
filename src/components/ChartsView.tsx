@@ -657,13 +657,36 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
     }
     setReadingChart(true);
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
+      const rawUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = () => reject(new Error('Failed to read file'));
         reader.readAsDataURL(file);
       });
-      const { data, error } = await supabase.functions.invoke('read-chart', { body: { image: dataUrl } });
+      // Downscale big photos/screenshots — huge data URLs are the main cause of
+      // the request hanging on "Reading…".
+      const dataUrl = await new Promise<string>((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1600;
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          if (scale >= 1 && rawUrl.length < 1_500_000) return resolve(rawUrl);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(rawUrl);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = () => resolve(rawUrl);
+        img.src = rawUrl;
+      });
+      const { data, error } = await Promise.race([
+        supabase.functions.invoke('read-chart', { body: { image: dataUrl } }),
+        new Promise<{ data: null; error: Error }>((resolve) =>
+          setTimeout(() => resolve({ data: null, error: new Error('Timed out reading the chart. Try a smaller or cropped image.') }), 120_000)),
+      ]);
       if (error) throw error;
       const chords: Array<{ root: NoteName; chordType: string; bass?: NoteName; bars: number; section?: string; ending?: 1 | 2 | 3 }> = data?.chords ?? [];
       const arrangementLabels: string[] = Array.isArray(data?.arrangement)
