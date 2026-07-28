@@ -1579,6 +1579,11 @@ function ScaleViewPanel({
   voiceLeadingMelody: { stringIndex: number; fret: number } | null;
   setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
   onApplyScale?: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
+  showFretBox?: boolean;
+  fretBoxStart?: number;
+  fretBoxSize?: number;
+  setShowFretBox?: (v: boolean) => void;
+
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
