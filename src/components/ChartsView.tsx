@@ -406,7 +406,9 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     if (!autoKey) return;
     const entries = slots.filter(s => s.chord).map(s => ({ chord: s.chord!, bars: s.bars }));
     const detected = detectKeyFromChords(entries, keyMode);
-    if (detected && detected !== chartKey) setChartKey(detected);
+    if (!detected) return;
+    if (detected.root !== chartKey) setChartKey(detected.root);
+    if (detected.mode !== keyMode) setKeyMode(detected.mode);
   }, [slots, keyMode, autoKey, chartKey]);
 
   // Charts and backing tracks are linked: push the chart key up to the timeline.
