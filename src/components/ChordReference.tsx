@@ -1902,8 +1902,21 @@ function ScaleViewPanel({
           >Voice<br/>Leading</button>
         </div>
 
+        {/* Drop Voicings description — sits left of the Drop 2 / Drop 3 buttons */}
+        {sectionTab === 'drop' && !dropMode && (
+          <div className="shrink-0 rounded-xl p-3 border border-border/60 bg-card/30 self-stretch flex" style={{ width: 260 }}>
+            <div className="min-w-0 flex flex-col gap-1.5 flex-1">
+              <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Drop Voicings</div>
+              <p className="text-[10px] font-mono text-foreground/80 leading-snug">
+                Chord voicings built by dropping the second or third highest note of a close-position chord down an octave. On guitar they essentially act as 7th inversions which allow players to access voicings for most chords from anywhere across the neck. Drop 2 spreads the chord across four adjacent strings; Drop 3 leaves a string gap for a wider, more open sound.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Drop Voicings: Drop 2 / Drop 3 selector */}
         {sectionTab === 'drop' && (
+
           <div className="flex flex-col gap-1.5 shrink-0" style={{ width: 96 }}>
             {(['drop2', 'drop3'] as const).map(dm => (
               <button
