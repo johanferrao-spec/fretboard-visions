@@ -310,7 +310,7 @@ const sectionDisplayName = (raw: string): string => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
-export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, onPlay, onStop }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, onPlay, onStop }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
     slots: ChartSlot[];
@@ -331,6 +331,9 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
   }, []);
 
   const [chartKey, setChartKey] = useState<NoteName>(persisted.chartKey ?? currentKey);
+  // The chart's mode can be any of the supported modes, independent of the app default.
+  const [keyMode, setKeyMode] = useState<KeyMode>(keyModeProp);
+  useEffect(() => { setKeyMode(keyModeProp); }, [keyModeProp]);
   // Auto key detection stays on until the user picks a key by hand.
   const [autoKey, setAutoKey] = useState(true);
   const [useSevenths, setUseSevenths] = useState(false);
