@@ -1699,7 +1699,7 @@ function ScaleViewPanel({
   }, [keyMode]);
 
   // Generate inversions when in drop mode with a string group and degree selected
-  const inversions = useMemo(() => {
+  const baseInversions = useMemo(() => {
     if (inversionStringGroup === null || degreeFilter === null) return [];
     const chord = diatonicLabels[degreeFilter];
     if (!chord) return [];
@@ -1716,6 +1716,45 @@ function ScaleViewPanel({
     }
     return [];
   }, [dropMode, inversionStringGroup, degreeFilter, diatonicLabels, tuning]);
+
+  /* ── Position-focus fit ────────────────────────────────────────────────
+     When the fretboard's Position focus box is on, restrict the drop
+     voicings to the inversions (in any octave) whose every fretted note
+     sits inside the box, so a whole progression can be played within the
+     span. Any inversion qualifies — the root does not need to be in the
+     bass. */
+  const [fitToBox, setFitToBox] = useState(true);
+  const boxEnd = fretBoxStart + fretBoxSize - 1;
+  const fitEnabled = showFretBox && fitToBox;
+
+  const inversions = useMemo(() => {
+    if (!fitEnabled || baseInversions.length === 0) return baseInversions;
+    const seen = new Set<string>();
+    const out: typeof baseInversions = [];
+    for (const inv of baseInversions) {
+      for (let oct = -2; oct <= 2; oct++) {
+        const shift = oct * 12;
+        const frets = inv.frets.map(f => (f < 0 ? f : f + shift));
+        const played = frets.filter(f => f >= 0);
+        if (played.length === 0) continue;
+        if (played.some(f => f < fretBoxStart || f > boxEnd || f > 24)) continue;
+        const key = frets.join(',');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(oct === 0 ? inv : {
+          ...inv,
+          frets,
+          notes: inv.notes.map(n => ({ ...n, fret: n.fret + shift })),
+        });
+      }
+    }
+    return out.sort((a, b) => {
+      const am = Math.min(...a.frets.filter(f => f >= 0));
+      const bm = Math.min(...b.frets.filter(f => f >= 0));
+      return am - bm || (a.inversionNumber ?? 0) - (b.inversionNumber ?? 0);
+    });
+  }, [baseInversions, fitEnabled, fretBoxStart, boxEnd]);
+
 
   // Voice-leading voicings: derived from selected degree + clicked melody note
   const voiceLeadingVoicings: VoiceLeadingVoicing[] = useMemo(() => {
