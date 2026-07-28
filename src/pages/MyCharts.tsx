@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileMusic, Music4, ListMusic, Trash2, Plus, X, Play } from 'lucide-react';
+import { ArrowLeft, FileMusic, Music4, ListMusic, Trash2, Plus, X, Play, Pencil, Upload as UploadIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { BackingTrack } from '@/lib/backingTrackTypes';
