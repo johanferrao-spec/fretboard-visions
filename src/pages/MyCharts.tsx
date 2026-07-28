@@ -38,13 +38,24 @@ function writeJSON(k: string, v: unknown) {
   try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
 }
 
+interface Upload {
+  id: string;
+  title: string;
+  kind: string;
+  composer: string | null;
+  downloads: number;
+  created_at: string;
+}
+
 export default function MyCharts() {
   const navigate = useNavigate();
   const [charts, setCharts] = useState<StoredChart[]>(() => readJSON<StoredChart[]>(LIBRARY_KEY, []));
   const [tracks, setTracks] = useState<BackingTrack[]>(() => readJSON<BackingTrack[]>(BACKING_KEY, []));
   const [setlists, setSetlists] = useState<Setlist[]>(() => readJSON<Setlist[]>(SETLISTS_KEY, []));
+  const [uploads, setUploads] = useState<Upload[]>([]);
   const [activeSetlistId, setActiveSetlistId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'charts' | 'tracks' | 'setlists'>('charts');
+  const [tab, setTab] = useState<'charts' | 'tracks' | 'uploads' | 'setlists'>('charts');
+
   // Guard: never let the initial render flush empty arrays over saved data.
   const hydrated = useRef(false);
 
