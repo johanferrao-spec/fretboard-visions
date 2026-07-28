@@ -149,6 +149,30 @@ export default function MyCharts() {
     setUploads(prev => prev.map(x => x.id === u.id ? { ...x, title } : x));
   };
 
+  /** Open a published upload. Charts load into the chart editor / backing
+   *  track view; backing-track uploads are imported into the local library. */
+  const openUpload = async (u: Upload, mode: 'backing' | 'edit' = 'edit') => {
+    const { data, error } = await supabase
+      .from('shared_charts')
+      .select('data')
+      .eq('id', u.id)
+      .maybeSingle();
+    if (error || !data) { toast.error('Could not load upload'); return; }
+    if (u.kind === 'chart') {
+      writeJSON(CHART_KEY, (data as { data: unknown }).data);
+      try { localStorage.setItem('mf-open-chart-intent', mode); } catch {}
+      toast.success(`Opened "${u.title}"`);
+      navigate('/');
+      return;
+    }
+    const track = { ...((data as { data: unknown }).data as BackingTrack), id: `bt-${Date.now()}`, name: u.title };
+    setTracks(prev => [...prev, track]);
+    setTab('tracks');
+    toast.success(`"${u.title}" added to your backing tracks`);
+  };
+
+
+
 
   const createSetlist = () => {
     const name = prompt('Setlist name?');
@@ -302,7 +326,18 @@ export default function MyCharts() {
                           <IconBtn title="Delete" onClick={() => deleteUpload(u.id)}><Trash2 size={12} /></IconBtn>
                         </div>
                       </div>
+                      <div className="mt-3 flex gap-2">
+                        {u.kind === 'chart' ? (
+                          <>
+                            <ActionBtn onClick={() => openUpload(u, 'backing')}><Play size={11} /> Open</ActionBtn>
+                            <ActionBtn onClick={() => openUpload(u, 'edit')}><Pencil size={11} /> Edit</ActionBtn>
+                          </>
+                        ) : (
+                          <ActionBtn onClick={() => openUpload(u)}><Plus size={11} /> Add to tracks</ActionBtn>
+                        )}
+                      </div>
                     </Card>
+
                   ))}
                 </div>
               )}
