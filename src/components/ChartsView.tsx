@@ -694,21 +694,21 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
         reader.onerror = () => reject(new Error('Failed to read file'));
         reader.readAsDataURL(file);
       });
-      // Downscale big photos/screenshots — huge data URLs are the main cause of
-      // the request hanging on "Reading…".
+      // Downscale only very large photos/screenshots — aggressive shrinking blurs
+      // small volta brackets and bar lines, which is what the reader relies on.
       const dataUrl = await new Promise<string>((resolve) => {
         const img = new Image();
         img.onload = () => {
-          const maxDim = 1600;
+          const maxDim = 2400;
           const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          if (scale >= 1 && rawUrl.length < 1_500_000) return resolve(rawUrl);
+          if (scale >= 1 && rawUrl.length < 3_500_000) return resolve(rawUrl);
           const canvas = document.createElement('canvas');
           canvas.width = Math.round(img.width * scale);
           canvas.height = Math.round(img.height * scale);
           const ctx = canvas.getContext('2d');
           if (!ctx) return resolve(rawUrl);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
+          resolve(canvas.toDataURL('image/jpeg', 0.94));
         };
         img.onerror = () => resolve(rawUrl);
         img.src = rawUrl;
