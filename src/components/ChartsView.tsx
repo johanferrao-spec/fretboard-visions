@@ -212,37 +212,60 @@ const chordFamily = (t: string): 'maj' | 'min' | 'dom' | 'dim' | 'other' => {
  * Scores every candidate tonic on diatonic fit (root + quality), weighted by
  * bar length, with bonuses for starting/ending on the tonic and for a V7.
  */
+const scoreKey = (
+  entries: { chord: ChartChord; bars: number }[],
+  candidate: NoteName,
+  keyMode: KeyMode,
+): number => {
+  const dia = getDiatonicChords(candidate, keyMode);
+  const rootMap = new Map<NoteName, string>();
+  dia.forEach(d => rootMap.set(d.root, chordFamily(d.type)));
+  let score = 0;
+  entries.forEach((e, i) => {
+    const w = Math.max(1, e.bars) / UNITS_PER_BAR;
+    const fam = rootMap.get(e.chord.root);
+    if (fam === undefined) { score -= 2 * w; return; }
+    score += 2 * w;
+    const cf = chordFamily(e.chord.chordType);
+    if (cf === fam) score += 1.5 * w;
+    // Dominant 7 on the 5th degree is a strong tonal signal.
+    if (e.chord.root === dia[4].root && cf === 'dom') score += 2;
+    if (e.chord.root === candidate) {
+      score += 1;
+      // Tonic quality agreement (major vs minor tonic triad) disambiguates
+      // relative major/minor keys.
+      if (cf === chordFamily(dia[0].type)) score += 2 * w;
+      if (i === 0) score += 2;
+      if (i === entries.length - 1) score += 3;
+    }
+  });
+  return score;
+};
+
+/**
+ * Detect both the tonic and whether the progression is major or minor.
+ * When the user has selected an exotic mode we keep that mode and only
+ * detect the tonic.
+ */
 const detectKeyFromChords = (
   entries: { chord: ChartChord; bars: number }[],
   keyMode: KeyMode,
-): NoteName | null => {
+): { root: NoteName; mode: KeyMode } | null => {
   if (entries.length < 2) return null;
-  let best: NoteName | null = null;
+  const isBasic = keyMode === 'major' || keyMode === 'minor'
+    || keyMode === 'ionian' || keyMode === 'aeolian';
+  const modes: KeyMode[] = isBasic ? ['major', 'minor'] : [keyMode];
+  let best: { root: NoteName; mode: KeyMode } | null = null;
   let bestScore = -Infinity;
-  for (const candidate of NOTE_NAMES) {
-    const dia = getDiatonicChords(candidate, keyMode);
-    const rootMap = new Map<NoteName, string>();
-    dia.forEach(d => rootMap.set(d.root, chordFamily(d.type)));
-    let score = 0;
-    entries.forEach((e, i) => {
-      const w = Math.max(1, e.bars) / UNITS_PER_BAR;
-      const fam = rootMap.get(e.chord.root);
-      if (fam === undefined) { score -= 2 * w; return; }
-      score += 2 * w;
-      const cf = chordFamily(e.chord.chordType);
-      if (cf === fam) score += 1.5 * w;
-      // Dominant 7 on the 5th degree is a strong tonal signal.
-      if (e.chord.root === dia[4].root && cf === 'dom') score += 2;
-      if (e.chord.root === candidate) {
-        score += 1;
-        if (i === 0) score += 2;
-        if (i === entries.length - 1) score += 3;
-      }
-    });
-    if (score > bestScore) { bestScore = score; best = candidate; }
+  for (const mode of modes) {
+    for (const candidate of NOTE_NAMES) {
+      const score = scoreKey(entries, candidate, mode);
+      if (score > bestScore) { bestScore = score; best = { root: candidate, mode }; }
+    }
   }
   return best;
 };
+
 
 
 const romanForChord = (chord: ChartChord, key: NoteName): string => {
