@@ -1683,84 +1683,8 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
             <span>Section</span>
           </button>
 
-          {/* Chart metadata config */}
-          <div className="flex flex-col gap-1 mt-1 border-t border-border pt-2">
-            <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground text-center">Chart Info</div>
-            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Title</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
-              placeholder="Untitled"
-            />
-            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Composer</label>
-            <input
-              value={composer}
-              onChange={(e) => setComposer(e.target.value)}
-              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
-              placeholder="—"
-            />
-            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Tempo (BPM)</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={tempoDraft}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^0-9]/g, '');
-                setTempoDraft(v);
-                if (v !== '') {
-                  const n = Math.max(20, Math.min(400, Number(v)));
-                  setTempo(n);
-                }
-              }}
-              onBlur={() => {
-                const n = Math.max(20, Math.min(400, Number(tempoDraft) || tempo));
-                setTempo(n);
-                setTempoDraft(String(n));
-              }}
-              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-              onMouseDown={(e) => {
-                const input = e.currentTarget;
-                const startY = e.clientY;
-                const startTempo = tempo;
-                let dragged = false;
-                const onMove = (ev: MouseEvent) => {
-                  const dy = startY - ev.clientY;
-                  if (!dragged && Math.abs(dy) < 3) return;
-                  dragged = true;
-                  const next = Math.max(20, Math.min(400, startTempo + Math.round(dy / 2)));
-                  setTempo(next);
-                  setTempoDraft(String(next));
-                };
-                const onUp = () => {
-                  window.removeEventListener('mousemove', onMove);
-                  window.removeEventListener('mouseup', onUp);
-                  if (dragged) input.blur();
-                };
-                window.addEventListener('mousemove', onMove);
-                window.addEventListener('mouseup', onUp);
-              }}
-              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary cursor-ns-resize"
-              title="Type a tempo, or click and drag up/down to change"
-            />
 
-            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Time Sig</label>
-            <select
-              value={timeSig}
-              onChange={(e) => setTimeSig(e.target.value)}
-              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
-            >
-              {['2/4','3/4','4/4','5/4','6/8','7/8','12/8'].map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <label className="text-[8px] font-mono uppercase text-muted-foreground/80">Feel</label>
-            <select
-              value={feel}
-              onChange={(e) => setFeel(e.target.value)}
-              className="text-[10px] font-mono bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:border-primary"
-            >
-              {['Straight','Swing','Shuffle','Ballad','Rock','Funk','Latin','Bossa Nova','Samba','Reggae','Jazz','Blues','Folk'].map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
+
 
           {/* Diatonic chord palette */}
 
@@ -1906,13 +1830,23 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
         <div className="flex-1 min-h-0 overflow-hidden p-3 flex flex-col">
           {/* Chart metadata banner */}
           <div className="mb-2 pb-2 border-b border-border flex items-baseline gap-4 flex-wrap shrink-0">
-            <div className="flex flex-col">
-              <span className="text-lg font-bold leading-tight text-foreground">{title || 'Untitled'}</span>
-              {composer && (
-                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                  by {composer}
-                </span>
-              )}
+            <div className="flex flex-col min-w-0">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Untitled"
+                title="Click to edit the title"
+                className="text-lg font-bold leading-tight text-foreground bg-transparent border border-transparent rounded px-1 -ml-1 hover:border-border focus:border-primary focus:outline-none placeholder:text-muted-foreground/60"
+                style={{ width: `${Math.max(10, (title || 'Untitled').length + 1)}ch` }}
+              />
+              <input
+                value={composer}
+                onChange={(e) => setComposer(e.target.value)}
+                placeholder="by …"
+                title="Click to edit the composer"
+                className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground bg-transparent border border-transparent rounded px-1 -ml-1 hover:border-border focus:border-primary focus:outline-none"
+                style={{ width: `${Math.max(12, (composer || 'by …').length + 4)}ch` }}
+              />
             </div>
             {(onPlay || onStop) && (
               <button
@@ -1929,11 +1863,67 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
               </button>
             )}
             <div className="ml-auto flex items-center gap-3 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-              <span><span className="text-foreground font-bold">{tempo}</span> BPM</span>
-              <span><span className="text-foreground font-bold">{timeSig}</span></span>
-              <span><span className="text-foreground font-bold">{feel}</span></span>
+              <span className="flex items-center gap-1">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={tempoDraft}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^0-9]/g, '');
+                    setTempoDraft(v);
+                    if (v !== '') setTempo(Math.max(20, Math.min(400, Number(v))));
+                  }}
+                  onBlur={() => {
+                    const n = Math.max(20, Math.min(400, Number(tempoDraft) || tempo));
+                    setTempo(n);
+                    setTempoDraft(String(n));
+                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                  onMouseDown={(e) => {
+                    const input = e.currentTarget;
+                    const startY = e.clientY;
+                    const startTempo = tempo;
+                    let dragged = false;
+                    const onMove = (ev: MouseEvent) => {
+                      const dy = startY - ev.clientY;
+                      if (!dragged && Math.abs(dy) < 3) return;
+                      dragged = true;
+                      const next = Math.max(20, Math.min(400, startTempo + Math.round(dy / 2)));
+                      setTempo(next);
+                      setTempoDraft(String(next));
+                    };
+                    const onUp = () => {
+                      window.removeEventListener('mousemove', onMove);
+                      window.removeEventListener('mouseup', onUp);
+                      if (dragged) input.blur();
+                    };
+                    window.addEventListener('mousemove', onMove);
+                    window.addEventListener('mouseup', onUp);
+                  }}
+                  title="Type a tempo, or click and drag up/down"
+                  className="w-[4ch] text-right text-foreground font-bold bg-transparent border border-transparent rounded hover:border-border focus:border-primary focus:outline-none cursor-ns-resize"
+                />
+                <span>BPM</span>
+              </span>
+              <select
+                value={timeSig}
+                onChange={(e) => setTimeSig(e.target.value)}
+                title="Time signature"
+                className="text-foreground font-bold bg-transparent border border-transparent rounded hover:border-border focus:border-primary focus:outline-none cursor-pointer appearance-none text-center"
+              >
+                {['2/4','3/4','4/4','5/4','6/8','7/8','12/8'].map(t => <option key={t} value={t} className="bg-background">{t}</option>)}
+              </select>
+              <select
+                value={feel}
+                onChange={(e) => setFeel(e.target.value)}
+                title="Feel / style"
+                className="text-foreground font-bold uppercase bg-transparent border border-transparent rounded hover:border-border focus:border-primary focus:outline-none cursor-pointer appearance-none text-center"
+              >
+                {['Straight','Swing','Shuffle','Ballad','Rock','Funk','Latin','Bossa Nova','Samba','Reggae','Jazz','Blues','Folk'].map(t => <option key={t} value={t} className="bg-background">{t}</option>)}
+              </select>
             </div>
           </div>
+
 
           <div
             ref={gridRef}
