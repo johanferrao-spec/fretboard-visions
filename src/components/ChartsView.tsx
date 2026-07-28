@@ -364,6 +364,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
   const [parsingSlot, setParsingSlot] = useState<string | null>(null);
   const [sections, setSections] = useState<Section[]>(persisted.sections ?? []);
   const [sectionMode, setSectionMode] = useState(false);
+  const [voltaMode, setVoltaMode] = useState(false);
   const [dragSel, setDragSel] = useState<{ start: number; end: number } | null>(null);
   const [pendingRange, setPendingRange] = useState<{ startIdx: number; endIdx: number } | null>(null);
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
