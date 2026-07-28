@@ -92,14 +92,44 @@ export default function MyCharts() {
     [setlists, activeSetlistId],
   );
 
-  const openChart = (c: StoredChart) => {
+  /** Open a saved chart.
+   *  'backing' (default) — load it and drop straight into the backing track
+   *  view with the collapsed timeline. 'edit' — open the chart editor. */
+  const openChart = (c: StoredChart, mode: 'backing' | 'edit' = 'backing') => {
     writeJSON(CHART_KEY, c.data);
+    try { localStorage.setItem('mf-open-chart-intent', mode); } catch {}
     toast.success(`Loaded "${c.title}"`);
     navigate('/');
   };
 
   const deleteChart = (id: string) => setCharts(prev => prev.filter(c => c.id !== id));
   const deleteTrack = (id: string) => setTracks(prev => prev.filter(t => t.id !== id));
+
+  const renameChart = (c: StoredChart) => {
+    const title = prompt('Rename chart', c.title);
+    if (!title) return;
+    setCharts(prev => prev.map(x => x.id === c.id ? { ...x, title, updatedAt: Date.now() } : x));
+  };
+  const renameTrack = (t: BackingTrack) => {
+    const name = prompt('Rename backing track', t.name);
+    if (!name) return;
+    setTracks(prev => prev.map(x => x.id === t.id ? { ...x, name } : x));
+  };
+
+  const deleteUpload = async (id: string) => {
+    const { error } = await supabase.from('shared_charts').delete().eq('id', id);
+    if (error) { toast.error('Could not delete upload'); return; }
+    setUploads(prev => prev.filter(u => u.id !== id));
+    toast.success('Upload removed');
+  };
+  const renameUpload = async (u: Upload) => {
+    const title = prompt('Rename upload', u.title);
+    if (!title) return;
+    const { error } = await supabase.from('shared_charts').update({ title }).eq('id', u.id);
+    if (error) { toast.error('Could not rename upload'); return; }
+    setUploads(prev => prev.map(x => x.id === u.id ? { ...x, title } : x));
+  };
+
 
   const createSetlist = () => {
     const name = prompt('Setlist name?');
