@@ -1126,6 +1126,10 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
 
         voltaCursor = null;
         voltaEnding = null;
+        // A section always begins on a fresh row so its enclosure box can be a
+        // single clean rectangle that never shares a row with another section.
+        const startsSection = sections.some(sec => sec.startIdx === i);
+        if (startsSection && n % COLS !== 0) n = Math.ceil(n / COLS) * COLS;
         startUnits.push(n);
         n += s.bars;
       }
