@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2, Play, Square } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2, Play, Square, Repeat } from 'lucide-react';
 
 import { buildChartPdf, downloadPdf, type ChartPdfData } from '@/lib/chartPdf';
 import ChartPreview from '@/components/ChartPreview';
@@ -364,6 +364,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
   const [parsingSlot, setParsingSlot] = useState<string | null>(null);
   const [sections, setSections] = useState<Section[]>(persisted.sections ?? []);
   const [sectionMode, setSectionMode] = useState(false);
+  const [voltaMode, setVoltaMode] = useState(false);
   const [dragSel, setDragSel] = useState<{ start: number; end: number } | null>(null);
   const [pendingRange, setPendingRange] = useState<{ startIdx: number; endIdx: number } | null>(null);
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
@@ -1372,23 +1373,27 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
 
 
 
-  // Drag-to-select section range
+  // Drag-to-select section or volta range
   const startSectionDrag = (idx: number, e: React.MouseEvent) => {
-    if (!sectionMode) return;
+    if (!sectionMode && !voltaMode) return;
     e.preventDefault();
     setDragSel({ start: idx, end: idx });
   };
   const extendSectionDrag = (idx: number) => {
-    if (!sectionMode || !dragSel) return;
+    if ((!sectionMode && !voltaMode) || !dragSel) return;
     if (dragSel.end !== idx) setDragSel({ ...dragSel, end: idx });
   };
 
   useEffect(() => {
-    if (!sectionMode || !dragSel) return;
+    if ((!sectionMode && !voltaMode) || !dragSel) return;
     const onUp = (ev: MouseEvent) => {
       const start = Math.min(dragSel.start, dragSel.end);
       const end = Math.max(dragSel.start, dragSel.end);
       setDragSel(null);
+      if (voltaMode) {
+        commitVolta(start, end);
+        return;
+      }
       setPendingRange({ startIdx: start, endIdx: end });
       // Position preset menu near cursor.
       const left = Math.min(Math.max(8, ev.clientX), window.innerWidth - 220);
@@ -1397,7 +1402,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
     };
     window.addEventListener('mouseup', onUp);
     return () => window.removeEventListener('mouseup', onUp);
-  }, [sectionMode, dragSel]);
+  }, [sectionMode, voltaMode, dragSel]);
 
   const commitSection = (name: string) => {
     if (!pendingRange) return;
@@ -1416,6 +1421,23 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
     setPendingRange(null);
     setPresetPos(null);
     setSectionMode(false);
+  };
+
+  const commitVolta = (startIdx: number, endIdx: number) => {
+    const containing = sections.find(s => startIdx >= s.startIdx && endIdx <= s.endIdx);
+    if (!containing) {
+      toast({ title: 'Volta must be inside a section', variant: 'destructive' });
+      setVoltaMode(false);
+      return;
+    }
+    snapshot();
+    let maxEnding = 0;
+    for (let i = containing.startIdx; i <= containing.endIdx; i++) {
+      maxEnding = Math.max(maxEnding, slots[i].ending ?? 0);
+    }
+    const nextEnding = Math.min(3, maxEnding + 1) as 1 | 2 | 3;
+    setSlots(prev => prev.map((s, i) => (i >= startIdx && i <= endIdx ? { ...s, ending: nextEnding } : s)));
+    setVoltaMode(false);
   };
 
   const cancelPreset = () => {
@@ -1671,7 +1693,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
           </div>
 
           <button
-            onClick={() => { setSectionMode(m => !m); setDragSel(null); }}
+            onClick={() => { setSectionMode(m => !m); setVoltaMode(false); setDragSel(null); }}
             className={`h-9 rounded flex items-center justify-center gap-1.5 border transition-colors text-[10px] font-mono uppercase tracking-wider ${
               sectionMode
                 ? 'bg-primary text-primary-foreground border-primary'
@@ -1680,11 +1702,21 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
             title={sectionMode ? 'Drag across slots to group' : 'Group into section'}
           >
             <Group size={13} />
-            <span>Section</span>
+            <span>Create Section</span>
           </button>
 
-
-
+          <button
+            onClick={() => { setVoltaMode(m => !m); setSectionMode(false); setDragSel(null); }}
+            className={`h-9 rounded flex items-center justify-center gap-1.5 border transition-colors text-[10px] font-mono uppercase tracking-wider ${
+              voltaMode
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background text-foreground border-border hover:bg-muted'
+            }`}
+            title={voltaMode ? 'Drag across slots to mark as repeat ending' : 'Create volta (repeat ending)'}
+          >
+            <Repeat size={13} />
+            <span>Create Volta</span>
+          </button>
 
           {/* Diatonic chord palette */}
 
@@ -2010,7 +2042,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
               const isParsing = parsingSlot === slot.id;
               const color = slot.chord ? getChordColor(slot.chord) : null;
               const section = sectionOfSlot(idx);
-              const inDragSel = sectionMode && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
+              const inDragSel = (sectionMode || voltaMode) && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
               const startUnit = startUnits[idx];
               const barLabel = formatBarNumber(startUnit);
               const logicalRow = logicalRowOf(idx);
@@ -2023,11 +2055,11 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                   onDragOver={(e) => handleDragOver(slot.id, e)}
                   onDragLeave={() => setHoverSlot(prev => prev === slot.id ? null : prev)}
                   onDrop={(e) => handleDrop(slot.id, e)}
-                  onDoubleClick={() => { if (!sectionMode) beginEdit(slot); }}
+                  onDoubleClick={() => { if (!sectionMode && !voltaMode) beginEdit(slot); }}
                   onMouseDown={(e) => startSectionDrag(idx, e)}
                   onMouseEnter={() => extendSectionDrag(idx)}
                   onClick={(e) => {
-                    if (sectionMode) return;
+                    if (sectionMode || voltaMode) return;
                     if (slot.chord && !isEditing) openChordEditor(slot, e.currentTarget as HTMLElement);
                   }}
                   style={{
@@ -2045,7 +2077,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
                     zIndex: 1,
                   }}
                   className={`group relative rounded-md flex items-center justify-center transition-colors overflow-hidden ${
-                    sectionMode ? 'cursor-crosshair select-none ' : slot.chord ? 'cursor-pointer ' : ''
+                    sectionMode || voltaMode ? 'cursor-crosshair select-none ' : slot.chord ? 'cursor-pointer ' : ''
                   }${
                     color
                       ? 'brightness-100 hover:brightness-110'
