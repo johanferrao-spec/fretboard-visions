@@ -1515,6 +1515,8 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
 
   const editorSlot = editorSlotId ? slots.find(s => s.id === editorSlotId) : null;
   const editorChord = editorSlot?.chord ?? null;
+  const [bassOpen, setBassOpen] = useState(false);
+
   const totalBars = slots.reduce((n, s) => n + s.bars, 0) / UNITS_PER_BAR;
 
   // Arrangement drag/drop
