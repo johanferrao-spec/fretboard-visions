@@ -2175,7 +2175,12 @@ function ScaleViewPanel({
                     })()}
                   </div>
                 ) : degreeFilter !== null ? (
-                  <div className="text-[10px] font-mono text-muted-foreground italic p-2">No voicings available for this chord type</div>
+                  <div className="text-[10px] font-mono text-muted-foreground italic p-2">
+                    {fitEnabled
+                      ? `No voicings fit inside frets ${fretBoxStart}–${boxEnd}. Widen or move the position focus box, or turn "Fit to box" off.`
+                      : 'No voicings available for this chord type'}
+                  </div>
+
                 ) : (
                   <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree above to view voicings</div>
                 )}
