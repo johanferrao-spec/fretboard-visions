@@ -1967,7 +1967,39 @@ function ScaleViewPanel({
               <p className="text-[10px] font-mono text-foreground/80 leading-snug">
                 Chord voicings built by dropping the second or third highest note of a close-position chord down an octave. On guitar they essentially act as 7th inversions which allow players to access voicings for most chords from anywhere across the neck. Drop 2 spreads the chord across four adjacent strings; Drop 3 leaves a string gap for a wider, more open sound.
               </p>
+              {/* Position-focus prompt: offer to restrict voicings to the box */}
+              {showFretBox ? (
+                <div
+                  className="mt-auto rounded-lg p-2 border"
+                  style={{ borderColor: 'hsl(var(--accent) / 0.5)', backgroundColor: 'hsl(var(--accent) / 0.1)' }}
+                >
+                  <div className="text-[9px] font-mono uppercase tracking-wider text-accent">Position focus: frets {fretBoxStart}–{boxEnd}</div>
+                  <p className="text-[9px] font-mono text-foreground/70 leading-snug mt-1">
+                    Only show voicings that fit inside the box, so you can play a whole progression (I ii V…) in one position — any inversion, root in the bass or not.
+                  </p>
+                  <button
+                    onClick={() => setFitToBox(v => !v)}
+                    className="mt-1.5 w-full py-1 rounded text-[9px] font-mono font-bold uppercase tracking-wider border transition-all"
+                    style={{
+                      backgroundColor: fitToBox ? 'hsl(var(--accent))' : 'transparent',
+                      borderColor: 'hsl(var(--accent) / 0.6)',
+                      color: fitToBox ? 'hsl(var(--accent-foreground))' : 'hsl(var(--accent))',
+                    }}
+                  >{fitToBox ? 'Fitting to box · on' : 'Fit to box · off'}</button>
+                </div>
+              ) : setShowFretBox ? (
+                <div className="mt-auto rounded-lg p-2 border border-border/60 bg-secondary/30">
+                  <p className="text-[9px] font-mono text-foreground/70 leading-snug">
+                    Turn on Position focus to only see voicings that fit inside a fret span.
+                  </p>
+                  <button
+                    onClick={() => { setShowFretBox(true); setFitToBox(true); }}
+                    className="mt-1.5 w-full py-1 rounded text-[9px] font-mono font-bold uppercase tracking-wider border border-accent/60 text-accent hover:bg-accent/10 transition-colors"
+                  >Enable position focus</button>
+                </div>
+              ) : null}
             </div>
+
           </div>
         )}
 
