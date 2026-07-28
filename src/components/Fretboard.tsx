@@ -1071,6 +1071,8 @@ export default function Fretboard({
                       setHiddenDegrees(prev => { const next = new Set(prev); next.delete(posKey); return next; });
                       return;
                     }
+                    // Individual toggles only have a visible effect when degree colours are on
+                    if (!degreeColors) setDegreeColors(true);
                     // Initial toggle sets the target state for the drag
                     const shouldDisable = !isOff;
                     toggleDegree(posKey);
