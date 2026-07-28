@@ -1373,23 +1373,27 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
 
 
 
-  // Drag-to-select section range
+  // Drag-to-select section or volta range
   const startSectionDrag = (idx: number, e: React.MouseEvent) => {
-    if (!sectionMode) return;
+    if (!sectionMode && !voltaMode) return;
     e.preventDefault();
     setDragSel({ start: idx, end: idx });
   };
   const extendSectionDrag = (idx: number) => {
-    if (!sectionMode || !dragSel) return;
+    if ((!sectionMode && !voltaMode) || !dragSel) return;
     if (dragSel.end !== idx) setDragSel({ ...dragSel, end: idx });
   };
 
   useEffect(() => {
-    if (!sectionMode || !dragSel) return;
+    if ((!sectionMode && !voltaMode) || !dragSel) return;
     const onUp = (ev: MouseEvent) => {
       const start = Math.min(dragSel.start, dragSel.end);
       const end = Math.max(dragSel.start, dragSel.end);
       setDragSel(null);
+      if (voltaMode) {
+        commitVolta(start, end);
+        return;
+      }
       setPendingRange({ startIdx: start, endIdx: end });
       // Position preset menu near cursor.
       const left = Math.min(Math.max(8, ev.clientX), window.innerWidth - 220);
@@ -1398,7 +1402,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
     };
     window.addEventListener('mouseup', onUp);
     return () => window.removeEventListener('mouseup', onUp);
-  }, [sectionMode, dragSel]);
+  }, [sectionMode, voltaMode, dragSel]);
 
   const commitSection = (name: string) => {
     if (!pendingRange) return;
