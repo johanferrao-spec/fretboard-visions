@@ -1431,12 +1431,21 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
       return;
     }
     snapshot();
+    // Number the new ending relative to every existing volta in sections that
+    // share this section's name (repeats of the same section continue the
+    // 1. / 2. / 3. numbering), ignoring the range being created.
+    const norm = (n: string) => n.trim().toLowerCase();
+    const peers = sections.filter(s => norm(s.name) === norm(containing.name));
     let maxEnding = 0;
-    for (let i = containing.startIdx; i <= containing.endIdx; i++) {
-      maxEnding = Math.max(maxEnding, slots[i].ending ?? 0);
+    for (const sec of peers) {
+      for (let i = sec.startIdx; i <= sec.endIdx; i++) {
+        if (i >= startIdx && i <= endIdx) continue;
+        maxEnding = Math.max(maxEnding, slots[i]?.ending ?? 0);
+      }
     }
     const nextEnding = Math.min(3, maxEnding + 1) as 1 | 2 | 3;
     setSlots(prev => prev.map((s, i) => (i >= startIdx && i <= endIdx ? { ...s, ending: nextEnding } : s)));
+
     setVoltaMode(false);
   };
 
