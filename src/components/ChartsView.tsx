@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2, Play, Square, Repeat, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2, Play, Square, Repeat, ChevronsLeft, ChevronsRight, Palette, Music2, Crosshair, ArrowDown } from 'lucide-react';
 
 import { buildChartPdf, downloadPdf, type ChartPdfData } from '@/lib/chartPdf';
 import ChartPreview from '@/components/ChartPreview';
@@ -83,6 +83,8 @@ interface ChartsViewProps {
   onResetAll?: () => void;
   /** Backing-track transport state / controls, surfaced next to the chart title. */
   isPlaying?: boolean;
+  /** Current playhead position in beats (drives the 'follow' view option). */
+  currentBeat?: number;
   onPlay?: () => void;
   onStop?: () => void;
 }
@@ -337,7 +339,7 @@ const sectionDisplayName = (raw: string): string => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
-export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, onPlay, onStop }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, currentBeat = 0, onPlay, onStop }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
     slots: ChartSlot[];
@@ -375,6 +377,12 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
 
   const [slots, setSlots] = useState<ChartSlot[]>(() => persisted.slots?.length ? persisted.slots! : makeSlots(DEFAULT_SLOT_COUNT));
 
+  /** Chord label honouring the "bass note" view toggle (playback keeps the bass). */
+  const displayChordLabel = useCallback(
+    (c: ChartChord) => formatChordLabel(showBassNotes ? c : { root: c.root, chordType: c.chordType }, chartKey, keyMode),
+    [showBassNotes, chartKey, keyMode],
+  );
+
   // Detect the key from the chords in use (unless the user chose one manually).
   useEffect(() => {
     if (!autoKey) return;
@@ -395,6 +403,10 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   const [sections, setSections] = useState<Section[]>(persisted.sections ?? []);
   const [sectionMode, setSectionMode] = useState(false);
   const [voltaMode, setVoltaMode] = useState(false);
+  // ---- View options ----
+  const [showColours, setShowColours] = useState(true);
+  const [showBassNotes, setShowBassNotes] = useState(true);
+  const [followPlayhead, setFollowPlayhead] = useState(false);
   const [dragSel, setDragSel] = useState<{ start: number; end: number } | null>(null);
   const [pendingRange, setPendingRange] = useState<{ startIdx: number; endIdx: number } | null>(null);
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
@@ -596,6 +608,35 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     const measures = Math.max(2, Math.ceil(cursorBeats / 4));
     emitRef.current({ chords: out, measures, bpm: tempo, sections: outSections });
   }, [arrangement, sections, slots, tempo]);
+
+  /** Beat ranges each slot occupies in the rendered arrangement (for 'follow'). */
+  const slotBeatRanges = useMemo(() => {
+    const map = new Map<string, { start: number; end: number }[]>();
+    let cursor = 0;
+    for (const item of arrangement) {
+      const sec = sections.find(s => s.id === item.sectionId);
+      if (!sec) continue;
+      for (let i = sec.startIdx; i <= sec.endIdx && i < slots.length; i++) {
+        const sl = slots[i];
+        const dur = (sl.bars / UNITS_PER_BAR) * 4;
+        const list = map.get(sl.id) ?? [];
+        list.push({ start: cursor, end: cursor + dur });
+        map.set(sl.id, list);
+        cursor += dur;
+      }
+    }
+    return map;
+  }, [arrangement, sections, slots]);
+
+  const activeSlotId = useMemo(() => {
+    if (!followPlayhead || !isPlaying) return null;
+    for (const [id, ranges] of slotBeatRanges) {
+      for (const r of ranges) {
+        if (currentBeat >= r.start && currentBeat < r.end) return id;
+      }
+    }
+    return null;
+  }, [followPlayhead, isPlaying, currentBeat, slotBeatRanges]);
 
 
 
