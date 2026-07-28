@@ -156,12 +156,10 @@ const Index = () => {
     }
   }, [inversionActive, inversionStringGroup, dropMode]);
 
-  // Sync timeline key with primary scale
-  useEffect(() => {
-    setTimelineKey(fb.primaryScale.root);
-    const km = scaleToKeyMode(fb.primaryScale.scale);
-    setKeyMode(km);
-  }, [fb.primaryScale.root, fb.primaryScale.scale]);
+  // Note: the fretboard/chord-library/arpeggio key selection is intentionally
+  // decoupled from the backing-track key. The timeline key is driven only by
+  // charts / the timeline's own key selector.
+
 
   // Reset octave shift when active chord changes
   useEffect(() => {
