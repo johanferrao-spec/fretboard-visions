@@ -41,6 +41,23 @@ const Index = () => {
   const [volume, setVolume] = useState(0.7);
   const [samplerHeight, setSamplerHeight] = useState(600);
   const [showCharts, setShowCharts] = useState(false);
+  /** Set when a chart is opened from My Charts — collapse to the backing
+   *  track view as soon as the chart pushes its arrangement to the timeline. */
+  const pendingChartCollapse = useRef(false);
+  useEffect(() => {
+    let intent: string | null = null;
+    try {
+      intent = localStorage.getItem('mf-open-chart-intent');
+      if (intent) localStorage.removeItem('mf-open-chart-intent');
+    } catch {/* ignore */}
+    if (!intent) return;
+    setActiveTab('backing');
+    setShowCharts(true);
+    // 'backing' → load the chart then drop straight into the DAW with the
+    // collapsed timeline. 'edit' → stay in the chart editor.
+    pendingChartCollapse.current = intent === 'backing';
+  }, []);
+
   const [arrangementSections, setArrangementSections] = useState<{ id: string; name: string; color: string; startBeat: number; lengthBeats: number }[]>([]);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [metronomeBpm, setMetronomeBpm] = useState(120);
