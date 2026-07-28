@@ -3766,37 +3766,61 @@ function PlayingChangesPanel({
   return (
     <div className="flex gap-2" style={{ minHeight: 0 }}>
       {/* Left: chord list with roman numerals */}
-      <div className="w-20 shrink-0 space-y-0.5 overflow-y-auto max-h-[300px]">
+      <div className="w-24 shrink-0 space-y-0.5 overflow-y-auto max-h-[300px]">
         <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Progression</div>
         {sorted.map((chord, i) => {
           const a = analysis[i];
           const isCurrent = currentIdx === i;
-          const borrowed = a && !a.isDiatonic;
+          const region = keyRegions[i];
+          const borrowed = a && !a.isDiatonic && !region;
+          const regionStart = region && (!keyRegions[i - 1]
+            || keyRegions[i - 1]!.root !== region.root
+            || keyRegions[i - 1]!.mode !== region.mode);
+          const regionEnd = region && (!keyRegions[i + 1]
+            || keyRegions[i + 1]!.root !== region.root
+            || keyRegions[i + 1]!.mode !== region.mode);
           return (
-            <button
-              key={chord.id}
-              onClick={() => onSeekToChord?.(chord.startBeat)}
-              className={`w-full text-left px-1.5 py-1 rounded text-[10px] font-mono transition-all border cursor-pointer ${
-                isCurrent
-                  ? 'bg-primary/20 border-primary/50 text-foreground font-bold'
-                  : 'border-transparent text-muted-foreground hover:bg-muted/30'
-              }`}
-              style={borrowed ? {
-                backgroundColor: isCurrent ? 'hsl(50, 90%, 55%, 0.2)' : 'hsl(50, 90%, 55%, 0.08)',
-                borderColor: isCurrent ? 'hsl(50, 90%, 55%, 0.5)' : 'transparent',
-                boxShadow: isCurrent ? '0 0 6px hsl(50, 90%, 55%, 0.3)' : 'none',
-              } : {}}
-            >
-              <div className="flex items-center gap-1">
-                <span className={`font-bold ${borrowed ? 'text-yellow-400' : ''}`}>
-                  {a?.roman || '?'}
-                </span>
-                <span className="text-[8px] truncate">{formatChordLabel(chord)}</span>
-              </div>
-            </button>
+            <div key={chord.id}>
+              {regionStart && (
+                <div
+                  className="text-[7px] font-mono uppercase tracking-wider px-1 pt-1 pb-0.5 rounded-t"
+                  style={{ backgroundColor: 'hsl(200, 85%, 55%, 0.12)', color: 'hsl(200, 85%, 65%)' }}
+                >
+                  → {region.root} {region.mode}
+                </div>
+              )}
+              <button
+                onClick={() => onSeekToChord?.(chord.startBeat)}
+                className={`w-full text-left px-1.5 py-1 text-[10px] font-mono transition-all border cursor-pointer ${
+                  region ? (regionEnd ? 'rounded-b' : '') : 'rounded'
+                } ${
+                  isCurrent
+                    ? 'bg-primary/20 border-primary/50 text-foreground font-bold'
+                    : 'border-transparent text-muted-foreground hover:bg-muted/30'
+                }`}
+                style={region ? {
+                  backgroundColor: isCurrent ? 'hsl(200, 85%, 55%, 0.25)' : 'hsl(200, 85%, 55%, 0.1)',
+                  borderColor: isCurrent ? 'hsl(200, 85%, 55%, 0.5)' : 'transparent',
+                  boxShadow: isCurrent ? '0 0 6px hsl(200, 85%, 55%, 0.3)' : 'none',
+                } : borrowed ? {
+                  backgroundColor: isCurrent ? 'hsl(50, 90%, 55%, 0.2)' : 'hsl(50, 90%, 55%, 0.08)',
+                  borderColor: isCurrent ? 'hsl(50, 90%, 55%, 0.5)' : 'transparent',
+                  boxShadow: isCurrent ? '0 0 6px hsl(50, 90%, 55%, 0.3)' : 'none',
+                } : {}}
+              >
+                <div className="flex items-center gap-1">
+                  <span className={`font-bold ${borrowed ? 'text-yellow-400' : ''}`}
+                    style={region ? { color: 'hsl(200, 85%, 65%)' } : undefined}>
+                    {a?.roman || '?'}
+                  </span>
+                  <span className="text-[8px] truncate">{formatChordLabel(chord)}</span>
+                </div>
+              </button>
+            </div>
           );
         })}
       </div>
+
 
       {/* Right: detail for current chord */}
       <div className="flex-1 min-w-0 overflow-y-auto max-h-[300px]">
