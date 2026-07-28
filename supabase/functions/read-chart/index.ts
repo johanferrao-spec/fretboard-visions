@@ -72,24 +72,37 @@ No markdown, no commentary. If no chords are visible, return {"chords":[]}.`;
 
 
 
-    const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-pro',
-        messages: [
-          { role: 'system', content: 'You extract chord progressions from lead sheet images with extreme attention to accidentals (♭/♯) and repeat marks. Respond ONLY with valid JSON.' },
-          { role: 'user', content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: image } },
-          ]},
-        ],
-        response_format: { type: 'json_object' },
-      }),
-    });
+    // Hard timeout so the request can never hang the client on "Reading…".
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 100_000);
+    let aiRes: Response;
+    try {
+      aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        signal: ac.signal,
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: 'You extract chord progressions from lead sheet images with extreme attention to accidentals (♭/♯) and repeat marks. Respond ONLY with valid JSON.' },
+            { role: 'user', content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: image } },
+            ]},
+          ],
+          response_format: { type: 'json_object' },
+        }),
+      });
+    } catch (e) {
+      const aborted = (e as Error).name === 'AbortError';
+      return new Response(JSON.stringify({ error: aborted ? 'Chart reading timed out — try a smaller/cropped image.' : (e as Error).message }),
+        { status: aborted ? 504 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (!aiRes.ok) {
       const text = await aiRes.text();
