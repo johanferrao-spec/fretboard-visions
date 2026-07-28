@@ -1250,6 +1250,11 @@ export default function ChordReference({
           voiceLeadingMelody={voiceLeadingMelody}
           setVoiceLeadingMelody={setVoiceLeadingMelody}
           onApplyScale={onApplyScale}
+          showFretBox={showFretBox}
+          fretBoxStart={fretBoxStart}
+          fretBoxSize={fretBoxSize}
+          setShowFretBox={setShowFretBox}
+
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
