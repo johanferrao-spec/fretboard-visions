@@ -1558,6 +1558,8 @@ function ScaleViewPanel({
   voiceLeadingMode, setVoiceLeadingMode,
   voiceLeadingMelody, setVoiceLeadingMelody,
   onApplyScale,
+  showFretBox = false, fretBoxStart = 1, fretBoxSize = 5, setShowFretBox,
+
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
