@@ -1148,29 +1148,24 @@ export default function Fretboard({
               </div>
             );
           })}
-          {/* Degrees Active / Disable All toggle */}
+          {/* Degree colours on/off toggle — reflects actual state */}
           <button
             onClick={() => {
               if (!degreeColors) {
                 setDegreeColors(true);
                 DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (disabledDegrees.has(k)) toggleDegree(k); });
               } else {
-                const allOn = DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)));
-                if (allOn) {
-                  DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (!disabledDegrees.has(k)) toggleDegree(k); });
-                } else {
-                  DEGREE_LEGEND.forEach(d => { const k = String(d.position); if (disabledDegrees.has(k)) toggleDegree(k); });
-                }
+                setDegreeColors(false);
               }
             }}
+            title={degreeColors ? 'Turn degree colours off' : 'Turn degree colours on'}
             className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
-              degreeColors && DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position)))
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-secondary-foreground'
+              degreeColors ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
             }`}
           >
-            {degreeColors && DEGREE_LEGEND.every(d => !disabledDegrees.has(String(d.position))) ? 'Disable All' : 'Degrees Active'}
+            Degrees: {degreeColors ? 'on' : 'off'}
           </button>
+
           {/* Position focus toggle — right of Degrees Active */}
           <button
             onClick={() => setShowFretBox(!showFretBox)}
