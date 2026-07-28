@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2, Play, Square } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2, Play, Square, Repeat } from 'lucide-react';
 
 import { buildChartPdf, downloadPdf, type ChartPdfData } from '@/lib/chartPdf';
 import ChartPreview from '@/components/ChartPreview';
