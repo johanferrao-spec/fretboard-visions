@@ -236,6 +236,10 @@ interface ChordReferenceProps {
   setShowFretBox?: (v: boolean) => void;
   setFretBoxStart?: (v: number) => void;
   setFretBoxSize?: (v: number) => void;
+  showFretBox?: boolean;
+  fretBoxStart?: number;
+  fretBoxSize?: number;
+
   onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
   chordOctaveShift: number;
   setChordOctaveShift: (v: number) => void;
