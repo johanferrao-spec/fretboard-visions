@@ -1903,7 +1903,7 @@ function ScaleViewPanel({
         </div>
 
         {/* Drop Voicings description — sits left of the Drop 2 / Drop 3 buttons */}
-        {sectionTab === 'drop' && !dropMode && (
+        {sectionTab === 'drop' && (
           <div className="shrink-0 rounded-xl p-3 border border-border/60 bg-card/30 self-stretch flex" style={{ width: 260 }}>
             <div className="min-w-0 flex flex-col gap-1.5 flex-1">
               <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Drop Voicings</div>
