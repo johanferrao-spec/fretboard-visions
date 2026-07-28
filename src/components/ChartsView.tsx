@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2, Play, Square, Repeat, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { X, Loader2, Group, Trash2, GripVertical, Upload, Undo2, Save, RotateCcw, FileDown, Share2, Play, Square, Repeat, ChevronsLeft, ChevronsRight, Palette, Music2, Crosshair, ArrowDown } from 'lucide-react';
 
 import { buildChartPdf, downloadPdf, type ChartPdfData } from '@/lib/chartPdf';
 import ChartPreview from '@/components/ChartPreview';
@@ -83,6 +83,8 @@ interface ChartsViewProps {
   onResetAll?: () => void;
   /** Backing-track transport state / controls, surfaced next to the chart title. */
   isPlaying?: boolean;
+  /** Current playhead position in beats (drives the 'follow' view option). */
+  currentBeat?: number;
   onPlay?: () => void;
   onStop?: () => void;
 }
@@ -337,7 +339,7 @@ const sectionDisplayName = (raw: string): string => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
-export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, onPlay, onStop }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, currentBeat = 0, onPlay, onStop }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
     slots: ChartSlot[];
@@ -375,6 +377,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
 
   const [slots, setSlots] = useState<ChartSlot[]>(() => persisted.slots?.length ? persisted.slots! : makeSlots(DEFAULT_SLOT_COUNT));
 
+
   // Detect the key from the chords in use (unless the user chose one manually).
   useEffect(() => {
     if (!autoKey) return;
@@ -395,6 +398,15 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   const [sections, setSections] = useState<Section[]>(persisted.sections ?? []);
   const [sectionMode, setSectionMode] = useState(false);
   const [voltaMode, setVoltaMode] = useState(false);
+  // ---- View options ----
+  const [showColours, setShowColours] = useState(true);
+  const [showBassNotes, setShowBassNotes] = useState(true);
+  const [followPlayhead, setFollowPlayhead] = useState(false);
+  /** Chord label honouring the "bass note" view toggle (playback keeps the bass). */
+  const displayChordLabel = useCallback(
+    (c: ChartChord) => formatChordLabel(showBassNotes ? c : { root: c.root, chordType: c.chordType }, chartKey, keyMode),
+    [showBassNotes, chartKey, keyMode],
+  );
   const [dragSel, setDragSel] = useState<{ start: number; end: number } | null>(null);
   const [pendingRange, setPendingRange] = useState<{ startIdx: number; endIdx: number } | null>(null);
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
@@ -596,6 +608,35 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     const measures = Math.max(2, Math.ceil(cursorBeats / 4));
     emitRef.current({ chords: out, measures, bpm: tempo, sections: outSections });
   }, [arrangement, sections, slots, tempo]);
+
+  /** Beat ranges each slot occupies in the rendered arrangement (for 'follow'). */
+  const slotBeatRanges = useMemo(() => {
+    const map = new Map<string, { start: number; end: number }[]>();
+    let cursor = 0;
+    for (const item of arrangement) {
+      const sec = sections.find(s => s.id === item.sectionId);
+      if (!sec) continue;
+      for (let i = sec.startIdx; i <= sec.endIdx && i < slots.length; i++) {
+        const sl = slots[i];
+        const dur = (sl.bars / UNITS_PER_BAR) * 4;
+        const list = map.get(sl.id) ?? [];
+        list.push({ start: cursor, end: cursor + dur });
+        map.set(sl.id, list);
+        cursor += dur;
+      }
+    }
+    return map;
+  }, [arrangement, sections, slots]);
+
+  const activeSlotId = useMemo(() => {
+    if (!followPlayhead || !isPlaying) return null;
+    for (const [id, ranges] of slotBeatRanges) {
+      for (const r of ranges) {
+        if (currentBeat >= r.start && currentBeat < r.end) return id;
+      }
+    }
+    return null;
+  }, [followPlayhead, isPlaying, currentBeat, slotBeatRanges]);
 
 
 
@@ -1770,6 +1811,31 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
             <span>Create Volta</span>
           </button>
 
+          {/* View options */}
+          <div className="flex flex-col gap-1 border-t border-border pt-1.5 mt-0.5">
+            <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground px-0.5">View</span>
+            {([
+              { key: 'colour', label: 'Colour', icon: Palette, on: showColours, toggle: () => setShowColours(v => !v), title: 'Show scale-degree colours on chord cells' },
+              { key: 'bass', label: 'Bass Note', icon: Music2, on: showBassNotes, toggle: () => setShowBassNotes(v => !v), title: 'Show slash-chord bass notes (playback always uses them)' },
+              { key: 'follow', label: 'Follow', icon: Crosshair, on: followPlayhead, toggle: () => setFollowPlayhead(v => !v), title: 'Mark the chord currently playing in the backing track' },
+            ] as const).map(opt => (
+              <button
+                key={opt.key}
+                onClick={opt.toggle}
+                title={opt.title}
+                className={`h-6 rounded flex items-center gap-1.5 px-1.5 border transition-colors text-[9px] font-mono uppercase tracking-wider ${
+                  opt.on
+                    ? 'bg-primary/20 text-primary border-primary/60'
+                    : 'bg-background text-muted-foreground border-border hover:bg-muted'
+                }`}
+              >
+                <opt.icon size={11} />
+                <span className="flex-1 text-left">{opt.label}</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${opt.on ? 'bg-primary' : 'bg-muted-foreground/40'}`} />
+              </button>
+            ))}
+          </div>
+
           {/* Diatonic chord palette */}
 
           {diatonicChords.length > 0 && (
@@ -2092,7 +2158,8 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
               const isHover = hoverSlot === slot.id;
               const isEditing = editingSlot === slot.id;
               const isParsing = parsingSlot === slot.id;
-              const color = slot.chord ? getChordColor(slot.chord) : null;
+              const color = slot.chord ? (showColours ? getChordColor(slot.chord) : '220 10% 72%') : null;
+              const isActiveChord = followPlayhead && activeSlotId === slot.id;
               const section = sectionOfSlot(idx);
               const inDragSel = (sectionMode || voltaMode) && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
               const startUnit = startUnits[idx];
@@ -2118,6 +2185,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                     gridColumn: `${(startUnit % COLS) + 1} / span ${slot.bars}`,
                     gridRow: gridRowIndex,
                     background: color ? `hsl(${color})` : undefined,
+                    filter: isActiveChord ? 'brightness(1.25) saturate(0.7)' : undefined,
                     boxShadow: isHover
                       ? 'inset 0 0 0 2px hsl(var(--primary))'
                       : inDragSel
@@ -2136,7 +2204,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                       : 'bg-muted/20 border border-dashed border-border/50 hover:border-primary/60 hover:bg-muted/30'
                   }`}
                   title={slot.chord
-                    ? `${formatChordLabel(slot.chord, chartKey, keyMode)} — click to edit extensions`
+                    ? `${displayChordLabel(slot.chord)} — click to edit extensions`
                     : 'Double-click to type a chord, or drop one here'}
                 >
                   {/* Section enclosure is drawn as a single sibling box across all cells (see sectionSegments above). */}
@@ -2214,9 +2282,15 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                     />
                   ) : slot.chord ? (
                     <span className="text-[13px] font-mono font-bold pointer-events-none" style={{ color: '#000' }}>
-                      {formatChordLabel(slot.chord, chartKey, keyMode)}
+                      {displayChordLabel(slot.chord)}
                     </span>
                   ) : null}
+
+                  {isActiveChord && (
+                    <div className="absolute top-0 left-0 right-0 flex justify-center pointer-events-none z-10">
+                      <ArrowDown size={14} strokeWidth={3} style={{ color: 'hsl(38 95% 55%)' }} className="drop-shadow" />
+                    </div>
+                  )}
 
                   {isParsing && (
                     <Loader2 size={10} className="absolute bottom-1 right-3 animate-spin text-foreground/70" />
