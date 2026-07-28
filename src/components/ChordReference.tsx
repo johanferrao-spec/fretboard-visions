@@ -2136,10 +2136,10 @@ function ScaleViewPanel({
           </div>
         )}
 
-        {/* Default empty-space content: three-column help */}
-        {!dropMode && !threeNpsMode && !voiceLeadingMode && (
-          <div ref={helpPanelRef} className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex gap-0 min-w-0">
-            <div className="min-w-0 px-3 flex flex-col gap-1.5" style={{ flex: `0 0 calc(${helpColWidths[0]}% - 6px)` }}>
+        {/* Tab content panels */}
+        {sectionTab === 'harmony' && (
+          <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex min-w-0">
+            <div className="min-w-0 px-3 flex flex-col gap-1.5 flex-1">
               <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Functional Harmony</div>
               <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
                 Chords are organized by their role within a key. Each degree (I–VII) has a job—<span className="text-primary font-bold">tonic</span> chords resolve, <span className="text-accent font-bold">subdominants</span> create movement, and <span className="text-destructive font-bold">dominants</span> build tension back to the tonic.
@@ -2167,23 +2167,23 @@ function ScaleViewPanel({
                 ))}
               </div>
             </div>
-            <div
-              onPointerDown={startHelpResize(0)}
-              className="w-1.5 mx-0.5 cursor-col-resize self-stretch my-1 rounded bg-border/60 hover:bg-primary/60 transition-colors shrink-0"
-              title="Drag to resize"
-            />
-            <div className="min-w-0 px-3 flex flex-col gap-1.5" style={{ flex: `0 0 calc(${helpColWidths[1]}% - 6px)` }}>
+          </div>
+        )}
+
+        {sectionTab === 'drop' && !dropMode && (
+          <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex min-w-0">
+            <div className="min-w-0 px-3 flex flex-col gap-1.5 flex-1">
               <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Drop 2 & Drop 3</div>
               <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
                 Chord voicings built by dropping the second or third highest note of a close-position chord down an octave. On guitar they essentially act as 7th inversions which allow players to access voicings for most chords from anywhere across the neck. Drop 2 spreads the chord across four adjacent strings; Drop 3 leaves a string gap for a wider, more open sound.
               </p>
             </div>
-            <div
-              onPointerDown={startHelpResize(1)}
-              className="w-1.5 mx-0.5 cursor-col-resize self-stretch my-1 rounded bg-border/60 hover:bg-primary/60 transition-colors shrink-0"
-              title="Drag to resize"
-            />
-            <div className="min-w-0 px-3 flex flex-col gap-1.5" style={{ flex: `0 0 calc(${helpColWidths[2]}% - 6px)` }}>
+          </div>
+        )}
+
+        {sectionTab === 'modes' && !threeNpsMode && (
+          <div className="flex-1 rounded-xl p-4 border border-border/60 bg-card/30 self-stretch flex min-w-0">
+            <div className="min-w-0 px-3 flex flex-col gap-1.5 flex-1">
               <div className="text-[10px] font-mono text-primary uppercase tracking-wider">Modes</div>
               <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">
                 Modes are scales created by starting the major scale on a different degree. They are useful when learning to visualise the fretboard as they all link together. They can also be used compositionally as they can offer interesting tonal colours.
@@ -2240,6 +2240,7 @@ function ScaleViewPanel({
             </div>
           </div>
         )}
+
       </div>
 
       {!dropMode && !threeNpsMode && degreeFilter === null && (
