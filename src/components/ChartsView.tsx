@@ -1811,6 +1811,31 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
             <span>Create Volta</span>
           </button>
 
+          {/* View options */}
+          <div className="flex flex-col gap-1 border-t border-border pt-1.5 mt-0.5">
+            <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground px-0.5">View</span>
+            {([
+              { key: 'colour', label: 'Colour', icon: Palette, on: showColours, toggle: () => setShowColours(v => !v), title: 'Show scale-degree colours on chord cells' },
+              { key: 'bass', label: 'Bass Note', icon: Music2, on: showBassNotes, toggle: () => setShowBassNotes(v => !v), title: 'Show slash-chord bass notes (playback always uses them)' },
+              { key: 'follow', label: 'Follow', icon: Crosshair, on: followPlayhead, toggle: () => setFollowPlayhead(v => !v), title: 'Mark the chord currently playing in the backing track' },
+            ] as const).map(opt => (
+              <button
+                key={opt.key}
+                onClick={opt.toggle}
+                title={opt.title}
+                className={`h-6 rounded flex items-center gap-1.5 px-1.5 border transition-colors text-[9px] font-mono uppercase tracking-wider ${
+                  opt.on
+                    ? 'bg-primary/20 text-primary border-primary/60'
+                    : 'bg-background text-muted-foreground border-border hover:bg-muted'
+                }`}
+              >
+                <opt.icon size={11} />
+                <span className="flex-1 text-left">{opt.label}</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${opt.on ? 'bg-primary' : 'bg-muted-foreground/40'}`} />
+              </button>
+            ))}
+          </div>
+
           {/* Diatonic chord palette */}
 
           {diatonicChords.length > 0 && (
@@ -2133,7 +2158,8 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
               const isHover = hoverSlot === slot.id;
               const isEditing = editingSlot === slot.id;
               const isParsing = parsingSlot === slot.id;
-              const color = slot.chord ? getChordColor(slot.chord) : null;
+              const color = slot.chord ? (showColours ? getChordColor(slot.chord) : '220 10% 72%') : null;
+              const isActiveChord = followPlayhead && activeSlotId === slot.id;
               const section = sectionOfSlot(idx);
               const inDragSel = (sectionMode || voltaMode) && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
               const startUnit = startUnits[idx];
@@ -2159,6 +2185,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                     gridColumn: `${(startUnit % COLS) + 1} / span ${slot.bars}`,
                     gridRow: gridRowIndex,
                     background: color ? `hsl(${color})` : undefined,
+                    filter: isActiveChord ? 'brightness(1.25) saturate(0.7)' : undefined,
                     boxShadow: isHover
                       ? 'inset 0 0 0 2px hsl(var(--primary))'
                       : inDragSel
@@ -2177,7 +2204,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                       : 'bg-muted/20 border border-dashed border-border/50 hover:border-primary/60 hover:bg-muted/30'
                   }`}
                   title={slot.chord
-                    ? `${formatChordLabel(slot.chord, chartKey, keyMode)} — click to edit extensions`
+                    ? `${displayChordLabel(slot.chord)} — click to edit extensions`
                     : 'Double-click to type a chord, or drop one here'}
                 >
                   {/* Section enclosure is drawn as a single sibling box across all cells (see sectionSegments above). */}
@@ -2255,9 +2282,15 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                     />
                   ) : slot.chord ? (
                     <span className="text-[13px] font-mono font-bold pointer-events-none" style={{ color: '#000' }}>
-                      {formatChordLabel(slot.chord, chartKey, keyMode)}
+                      {displayChordLabel(slot.chord)}
                     </span>
                   ) : null}
+
+                  {isActiveChord && (
+                    <div className="absolute top-0 left-0 right-0 flex justify-center pointer-events-none z-10">
+                      <ArrowDown size={14} strokeWidth={3} style={{ color: 'hsl(38 95% 55%)' }} className="drop-shadow" />
+                    </div>
+                  )}
 
                   {isParsing && (
                     <Loader2 size={10} className="absolute bottom-1 right-3 animate-spin text-foreground/70" />
