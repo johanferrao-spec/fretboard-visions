@@ -2428,7 +2428,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
             selectedRoot={editorChord.root}
             selectedChord={editorChord.chordType}
             handleSelectChord={(ct) => {
-              setSlotChord(editorSlot.id, { root: editorChord.root, chordType: ct });
+              setSlotChord(editorSlot.id, { ...editorChord, chordType: ct });
             }}
             getChordCellLabel={(ct) => formatChordLabel({ root: editorChord.root, chordType: ct }, chartKey, keyMode)}
             draggable={false}
