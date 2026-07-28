@@ -10,7 +10,7 @@ import {
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS, buildFormulaPcMap,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
   isVoicingTonallyValid, isPhysicallyPlayable, getTensionSuggestions, getChordTones,
-  analyzeProgression, identifyArpeggioFromNotes,
+  analyzeProgression, identifyArpeggioFromNotes, getChordDegree,
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
   getDiatonicChords, generate7thInversions, generateDrop3Inversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
   STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS, MAJOR_MODE_NAMES, MINOR_MODE_NAMES, SCALE_DESCRIPTIONS,
