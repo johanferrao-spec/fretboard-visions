@@ -236,6 +236,10 @@ interface ChordReferenceProps {
   setShowFretBox?: (v: boolean) => void;
   setFretBoxStart?: (v: number) => void;
   setFretBoxSize?: (v: number) => void;
+  showFretBox?: boolean;
+  fretBoxStart?: number;
+  fretBoxSize?: number;
+
   onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
   chordOctaveShift: number;
   setChordOctaveShift: (v: number) => void;
@@ -1032,6 +1036,8 @@ export default function ChordReference({
   voiceLeadingMode, setVoiceLeadingMode, voiceLeadingMelody, setVoiceLeadingMelody,
   onApplyBeginnerPreset, onApplyOpenChord,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
+  showFretBox, fretBoxStart = 1, fretBoxSize = 5,
+
   onChordAddStateChange,
   chordOctaveShift, setChordOctaveShift,
   setArpAddReferenceNotes,
@@ -1244,6 +1250,11 @@ export default function ChordReference({
           voiceLeadingMelody={voiceLeadingMelody}
           setVoiceLeadingMelody={setVoiceLeadingMelody}
           onApplyScale={onApplyScale}
+          showFretBox={showFretBox}
+          fretBoxStart={fretBoxStart}
+          fretBoxSize={fretBoxSize}
+          setShowFretBox={setShowFretBox}
+
         />
       ) : activeTab === 'changes' ? (
         <PlayingChangesPanel
@@ -1547,6 +1558,8 @@ function ScaleViewPanel({
   voiceLeadingMode, setVoiceLeadingMode,
   voiceLeadingMelody, setVoiceLeadingMelody,
   onApplyScale,
+  showFretBox = false, fretBoxStart = 1, fretBoxSize = 5, setShowFretBox,
+
 }: {
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
@@ -1566,6 +1579,11 @@ function ScaleViewPanel({
   voiceLeadingMelody: { stringIndex: number; fret: number } | null;
   setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
   onApplyScale?: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
+  showFretBox?: boolean;
+  fretBoxStart?: number;
+  fretBoxSize?: number;
+  setShowFretBox?: (v: boolean) => void;
+
 }) {
   const keyMode = scaleToKeyMode(primaryScale.scale);
   const diatonicChords = useMemo(() => getDiatonicChords(primaryScale.root, keyMode), [primaryScale.root, keyMode]);
@@ -1681,7 +1699,7 @@ function ScaleViewPanel({
   }, [keyMode]);
 
   // Generate inversions when in drop mode with a string group and degree selected
-  const inversions = useMemo(() => {
+  const baseInversions = useMemo(() => {
     if (inversionStringGroup === null || degreeFilter === null) return [];
     const chord = diatonicLabels[degreeFilter];
     if (!chord) return [];
@@ -1698,6 +1716,45 @@ function ScaleViewPanel({
     }
     return [];
   }, [dropMode, inversionStringGroup, degreeFilter, diatonicLabels, tuning]);
+
+  /* ── Position-focus fit ────────────────────────────────────────────────
+     When the fretboard's Position focus box is on, restrict the drop
+     voicings to the inversions (in any octave) whose every fretted note
+     sits inside the box, so a whole progression can be played within the
+     span. Any inversion qualifies — the root does not need to be in the
+     bass. */
+  const [fitToBox, setFitToBox] = useState(true);
+  const boxEnd = fretBoxStart + fretBoxSize - 1;
+  const fitEnabled = showFretBox && fitToBox;
+
+  const inversions = useMemo(() => {
+    if (!fitEnabled || baseInversions.length === 0) return baseInversions;
+    const seen = new Set<string>();
+    const out: typeof baseInversions = [];
+    for (const inv of baseInversions) {
+      for (let oct = -2; oct <= 2; oct++) {
+        const shift = oct * 12;
+        const frets = inv.frets.map(f => (f < 0 ? f : f + shift));
+        const played = frets.filter(f => f >= 0);
+        if (played.length === 0) continue;
+        if (played.some(f => f < fretBoxStart || f > boxEnd || f > 24)) continue;
+        const key = frets.join(',');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(oct === 0 ? inv : {
+          ...inv,
+          frets,
+          notes: inv.notes.map(n => ({ ...n, fret: n.fret + shift })),
+        });
+      }
+    }
+    return out.sort((a, b) => {
+      const am = Math.min(...a.frets.filter(f => f >= 0));
+      const bm = Math.min(...b.frets.filter(f => f >= 0));
+      return am - bm || (a.inversionNumber ?? 0) - (b.inversionNumber ?? 0);
+    });
+  }, [baseInversions, fitEnabled, fretBoxStart, boxEnd]);
+
 
   // Voice-leading voicings: derived from selected degree + clicked melody note
   const voiceLeadingVoicings: VoiceLeadingVoicing[] = useMemo(() => {
@@ -1910,7 +1967,39 @@ function ScaleViewPanel({
               <p className="text-[10px] font-mono text-foreground/80 leading-snug">
                 Chord voicings built by dropping the second or third highest note of a close-position chord down an octave. On guitar they essentially act as 7th inversions which allow players to access voicings for most chords from anywhere across the neck. Drop 2 spreads the chord across four adjacent strings; Drop 3 leaves a string gap for a wider, more open sound.
               </p>
+              {/* Position-focus prompt: offer to restrict voicings to the box */}
+              {showFretBox ? (
+                <div
+                  className="mt-auto rounded-lg p-2 border"
+                  style={{ borderColor: 'hsl(var(--accent) / 0.5)', backgroundColor: 'hsl(var(--accent) / 0.1)' }}
+                >
+                  <div className="text-[9px] font-mono uppercase tracking-wider text-accent">Position focus: frets {fretBoxStart}–{boxEnd}</div>
+                  <p className="text-[9px] font-mono text-foreground/70 leading-snug mt-1">
+                    Only show voicings that fit inside the box, so you can play a whole progression (I ii V…) in one position — any inversion, root in the bass or not.
+                  </p>
+                  <button
+                    onClick={() => setFitToBox(v => !v)}
+                    className="mt-1.5 w-full py-1 rounded text-[9px] font-mono font-bold uppercase tracking-wider border transition-all"
+                    style={{
+                      backgroundColor: fitToBox ? 'hsl(var(--accent))' : 'transparent',
+                      borderColor: 'hsl(var(--accent) / 0.6)',
+                      color: fitToBox ? 'hsl(var(--accent-foreground))' : 'hsl(var(--accent))',
+                    }}
+                  >{fitToBox ? 'Fitting to box · on' : 'Fit to box · off'}</button>
+                </div>
+              ) : setShowFretBox ? (
+                <div className="mt-auto rounded-lg p-2 border border-border/60 bg-secondary/30">
+                  <p className="text-[9px] font-mono text-foreground/70 leading-snug">
+                    Turn on Position focus to only see voicings that fit inside a fret span.
+                  </p>
+                  <button
+                    onClick={() => { setShowFretBox(true); setFitToBox(true); }}
+                    className="mt-1.5 w-full py-1 rounded text-[9px] font-mono font-bold uppercase tracking-wider border border-accent/60 text-accent hover:bg-accent/10 transition-colors"
+                  >Enable position focus</button>
+                </div>
+              ) : null}
             </div>
+
           </div>
         )}
 
@@ -2086,7 +2175,12 @@ function ScaleViewPanel({
                     })()}
                   </div>
                 ) : degreeFilter !== null ? (
-                  <div className="text-[10px] font-mono text-muted-foreground italic p-2">No voicings available for this chord type</div>
+                  <div className="text-[10px] font-mono text-muted-foreground italic p-2">
+                    {fitEnabled
+                      ? `No voicings fit inside frets ${fretBoxStart}–${boxEnd}. Widen or move the position focus box, or turn "Fit to box" off.`
+                      : 'No voicings available for this chord type'}
+                  </div>
+
                 ) : (
                   <div className="text-[10px] font-mono text-muted-foreground italic p-2">👆 Select a degree above to view voicings</div>
                 )}

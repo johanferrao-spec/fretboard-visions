@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileMusic, Music4, ListMusic, Trash2, Plus, X, Play } from 'lucide-react';
+import { ArrowLeft, FileMusic, Music4, ListMusic, Trash2, Plus, X, Play, Pencil, Upload as UploadIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { BackingTrack } from '@/lib/backingTrackTypes';
@@ -38,13 +38,24 @@ function writeJSON(k: string, v: unknown) {
   try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
 }
 
+interface Upload {
+  id: string;
+  title: string;
+  kind: string;
+  composer: string | null;
+  downloads: number;
+  created_at: string;
+}
+
 export default function MyCharts() {
   const navigate = useNavigate();
   const [charts, setCharts] = useState<StoredChart[]>(() => readJSON<StoredChart[]>(LIBRARY_KEY, []));
   const [tracks, setTracks] = useState<BackingTrack[]>(() => readJSON<BackingTrack[]>(BACKING_KEY, []));
   const [setlists, setSetlists] = useState<Setlist[]>(() => readJSON<Setlist[]>(SETLISTS_KEY, []));
+  const [uploads, setUploads] = useState<Upload[]>([]);
   const [activeSetlistId, setActiveSetlistId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'charts' | 'tracks' | 'setlists'>('charts');
+  const [tab, setTab] = useState<'charts' | 'tracks' | 'uploads' | 'setlists'>('charts');
+
   // Guard: never let the initial render flush empty arrays over saved data.
   const hydrated = useRef(false);
 
@@ -73,6 +84,14 @@ export default function MyCharts() {
         setCharts(prev => mergeById(prev, d.charts_library));
         setTracks(prev => mergeById(prev, d.backing_tracks_data));
         setSetlists(prev => mergeById(prev, d.setlists));
+        // My uploads — charts/tracks this account published to Community.
+        const { data: mine } = await supabase
+          .from('shared_charts')
+          .select('id, title, kind, composer, downloads, created_at')
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false });
+        if (!cancelled && mine) setUploads(mine as Upload[]);
+
       } catch {
         /* offline — local copy still works */
       } finally {
@@ -92,14 +111,44 @@ export default function MyCharts() {
     [setlists, activeSetlistId],
   );
 
-  const openChart = (c: StoredChart) => {
+  /** Open a saved chart.
+   *  'backing' (default) — load it and drop straight into the backing track
+   *  view with the collapsed timeline. 'edit' — open the chart editor. */
+  const openChart = (c: StoredChart, mode: 'backing' | 'edit' = 'backing') => {
     writeJSON(CHART_KEY, c.data);
+    try { localStorage.setItem('mf-open-chart-intent', mode); } catch {}
     toast.success(`Loaded "${c.title}"`);
     navigate('/');
   };
 
   const deleteChart = (id: string) => setCharts(prev => prev.filter(c => c.id !== id));
   const deleteTrack = (id: string) => setTracks(prev => prev.filter(t => t.id !== id));
+
+  const renameChart = (c: StoredChart) => {
+    const title = prompt('Rename chart', c.title);
+    if (!title) return;
+    setCharts(prev => prev.map(x => x.id === c.id ? { ...x, title, updatedAt: Date.now() } : x));
+  };
+  const renameTrack = (t: BackingTrack) => {
+    const name = prompt('Rename backing track', t.name);
+    if (!name) return;
+    setTracks(prev => prev.map(x => x.id === t.id ? { ...x, name } : x));
+  };
+
+  const deleteUpload = async (id: string) => {
+    const { error } = await supabase.from('shared_charts').delete().eq('id', id);
+    if (error) { toast.error('Could not delete upload'); return; }
+    setUploads(prev => prev.filter(u => u.id !== id));
+    toast.success('Upload removed');
+  };
+  const renameUpload = async (u: Upload) => {
+    const title = prompt('Rename upload', u.title);
+    if (!title) return;
+    const { error } = await supabase.from('shared_charts').update({ title }).eq('id', u.id);
+    if (error) { toast.error('Could not rename upload'); return; }
+    setUploads(prev => prev.map(x => x.id === u.id ? { ...x, title } : x));
+  };
+
 
   const createSetlist = () => {
     const name = prompt('Setlist name?');
@@ -140,7 +189,7 @@ export default function MyCharts() {
         </Link>
         <h1 className="text-lg font-fredoka">My Charts</h1>
         <div className="ml-auto flex gap-1">
-          {(['charts','tracks','setlists'] as const).map(t => (
+          {(['charts','tracks','uploads','setlists'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -148,9 +197,10 @@ export default function MyCharts() {
                 tab === t ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'
               }`}
             >
-              {t === 'charts' ? 'Chord Charts' : t === 'tracks' ? 'Backing Tracks' : 'Setlists'}
+              {t === 'charts' ? 'Chord Charts' : t === 'tracks' ? 'Backing Tracks' : t === 'uploads' ? 'My Uploads' : 'Setlists'}
             </button>
           ))}
+
         </div>
       </header>
 
@@ -176,12 +226,17 @@ export default function MyCharts() {
                             {c.tempo ?? '—'} BPM · {c.timeSig ?? '4/4'} · {c.feel ?? 'Straight'}
                           </div>
                         </div>
-                        <IconBtn title="Delete" onClick={() => deleteChart(c.id)}><Trash2 size={12} /></IconBtn>
+                        <div className="flex gap-1">
+                          <IconBtn title="Rename" onClick={() => renameChart(c)}><Pencil size={12} /></IconBtn>
+                          <IconBtn title="Delete" onClick={() => deleteChart(c.id)}><Trash2 size={12} /></IconBtn>
+                        </div>
                       </div>
                       <div className="mt-3 flex gap-2">
-                        <ActionBtn onClick={() => openChart(c)}><Play size={11} /> Open</ActionBtn>
+                        <ActionBtn onClick={() => openChart(c, 'backing')}><Play size={11} /> Open</ActionBtn>
+                        <ActionBtn onClick={() => openChart(c, 'edit')}><Pencil size={11} /> Edit</ActionBtn>
                         <ActionBtn onClick={() => addToSetlist({ refType: 'chart', refId: c.id })}><Plus size={11} /> Setlist</ActionBtn>
                       </div>
+
                     </Card>
                   ))}
                 </div>
@@ -207,7 +262,10 @@ export default function MyCharts() {
                             {t.bpm} BPM · {t.measures} bars · {t.genre}
                           </div>
                         </div>
-                        <IconBtn title="Delete" onClick={() => deleteTrack(t.id)}><Trash2 size={12} /></IconBtn>
+                        <div className="flex gap-1">
+                          <IconBtn title="Rename" onClick={() => renameTrack(t)}><Pencil size={12} /></IconBtn>
+                          <IconBtn title="Delete" onClick={() => deleteTrack(t.id)}><Trash2 size={12} /></IconBtn>
+                        </div>
                       </div>
                       <div className="mt-3">
                         <ActionBtn onClick={() => addToSetlist({ refType: 'track', refId: t.id })}><Plus size={11} /> Setlist</ActionBtn>
@@ -218,6 +276,40 @@ export default function MyCharts() {
               )}
             </div>
           )}
+
+          {tab === 'uploads' && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-mono uppercase tracking-wider text-muted-foreground">My Uploads ({uploads.length})</h2>
+                <span className="text-[10px] text-muted-foreground">Everything you've shared to Community</span>
+              </div>
+              {uploads.length === 0 ? (
+                <EmptyState icon={<UploadIcon />} label="You haven't published anything to Community yet." />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {uploads.map(u => (
+                    <Card key={u.id}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-fredoka text-base">{u.title}</div>
+                          {u.composer && <div className="text-[10px] text-muted-foreground">{u.composer}</div>}
+                          <div className="text-[10px] text-muted-foreground/70 font-mono mt-1">
+                            {u.kind} · {u.downloads} download{u.downloads === 1 ? '' : 's'}
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <IconBtn title="Rename" onClick={() => renameUpload(u)}><Pencil size={12} /></IconBtn>
+                          <IconBtn title="Delete" onClick={() => deleteUpload(u.id)}><Trash2 size={12} /></IconBtn>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+
 
           {tab === 'setlists' && (
             <div>
