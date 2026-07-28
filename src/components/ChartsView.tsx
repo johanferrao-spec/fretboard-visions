@@ -16,6 +16,33 @@ import type { TimelineChord } from '@/hooks/useSongTimeline';
 
 const STORAGE_KEY = 'chartsView.state.v1';
 
+/** Every mode the harmony engine supports, grouped by parent scale. */
+const KEY_MODE_OPTIONS: { value: KeyMode; label: string }[] = [
+  { value: 'major', label: 'Major' },
+  { value: 'minor', label: 'Minor' },
+  { value: 'ionian', label: 'Ionian' },
+  { value: 'dorian', label: 'Dorian' },
+  { value: 'phrygian', label: 'Phrygian' },
+  { value: 'lydian', label: 'Lydian' },
+  { value: 'mixolydian', label: 'Mixolydian' },
+  { value: 'aeolian', label: 'Aeolian' },
+  { value: 'locrian', label: 'Locrian' },
+  { value: 'harmonic_minor', label: 'Harmonic Minor' },
+  { value: 'locrian_nat6', label: 'Locrian ♮6' },
+  { value: 'ionian_sharp5', label: 'Ionian ♯5' },
+  { value: 'dorian_sharp4', label: 'Dorian ♯4' },
+  { value: 'phrygian_dominant', label: 'Phrygian Dominant' },
+  { value: 'lydian_sharp2', label: 'Lydian ♯2' },
+  { value: 'superlocrian_bb7', label: 'Superlocrian 𝄫7' },
+  { value: 'melodic_minor', label: 'Melodic Minor' },
+  { value: 'dorian_b2', label: 'Dorian ♭2' },
+  { value: 'lydian_augmented', label: 'Lydian Augmented' },
+  { value: 'lydian_dominant', label: 'Lydian Dominant' },
+  { value: 'mixolydian_b6', label: 'Mixolydian ♭6' },
+  { value: 'locrian_nat2', label: 'Locrian ♮2' },
+  { value: 'superlocrian', label: 'Superlocrian' },
+];
+
 interface DiatonicChord {
   root: NoteName;
   type: string;
