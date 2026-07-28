@@ -60,7 +60,8 @@ For each bar return one object:
 - "bars": duration in bars (number, default 1).
 - "times": OPTIONAL repeat count from an "xN" marking.
 - "section": OPTIONAL label for the song section (use the printed name such as "Intro", "Verse 1", "Bridge", "Chorus"; fall back to the rehearsal letter if there is no name). Assign every subsequent bar to that section until the next marker.
-- "ending": OPTIONAL 1, 2 or 3 for volta brackets marked "1.", "2.", "3.". Bars under "1." get 1, under "2." get 2. Later-numbered bars are ALTERNATIVES played on later passes of the SAME section, so give them the SAME "section" label and list all 1. bars then all 2. bars. Omit for normal bars.
+- "ending": OPTIONAL 1, 2 or 3 for volta brackets marked "1.", "2.", "3." (also written "1st ending", "2nd", "3rd", or as numbered brackets over the staff). Bars under "1." get 1, under "2." get 2, under "3." get 3. Later-numbered bars are ALTERNATIVES played on later passes of the SAME section, so give them the SAME "section" label and list all 1. bars, then all 2. bars, then all 3. bars. Omit for normal bars.
+- SCAN CAREFULLY FOR EVERY VOLTA BRACKET, including a final "3." ending in the LAST system of the sheet — a last-time ending is easy to miss because the bracket is short and may sit at the very end of the final line. If a repeated section is played three times, there MUST be three ending groups. Never drop the highest-numbered ending.
 
 Return STRICT JSON only:
 { "meta": { "title": "...", "composer": "...", "timeSig": "4/4", "style": "Pop - Soul", "tempo": 120 },
