@@ -1693,7 +1693,7 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
           </div>
 
           <button
-            onClick={() => { setSectionMode(m => !m); setDragSel(null); }}
+            onClick={() => { setSectionMode(m => !m); setVoltaMode(false); setDragSel(null); }}
             className={`h-9 rounded flex items-center justify-center gap-1.5 border transition-colors text-[10px] font-mono uppercase tracking-wider ${
               sectionMode
                 ? 'bg-primary text-primary-foreground border-primary'
@@ -1702,11 +1702,21 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
             title={sectionMode ? 'Drag across slots to group' : 'Group into section'}
           >
             <Group size={13} />
-            <span>Section</span>
+            <span>Create Section</span>
           </button>
 
-
-
+          <button
+            onClick={() => { setVoltaMode(m => !m); setSectionMode(false); setDragSel(null); }}
+            className={`h-9 rounded flex items-center justify-center gap-1.5 border transition-colors text-[10px] font-mono uppercase tracking-wider ${
+              voltaMode
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background text-foreground border-border hover:bg-muted'
+            }`}
+            title={voltaMode ? 'Drag across slots to mark as repeat ending' : 'Create volta (repeat ending)'}
+          >
+            <Repeat size={13} />
+            <span>Create Volta</span>
+          </button>
 
           {/* Diatonic chord palette */}
 
