@@ -1423,6 +1423,23 @@ export default function ChartsView({ currentKey, keyMode, onToggleCharts, onKeyC
     setSectionMode(false);
   };
 
+  const commitVolta = (startIdx: number, endIdx: number) => {
+    const containing = sections.find(s => startIdx >= s.startIdx && endIdx <= s.endIdx);
+    if (!containing) {
+      toast({ title: 'Volta must be inside a section', variant: 'destructive' });
+      setVoltaMode(false);
+      return;
+    }
+    snapshot();
+    let maxEnding = 0;
+    for (let i = containing.startIdx; i <= containing.endIdx; i++) {
+      maxEnding = Math.max(maxEnding, slots[i].ending ?? 0);
+    }
+    const nextEnding = Math.min(3, maxEnding + 1) as 1 | 2 | 3;
+    setSlots(prev => prev.map((s, i) => (i >= startIdx && i <= endIdx ? { ...s, ending: nextEnding } : s)));
+    setVoltaMode(false);
+  };
+
   const cancelPreset = () => {
     setPendingRange(null);
     setPresetPos(null);
