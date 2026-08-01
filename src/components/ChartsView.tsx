@@ -55,6 +55,8 @@ export interface ChartChord {
   chordType: string;
   /** Slash-chord bass note (e.g. Gmaj7/B). */
   bass?: NoteName;
+  /** Optional attached fretboard voicing: 6 frets, low-E → high-e (-1 = muted). */
+  voicing?: number[];
 }
 
 
