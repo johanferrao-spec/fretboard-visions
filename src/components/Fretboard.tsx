@@ -1167,7 +1167,7 @@ export default function Fretboard({
               }
             }}
             title={degreeColors ? 'Turn degree colours off' : 'Turn degree colours on'}
-            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
+            className={`flex-1 min-w-0 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
               degreeColors ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
             }`}
           >
