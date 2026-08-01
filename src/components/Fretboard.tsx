@@ -1143,11 +1143,11 @@ export default function Fretboard({
                     window.addEventListener('pointermove', handleMove);
                     window.addEventListener('pointerup', handleUp);
                   }}
-                  className={`transition-colors ${isHidden ? 'text-destructive' : 'text-muted-foreground/50 hover:text-foreground'}`}
+                  className={`w-full flex justify-center py-0.5 transition-colors ${isHidden ? 'text-destructive' : 'text-muted-foreground/50 hover:text-foreground'}`}
                   title={isHidden ? `Show ${d.label} (drag to toggle multiple)` : `Hide ${d.label} (drag to toggle multiple)`}
                   aria-label={isHidden ? `Show ${d.label}` : `Hide ${d.label}`}
                 >
-                  <Power size={8} strokeWidth={2.5} />
+                  <Power size={10} strokeWidth={2.5} />
                 </button>
 
               </div>
