@@ -1648,6 +1648,17 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     : null;
 
   const [bassOpen, setBassOpen] = useState(false);
+  const [voicingOpen, setVoicingOpen] = useState(false);
+  useEffect(() => { setVoicingOpen(false); }, [editorSlotId]);
+  /** Toggle a fret on the attached voicing of the chord currently being edited. */
+  const toggleVoicingFret = useCallback((stringIndex: number, fret: number) => {
+    if (!editorSlot || !editorChord) return;
+    const current = editorChord.voicing ?? EMPTY_VOICING;
+    const next = current.slice();
+    next[stringIndex] = current[stringIndex] === fret ? -1 : fret;
+    setSlotChord(editorSlot.id, { ...editorChord, voicing: isVoicingEmpty(next) ? undefined : next });
+  }, [editorSlot, editorChord, setSlotChord]);
+
 
   const totalBars = slots.reduce((n, s) => n + s.bars, 0) / UNITS_PER_BAR;
 
