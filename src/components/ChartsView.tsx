@@ -2609,14 +2609,21 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
 
           <div className="flex items-center justify-between gap-2 mb-2">
             <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground shrink-0">
-              Edit chord · {editorChord.root}
+              Chord
             </span>
-            <div className="flex-1 min-w-0 flex justify-end">
+            <div className="flex-1 min-w-0 flex justify-end -mb-2">
               <ScaleRootSelector
+                key={editorSlot.id}
                 selectedRoot={editorChord.root}
-                onSelect={(n) => setSlotChord(editorSlot.id, { ...editorChord, root: n })}
+                onSelect={(n) => {
+                  // The selector emits its initial spelling on mount — don't let
+                  // that commit a chord into an empty cell.
+                  if (!editorSlot.chord && n === editorChord.root) return;
+                  setSlotChord(editorSlot.id, { ...editorChord, root: n });
+                }}
               />
             </div>
+
             <button
               onClick={() => setEditorSlotId(null)}
               className="text-muted-foreground hover:text-foreground shrink-0"
