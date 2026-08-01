@@ -72,7 +72,7 @@ export default function SongTimeline({
   onSeek, onSetChordBass,
   backingTrackActive, onOpenBackingTrack, onCloseBackingTrack,
   onSaveBackingTrack, onLoadBackingTrack, onDeleteBackingTrack, savedBackingTracks = [],
-  chartsActive, onToggleCharts,
+  chartsActive, onToggleCharts, onTranspose,
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   // Horizontal timeline zoom (1 = fit to width). The measure-label strip and the
