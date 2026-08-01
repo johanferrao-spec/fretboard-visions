@@ -1098,18 +1098,18 @@ export default function Fretboard({
                     window.addEventListener('pointermove', handleMove);
                     window.addEventListener('pointerup', handleUp);
                   }}
-                  className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all touch-none select-none ${isHidden ? 'opacity-100' : isOff ? 'opacity-30' : 'opacity-100'}`}
+                  className={`w-full justify-center items-center gap-1 px-1 py-1 rounded transition-all touch-none select-none ${isHidden ? 'opacity-100' : isOff ? 'opacity-30' : 'opacity-100'}`}
                   title={isHidden ? `Click to restore ${d.label}` : `Click or drag to toggle ${d.label}`}
                 >
                   {isHidden ? (
                     <>
-                      <div className="w-3 h-3 rounded-full flex items-center justify-center text-[7px] font-bold" style={{ backgroundColor: `hsl(${d.color})`, color: '#000' }}>✕</div>
-                      <span className="text-[8px] font-mono text-destructive line-through">{d.label}</span>
+                      <div className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold" style={{ backgroundColor: `hsl(${d.color})`, color: '#000' }}>✕</div>
+                      <span className="text-[10px] font-mono text-destructive line-through">{d.label}</span>
                     </>
                   ) : (
                     <>
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${d.color})` }} />
-                      <span className="text-[8px] font-mono text-muted-foreground">{d.label}</span>
+                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: `hsl(${d.color})` }} />
+                      <span className="text-[10px] font-mono text-muted-foreground">{d.label}</span>
                     </>
                   )}
                 </button>
