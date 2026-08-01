@@ -3803,9 +3803,9 @@ function PlayingChangesPanel({
                   borderColor: isCurrent ? 'hsl(200, 85%, 55%, 0.5)' : 'transparent',
                   boxShadow: isCurrent ? '0 0 6px hsl(200, 85%, 55%, 0.3)' : 'none',
                 } : borrowed ? {
-                  backgroundColor: isCurrent ? 'hsl(50, 90%, 55%, 0.2)' : 'hsl(50, 90%, 55%, 0.08)',
-                  borderColor: isCurrent ? 'hsl(50, 90%, 55%, 0.5)' : 'transparent',
-                  boxShadow: isCurrent ? '0 0 6px hsl(50, 90%, 55%, 0.3)' : 'none',
+                  backgroundColor: isCurrent ? 'hsl(50, 90%, 55%, 0.3)' : 'hsl(50, 90%, 55%, 0.15)',
+                  borderColor: 'hsl(50, 90%, 55%, 0.55)',
+                  boxShadow: isCurrent ? '0 0 6px hsl(50, 90%, 55%, 0.4)' : 'none',
                 } : {}}
               >
                 <div className="flex items-center gap-1">
