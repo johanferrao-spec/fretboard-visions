@@ -1617,7 +1617,6 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   }, [editorSlotId]);
 
   const openChordEditor = (slot: ChartSlot, target: HTMLElement) => {
-    if (!slot.chord) return;
     const rect = target.getBoundingClientRect();
     const width = 320;
     const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
@@ -1627,7 +1626,12 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   };
 
   const editorSlot = editorSlotId ? slots.find(s => s.id === editorSlotId) : null;
-  const editorChord = editorSlot?.chord ?? null;
+  // Empty cells open the same editor with a neutral draft chord so the root
+  // selector / diatonic palette are available before anything is committed.
+  const editorChord: ChartChord | null = editorSlot
+    ? (editorSlot.chord ?? { root: chartKey, chordType: 'maj' })
+    : null;
+
   const [bassOpen, setBassOpen] = useState(false);
 
   const totalBars = slots.reduce((n, s) => n + s.bars, 0) / UNITS_PER_BAR;
