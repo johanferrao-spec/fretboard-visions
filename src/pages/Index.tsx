@@ -389,6 +389,23 @@ const Index = () => {
     }
   };
 
+  /** Transpose every timeline chord and the key centre together. */
+  const handleTranspose = (semitones: number) => {
+    const shift = (n: NoteName): NoteName => {
+      const i = NOTE_NAMES.indexOf(n);
+      if (i < 0) return n;
+      return NOTE_NAMES[(i + semitones + 12) % 12] as NoteName;
+    };
+    timeline.setChords(prev => prev.map(c => ({
+      ...c,
+      root: shift(c.root),
+      ...(c.bassNote ? { bassNote: shift(c.bassNote) } : {}),
+    })));
+    setTimelineKey(k => shift(k));
+  };
+
+
+
   const isVertical = fb.orientation === 'vertical';
 
   // Compute playing chord tones for reactive fretboard
