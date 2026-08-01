@@ -437,6 +437,9 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
   const [arrangement, setArrangement] = useState<ArrangementItem[]>(persisted.arrangement ?? []);
 
+  // Auto-sectioning only applies to imported charts, never to manual editing.
+  const autoSectionEnabled = useRef(false);
+
   useEffect(() => {
     const normalized = normalizeSectionRanges(sections);
     if (!sectionsMatch(sections, normalized)) {
