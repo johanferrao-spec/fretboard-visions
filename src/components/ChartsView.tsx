@@ -499,6 +499,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   // A song with a single continuous chord progression and no sections yet gets
   // one "A Section" box wrapped around the whole progression.
   useEffect(() => {
+    if (!autoSectionEnabled.current) return;
     if (sections.length) return;
     const idxs = slots.map((s, i) => (s.chord ? i : -1)).filter(i => i >= 0);
     if (idxs.length < 2) return;
