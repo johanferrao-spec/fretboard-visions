@@ -385,9 +385,11 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   const [chartKey, setChartKey] = useState<NoteName>(persisted.chartKey ?? currentKey);
   // The chart's mode can be any of the supported modes, independent of the app default.
   const [keyMode, setKeyMode] = useState<KeyMode>(keyModeProp);
-  useEffect(() => { if (!autoKeyRef.current) setKeyMode(keyModeProp); }, [keyModeProp]);
-  // Auto key detection stays on until the user picks a key by hand.
+  // Auto key/scale detection stays on until the user picks a key by hand.
   const [autoKey, setAutoKey] = useState(true);
+  const autoKeyRef = useRef(true);
+  useEffect(() => { autoKeyRef.current = autoKey; }, [autoKey]);
+  useEffect(() => { if (!autoKeyRef.current) setKeyMode(keyModeProp); }, [keyModeProp]);
   const [useSevenths, setUseSevenths] = useState(false);
 
   const diatonicChords = useMemo(() => getDiatonicChords(chartKey, keyMode), [chartKey, keyMode]);
