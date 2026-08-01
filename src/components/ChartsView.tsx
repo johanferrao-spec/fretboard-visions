@@ -2607,6 +2607,58 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
               </div>
             );
           })()}
+
+          {/* Attached-voicing bubble — sits above the editor, connected by a stem */}
+          {editorChord.voicing && !isVoicingEmpty(editorChord.voicing) && (
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex flex-col items-center">
+              <div className="rounded-lg border border-border bg-card shadow-xl p-2 flex flex-col items-center gap-1">
+                <div className="flex items-center gap-2 w-full">
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">Voicing</span>
+                  <button
+                    onClick={() => setSlotChord(editorSlot.id, { ...editorChord, voicing: undefined })}
+                    className="ml-auto text-muted-foreground hover:text-destructive"
+                    title="Remove attached voicing"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+                <VoicingDiagram voicing={editorChord.voicing} width={120} />
+              </div>
+              <div className="w-px h-2 bg-border" />
+            </div>
+          )}
+
+          {/* Collapsible "Attach voicing" panel — opens below the editor */}
+          <div className="absolute top-full left-0 right-0 mt-2 flex flex-col items-center">
+            {voicingOpen ? (
+              <div className="w-full rounded-lg border border-border bg-card shadow-xl p-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Attach voicing</span>
+                  <button onClick={() => setVoicingOpen(false)} className="text-muted-foreground hover:text-foreground" title="Collapse">
+                    <X size={12} />
+                  </button>
+                </div>
+                <p className="text-[9px] font-mono text-muted-foreground/70 mb-1">
+                  Click the fretboard to place notes · top row = open/mute
+                </p>
+                <div className="flex justify-center">
+                  <VoicingDiagram
+                    voicing={editorChord.voicing ?? EMPTY_VOICING}
+                    width={200}
+                    onToggle={toggleVoicingFret}
+                  />
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setVoicingOpen(true)}
+                className="rounded-b-lg border border-t-0 border-border bg-card shadow-xl px-3 py-1 text-[9px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
+              >
+                Attach voicing
+              </button>
+            )}
+          </div>
+
           {/* Quick diatonic chord picker (scale degree colours) */}
           {diatonicChords.length > 0 && (
             <div className="grid grid-cols-7 gap-1 mb-2">
