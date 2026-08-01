@@ -451,6 +451,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   // whose chords match an existing section becomes another occurrence of that
   // section, with the differing tail bars marked as the next volta ending.
   useEffect(() => {
+    if (!autoSectionEnabled.current) return;
     const secOf = (i: number) => sections.find(s => i >= s.startIdx && i <= s.endIdx);
     const runs: { start: number; end: number }[] = [];
     for (let i = 0; i < slots.length; i++) {
