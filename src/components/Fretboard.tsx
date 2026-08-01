@@ -1177,7 +1177,7 @@ export default function Fretboard({
           {/* Position focus toggle — right of Degrees Active */}
           <button
             onClick={() => setShowFretBox(!showFretBox)}
-            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ml-1 ${
+            className={`flex-1 min-w-0 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ml-1 ${
               showFretBox ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
             }`}
           >
