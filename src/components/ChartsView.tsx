@@ -2225,7 +2225,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                   onMouseEnter={() => extendSectionDrag(idx)}
                   onClick={(e) => {
                     if (sectionMode || voltaMode) return;
-                    if (slot.chord && !isEditing) openChordEditor(slot, e.currentTarget as HTMLElement);
+                    if (!isEditing) openChordEditor(slot, e.currentTarget as HTMLElement);
                   }}
                   style={{
                     gridColumn: `${(startUnit % COLS) + 1} / span ${slot.bars}`,
