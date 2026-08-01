@@ -899,6 +899,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
       const newArrangement = structureArrangement.length > 0 ? structureArrangement : defaultArrangement;
 
       snapshot();
+      autoSectionEnabled.current = true;
       setSlots(newSlots);
       setSections(newSections);
       setArrangement(newArrangement);
