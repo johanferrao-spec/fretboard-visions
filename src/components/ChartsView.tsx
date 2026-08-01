@@ -437,6 +437,9 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   const [presetPos, setPresetPos] = useState<{ top: number; left: number } | null>(null);
   const [arrangement, setArrangement] = useState<ArrangementItem[]>(persisted.arrangement ?? []);
 
+  // Auto-sectioning only applies to imported charts, never to manual editing.
+  const autoSectionEnabled = useRef(false);
+
   useEffect(() => {
     const normalized = normalizeSectionRanges(sections);
     if (!sectionsMatch(sections, normalized)) {
@@ -448,6 +451,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   // whose chords match an existing section becomes another occurrence of that
   // section, with the differing tail bars marked as the next volta ending.
   useEffect(() => {
+    if (!autoSectionEnabled.current) return;
     const secOf = (i: number) => sections.find(s => i >= s.startIdx && i <= s.endIdx);
     const runs: { start: number; end: number }[] = [];
     for (let i = 0; i < slots.length; i++) {
@@ -495,6 +499,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   // A song with a single continuous chord progression and no sections yet gets
   // one "A Section" box wrapped around the whole progression.
   useEffect(() => {
+    if (!autoSectionEnabled.current) return;
     if (sections.length) return;
     const idxs = slots.map((s, i) => (s.chord ? i : -1)).filter(i => i >= 0);
     if (idxs.length < 2) return;
@@ -894,9 +899,12 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
       const newArrangement = structureArrangement.length > 0 ? structureArrangement : defaultArrangement;
 
       snapshot();
+      autoSectionEnabled.current = true;
       setSlots(newSlots);
       setSections(newSections);
       setArrangement(newArrangement);
+      // Only the import pass may auto-create sections.
+      setTimeout(() => { autoSectionEnabled.current = false; }, 0);
       const sectionMsg = newSections.length > 0 ? ` in ${newSections.length} section${newSections.length === 1 ? '' : 's'}` : '';
       toast({ title: 'Chart imported', description: `Loaded ${chords.length} chord${chords.length === 1 ? '' : 's'}${sectionMsg}.` });
     } catch (err) {
