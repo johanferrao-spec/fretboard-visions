@@ -656,34 +656,34 @@ const Index = () => {
               setShowFretBox={fb.setShowFretBox}
               toolbarExtras={
                 <>
-                  <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider ml-2">Markers:</span>
+                  <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider ml-2 shrink-0">Markers:</span>
                   <button
                     type="button"
                     onClick={() => fb.setDisplayMode(fb.displayMode === 'notes' ? 'degrees' : fb.displayMode === 'degrees' ? 'none' : 'notes')}
-                    className="w-[68px] shrink-0 inline-flex items-center justify-center px-1 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                    className="flex-1 min-w-0 inline-flex items-center justify-center px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
                   >
                     {fb.displayMode === 'notes' ? '♪ Notes' : fb.displayMode === 'degrees' ? '° Degrees' : '○ None'}
                   </button>
 
-                  <div className="flex items-center gap-1 ml-2">
-                    <span className="text-[9px] font-mono text-muted-foreground uppercase">Size:</span>
+                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                    <span className="text-[10px] font-mono text-muted-foreground uppercase shrink-0">Size:</span>
                     <input
                       type="range" min={12} max={32} value={fb.noteMarkerSize}
                       onChange={e => fb.setNoteMarkerSize(Number(e.target.value))}
-                      className="w-16 accent-primary"
+                      className="flex-1 min-w-0 accent-primary"
                     />
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[9px] font-mono text-muted-foreground uppercase">Frets:</span>
+                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                    <span className="text-[10px] font-mono text-muted-foreground uppercase shrink-0">Frets:</span>
                     <input
                       type="range" min={12} max={24} value={fb.maxFrets}
                       onChange={e => fb.setMaxFrets(Number(e.target.value))}
-                      className="w-20 accent-primary"
+                      className="flex-1 min-w-0 accent-primary"
                     />
-                    <span className="text-[10px] font-mono text-muted-foreground w-5">{fb.maxFrets}</span>
+                    <span className="text-[10px] font-mono text-muted-foreground w-5 shrink-0">{fb.maxFrets}</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[9px] font-mono text-muted-foreground uppercase">Opacity:</span>
+                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                    <span className="text-[10px] font-mono text-muted-foreground uppercase shrink-0">Opacity:</span>
                     <input
                       type="range" min={0} max={100} value={Math.round(fb.arpOverlayOpacity * 100)}
                       onChange={e => {
@@ -692,9 +692,9 @@ const Index = () => {
                         fb.setGhostNoteOpacity(v);
                         fb.setSecondaryOpacity(v);
                       }}
-                      className="w-16 accent-primary"
+                      className="flex-1 min-w-0 accent-primary"
                     />
-                    <span className="text-[10px] font-mono text-muted-foreground w-5">{Math.round(fb.arpOverlayOpacity * 100)}%</span>
+                    <span className="text-[10px] font-mono text-muted-foreground w-5 shrink-0">{Math.round(fb.arpOverlayOpacity * 100)}%</span>
                   </div>
                 </>
               }
