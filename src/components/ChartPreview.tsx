@@ -11,42 +11,50 @@ interface Row { bars: ChartBar[]; offset: number }
 export default function ChartPreview({ data }: { data: ChartPdfData }) {
   const bars = useMemo(() => buildBars(data), [data]);
 
-  // Rows: volta (2nd/3rd ending) runs start a new row, indented so they sit
-  // directly beneath the 1st-ending bars they replace.
+  // Rows: volta (2nd/3rd ending) runs each get their own row, left-aligned with
+  // the 1st-ending run they replace.
   const rows = useMemo<Row[]>(() => {
+    // 1) Group bars into consecutive runs sharing the same ending value.
+    const runs: { ending: number; bars: ChartBar[] }[] = [];
+    bars.forEach(bar => {
+      const e = bar.ending ?? 0;
+      const last = runs[runs.length - 1];
+      if (last && last.ending === e && !bar.sectionStart) last.bars.push(bar);
+      else runs.push({ ending: e, bars: [bar] });
+    });
+
+    // 2) Lay runs out into rows.
     const out: Row[] = [];
     let cur: ChartBar[] = [];
     let offset = 0;
-    let ending1Col: number | null = null;
-    let prevEnding = 0;
+    let ending1Col = 0;
 
-    const flush = () => {
+    const flush = (nextOffset = 0) => {
       if (cur.length) out.push({ bars: cur, offset });
       cur = [];
-      offset = 0;
+      offset = nextOffset;
     };
 
-    bars.forEach(bar => {
-      const e = bar.ending ?? 0;
-
-      if (bar.sectionStart) {
-        flush();
-        ending1Col = null;
-      } else if (e >= 2 && prevEnding >= 1) {
-        const anchor = ending1Col ?? 0;
-        flush();
-        offset = anchor;
-      } else if (e === 0 && prevEnding >= 1) {
-        flush();
-        ending1Col = null;
-      } else if (offset + cur.length >= CHART_BARS_PER_ROW) {
-        flush();
-        if (e >= 1) ending1Col = 0;
+    runs.forEach(run => {
+      if (run.ending === 0) {
+        if (cur.length && (cur[cur.length - 1].ending ?? 0) !== 0) flush();
+        run.bars.forEach(bar => {
+          if (bar.sectionStart && cur.length) flush();
+          if (offset + cur.length >= CHART_BARS_PER_ROW) flush();
+          cur.push(bar);
+        });
+        return;
       }
-
-      if (e === 1 && prevEnding !== 1) ending1Col = offset + cur.length;
-      cur.push(bar);
-      prevEnding = e;
+      if (run.ending === 1) {
+        // Starts inline; break first if it wouldn't fit on the current row.
+        if (offset + cur.length + run.bars.length > CHART_BARS_PER_ROW) flush();
+        ending1Col = offset + cur.length;
+        run.bars.forEach(bar => cur.push(bar));
+        return;
+      }
+      // 2nd / 3rd ending: own row, aligned under the 1st ending.
+      flush(ending1Col);
+      run.bars.forEach(bar => cur.push(bar));
     });
     flush();
     return out;
