@@ -1612,6 +1612,23 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     setArrangement(prev => prev.filter(a => a.sectionId !== id));
   };
 
+  /** Transpose every chord (and slash bass) plus the key centre by N semitones. */
+  const transposeChart = (semitones: number) => {
+    const shift = (n: NoteName): NoteName => {
+      const i = NOTE_NAMES.indexOf(n);
+      if (i < 0) return n;
+      return NOTE_NAMES[(i + semitones + 12) % 12] as NoteName;
+    };
+    snapshot();
+    setAutoKey(false);
+    setChartKey(k => shift(k));
+    setSlots(prev => prev.map(s => s.chord
+      ? { ...s, chord: { ...s.chord, root: shift(s.chord.root), ...(s.chord.bass ? { bass: shift(s.chord.bass) } : {}) } }
+      : s));
+  };
+
+
+
   // Close editor on outside click / Escape.
   useEffect(() => {
     if (!editorSlotId) return;
