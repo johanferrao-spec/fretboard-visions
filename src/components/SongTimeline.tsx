@@ -1067,19 +1067,36 @@ export default function SongTimeline({
                   />
                 </div>
               )}
-              {/* Chart toggle — centered in the left header column, always visible. */}
-              <button
-                onClick={() => onToggleCharts?.()}
-                className={`px-4 py-2 rounded-md text-[11px] font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors border shadow-sm ${
-                  chartsActive
-                    ? 'bg-amber-500 text-black border-amber-400 hover:bg-amber-400'
-                    : 'bg-amber-500/80 text-black border-amber-400/80 hover:bg-amber-400'
-                }`}
-                title={chartsActive ? 'Close chart and return to DAW' : 'Open chart panel'}
-              >
-                <LayoutGrid size={14} />
-                Chart
-              </button>
+              {/* Chart toggle + transpose — centered in the left header column, always visible. */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onToggleCharts?.()}
+                  className={`px-4 py-2 rounded-md text-[11px] font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors border shadow-sm ${
+                    chartsActive
+                      ? 'bg-amber-500 text-black border-amber-400 hover:bg-amber-400'
+                      : 'bg-amber-500/80 text-black border-amber-400/80 hover:bg-amber-400'
+                  }`}
+                  title={chartsActive ? 'Close chart and return to DAW' : 'Open chart panel'}
+                >
+                  <LayoutGrid size={14} />
+                  Chart
+                </button>
+                <div className="flex flex-col items-center gap-0.5" title="Transpose everything (chords + key centre)">
+                  <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">Transpose</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onTranspose?.(-1)}
+                      className="w-6 h-6 rounded bg-secondary hover:bg-muted border border-border/50 text-foreground text-[12px] font-mono leading-none flex items-center justify-center"
+                      title="Transpose down a semitone"
+                    >−</button>
+                    <button
+                      onClick={() => onTranspose?.(1)}
+                      className="w-6 h-6 rounded bg-secondary hover:bg-muted border border-border/50 text-foreground text-[12px] font-mono leading-none flex items-center justify-center"
+                      title="Transpose up a semitone"
+                    >+</button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
