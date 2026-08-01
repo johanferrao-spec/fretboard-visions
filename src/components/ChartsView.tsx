@@ -1649,6 +1649,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
 
   const [bassOpen, setBassOpen] = useState(false);
   const [voicingOpen, setVoicingOpen] = useState(false);
+  const [voicingBase, setVoicingBase] = useState(1);
   useEffect(() => { setVoicingOpen(false); }, [editorSlotId]);
   /** Toggle a fret on the attached voicing of the chord currently being edited. */
   const toggleVoicingFret = useCallback((stringIndex: number, fret: number) => {
@@ -2629,11 +2630,16 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
           )}
 
           {/* Collapsible "Attach voicing" panel — opens below the editor */}
-          <div className="absolute top-full left-0 right-0 mt-2 flex flex-col items-center">
+          <div className="absolute top-full left-0 right-0 flex flex-col items-center">
             {voicingOpen ? (
-              <div className="w-full rounded-lg border border-border bg-card shadow-xl p-2">
+              <div className="w-full mt-2 rounded-lg border border-border bg-card shadow-xl p-2">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Attach voicing</span>
+                  <div className="flex items-center gap-1 ml-auto mr-2">
+                    <button onClick={() => setVoicingBase(b => Math.max(1, b - 1))} className="px-1 rounded border border-border text-[10px] font-mono hover:bg-muted">-</button>
+                    <span className="text-[9px] font-mono text-muted-foreground">fret {voicingBase}</span>
+                    <button onClick={() => setVoicingBase(b => Math.min(17, b + 1))} className="px-1 rounded border border-border text-[10px] font-mono hover:bg-muted">+</button>
+                  </div>
                   <button onClick={() => setVoicingOpen(false)} className="text-muted-foreground hover:text-foreground" title="Collapse">
                     <X size={12} />
                   </button>
@@ -2645,6 +2651,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                   <VoicingDiagram
                     voicing={editorChord.voicing ?? EMPTY_VOICING}
                     width={200}
+                    baseFret={voicingBase}
                     onToggle={toggleVoicingFret}
                   />
                 </div>
