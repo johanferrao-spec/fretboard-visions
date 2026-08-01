@@ -1056,14 +1056,14 @@ export default function Fretboard({
       >
         {/* Degree color key + toggles + position box toggle */}
         {!hideToolbar && (
-        <div data-fb-toolbar className={`flex items-center gap-1 mb-2 flex-wrap ${isVertical ? '-rotate-90' : ''}`}>
+        <div data-fb-toolbar className={`flex items-center gap-1 mb-2 w-full ${isVertical ? '-rotate-90' : ''}`}>
           <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Key:</span>
           {DEGREE_LEGEND.map(d => {
             const posKey = String(d.position);
             const isOff = disabledDegrees.has(posKey);
             const isHidden = hiddenDegrees.has(posKey);
             return (
-              <div key={d.label} className="flex flex-col items-center gap-0.5">
+              <div key={d.label} className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
                 <button
                   data-color-degree={posKey}
                   data-color-degree-off={isOff ? '1' : '0'}
@@ -1098,18 +1098,18 @@ export default function Fretboard({
                     window.addEventListener('pointermove', handleMove);
                     window.addEventListener('pointerup', handleUp);
                   }}
-                  className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all touch-none select-none ${isHidden ? 'opacity-100' : isOff ? 'opacity-30' : 'opacity-100'}`}
+                  className={`w-full justify-center items-center gap-1 px-1 py-1 rounded transition-all touch-none select-none ${isHidden ? 'opacity-100' : isOff ? 'opacity-30' : 'opacity-100'}`}
                   title={isHidden ? `Click to restore ${d.label}` : `Click or drag to toggle ${d.label}`}
                 >
                   {isHidden ? (
                     <>
-                      <div className="w-3 h-3 rounded-full flex items-center justify-center text-[7px] font-bold" style={{ backgroundColor: `hsl(${d.color})`, color: '#000' }}>✕</div>
-                      <span className="text-[8px] font-mono text-destructive line-through">{d.label}</span>
+                      <div className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold" style={{ backgroundColor: `hsl(${d.color})`, color: '#000' }}>✕</div>
+                      <span className="text-[10px] font-mono text-destructive line-through">{d.label}</span>
                     </>
                   ) : (
                     <>
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${d.color})` }} />
-                      <span className="text-[8px] font-mono text-muted-foreground">{d.label}</span>
+                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: `hsl(${d.color})` }} />
+                      <span className="text-[10px] font-mono text-muted-foreground">{d.label}</span>
                     </>
                   )}
                 </button>
@@ -1143,11 +1143,11 @@ export default function Fretboard({
                     window.addEventListener('pointermove', handleMove);
                     window.addEventListener('pointerup', handleUp);
                   }}
-                  className={`transition-colors ${isHidden ? 'text-destructive' : 'text-muted-foreground/50 hover:text-foreground'}`}
+                  className={`w-full flex justify-center py-0.5 transition-colors ${isHidden ? 'text-destructive' : 'text-muted-foreground/50 hover:text-foreground'}`}
                   title={isHidden ? `Show ${d.label} (drag to toggle multiple)` : `Hide ${d.label} (drag to toggle multiple)`}
                   aria-label={isHidden ? `Show ${d.label}` : `Hide ${d.label}`}
                 >
-                  <Power size={8} strokeWidth={2.5} />
+                  <Power size={10} strokeWidth={2.5} />
                 </button>
 
               </div>
@@ -1167,7 +1167,7 @@ export default function Fretboard({
               }
             }}
             title={degreeColors ? 'Turn degree colours off' : 'Turn degree colours on'}
-            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ${
+            className={`flex-1 min-w-0 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
               degreeColors ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
             }`}
           >
@@ -1177,7 +1177,7 @@ export default function Fretboard({
           {/* Position focus toggle — right of Degrees Active */}
           <button
             onClick={() => setShowFretBox(!showFretBox)}
-            className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider transition-colors ml-1 ${
+            className={`flex-1 min-w-0 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ml-1 ${
               showFretBox ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
             }`}
           >
