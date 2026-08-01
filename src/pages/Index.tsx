@@ -940,6 +940,7 @@ const Index = () => {
               onDeleteBackingTrack={(id) => backingApi?.remove(id)}
               savedBackingTracks={backingApi?.saved || []}
               chartsActive={showCharts && activeTab === 'backing'}
+              onTranspose={handleTranspose}
               onToggleCharts={() => {
                 if (activeTab !== 'backing') {
                   setActiveTab('backing');
