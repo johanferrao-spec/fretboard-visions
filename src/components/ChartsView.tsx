@@ -2455,7 +2455,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                         className="rounded border border-dashed px-1 py-[1px] text-center text-[9px] font-mono leading-tight"
                         style={{ borderColor: `hsl(${sec.color} / 0.6)`, color: `hsl(${sec.color})` }}
                       >
-                        {ending}. ending
+                        {ending}. Volta
                       </div>
                     )}
                   </div>
