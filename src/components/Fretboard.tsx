@@ -1022,6 +1022,9 @@ export default function Fretboard({
         }
       }}
       onDoubleClick={(e) => {
+        // Ignore double-clicks that come from toolbar controls (buttons/sliders)
+        const el = e.target as HTMLElement | null;
+        if (el && el.closest('button, input, select, [data-fb-toolbar]')) return;
         if (persistedPaths.length > 0) {
           setPersistedPaths([]);
           return;
