@@ -1844,6 +1844,19 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
               >Auto</button>
             </div>
             <ScaleRootSelector selectedRoot={chartKey} onSelect={(n) => { setAutoKey(false); setChartKey(n); }} />
+            <div className="flex items-center justify-center gap-1" title="Transpose all chords and the key centre">
+              <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">Transpose</span>
+              <button
+                onClick={() => transposeChart(-1)}
+                className="w-5 h-5 rounded bg-secondary hover:bg-muted border border-border/50 text-[11px] font-mono leading-none flex items-center justify-center"
+                title="Down a semitone"
+              >−</button>
+              <button
+                onClick={() => transposeChart(1)}
+                className="w-5 h-5 rounded bg-secondary hover:bg-muted border border-border/50 text-[11px] font-mono leading-none flex items-center justify-center"
+                title="Up a semitone"
+              >+</button>
+            </div>
             <select
               value={keyMode}
               onChange={(e) => setKeyMode(e.target.value as KeyMode)}
