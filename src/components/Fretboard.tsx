@@ -1171,7 +1171,7 @@ export default function Fretboard({
               degreeColors ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
             }`}
           >
-            Degrees: {degreeColors ? 'on' : 'off'}
+            Degree colours: {degreeColors ? 'on' : 'off'}
           </button>
 
           {/* Position focus toggle — right of Degrees Active */}
