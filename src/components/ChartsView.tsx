@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 import { ChordBuilder } from '@/components/ChordReference';
 import { ScaleRootSelector } from '@/components/ControlPanel';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
+import { VoicingDiagram, EMPTY_VOICING, isVoicingEmpty } from '@/components/Charts/VoicingEditor';
 
 const STORAGE_KEY = 'chartsView.state.v1';
 
@@ -55,6 +56,8 @@ export interface ChartChord {
   chordType: string;
   /** Slash-chord bass note (e.g. Gmaj7/B). */
   bass?: NoteName;
+  /** Optional attached fretboard voicing: 6 frets, low-E → high-e (-1 = muted). */
+  voicing?: number[];
 }
 
 
@@ -385,9 +388,11 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   const [chartKey, setChartKey] = useState<NoteName>(persisted.chartKey ?? currentKey);
   // The chart's mode can be any of the supported modes, independent of the app default.
   const [keyMode, setKeyMode] = useState<KeyMode>(keyModeProp);
-  useEffect(() => { setKeyMode(keyModeProp); }, [keyModeProp]);
-  // Auto key detection stays on until the user picks a key by hand.
+  // Auto key/scale detection stays on until the user picks a key by hand.
   const [autoKey, setAutoKey] = useState(true);
+  const autoKeyRef = useRef(true);
+  useEffect(() => { autoKeyRef.current = autoKey; }, [autoKey]);
+  useEffect(() => { if (!autoKeyRef.current) setKeyMode(keyModeProp); }, [keyModeProp]);
   const [useSevenths, setUseSevenths] = useState(false);
 
   const diatonicChords = useMemo(() => getDiatonicChords(chartKey, keyMode), [chartKey, keyMode]);
@@ -900,6 +905,8 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
 
       snapshot();
       autoSectionEnabled.current = true;
+      // Imported charts always re-detect their key/scale.
+      setAutoKey(true);
       setSlots(newSlots);
       setSections(newSections);
       setArrangement(newArrangement);
@@ -1641,6 +1648,18 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     : null;
 
   const [bassOpen, setBassOpen] = useState(false);
+  const [voicingOpen, setVoicingOpen] = useState(false);
+  const [voicingBase, setVoicingBase] = useState(1);
+  useEffect(() => { setVoicingOpen(false); }, [editorSlotId]);
+  /** Toggle a fret on the attached voicing of the chord currently being edited. */
+  const toggleVoicingFret = useCallback((stringIndex: number, fret: number) => {
+    if (!editorSlot || !editorChord) return;
+    const current = editorChord.voicing ?? EMPTY_VOICING;
+    const next = current.slice();
+    next[stringIndex] = current[stringIndex] === fret ? -1 : fret;
+    setSlotChord(editorSlot.id, { ...editorChord, voicing: isVoicingEmpty(next) ? undefined : next });
+  }, [editorSlot, editorChord, setSlotChord]);
+
 
   const totalBars = slots.reduce((n, s) => n + s.bars, 0) / UNITS_PER_BAR;
 
@@ -2589,6 +2608,64 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
               </div>
             );
           })()}
+
+          {/* Attached-voicing bubble — sits above the editor, connected by a stem */}
+          {editorChord.voicing && !isVoicingEmpty(editorChord.voicing) && (
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex flex-col items-center">
+              <div className="rounded-lg border border-border bg-card shadow-xl p-2 flex flex-col items-center gap-1">
+                <div className="flex items-center gap-2 w-full">
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">Voicing</span>
+                  <button
+                    onClick={() => setSlotChord(editorSlot.id, { ...editorChord, voicing: undefined })}
+                    className="ml-auto text-muted-foreground hover:text-destructive"
+                    title="Remove attached voicing"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+                <VoicingDiagram voicing={editorChord.voicing} width={120} />
+              </div>
+              <div className="w-px h-2 bg-border" />
+            </div>
+          )}
+
+          {/* Collapsible "Attach voicing" panel — opens below the editor */}
+          <div className="absolute top-full left-0 right-0 flex flex-col items-center">
+            {voicingOpen ? (
+              <div className="w-full mt-2 rounded-lg border border-border bg-card shadow-xl p-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Attach voicing</span>
+                  <div className="flex items-center gap-1 ml-auto mr-2">
+                    <button onClick={() => setVoicingBase(b => Math.max(1, b - 1))} className="px-1 rounded border border-border text-[10px] font-mono hover:bg-muted">-</button>
+                    <span className="text-[9px] font-mono text-muted-foreground">fret {voicingBase}</span>
+                    <button onClick={() => setVoicingBase(b => Math.min(17, b + 1))} className="px-1 rounded border border-border text-[10px] font-mono hover:bg-muted">+</button>
+                  </div>
+                  <button onClick={() => setVoicingOpen(false)} className="text-muted-foreground hover:text-foreground" title="Collapse">
+                    <X size={12} />
+                  </button>
+                </div>
+                <p className="text-[9px] font-mono text-muted-foreground/70 mb-1">
+                  Click the fretboard to place notes · top row = open/mute
+                </p>
+                <div className="flex justify-center">
+                  <VoicingDiagram
+                    voicing={editorChord.voicing ?? EMPTY_VOICING}
+                    width={200}
+                    baseFret={voicingBase}
+                    onToggle={toggleVoicingFret}
+                  />
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setVoicingOpen(true)}
+                className="rounded-b-lg border border-t-0 border-border bg-card shadow-xl px-3 py-1 text-[9px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
+              >
+                Attach voicing
+              </button>
+            )}
+          </div>
+
           {/* Quick diatonic chord picker (scale degree colours) */}
           {diatonicChords.length > 0 && (
             <div className="grid grid-cols-7 gap-1 mb-2">
