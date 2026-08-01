@@ -903,6 +903,8 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
       setSlots(newSlots);
       setSections(newSections);
       setArrangement(newArrangement);
+      // Only the import pass may auto-create sections.
+      setTimeout(() => { autoSectionEnabled.current = false; }, 0);
       const sectionMsg = newSections.length > 0 ? ` in ${newSections.length} section${newSections.length === 1 ? '' : 's'}` : '';
       toast({ title: 'Chart imported', description: `Loaded ${chords.length} chord${chords.length === 1 ? '' : 's'}${sectionMsg}.` });
     } catch (err) {
