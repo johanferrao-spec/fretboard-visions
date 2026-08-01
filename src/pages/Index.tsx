@@ -658,11 +658,13 @@ const Index = () => {
                 <>
                   <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider ml-2">Markers:</span>
                   <button
+                    type="button"
                     onClick={() => fb.setDisplayMode(fb.displayMode === 'notes' ? 'degrees' : fb.displayMode === 'degrees' ? 'none' : 'notes')}
-                    className="px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                    className="w-[68px] shrink-0 inline-flex items-center justify-center px-1 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
                   >
                     {fb.displayMode === 'notes' ? '♪ Notes' : fb.displayMode === 'degrees' ? '° Degrees' : '○ None'}
                   </button>
+
                   <div className="flex items-center gap-1 ml-2">
                     <span className="text-[9px] font-mono text-muted-foreground uppercase">Size:</span>
                     <input

@@ -1022,6 +1022,9 @@ export default function Fretboard({
         }
       }}
       onDoubleClick={(e) => {
+        // Ignore double-clicks that come from toolbar controls (buttons/sliders)
+        const el = e.target as HTMLElement | null;
+        if (el && el.closest('button, input, select, [data-fb-toolbar]')) return;
         if (persistedPaths.length > 0) {
           setPersistedPaths([]);
           return;
@@ -1053,7 +1056,7 @@ export default function Fretboard({
       >
         {/* Degree color key + toggles + position box toggle */}
         {!hideToolbar && (
-        <div className={`flex items-center gap-1 mb-2 flex-wrap ${isVertical ? '-rotate-90' : ''}`}>
+        <div data-fb-toolbar className={`flex items-center gap-1 mb-2 flex-wrap ${isVertical ? '-rotate-90' : ''}`}>
           <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Key:</span>
           {DEGREE_LEGEND.map(d => {
             const posKey = String(d.position);
