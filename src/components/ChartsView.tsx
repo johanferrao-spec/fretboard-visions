@@ -1617,7 +1617,6 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   }, [editorSlotId]);
 
   const openChordEditor = (slot: ChartSlot, target: HTMLElement) => {
-    if (!slot.chord) return;
     const rect = target.getBoundingClientRect();
     const width = 320;
     const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
@@ -1627,7 +1626,12 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   };
 
   const editorSlot = editorSlotId ? slots.find(s => s.id === editorSlotId) : null;
-  const editorChord = editorSlot?.chord ?? null;
+  // Empty cells open the same editor with a neutral draft chord so the root
+  // selector / diatonic palette are available before anything is committed.
+  const editorChord: ChartChord | null = editorSlot
+    ? (editorSlot.chord ?? { root: chartKey, chordType: 'Major' })
+    : null;
+
   const [bassOpen, setBassOpen] = useState(false);
 
   const totalBars = slots.reduce((n, s) => n + s.bars, 0) / UNITS_PER_BAR;
@@ -2221,7 +2225,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                   onMouseEnter={() => extendSectionDrag(idx)}
                   onClick={(e) => {
                     if (sectionMode || voltaMode) return;
-                    if (slot.chord && !isEditing) openChordEditor(slot, e.currentTarget as HTMLElement);
+                    if (!isEditing) openChordEditor(slot, e.currentTarget as HTMLElement);
                   }}
                   style={{
                     gridColumn: `${(startUnit % COLS) + 1} / span ${slot.bars}`,
@@ -2577,18 +2581,58 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
               </div>
             );
           })()}
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-              Edit chord · {editorChord.root}
+          {/* Quick diatonic chord picker (scale degree colours) */}
+          {diatonicChords.length > 0 && (
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {diatonicChords.slice(0, 7).map((dc, i) => {
+                const source = useSevenths ? diatonicSevenths[i] : dc;
+                const spelledRoot = spelledRoots[i] ?? source.root;
+                const suffix = source.symbol.slice(source.root.length);
+                const active = editorSlot.chord
+                  && editorSlot.chord.root === source.root
+                  && editorSlot.chord.chordType === source.type;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setSlotChord(editorSlot.id, { ...editorChord, root: source.root as NoteName, chordType: source.type })}
+                    className={`rounded px-0.5 py-1 flex flex-col items-center leading-tight hover:brightness-110 transition ${active ? 'ring-2 ring-foreground' : ''}`}
+                    style={{ background: `hsl(${SCALE_DEGREE_COLORS[i]})`, color: '#000' }}
+                    title={`${source.roman} — ${spelledRoot}${suffix}`}
+                  >
+                    <span className="text-[8px] font-mono font-bold opacity-80">{source.roman}</span>
+                    <span className="text-[10px] font-mono font-bold">{spelledRoot}{suffix}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground shrink-0">
+              Chord
             </span>
+            <div className="flex-1 min-w-0 flex justify-end -mb-2">
+              <ScaleRootSelector
+                key={editorSlot.id}
+                selectedRoot={editorChord.root}
+                onSelect={(n) => {
+                  // The selector emits its initial spelling on mount — don't let
+                  // that commit a chord into an empty cell.
+                  if (!editorSlot.chord && n === editorChord.root) return;
+                  setSlotChord(editorSlot.id, { ...editorChord, root: n });
+                }}
+              />
+            </div>
+
             <button
               onClick={() => setEditorSlotId(null)}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground shrink-0"
               title="Close"
             >
               <X size={12} />
             </button>
           </div>
+
 
           <ChordBuilder
             selectedRoot={editorChord.root}
