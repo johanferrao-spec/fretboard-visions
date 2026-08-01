@@ -27,7 +27,7 @@ export default function ChartPreview({ data }: { data: ChartPdfData }) {
     const out: Row[] = [];
     let cur: ChartBar[] = [];
     let offset = 0;
-    let ending1Col = 0;
+    let ending1Col = -1;
 
     const flush = (nextOffset = 0) => {
       if (cur.length) out.push({ bars: cur, offset });
@@ -40,6 +40,7 @@ export default function ChartPreview({ data }: { data: ChartPdfData }) {
         if (cur.length && (cur[cur.length - 1].ending ?? 0) !== 0) flush();
         run.bars.forEach(bar => {
           if (bar.sectionStart && cur.length) flush();
+          if (bar.sectionStart) ending1Col = -1;
           if (offset + cur.length >= CHART_BARS_PER_ROW) flush();
           cur.push(bar);
         });
@@ -52,10 +53,16 @@ export default function ChartPreview({ data }: { data: ChartPdfData }) {
         run.bars.forEach(bar => cur.push(bar));
         return;
       }
-      // 2nd / 3rd ending: own row, aligned under the 1st ending.
-      flush(ending1Col);
+      // 2nd / 3rd ending: own row aligned under the 1st ending — but only when a
+      // 1st ending exists in this section. Otherwise it just flows inline.
+      if (ending1Col >= 0) {
+        flush(ending1Col);
+      } else if (offset + cur.length + run.bars.length > CHART_BARS_PER_ROW) {
+        flush();
+      }
       run.bars.forEach(bar => cur.push(bar));
     });
+
     flush();
     return out;
   }, [bars]);
