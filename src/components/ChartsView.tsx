@@ -1629,7 +1629,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   // Empty cells open the same editor with a neutral draft chord so the root
   // selector / diatonic palette are available before anything is committed.
   const editorChord: ChartChord | null = editorSlot
-    ? (editorSlot.chord ?? { root: chartKey, chordType: 'maj' })
+    ? (editorSlot.chord ?? { root: chartKey, chordType: 'Major' })
     : null;
 
   const [bassOpen, setBassOpen] = useState(false);
