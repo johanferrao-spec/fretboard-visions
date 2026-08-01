@@ -27,14 +27,17 @@ interface DiagramProps {
   /** Called with the string index (0 = low E) and absolute fret when a cell is clicked. */
   onToggle?: (stringIndex: number, fret: number) => void;
   windowSize?: number;
+  /** Force the top fret of the visible window (editor position stepper). */
+  baseFret?: number;
 }
 
 /**
  * Vertical chord-box diagram. Strings run vertically (low E on the left),
  * frets horizontally. Interactive when `onToggle` is supplied.
  */
-export function VoicingDiagram({ voicing, width = 150, onToggle, windowSize = 5 }: DiagramProps) {
-  const base = useMemo(() => voicingBaseFret(voicing, windowSize), [voicing, windowSize]);
+export function VoicingDiagram({ voicing, width = 150, onToggle, windowSize = 5, baseFret }: DiagramProps) {
+  const auto = useMemo(() => voicingBaseFret(voicing, windowSize), [voicing, windowSize]);
+  const base = baseFret ?? auto;
   const stringGap = width / 7;
   const padX = stringGap;
   const headerH = 18;
