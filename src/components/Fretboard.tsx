@@ -1063,7 +1063,7 @@ export default function Fretboard({
             const isOff = disabledDegrees.has(posKey);
             const isHidden = hiddenDegrees.has(posKey);
             return (
-              <div key={d.label} className="flex flex-col items-center gap-0.5">
+              <div key={d.label} className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
                 <button
                   data-color-degree={posKey}
                   data-color-degree-off={isOff ? '1' : '0'}
