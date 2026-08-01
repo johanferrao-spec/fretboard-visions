@@ -665,7 +665,7 @@ const Index = () => {
                     {fb.displayMode === 'notes' ? '♪ Notes' : fb.displayMode === 'degrees' ? '° Degrees' : '○ None'}
                   </button>
 
-                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-1 w-24 shrink-0">
                     <span className="text-[10px] font-mono text-muted-foreground uppercase shrink-0">Size:</span>
                     <input
                       type="range" min={12} max={32} value={fb.noteMarkerSize}
@@ -673,7 +673,7 @@ const Index = () => {
                       className="flex-1 min-w-0 accent-primary"
                     />
                   </div>
-                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-1 w-36 shrink-0">
                     <span className="text-[10px] font-mono text-muted-foreground uppercase shrink-0">Frets:</span>
                     <input
                       type="range" min={12} max={24} value={fb.maxFrets}
@@ -682,7 +682,7 @@ const Index = () => {
                     />
                     <span className="text-[10px] font-mono text-muted-foreground w-5 shrink-0">{fb.maxFrets}</span>
                   </div>
-                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-1 w-36 shrink-0">
                     <span className="text-[10px] font-mono text-muted-foreground uppercase shrink-0">Opacity:</span>
                     <input
                       type="range" min={0} max={100} value={Math.round(fb.arpOverlayOpacity * 100)}
