@@ -59,6 +59,8 @@ interface SongTimelineProps {
   /** Charts panel replaces the DAW when active. */
   chartsActive?: boolean;
   onToggleCharts?: () => void;
+  /** Transpose all chords and the key centre by N semitones. */
+  onTranspose?: (semitones: number) => void;
 }
 
 export default function SongTimeline({
