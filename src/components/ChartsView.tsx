@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 import { ChordBuilder } from '@/components/ChordReference';
 import { ScaleRootSelector } from '@/components/ControlPanel';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
+import { VoicingDiagram, EMPTY_VOICING, isVoicingEmpty } from '@/components/Charts/VoicingEditor';
 
 const STORAGE_KEY = 'chartsView.state.v1';
 
