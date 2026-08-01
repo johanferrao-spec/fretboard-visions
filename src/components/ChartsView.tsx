@@ -900,6 +900,8 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
 
       snapshot();
       autoSectionEnabled.current = true;
+      // Imported charts always re-detect their key/scale.
+      setAutoKey(true);
       setSlots(newSlots);
       setSections(newSections);
       setArrangement(newArrangement);
