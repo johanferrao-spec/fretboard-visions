@@ -1056,7 +1056,7 @@ export default function Fretboard({
       >
         {/* Degree color key + toggles + position box toggle */}
         {!hideToolbar && (
-        <div data-fb-toolbar className={`flex items-center gap-1 mb-2 flex-wrap ${isVertical ? '-rotate-90' : ''}`}>
+        <div data-fb-toolbar className={`flex items-center gap-1 mb-2 w-full ${isVertical ? '-rotate-90' : ''}`}>
           <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Key:</span>
           {DEGREE_LEGEND.map(d => {
             const posKey = String(d.position);
