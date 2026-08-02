@@ -601,7 +601,7 @@ export default function SongTimeline({
       style={{ height: containerHeight }}
     >
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0 flex-wrap">
+      <div className="flex items-center gap-1.5 px-2 py-1 border-b border-border shrink-0 overflow-hidden">
         <button
           onClick={isPlaying ? onStop : onPlay}
           className={`p-1.5 rounded-md transition-colors ${
