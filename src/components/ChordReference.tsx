@@ -1587,8 +1587,14 @@ function fretsToNotes(frets: number[]) {
   return notes;
 }
 
-function CompingDiagram({ item, isActive, onClick }: { item: CompingItem; isActive: boolean; onClick: () => void }) {
+function CompingDiagram({ item, isActive, onClick, degreeColors = false, tuning = STANDARD_TUNING, rootNote }: { item: CompingItem; isActive: boolean; onClick: () => void; degreeColors?: boolean; tuning?: number[]; rootNote?: NoteName }) {
   const color = COMPING_KIND_COLORS[item.kind];
+  const rootPc = rootNote ? NOTE_NAMES.indexOf(rootNote) : -1;
+  const dotColor = (si: number, fret: number) => {
+    if (!degreeColors || rootPc < 0) return `hsl(${color})`;
+    const semi = (((tuning[si] ?? 0) + fret - rootPc) % 12 + 12) % 12;
+    return `hsl(${formulaSemitoneToDegree(semi).color})`;
+  };
   const played = item.frets.filter(f => f > 0);
   const minFret = played.length ? Math.min(...played) : 1;
   const maxFret = played.length ? Math.max(...played) : 4;
