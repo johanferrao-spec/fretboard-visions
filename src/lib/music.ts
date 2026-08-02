@@ -3351,11 +3351,14 @@ export function generateVoiceLeadingVoicings(
           const hasSeventh = seventhInterval !== undefined && intervalsUsed.has(seventhInterval);
           if (!hasThird && !hasSeventh) return;
 
-          // Only Drop 2, Drop 3 and Shell structures are allowed here.
-          const voicingType = classifyVoiceLeadingShape(
+          // Drop 2 / Drop 3 / Shell structures — either textbook, or the same
+          // structure with its top voice modified to carry the melody note.
+          const classified = classifyAlteredTopShape(
             allPitches, rootIdx, intervals, thirdInterval, seventhInterval,
           );
-          if (!voicingType) return;
+          if (!classified) return;
+          const voicingType = classified.type;
+          const isModified = classified.modified;
 
 
           const frets: (number | -1)[] = Array(tuning.length).fill(-1);
