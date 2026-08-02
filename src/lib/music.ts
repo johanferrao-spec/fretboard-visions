@@ -3249,7 +3249,13 @@ export function generateVoiceLeadingVoicings(
           const hasThird = thirdInterval !== undefined && intervalsUsed.has(thirdInterval);
           const hasSeventh = seventhInterval !== undefined && intervalsUsed.has(seventhInterval);
           if (!hasThird && !hasSeventh) return;
-          if (intervalsUsed.size < Math.min(2, numVoices - 1)) return;
+
+          // Only Drop 2, Drop 3 and Shell structures are allowed here.
+          const voicingType = classifyVoiceLeadingShape(
+            allPitches, rootIdx, intervals, thirdInterval, seventhInterval,
+          );
+          if (!voicingType) return;
+
 
           const frets: (number | -1)[] = Array(tuning.length).fill(-1);
           for (let i = 0; i < acc.length; i++) frets[stringSet[i]] = acc[i].fret;
