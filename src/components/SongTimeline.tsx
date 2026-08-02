@@ -986,27 +986,27 @@ export default function SongTimeline({
           )}
           <button
             onClick={onClearTimeline}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             title="Clear timeline"
           >
-            <Trash2 size={13} />
+            <Trash2 size={11} />
           </button>
           {!backingTrackActive && onOpenBackingTrack && (
             <button
               onClick={onOpenBackingTrack}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               title="Open Backing Track DAW"
             >
-              <ChevronUp size={14} />
+              <ChevronUp size={12} />
             </button>
           )}
           {backingTrackActive && onCloseBackingTrack && (
             <button
               onClick={onCloseBackingTrack}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               title="Hide backing track DAW"
             >
-              <ChevronDown size={14} />
+              <ChevronDown size={12} />
             </button>
           )}
         </div>
