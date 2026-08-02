@@ -2818,75 +2818,17 @@ function ScaleViewPanel({
         )}
 
         {sectionTab === 'voiceleading' && (
-          <div className="flex-1 rounded-xl p-2 border-2 self-stretch min-w-0" style={{ borderColor: 'hsl(280 80% 60% / 0.4)', backgroundColor: 'hsl(280 80% 60% / 0.08)' }}>
-            {degreeFilter === null ? (
-              <div className="text-[11px] font-mono text-muted-foreground leading-relaxed p-1">
-                <span className="font-bold" style={{ color: 'hsl(280 80% 70%)' }}>Voice Leading mode.</span> Pick a degree above and click any note on the fretboard to use it as your melody (top voice). Jazz comping voicings will appear here.
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {/* Header row: chord label · count · open-string toggle · clear */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-[10px] font-mono">
-                    <span className="font-bold" style={{ color: `hsl(${activeColor})` }}>{diatonicLabels[degreeFilter].label7}</span>
-                    {voiceLeadingMelody ? (
-                      <span className="text-muted-foreground"> · {filteredVlVoicings.length} voicing{filteredVlVoicings.length === 1 ? '' : 's'}</span>
-                    ) : (
-                      <span className="text-muted-foreground"> · click a fretboard note for melody</span>
-                    )}
-                  </div>
-                  <div className="flex gap-1.5 items-center">
-                    <label className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider cursor-pointer select-none" style={{ color: hideOpenStrings ? 'hsl(280 80% 70%)' : 'hsl(var(--muted-foreground))' }}>
-                      <input
-                        type="checkbox"
-                        checked={hideOpenStrings}
-                        onChange={(e) => setHideOpenStrings(e.target.checked)}
-                        className="h-3 w-3"
-                        style={{ accentColor: 'hsl(280 80% 60%)' }}
-                      />
-                      No open strings
-                    </label>
-                    {voiceLeadingMelody && (
-                      <button
-                        onClick={() => setVoiceLeadingMelody(null)}
-                        className="px-2 h-6 rounded bg-secondary text-secondary-foreground hover:bg-muted text-[9px] font-mono"
-                        title="Clear melody note"
-                      >clear</button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Voicings grid — multiple visible at once */}
-                {!voiceLeadingMelody ? (
-                  <div className="text-[11px] font-mono text-muted-foreground italic p-2">
-                    Click any note on the fretboard to set the melody (top voice).
-                  </div>
-                ) : filteredVlVoicings.length === 0 ? (
-                  <div className="text-[11px] font-mono text-muted-foreground italic p-2">
-                    {voiceLeadingVoicings.length === 0
-                      ? 'No voicings found for that melody note. Pick another note.'
-                      : 'All matching voicings use open strings — disable the filter to see them.'}
-                  </div>
-                ) : (
-                  <div
-                    className="flex gap-1 overflow-x-auto pb-1"
-                    style={{ scrollbarWidth: 'thin' }}
-                  >
-                    {filteredVlVoicings.map((v, idx) => (
-                      <VoiceLeadingDiagram
-                        key={idx}
-                        voicing={v}
-                        color={activeColor || '0, 0%, 60%'}
-                        isActive={idx === currentVlIdx}
-                        onClick={() => setCurrentVlIdx(idx)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <VoiceLeadingPanel
+            timelineChords={timelineChords}
+            tuning={tuning}
+            onSetInversionVoicing={onSetInversionVoicing}
+            voiceLeadingMelody={voiceLeadingMelody}
+            setVoiceLeadingMelody={setVoiceLeadingMelody}
+            keyRoot={primaryScale.root}
+            keyMode={keyMode}
+          />
         )}
+
 
         {/* Tab content panels */}
         {sectionTab === 'harmony' && (
