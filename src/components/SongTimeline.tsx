@@ -78,6 +78,8 @@ export default function SongTimeline({
   // Horizontal timeline zoom (1 = fit to width). The measure-label strip and the
   // chord grid scroll together so bar numbers always sit above their bars.
   const [zoom, setZoom] = useState(1);
+  // Cumulative semitone offset applied via the transpose buttons (display only).
+  const [transposeAmount, setTransposeAmount] = useState(0);
   const labelScrollRef = useRef<HTMLDivElement>(null);
   const gridScrollRef = useRef<HTMLDivElement>(null);
   const syncingRef = useRef(false);
