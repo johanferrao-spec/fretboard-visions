@@ -641,11 +641,11 @@ export default function SongTimeline({
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          <Music size={12} className="text-muted-foreground" />
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">BPM</span>
+        <div className="flex items-center gap-0.5">
+          <Music size={11} className="text-muted-foreground" />
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">BPM</span>
           <div
-            className="w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center select-none cursor-ns-resize"
+            className="w-10 text-foreground text-[9px] font-mono rounded px-1 py-0.5 border border-border text-center select-none cursor-ns-resize"
             style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
             title="Drag up/down to change BPM"
             onMouseDown={(e) => {
