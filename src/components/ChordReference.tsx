@@ -1874,7 +1874,7 @@ function ScaleViewPanel({
   const [currentInvIdx, setCurrentInvIdx] = useState(0);
   const [selectedModePreview, setSelectedModePreview] = useState<string>('Ionian');
   /** Left-hand section tabs for Fretboard Mastery. */
-  type SectionTab = 'harmony' | 'drop' | 'modes' | 'voiceleading';
+  type SectionTab = 'harmony' | 'drop' | 'comping' | 'modes' | 'voiceleading';
   const [sectionTab, setSectionTab] = useState<SectionTab>('harmony');
   const selectSectionTab = (t: SectionTab) => {
     setSectionTab(t);
@@ -2226,10 +2226,11 @@ function ScaleViewPanel({
       {/* Section tabs — Functional Harmony / Drop Voicings / Modes / Voice Leading */}
       <div className="flex gap-2">
         {/* Left column: section tabs stacked vertically */}
-        <div className="flex flex-col gap-1.5 shrink-0" style={{ width: 110 }}>
+        <div className="flex flex-col gap-1.5 shrink-0" style={{ width: 168 }}>
           {([
-            { key: 'harmony', label: 'Functional\nHarmony', color: 'var(--primary)' },
-            { key: 'drop', label: 'Drop\nVoicings', color: 'var(--primary)' },
+            { key: 'harmony', label: 'Functional Harmony', color: 'var(--primary)' },
+            { key: 'drop', label: 'Drop Voicings', color: 'var(--primary)' },
+            { key: 'comping', label: 'Comping Tool', color: 'var(--accent)' },
             { key: 'modes', label: 'Modes', color: 'var(--accent)' },
           ] as const).map(t => {
             const on = sectionTab === t.key;
@@ -2238,7 +2239,7 @@ function ScaleViewPanel({
               <button
                 key={t.key}
                 onClick={() => selectSectionTab(t.key)}
-                className="py-3 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight whitespace-pre-line"
+                className="py-3 px-1 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight whitespace-nowrap"
                 style={{
                   backgroundColor: on ? `hsl(${t.color})` : `hsl(${t.color} / 0.12)`,
                   borderColor: on ? `hsl(${t.color})` : `hsl(${t.color} / 0.4)`,
@@ -2250,7 +2251,7 @@ function ScaleViewPanel({
           })}
           <button
             onClick={() => selectSectionTab('voiceleading')}
-            className="py-3 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight"
+            className="py-3 px-1 rounded-xl text-[11px] font-mono font-black uppercase tracking-wider transition-all border-2 leading-tight whitespace-nowrap"
             style={{
               backgroundColor: sectionTab === 'voiceleading' ? 'hsl(280 80% 60%)' : 'hsl(280 80% 60% / 0.12)',
               borderColor: sectionTab === 'voiceleading' ? 'hsl(280 80% 60%)' : 'hsl(280 80% 60% / 0.4)',
@@ -2258,7 +2259,7 @@ function ScaleViewPanel({
               boxShadow: sectionTab === 'voiceleading' ? '0 0 12px hsl(280 80% 60% / 0.5)' : 'none',
             }}
             title="Voice leading: pick a melody note on the fretboard + a degree to see jazz comping voicings"
-          >Voice<br/>Leading</button>
+          >Voice Leading</button>
         </div>
 
         {/* Drop Voicings description — sits left of the Drop 2 / Drop 3 buttons */}
@@ -2497,6 +2498,17 @@ function ScaleViewPanel({
               <span className="text-accent font-bold">3-Notes-Per-String mode active.</span> Click a degree above to highlight its full mode pattern on the fretboard. Each degree shows its parent rotation (I → Ionian, ii → Dorian, etc.) coloured to match.
             </div>
           </div>
+        )}
+
+        {sectionTab === 'comping' && (
+          <CompingToolPanel
+            timelineChords={timelineChords}
+            tuning={tuning}
+            onSetInversionVoicing={onSetInversionVoicing}
+            showFretBox={showFretBox}
+            fretBoxStart={fretBoxStart}
+            fretBoxSize={fretBoxSize}
+          />
         )}
 
         {sectionTab === 'voiceleading' && (
