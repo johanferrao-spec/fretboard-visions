@@ -87,7 +87,8 @@ const Index = () => {
   const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
   const [selectedSinkId, setSelectedSinkId] = useState<string>('default');
   const [timelineKey, setTimelineKey] = useState<NoteName>(fb.primaryScale.root);
-  const [keyMode, setKeyMode] = useState<KeyMode>(() => scaleToKeyMode(fb.primaryScale.scale));
+  const [keyMode, setKeyMode] = useState<KeyMode>(() => normalizeKeyMode(scaleToKeyMode(fb.primaryScale.scale)));
+
   const [activeTab, setActiveTab] = useState<'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'community' | 'tuning' | null>(null);
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
