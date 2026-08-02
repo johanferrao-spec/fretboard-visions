@@ -14,7 +14,7 @@ import {
   SCALE_FORMULAS, ARPEGGIO_FORMULAS, generateArpeggioPositions,
   getDiatonicChords, generate7thInversions, generateDrop3Inversions, scaleToKeyMode, get7thChordType, get7thChordSymbol,
   STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, SCALE_DEGREE_COLORS, MAJOR_MODE_NAMES, MINOR_MODE_NAMES, SCALE_DESCRIPTIONS,
-  generateVoiceLeadingVoicings,
+  generateVoiceLeadingVoicings, generateShellVoicings,
   type ChordVoicing, type TensionSuggestion, type KeyMode, type ChordAnalysis,
   type ArpeggioPosition, type StringGroup, type InversionVoicing,
   type VoiceLeadingVoicing, type TuningPreset,
@@ -1678,7 +1678,7 @@ function CompingToolPanel({
         items.push({ kind: 'Drop 2', label: `${v.slashName} · ${v.inversionLabel}`, frets: v.frets as number[], notes: v.notes, voicing: v });
       }
     }
-    for (const g of ['lower', 'mid'] as StringGroup[]) {
+    for (const g of ['lower', 'mid'] as ('lower' | 'mid')[]) {
       for (const v of generateDrop3Inversions(current.root, seventh, g, tuning)) {
         if (v.inversionNumber === -1) continue;
         items.push({ kind: 'Drop 3', label: `${v.slashName} · ${v.inversionLabel}`, frets: v.frets as number[], notes: v.notes, voicing: v });
