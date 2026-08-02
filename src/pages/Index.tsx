@@ -871,6 +871,8 @@ const Index = () => {
                 showFretBox={fb.showFretBox}
                 fretBoxStart={fb.fretBoxStart}
                 fretBoxSize={fb.fretBoxSize}
+                fretBoxStringStart={fb.fretBoxStringStart}
+                fretBoxStringSize={fb.fretBoxStringSize}
 
                 onChordAddStateChange={(root, hasNotes) => { setChordAddRoot(root); setChordAddHasNotes(hasNotes); }}
                 chordOctaveShift={chordOctaveShift}
