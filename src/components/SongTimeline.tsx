@@ -1292,8 +1292,10 @@ export default function SongTimeline({
             const widthPct = (chord.duration / totalBeats) * 100;
             const color = getChordColor(chord);
             const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
-            const isDiatonic = degree >= 0;
             const borrowed = isBorrowed(chord);
+            // Chords inside a secondary ii–V run are coloured against their
+            // temporary key, so treat them as diatonic (full-strength colour).
+            const isDiatonic = !borrowed;
             const chordLabel = `${chord.root}${chord.chordType === 'Major' ? '' : chord.chordType === 'Minor' ? 'm' : ` ${chord.chordType}`}`;
             const bassLabel = chord.bassNote ? `/${chord.bassNote}` : '';
 
@@ -1365,7 +1367,7 @@ export default function SongTimeline({
                   // Open the variations/bass popup (was: delete)
                   handleChordContextMenu(chord, e);
                 }}
-                title={`${chordLabel}${bassLabel}${isDiatonic ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed' : ''} — click: seek, dbl-click: voicings, ⌘-click: delete`}
+                title={`${chordLabel}${bassLabel}${degree >= 0 ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed' : ''} — click: seek, dbl-click: voicings, ⌘-click: delete`}
               >
                 <span
                   className="text-[10px] font-mono font-bold px-1.5 truncate"

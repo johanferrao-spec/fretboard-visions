@@ -2259,6 +2259,7 @@ function ScaleViewPanel({
   };
 
   // Degrees the user has forced to a dominant 7 chord (secondary-dominant style)
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const [dominantDegrees, setDominantDegrees] = useState<Set<number>>(new Set());
   const toggleDominantDegree = (i: number) => {
     setDominantDegrees(prev => {
@@ -2444,9 +2445,10 @@ function ScaleViewPanel({
             const currentIdx = Math.max(0, STANDARD_MODES.findIndex(m => m.scale === currentMode));
             const currentColor = SCALE_DEGREE_COLORS[currentIdx];
             return (
-              <div className="relative group">
+              <div className="relative">
                 <button
                   type="button"
+                  onClick={() => setModeMenuOpen(o => !o)}
                   className="w-full text-[11px] font-mono font-bold rounded border px-2 py-1 flex items-center justify-between"
                   style={{
                     backgroundColor: `hsl(${currentColor})`,
@@ -2457,14 +2459,15 @@ function ScaleViewPanel({
                   <span>{STANDARD_MODES[currentIdx].label}</span>
                   <span className="opacity-60">▾</span>
                 </button>
-                <div className="absolute left-0 right-0 top-full mt-1 z-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity flex flex-col gap-0.5 p-1 rounded border border-border bg-background/95 backdrop-blur shadow-lg">
+                <div className={`absolute left-0 right-0 top-full mt-1 z-50 transition-opacity flex-col gap-0.5 p-1 rounded border border-border bg-background/95 backdrop-blur shadow-lg ${modeMenuOpen ? 'flex opacity-100' : 'hidden opacity-0 pointer-events-none'}`}>
+
                   {STANDARD_MODES.map((m, i) => {
                     const color = SCALE_DEGREE_COLORS[i];
                     const isSel = m.scale === currentMode;
                     return (
                       <button
                         key={m.scale}
-                        onClick={() => onApplyScale?.(primaryScale.root, m.scale, 'scale')}
+                        onClick={() => { onApplyScale?.(primaryScale.root, m.scale, 'scale'); setModeMenuOpen(false); }}
                         className="w-full text-[11px] font-mono font-bold rounded px-2 py-1 text-left transition-transform hover:scale-[1.02]"
                         style={{
                           backgroundColor: `hsl(${color})`,
@@ -2490,10 +2493,10 @@ function ScaleViewPanel({
             const modeName = modeNames[i] ?? '';
             const isDom = dominantDegrees.has(i);
             return (
-              <div key={i} className="relative group">
+              <div key={i} className="relative group flex flex-col">
                 <button
                   onClick={() => setDegreeFilter(isActive ? null : i)}
-                  className="w-full rounded-xl font-bold transition-all flex flex-col items-center justify-center py-1 px-1"
+                  className="w-full flex-1 rounded-xl font-bold transition-all flex flex-col items-center justify-center py-1 px-1"
                   style={{
                     backgroundColor: isActive ? `hsla(${color}, 0.15)` : `hsl(${color})`,
                     border: isActive ? `3px solid hsl(${color})` : `2px solid hsl(${color})`,
@@ -2537,9 +2540,9 @@ function ScaleViewPanel({
         <div className="flex flex-col gap-1.5 shrink-0" style={{ width: 168 }}>
           {([
             { key: 'harmony', label: 'Functional Harmony', color: 'var(--primary)' },
+            { key: 'modes', label: 'Modes', color: 'var(--accent)' },
             { key: 'drop', label: 'Drop Voicings', color: 'var(--primary)' },
             { key: 'comping', label: 'Comping Tool', color: '285 85% 62%' },
-            { key: 'modes', label: 'Modes', color: 'var(--accent)' },
           ] as const).map(t => {
             const on = sectionTab === t.key;
             const isAccent = t.color === 'var(--accent)';
