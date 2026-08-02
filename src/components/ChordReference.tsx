@@ -1942,8 +1942,8 @@ function VoiceLeadingPanel({
     });
   };
 
-  const removeSaved = (i: number) => {
-    setSaved(prev => ({ ...prev, [key]: (prev[key] ?? []).filter((_, j) => j !== i) }));
+  const removeSaved = (k: string, i: number) => {
+    setSaved(prev => ({ ...prev, [k]: (prev[k] ?? []).filter((_, j) => j !== i) }));
   };
 
   const cycleSaved = (k: string, list: VoiceLeadingVoicing[], dir: 1 | -1) => {
@@ -2093,7 +2093,7 @@ function VoiceLeadingPanel({
                           onClick={() => { setSavedIdx(p => ({ ...p, [k]: i })); onSetInversionVoicing?.(v); }}
                         />
                         <button
-                          onClick={() => removeSaved(i)}
+                          onClick={() => removeSaved(k, i)}
                           className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-mono leading-none"
                           title="Remove from chain"
                         >×</button>
