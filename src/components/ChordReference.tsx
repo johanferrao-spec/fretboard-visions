@@ -1808,7 +1808,7 @@ function CompingToolPanel({
         {sequence.map((c, i) => {
           const deg = getChordDegree(keyRoot, c.root, c.chordType, keyMode);
           const semi = (((NOTE_NAMES.indexOf(c.root) - NOTE_NAMES.indexOf(keyRoot)) % 12) + 12) % 12;
-          const col = deg > 0 ? SCALE_DEGREE_COLORS[deg - 1] : formulaSemitoneToDegree(semi).color;
+          const col = deg >= 0 ? SCALE_DEGREE_COLORS[deg] : formulaSemitoneToDegree(semi).color;
           return (
             <button
               key={c.id}
