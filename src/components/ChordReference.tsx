@@ -8,6 +8,7 @@ import CommunityCharts from './CommunityCharts';
 import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING, TUNING_PRESETS,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS, buildFormulaPcMap,
+  formulaSemitoneToDegree,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
   isVoicingTonallyValid, isPhysicallyPlayable, getTensionSuggestions, getChordTones,
   analyzeProgression, identifyArpeggioFromNotes, getChordDegree,
