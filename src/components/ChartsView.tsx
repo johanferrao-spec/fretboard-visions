@@ -76,8 +76,10 @@ interface ChartsViewProps {
   currentKey: NoteName;
   keyMode: KeyMode;
   onToggleCharts?: () => void;
-  /** Charts and backing tracks share a key — fired whenever the chart's key changes. */
-  onKeyChange?: (key: NoteName) => void;
+  /** Close the chart view entirely and return to the app's main screen. */
+  onClose?: () => void;
+  /** Charts, backing tracks and the fretboard share a key — fired on any key/mode change. */
+  onKeyChange?: (key: NoteName, mode: KeyMode) => void;
   /** Fired whenever the arrangement (or its underlying chords) change, so the
       parent can push the resulting chord progression into the backing-track timeline. */
   onArrangementChange?: (data: { chords: TimelineChord[]; measures: number; bpm: number; sections: { id: string; name: string; color: string; startBeat: number; lengthBeats: number }[] }) => void;
@@ -256,17 +258,84 @@ const detectKeyFromChords = (
 ): { root: NoteName; mode: KeyMode } | null => {
   if (entries.length < 2) return null;
   const isBasic = keyMode === 'major' || keyMode === 'minor'
-    || keyMode === 'ionian' || keyMode === 'aeolian';
-  const modes: KeyMode[] = isBasic ? ['major', 'minor'] : [keyMode];
+    || keyMode === 'ionian' || keyMode === 'aeolian'
+    || keyMode === 'dorian' || keyMode === 'phrygian'
+    || keyMode === 'lydian' || keyMode === 'mixolydian';
+  // Modal charts are common, so a basic selection lets every diatonic mode compete.
+  const modes: KeyMode[] = isBasic
+    ? ['major', 'minor', 'dorian', 'mixolydian', 'lydian', 'phrygian']
+    : [keyMode];
+  // Modes share the same note set, so a small prior keeps ambiguous charts in
+  // major/minor and only picks an exotic mode when the evidence is clear.
+  const MODE_BIAS: Partial<Record<KeyMode, number>> = {
+    major: 1.5, minor: 1.5, dorian: 0.4, mixolydian: 0.4, lydian: 0, phrygian: 0,
+  };
   let best: { root: NoteName; mode: KeyMode } | null = null;
   let bestScore = -Infinity;
   for (const mode of modes) {
     for (const candidate of NOTE_NAMES) {
-      const score = scoreKey(entries, candidate, mode);
+      const score = scoreKey(entries, candidate, mode) + (MODE_BIAS[mode] ?? 0);
       if (score > bestScore) { bestScore = score; best = { root: candidate, mode }; }
     }
   }
   return best;
+};
+
+/**
+ * Find secondary ii–V and ii–V–I runs that momentarily tonicise another key.
+ * Returns, per slot index, the temporary tonic so degree colours (and a purple
+ * enclosure box) can show the modulation.
+ */
+export interface TempKeyRun {
+  start: number;   // slot index (inclusive)
+  end: number;     // slot index (inclusive)
+  tonic: NoteName;
+  mode: KeyMode;
+  label: string;
+}
+
+const semisBetween = (a: NoteName, b: NoteName) =>
+  (((NOTE_NAMES.indexOf(b) - NOTE_NAMES.indexOf(a)) % 12) + 12) % 12;
+const transposeNote = (n: NoteName, semis: number): NoteName =>
+  NOTE_NAMES[(((NOTE_NAMES.indexOf(n) + semis) % 12) + 12) % 12];
+
+const detectSecondaryKeys = (
+  slots: ChartSlot[],
+  homeKey: NoteName,
+  homeMode: KeyMode,
+): TempKeyRun[] => {
+  // Work on the chord-bearing slots in order.
+  const idxs = slots.map((s, i) => (s.chord ? i : -1)).filter(i => i >= 0);
+  const homeRoots = new Set(getDiatonicChords(homeKey, homeMode).map(d => d.root));
+  const out: TempKeyRun[] = [];
+  for (let p = 0; p < idxs.length - 1; p++) {
+    const a = slots[idxs[p]].chord!;
+    const b = slots[idxs[p + 1]].chord!;
+    const famA = chordFamily(a.chordType);
+    const famB = chordFamily(b.chordType);
+    // ii (minor 7 / m7♭5) → V (dominant) a fourth up.
+    if ((famA === 'min' || famA === 'dim') && famB === 'dom' && semisBetween(a.root, b.root) === 5) {
+      const tonic = transposeNote(b.root, 5);
+      const isMinorTarget = famA === 'dim';
+      let end = idxs[p + 1];
+      let resolved = false;
+      const nxt = idxs[p + 2] !== undefined ? slots[idxs[p + 2]].chord : undefined;
+      if (nxt && nxt.root === tonic) { end = idxs[p + 2]; resolved = true; }
+      // Only flag it when it leaves the home key (a home-key ii–V–I is not a modulation).
+      const leavesHome = !homeRoots.has(a.root) || !homeRoots.has(b.root)
+        || (resolved && !homeRoots.has(tonic)) || tonic !== homeKey;
+      if (!leavesHome || tonic === homeKey) { p = idxs.indexOf(end) >= 0 ? idxs.indexOf(end) : p; continue; }
+      out.push({
+        start: idxs[p],
+        end,
+        tonic,
+        mode: isMinorTarget ? 'minor' : 'major',
+        label: `${resolved ? 'ii–V–I' : 'ii–V'} of ${spellRootInKey(tonic, tonic, isMinorTarget ? 'minor' : 'major')}${isMinorTarget ? 'm' : ''}`,
+      });
+      p = idxs.indexOf(end);
+    }
+  }
+  return out;
 };
 
 
@@ -365,7 +434,7 @@ const sectionDisplayName = (raw: string): string => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
-export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, currentBeat = 0, onPlay, onStop }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onClose, onKeyChange, onArrangementChange, onResetAll, isPlaying, currentBeat = 0, onPlay, onStop }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
     slots: ChartSlot[];
@@ -398,13 +467,24 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   const diatonicChords = useMemo(() => getDiatonicChords(chartKey, keyMode), [chartKey, keyMode]);
   const diatonicSevenths = useMemo(() => getDiatonicSevenths(chartKey, keyMode), [chartKey, keyMode]);
   const spelledRoots = useMemo(() => spellDiatonicRoots(chartKey, keyMode), [chartKey, keyMode]);
-  const getChordColor = useCallback((chord: ChartChord) => {
-    const deg = getChordDegree(chartKey, chord.root, chord.chordType, keyMode);
+  const getChordColorIn = useCallback((chord: ChartChord, key: NoteName, mode: KeyMode) => {
+    const deg = getChordDegree(key, chord.root, chord.chordType, mode);
     return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
-  }, [chartKey, keyMode]);
+  }, []);
+  const getChordColor = useCallback(
+    (chord: ChartChord) => getChordColorIn(chord, chartKey, keyMode),
+    [getChordColorIn, chartKey, keyMode],
+  );
 
   const [slots, setSlots] = useState<ChartSlot[]>(() => persisted.slots?.length ? persisted.slots! : makeSlots(DEFAULT_SLOT_COUNT));
 
+  // Temporary key centres: secondary ii–V / ii–V–I runs get their own tonic so
+  // the degree colours (and a purple enclosure) show the modulation.
+  const tempKeyRuns = useMemo(
+    () => detectSecondaryKeys(slots, chartKey, keyMode),
+    [slots, chartKey, keyMode],
+  );
+  const tempKeyOfSlot = useCallback((idx: number) => tempKeyRuns.find(r => idx >= r.start && idx <= r.end), [tempKeyRuns]);
 
   // Detect the key from the chords in use (unless the user chose one manually).
   useEffect(() => {
@@ -416,10 +496,11 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     if (detected.mode !== keyMode) setKeyMode(detected.mode);
   }, [slots, keyMode, autoKey, chartKey]);
 
-  // Charts and backing tracks are linked: push the chart key up to the timeline.
+
+  // Charts, backing tracks and the fretboard share a key/mode.
   useEffect(() => {
-    if (chartKey !== currentKey) onKeyChange?.(chartKey);
-  }, [chartKey]);
+    onKeyChange?.(chartKey, keyMode);
+  }, [chartKey, keyMode]);
 
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
@@ -1528,6 +1609,41 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     return out;
   })();
 
+  // Temporary key changes (secondary ii–V / ii–V–I) — purple enclosure boxes.
+  const tempKeySegments = (() => {
+    const out: {
+      key: string; rowStart: number; rowEnd: number; colStart: number; colEnd: number; label: string;
+    }[] = [];
+    tempKeyRuns.forEach(run => {
+      const byRenderRow = new Map<number, { colStart: number; colEnd: number }>();
+      for (let k = run.start; k <= run.end; k++) {
+        if (!slots[k]?.chord) continue;
+        const row = renderRowOfLogical[logicalRowOf(k)] + endingRowOffset(k);
+        const colStart = (startUnits[k] % COLS) + 1;
+        const colEnd = colStart + slots[k].bars;
+        const prev = byRenderRow.get(row);
+        byRenderRow.set(row, prev
+          ? { colStart: Math.min(prev.colStart, colStart), colEnd: Math.max(prev.colEnd, colEnd) }
+          : { colStart, colEnd });
+      }
+      let first = true;
+      byRenderRow.forEach((cols, row) => {
+        out.push({
+          key: `tempkey-${slots[run.start].id}-${row}`,
+          rowStart: row,
+          rowEnd: row + 1,
+          colStart: cols.colStart,
+          colEnd: cols.colEnd,
+          label: first ? run.label : '',
+        });
+        first = false;
+      });
+    });
+    return out;
+  })();
+
+
+
 
 
 
@@ -1868,9 +1984,9 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
           {totalBars % 1 === 0 ? totalBars : totalBars.toFixed(2)} bars · {slots.length} slots
         </span>
         <button
-          onClick={() => onToggleCharts?.()}
+          onClick={() => (onClose ? onClose() : onToggleCharts?.())}
           className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-muted-foreground hover:bg-muted transition-colors"
-          title="Close charts and return to timeline"
+          title="Close charts and return to the main screen"
         >
           <X size={10} />
           Close
@@ -2287,14 +2403,44 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                 }}
               />
             ))}
-
+            {/* Temporary key change (secondary ii–V / ii–V–I) — purple box. */}
+            {showColours && tempKeySegments.map(seg => (
+              <div
+                key={seg.key}
+                className="pointer-events-none rounded-md relative"
+                style={{
+                  gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
+                  gridColumn: `${seg.colStart} / ${seg.colEnd}`,
+                  border: '2px solid hsl(285 85% 62% / 0.95)',
+                  boxShadow: '0 0 8px hsl(285 85% 62% / 0.35)',
+                  margin: '-3px -2px',
+                  zIndex: 5,
+                }}
+              >
+                {seg.label && (
+                  <span
+                    className="absolute -bottom-3.5 left-1.5 px-1 text-[8px] font-mono font-bold bg-background/90 rounded select-none whitespace-nowrap"
+                    style={{ color: 'hsl(285 85% 68%)' }}
+                  >
+                    {seg.label}
+                  </span>
+                )}
+              </div>
+            ))}
 
 
             {slots.map((slot, idx) => {
               const isHover = hoverSlot === slot.id;
               const isEditing = editingSlot === slot.id;
               const isParsing = parsingSlot === slot.id;
-              const color = slot.chord ? (showColours ? getChordColor(slot.chord) : '220 10% 72%') : null;
+              const tempKey = tempKeyOfSlot(idx);
+              const color = slot.chord
+                ? (showColours
+                    ? (tempKey
+                        ? getChordColorIn(slot.chord, tempKey.tonic, tempKey.mode)
+                        : getChordColor(slot.chord))
+                    : '220 10% 72%')
+                : null;
               const isActiveChord = followPlayhead && activeSlotId === slot.id;
               const section = sectionOfSlot(idx);
               const inDragSel = (sectionMode || voltaMode) && dragSel && idx >= dragSelStart && idx <= dragSelEnd;

@@ -22,7 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { NoteName } from '@/lib/music';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, getChordDegree, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
+import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, getChordDegree, keyModeToScale, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -1029,8 +1029,16 @@ const Index = () => {
             <ChartsView
               currentKey={timelineKey}
               keyMode={keyMode}
-              onKeyChange={(k) => setTimelineKey(k)}
+              onKeyChange={(k, m) => {
+                setTimelineKey(k);
+                if (m) {
+                  setKeyMode(m);
+                  // Fretboard Mastery follows the chart's detected key/mode.
+                  fb.setPrimaryScale({ mode: 'scale', root: k, scale: keyModeToScale(m) });
+                }
+              }}
               onToggleCharts={() => setShowCharts(v => !v)}
+              onClose={() => { setShowCharts(false); setActiveTab(null); }}
               isPlaying={timeline.isPlaying}
               currentBeat={timeline.currentBeat}
               onPlay={handlePlay}
