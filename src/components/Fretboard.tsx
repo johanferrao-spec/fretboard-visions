@@ -1603,7 +1603,9 @@ export default function Fretboard({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              playFretNote(tuning, stringIdx, fret);
                               if (arpAddMode && onArpAddClick && (fret > 0 || voiceLeadingActive)) {
+
                                 onArpAddClick(stringIdx, fret);
                               } else if (identifyMode) {
                                 // Simple toggle like chord library — barre is preserved by useEffect
