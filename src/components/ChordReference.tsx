@@ -3763,6 +3763,7 @@ function ChordLibraryPanel({
                             } else if (entry.kind === 'custom') {
                               handleSelectCustomVoicing(v);
                             }
+                            playFretShape(tuning, (v.frets as (number | -1)[]).map(f => (f < 0 ? -1 : Math.max(0, f + chordOctaveShift * 12))));
                           }}
                           className={`w-full aspect-square rounded p-0.5 transition-all border flex flex-col items-center justify-between overflow-hidden ${
                             isActive ? 'border-primary bg-primary/10 shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'border-border/30 hover:bg-muted/50'
