@@ -465,13 +465,24 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   const diatonicChords = useMemo(() => getDiatonicChords(chartKey, keyMode), [chartKey, keyMode]);
   const diatonicSevenths = useMemo(() => getDiatonicSevenths(chartKey, keyMode), [chartKey, keyMode]);
   const spelledRoots = useMemo(() => spellDiatonicRoots(chartKey, keyMode), [chartKey, keyMode]);
-  const getChordColor = useCallback((chord: ChartChord) => {
-    const deg = getChordDegree(chartKey, chord.root, chord.chordType, keyMode);
+  const getChordColorIn = useCallback((chord: ChartChord, key: NoteName, mode: KeyMode) => {
+    const deg = getChordDegree(key, chord.root, chord.chordType, mode);
     return deg >= 0 ? SCALE_DEGREE_COLORS[deg] : '220, 15%, 50%';
-  }, [chartKey, keyMode]);
+  }, []);
+  const getChordColor = useCallback(
+    (chord: ChartChord) => getChordColorIn(chord, chartKey, keyMode),
+    [getChordColorIn, chartKey, keyMode],
+  );
 
   const [slots, setSlots] = useState<ChartSlot[]>(() => persisted.slots?.length ? persisted.slots! : makeSlots(DEFAULT_SLOT_COUNT));
 
+  // Temporary key centres: secondary ii–V / ii–V–I runs get their own tonic so
+  // the degree colours (and a purple enclosure) show the modulation.
+  const tempKeyRuns = useMemo(
+    () => detectSecondaryKeys(slots, chartKey, keyMode),
+    [slots, chartKey, keyMode],
+  );
+  const tempKeyOfSlot = useCallback((idx: number) => tempKeyRuns.find(r => idx >= r.start && idx <= r.end), [tempKeyRuns]);
 
   // Detect the key from the chords in use (unless the user chose one manually).
   useEffect(() => {
@@ -482,6 +493,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     if (detected.root !== chartKey) setChartKey(detected.root);
     if (detected.mode !== keyMode) setKeyMode(detected.mode);
   }, [slots, keyMode, autoKey, chartKey]);
+
 
   // Charts and backing tracks are linked: push the chart key up to the timeline.
   useEffect(() => {
