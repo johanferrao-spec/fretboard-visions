@@ -615,9 +615,9 @@ export default function SongTimeline({
         </button>
 
         {/* Volume slider — grows taller with volume, green→red, glowing */}
-        <div className="flex items-center gap-1" title={`Volume: ${Math.round(volume * 100)}%`}>
-          <span className="text-[9px] font-mono text-muted-foreground">🔊</span>
-          <div className="relative flex items-end" style={{ width: 48 }}>
+        <div className="flex items-center gap-0.5" title={`Volume: ${Math.round(volume * 100)}%`}>
+          <span className="text-[8px] font-mono text-muted-foreground">🔊</span>
+          <div className="relative flex items-end" style={{ width: 40 }}>
             <input
               type="range"
               min={0}
