@@ -495,10 +495,10 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
   }, [slots, keyMode, autoKey, chartKey]);
 
 
-  // Charts and backing tracks are linked: push the chart key up to the timeline.
+  // Charts, backing tracks and the fretboard share a key/mode.
   useEffect(() => {
-    if (chartKey !== currentKey) onKeyChange?.(chartKey);
-  }, [chartKey]);
+    onKeyChange?.(chartKey, keyMode);
+  }, [chartKey, keyMode]);
 
   const [hoverSlot, setHoverSlot] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
