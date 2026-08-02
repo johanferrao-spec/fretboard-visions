@@ -3066,12 +3066,86 @@ export function generateDrop3Inversions(
 // Voicings are scored & sorted (both 3rd AND 7th first, then more notes, then
 // smaller span, then lower position) and deduped on identical fret patterns.
 
+export type VoiceLeadingVoicingType = 'Drop 2' | 'Drop 3' | 'Shell';
+
 export interface VoiceLeadingVoicing extends InversionVoicing {
   hasThird: boolean;
   hasSeventh: boolean;
   span: number;
   melody: { stringIndex: number; fret: number };
+  /** Structural family the shape belongs to — only Drop 2, Drop 3 and Shell are allowed. */
+  voicingType: VoiceLeadingVoicingType;
 }
+
+/** Stack chord tones in close position starting from inversion `k`, as semitone offsets. */
+function closePositionOffsets(tones: number[], k: number): number[] {
+  const out: number[] = [];
+  let prev = -Infinity;
+  for (let i = 0; i < tones.length; i++) {
+    let v = tones[(k + i) % tones.length];
+    while (v <= prev) v += 12;
+    out.push(v);
+    prev = v;
+  }
+  const min = out[0];
+  return out.map(v => v - min);
+}
+
+/** Drop the nth voice from the top (2 = drop 2, 3 = drop 3) an octave, return normalised offsets. */
+function dropOffsets(close: number[], n: number): number[] | null {
+  if (close.length < n) return null;
+  const idx = close.length - n;
+  const dropped = close.slice();
+  dropped[idx] -= 12;
+  dropped.sort((a, b) => a - b);
+  const min = dropped[0];
+  return dropped.map(v => v - min);
+}
+
+const sameOffsets = (a: number[], b: number[]) => a.length === b.length && a.every((v, i) => v === b[i]);
+
+/**
+ * Classify an ascending set of pitches against the chord's tones.
+ * Returns 'Drop 2' / 'Drop 3' / 'Shell', or null when the shape is not one of
+ * those families (close position, clusters, incomplete stacks, …).
+ */
+function classifyVoiceLeadingShape(
+  pitches: number[],
+  rootIdx: number,
+  intervals: number[],
+  thirdInterval?: number,
+  seventhInterval?: number,
+): VoiceLeadingVoicingType | null {
+  const pcs = pitches.map(p => ((p % 12) - rootIdx + 12) % 12);
+  const unique = new Set(pcs);
+  if (unique.size !== pitches.length) return null; // no doubled voices
+
+  // Shell: root + 3rd + 7th (5th omitted), any arrangement.
+  if (
+    pitches.length === 3 &&
+    thirdInterval !== undefined && seventhInterval !== undefined &&
+    unique.has(0) && unique.has(thirdInterval) && unique.has(seventhInterval)
+  ) {
+    return 'Shell';
+  }
+
+  // Drop voicings must contain every chord tone exactly once.
+  const tones = [...new Set(intervals)].sort((a, b) => a - b);
+  if (pitches.length !== tones.length) return null;
+  if (!tones.every(t => unique.has(t))) return null;
+
+  const offsets = pitches.map(p => p - pitches[0]);
+  for (let k = 0; k < tones.length; k++) {
+    const close = closePositionOffsets(tones, k);
+    const d2 = dropOffsets(close, 2);
+    if (d2 && sameOffsets(offsets, d2)) return 'Drop 2';
+    const d3 = dropOffsets(close, 3);
+    if (d3 && sameOffsets(offsets, d3)) return 'Drop 3';
+  }
+  return null;
+}
+
+
 
 export function generateVoiceLeadingVoicings(
   root: NoteName,
@@ -3175,7 +3249,13 @@ export function generateVoiceLeadingVoicings(
           const hasThird = thirdInterval !== undefined && intervalsUsed.has(thirdInterval);
           const hasSeventh = seventhInterval !== undefined && intervalsUsed.has(seventhInterval);
           if (!hasThird && !hasSeventh) return;
-          if (intervalsUsed.size < Math.min(2, numVoices - 1)) return;
+
+          // Only Drop 2, Drop 3 and Shell structures are allowed here.
+          const voicingType = classifyVoiceLeadingShape(
+            allPitches, rootIdx, intervals, thirdInterval, seventhInterval,
+          );
+          if (!voicingType) return;
+
 
           const frets: (number | -1)[] = Array(tuning.length).fill(-1);
           for (let i = 0; i < acc.length; i++) frets[stringSet[i]] = acc[i].fret;
@@ -3202,7 +3282,9 @@ export function generateVoiceLeadingVoicings(
           results.push({
             frets, notes,
             inversionNumber: bottomNotePitch.interval === 0 ? 0 : -1,
-            inversionLabel: `Melody on ${topNoteName}`,
+            inversionLabel: `${voicingType} · melody on ${topNoteName}`,
+            voicingType,
+
             slashName,
             alternateName: '',
             bottomDegree: `${intervalNameMap[bottomNotePitch.interval] || '?'} in bass`,
