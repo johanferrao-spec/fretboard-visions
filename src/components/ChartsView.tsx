@@ -2403,7 +2403,30 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
                 }}
               />
             ))}
-
+            {/* Temporary key change (secondary ii–V / ii–V–I) — purple box. */}
+            {showColours && tempKeySegments.map(seg => (
+              <div
+                key={seg.key}
+                className="pointer-events-none rounded-md relative"
+                style={{
+                  gridRow: `${seg.rowStart} / ${seg.rowEnd}`,
+                  gridColumn: `${seg.colStart} / ${seg.colEnd}`,
+                  border: '2px solid hsl(285 85% 62% / 0.95)',
+                  boxShadow: '0 0 8px hsl(285 85% 62% / 0.35)',
+                  margin: '-3px -2px',
+                  zIndex: 5,
+                }}
+              >
+                {seg.label && (
+                  <span
+                    className="absolute -bottom-3.5 left-1.5 px-1 text-[8px] font-mono font-bold bg-background/90 rounded select-none whitespace-nowrap"
+                    style={{ color: 'hsl(285 85% 68%)' }}
+                  >
+                    {seg.label}
+                  </span>
+                )}
+              </div>
+            ))}
 
 
             {slots.map((slot, idx) => {
