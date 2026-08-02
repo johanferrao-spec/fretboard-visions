@@ -2493,10 +2493,10 @@ function ScaleViewPanel({
             const modeName = modeNames[i] ?? '';
             const isDom = dominantDegrees.has(i);
             return (
-              <div key={i} className="relative group">
+              <div key={i} className="relative group flex flex-col">
                 <button
                   onClick={() => setDegreeFilter(isActive ? null : i)}
-                  className="w-full rounded-xl font-bold transition-all flex flex-col items-center justify-center py-1 px-1"
+                  className="w-full flex-1 rounded-xl font-bold transition-all flex flex-col items-center justify-center py-1 px-1"
                   style={{
                     backgroundColor: isActive ? `hsla(${color}, 0.15)` : `hsl(${color})`,
                     border: isActive ? `3px solid hsl(${color})` : `2px solid hsl(${color})`,
