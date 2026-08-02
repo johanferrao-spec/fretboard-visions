@@ -723,12 +723,12 @@ export default function SongTimeline({
         </div>
 
 
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Genre</span>
+        <div className="flex items-center gap-0.5">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">Genre</span>
           <select
             value={genre}
             onChange={e => setGenre(e.target.value as Genre)}
-            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
+            className="text-foreground text-[9px] font-mono uppercase rounded px-1 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
           >
             <option value="Rock">Rock</option>
             <option value="Pop">Pop</option>
@@ -738,13 +738,13 @@ export default function SongTimeline({
           </select>
         </div>
 
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Groove</span>
+        <div className="flex items-center gap-0.5">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">Groove</span>
           <select
             value={groove}
             onChange={e => setGroove(Number(e.target.value) as GrooveId)}
             disabled={genre !== 'Funk' && genre !== 'Rock' && genre !== 'Jazz' && genre !== 'Latin'}
-            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-foreground text-[9px] font-mono uppercase rounded px-1 py-0.5 border appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
             title={
               genre === 'Funk' ? 'Pick a groove preset' :
