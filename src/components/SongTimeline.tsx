@@ -805,9 +805,9 @@ export default function SongTimeline({
             step={1}
             value={swing}
             onChange={e => setSwing(Number(e.target.value))}
-            className="w-20 accent-primary cursor-pointer"
+            className="w-14 accent-primary cursor-pointer"
           />
-          <span className="text-[9px] font-mono text-muted-foreground w-7 text-right">{swing}%</span>
+          <span className="text-[8px] font-mono text-muted-foreground w-6 text-right">{swing}%</span>
         </div>
 
 
