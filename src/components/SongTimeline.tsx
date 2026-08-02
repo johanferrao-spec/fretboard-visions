@@ -855,8 +855,8 @@ export default function SongTimeline({
           />
         </div>
 
-        {/* Diatonic chord buttons */}
-        <div className="flex items-center gap-0.5 ml-1">
+        {/* Diatonic chord buttons — scale to fill remaining row width */}
+        <div className="flex items-center gap-0.5 ml-1 flex-1 min-w-0">
           {diatonicChords.map((dc, i) => (
             <button
               key={i}
@@ -867,7 +867,7 @@ export default function SongTimeline({
                 e.dataTransfer.effectAllowed = 'copy';
               }}
               disabled={keyUnknown}
-              className={`w-7 h-5 rounded-md text-[7px] font-mono font-bold flex items-center justify-center transition-all ${
+              className={`flex-1 h-5 min-w-0 max-w-12 rounded-md text-[7px] font-mono font-bold flex items-center justify-center transition-all ${
                 keyUnknown
                   ? 'cursor-not-allowed grayscale opacity-40'
                   : 'cursor-grab active:cursor-grabbing hover:brightness-110'
