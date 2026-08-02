@@ -601,23 +601,23 @@ export default function SongTimeline({
       style={{ height: containerHeight }}
     >
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0 flex-wrap">
+      <div className="flex items-center gap-1.5 px-2 py-1 border-b border-border shrink-0 overflow-hidden">
         <button
           onClick={isPlaying ? onStop : onPlay}
-          className={`p-1.5 rounded-md transition-colors ${
+          className={`p-1 rounded-md transition-colors ${
             isPlaying
               ? 'bg-destructive/20 text-destructive hover:bg-destructive/30'
               : 'bg-primary/20 text-primary hover:bg-primary/30'
           }`}
           title={isPlaying ? 'Stop' : 'Play'}
         >
-          {isPlaying ? <Square size={14} /> : <Play size={14} />}
+          {isPlaying ? <Square size={12} /> : <Play size={12} />}
         </button>
 
         {/* Volume slider — grows taller with volume, green→red, glowing */}
-        <div className="flex items-center gap-1" title={`Volume: ${Math.round(volume * 100)}%`}>
-          <span className="text-[9px] font-mono text-muted-foreground">🔊</span>
-          <div className="relative flex items-end" style={{ width: 48 }}>
+        <div className="flex items-center gap-0.5" title={`Volume: ${Math.round(volume * 100)}%`}>
+          <span className="text-[8px] font-mono text-muted-foreground">🔊</span>
+          <div className="relative flex items-end" style={{ width: 40 }}>
             <input
               type="range"
               min={0}
@@ -641,11 +641,11 @@ export default function SongTimeline({
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          <Music size={12} className="text-muted-foreground" />
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">BPM</span>
+        <div className="flex items-center gap-0.5">
+          <Music size={11} className="text-muted-foreground" />
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">BPM</span>
           <div
-            className="w-12 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center select-none cursor-ns-resize"
+            className="w-10 text-foreground text-[9px] font-mono rounded px-1 py-0.5 border border-border text-center select-none cursor-ns-resize"
             style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
             title="Drag up/down to change BPM"
             onMouseDown={(e) => {
@@ -677,12 +677,12 @@ export default function SongTimeline({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 group/key relative">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Key</span>
+        <div className="flex items-center gap-0.5 group/key relative">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">Key</span>
           {keyUnknown ? (
             <button
               onClick={() => setKeyUnknown(false)}
-              className="h-6 px-3 flex items-center justify-center rounded-md border text-[10px] font-mono uppercase whitespace-nowrap bg-card/95 text-yellow-300 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)] hover:shadow-[0_0_24px_rgba(250,204,21,0.9)] hover:bg-yellow-400/10 transition-all"
+              className="h-5 px-2 flex items-center justify-center rounded-md border text-[9px] font-mono uppercase whitespace-nowrap bg-card/95 text-yellow-300 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)] hover:shadow-[0_0_24px_rgba(250,204,21,0.9)] hover:bg-yellow-400/10 transition-all"
               title="Click to choose a key"
             >
               Don't know?
@@ -692,7 +692,7 @@ export default function SongTimeline({
               <select
                 value={timelineKey}
                 onChange={e => setTimelineKey(e.target.value as NoteName)}
-                className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
+                className="text-foreground text-[9px] font-mono uppercase rounded px-1 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
               >
                 {NOTE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
@@ -705,7 +705,7 @@ export default function SongTimeline({
                   setAnalysisError(null);
                   setKeyMode(v);
                 }}
-                className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
+                className="text-foreground text-[9px] font-mono uppercase rounded px-1 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
               >
                 {(['ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian', 'locrian'] as KeyMode[]).map(m => (
                   <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
@@ -723,12 +723,12 @@ export default function SongTimeline({
         </div>
 
 
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Genre</span>
+        <div className="flex items-center gap-0.5">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">Genre</span>
           <select
             value={genre}
             onChange={e => setGenre(e.target.value as Genre)}
-            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
+            className="text-foreground text-[9px] font-mono uppercase rounded px-1 py-0.5 border appearance-none" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
           >
             <option value="Rock">Rock</option>
             <option value="Pop">Pop</option>
@@ -738,13 +738,13 @@ export default function SongTimeline({
           </select>
         </div>
 
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Groove</span>
+        <div className="flex items-center gap-0.5">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">Groove</span>
           <select
             value={groove}
             onChange={e => setGroove(Number(e.target.value) as GrooveId)}
             disabled={genre !== 'Funk' && genre !== 'Rock' && genre !== 'Jazz' && genre !== 'Latin'}
-            className="text-foreground text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-foreground text-[9px] font-mono uppercase rounded px-1 py-0.5 border appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)', borderColor: 'hsl(210, 60%, 70%, 0.4)' }}
             title={
               genre === 'Funk' ? 'Pick a groove preset' :
@@ -767,7 +767,7 @@ export default function SongTimeline({
         </div>
 
         <div
-          className="flex items-center gap-1.5"
+          className="flex items-center gap-1"
           title={`Swing (${swingSubdivision === '8n' ? '8th' : '16th'} notes): 0 = straight, 100 = triplet feel`}
         >
           <div
@@ -777,10 +777,10 @@ export default function SongTimeline({
           >
             <button
               type="button"
-              className="text-[10px] font-mono text-muted-foreground uppercase px-1.5 py-0.5 rounded hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-1"
+              className="text-[9px] font-mono text-muted-foreground uppercase px-1 py-0.5 rounded hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-0.5"
             >
               Swing
-              <span className="text-[8px] opacity-70">{swingSubdivision === '8n' ? '8th' : '16th'}</span>
+              <span className="text-[7px] opacity-70">{swingSubdivision === '8n' ? '8th' : '16th'}</span>
             </button>
             {swingMenuOpen && (
               <div className="absolute top-full left-0 mt-0.5 z-50 bg-popover border border-border rounded shadow-lg py-0.5 min-w-[92px]">
@@ -805,20 +805,20 @@ export default function SongTimeline({
             step={1}
             value={swing}
             onChange={e => setSwing(Number(e.target.value))}
-            className="w-20 accent-primary cursor-pointer"
+            className="w-14 accent-primary cursor-pointer"
           />
-          <span className="text-[9px] font-mono text-muted-foreground w-7 text-right">{swing}%</span>
+          <span className="text-[8px] font-mono text-muted-foreground w-6 text-right">{swing}%</span>
         </div>
 
 
 
 
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Snap</span>
+        <div className="flex items-center gap-0.5">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">Snap</span>
           <select
             value={snap}
             onChange={e => setSnap(e.target.value as SnapValue)}
-            className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500 text-black border border-amber-400 hover:bg-amber-400 cursor-pointer focus:outline-none"
+            className="px-1 py-0.5 rounded text-[9px] font-mono bg-amber-500 text-black border border-amber-400 hover:bg-amber-400 cursor-pointer focus:outline-none"
             aria-label="Snap value"
           >
             {(['1/4', '1/8', '1/16'] as SnapValue[]).map(s => (
@@ -828,8 +828,8 @@ export default function SongTimeline({
         </div>
 
         {/* Timeline zoom */}
-        <div className="flex items-center gap-1" title="Timeline zoom (double-click to reset)">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Zoom</span>
+        <div className="flex items-center gap-0.5" title="Timeline zoom (double-click to reset)">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">Zoom</span>
           <input
             type="range"
             min={1}
@@ -838,25 +838,25 @@ export default function SongTimeline({
             value={zoom}
             onChange={(e) => setZoom(parseFloat(e.target.value))}
             onDoubleClick={() => setZoom(1)}
-            className="w-20 accent-primary cursor-pointer"
+            className="w-14 accent-primary cursor-pointer"
             aria-label="Timeline zoom"
           />
-          <span className="text-[9px] font-mono text-muted-foreground w-7 text-right">{zoom.toFixed(1)}x</span>
+          <span className="text-[8px] font-mono text-muted-foreground w-6 text-right">{zoom.toFixed(1)}x</span>
         </div>
 
 
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Bars</span>
+        <div className="flex items-center gap-0.5">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">Bars</span>
           <input
             type="number"
             value={measures}
             onChange={e => setMeasures(Math.max(1, Math.min(32, Number(e.target.value))))}
-            className="w-10 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
+            className="w-8 text-foreground text-[9px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
           />
         </div>
 
         {/* Diatonic chord buttons */}
-        <div className="flex items-center gap-1 ml-1">
+        <div className="flex items-center gap-0.5 ml-1">
           {diatonicChords.map((dc, i) => (
             <button
               key={i}
@@ -867,7 +867,7 @@ export default function SongTimeline({
                 e.dataTransfer.effectAllowed = 'copy';
               }}
               disabled={keyUnknown}
-              className={`w-8 h-6 rounded-md text-[8px] font-mono font-bold flex items-center justify-center transition-all ${
+              className={`w-7 h-5 rounded-md text-[7px] font-mono font-bold flex items-center justify-center transition-all ${
                 keyUnknown
                   ? 'cursor-not-allowed grayscale opacity-40'
                   : 'cursor-grab active:cursor-grabbing hover:brightness-110'
@@ -916,24 +916,24 @@ export default function SongTimeline({
         )}
 
 
-        <div className="ml-auto flex items-center gap-1 relative">
+        <div className="ml-auto flex items-center gap-0.5 relative">
           {backingTrackActive && (
             <>
               <button
                 onClick={() => { setShowSavePop(s => !s); setShowLoadPop(false); }}
-                className="px-2 py-1 rounded-md text-[9px] font-mono uppercase tracking-wider bg-primary/20 text-primary hover:bg-primary/30 transition-colors flex items-center gap-1"
+                className="p-1 rounded-md bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
                 title="Save backing track"
               >
-                <Save size={10} /> Save
+                <Save size={11} />
               </button>
               <button
                 onClick={() => { setShowLoadPop(s => !s); setShowSavePop(false); }}
-                className="px-2 py-1 rounded-md text-[9px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-muted transition-colors flex items-center gap-1"
+                className="p-1 rounded-md bg-secondary text-secondary-foreground hover:bg-muted transition-colors relative"
                 title="Load backing track"
               >
-                <FolderOpen size={10} /> Load
+                <FolderOpen size={11} />
                 {savedBackingTracks.length > 0 && (
-                  <span className="text-[8px] bg-muted rounded px-1 ml-0.5">{savedBackingTracks.length}</span>
+                  <span className="absolute -top-1 -right-1 text-[7px] bg-muted rounded-full w-3 h-3 flex items-center justify-center">{savedBackingTracks.length}</span>
                 )}
               </button>
               {showSavePop && (
@@ -986,27 +986,27 @@ export default function SongTimeline({
           )}
           <button
             onClick={onClearTimeline}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             title="Clear timeline"
           >
-            <Trash2 size={13} />
+            <Trash2 size={11} />
           </button>
           {!backingTrackActive && onOpenBackingTrack && (
             <button
               onClick={onOpenBackingTrack}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               title="Open Backing Track DAW"
             >
-              <ChevronUp size={14} />
+              <ChevronUp size={12} />
             </button>
           )}
           {backingTrackActive && onCloseBackingTrack && (
             <button
               onClick={onCloseBackingTrack}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               title="Hide backing track DAW"
             >
-              <ChevronDown size={14} />
+              <ChevronDown size={12} />
             </button>
           )}
         </div>
