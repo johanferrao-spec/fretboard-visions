@@ -119,6 +119,8 @@ export default function SongTimeline({
     y: number;
   } | null>(null);
   const [keyUnknown, setKeyUnknown] = useState(false);
+  /** Which secondary-key box is hovered (shows its ii–V label). */
+  const [hoveredRunKey, setHoveredRunKey] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [keyAnalysis, setKeyAnalysis] = useState<{
     key: string; tonalCentre?: string; mode?: string; analysis: string;
