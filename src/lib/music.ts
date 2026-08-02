@@ -3386,8 +3386,9 @@ export function generateVoiceLeadingVoicings(
           results.push({
             frets, notes,
             inversionNumber: bottomNotePitch.interval === 0 ? 0 : -1,
-            inversionLabel: `${voicingType} · melody on ${topNoteName}`,
+            inversionLabel: `${voicingType}${isModified ? ' (mod)' : ''} · melody on ${topNoteName}`,
             voicingType,
+            modified: isModified,
 
             slashName,
             alternateName: '',
