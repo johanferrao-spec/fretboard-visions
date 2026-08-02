@@ -845,18 +845,18 @@ export default function SongTimeline({
         </div>
 
 
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Bars</span>
+        <div className="flex items-center gap-0.5">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">Bars</span>
           <input
             type="number"
             value={measures}
             onChange={e => setMeasures(Math.max(1, Math.min(32, Number(e.target.value))))}
-            className="w-10 text-foreground text-[10px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
+            className="w-8 text-foreground text-[9px] font-mono rounded px-1 py-0.5 border border-border text-center" style={{ backgroundColor: 'hsl(210, 70%, 80%, 0.2)' }}
           />
         </div>
 
         {/* Diatonic chord buttons */}
-        <div className="flex items-center gap-1 ml-1">
+        <div className="flex items-center gap-0.5 ml-1">
           {diatonicChords.map((dc, i) => (
             <button
               key={i}
@@ -867,7 +867,7 @@ export default function SongTimeline({
                 e.dataTransfer.effectAllowed = 'copy';
               }}
               disabled={keyUnknown}
-              className={`w-8 h-6 rounded-md text-[8px] font-mono font-bold flex items-center justify-center transition-all ${
+              className={`w-7 h-5 rounded-md text-[7px] font-mono font-bold flex items-center justify-center transition-all ${
                 keyUnknown
                   ? 'cursor-not-allowed grayscale opacity-40'
                   : 'cursor-grab active:cursor-grabbing hover:brightness-110'
