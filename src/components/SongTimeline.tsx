@@ -119,6 +119,8 @@ export default function SongTimeline({
     y: number;
   } | null>(null);
   const [keyUnknown, setKeyUnknown] = useState(false);
+  /** Which secondary-key box is hovered (shows its ii–V label). */
+  const [hoveredRunKey, setHoveredRunKey] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [keyAnalysis, setKeyAnalysis] = useState<{
     key: string; tonalCentre?: string; mode?: string; analysis: string;
@@ -170,8 +172,18 @@ export default function SongTimeline({
       startBeat: sorted[r.start].startBeat,
       endBeat: sorted[r.end].startBeat + sorted[r.end].duration,
       label: r.label,
+      tonic: r.tonic,
+      mode: r.mode,
+      ids: sorted.slice(r.start, r.end + 1).map(c => c.id),
     }));
   }, [chords, timelineKey, keyMode]);
+  /** Chord id -> temporary key it is tonicising (drives degree colours). */
+  const tempKeyByChordId = useMemo(() => {
+    const map = new Map<string, { tonic: NoteName; mode: KeyMode }>();
+    secondaryKeyRuns.forEach(run => run.ids.forEach(id => map.set(id, { tonic: run.tonic, mode: run.mode })));
+    return map;
+  }, [secondaryKeyRuns]);
+
   const { numerals: currentNumerals } = useMemo(() => {
     const ALL_MODES: KeyMode[] = ['major', 'minor', 'ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian', 'locrian'];
     if (keyMode === 'minor') return { numerals: ROMAN_NUMERALS_MINOR };
@@ -556,17 +568,26 @@ export default function SongTimeline({
     onSeek?.(beat);
   }, [getRawBeatFromX, isPlaying, onStop, onSeek]);
 
-  // Get color for a chord based on its degree in the key
+  // Get color for a chord based on its degree — inside a secondary ii–V run the
+  // degree is measured against the temporarily tonicised key.
   const getChordColor = (chord: TimelineChord): string => {
+    const temp = tempKeyByChordId.get(chord.id);
+    if (temp) {
+      const d = getChordDegree(temp.tonic, chord.root, chord.chordType, temp.mode);
+      if (d >= 0) return SCALE_DEGREE_COLORS[d];
+    }
     const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
     if (degree >= 0) return SCALE_DEGREE_COLORS[degree];
     return '220, 15%, 50%';
   };
 
   const isBorrowed = (chord: TimelineChord): boolean => {
+    const temp = tempKeyByChordId.get(chord.id);
+    if (temp && getChordDegree(temp.tonic, chord.root, chord.chordType, temp.mode) >= 0) return false;
     const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
     return degree < 0;
   };
+
 
   // In cell view, grow vertically as more rows of cells are added (each row ≈ 90px tall + gap).
   const cellRows = cellView ? Math.max(1, Math.ceil(Math.ceil(measures / 4) / 4)) : 0;
@@ -1237,18 +1258,26 @@ export default function SongTimeline({
                 left: `${(run.startBeat / totalBeats) * 100}%`,
                 width: `${((run.endBeat - run.startBeat) / totalBeats) * 100}%`,
                 height: 'calc(100% - 8px)',
-                border: '2px solid hsl(285 85% 62% / 0.95)',
-                boxShadow: '0 0 8px hsl(285 85% 62% / 0.35)',
+                border: '4px solid hsl(285 85% 62%)',
+                boxShadow: '0 0 10px hsl(285 85% 62% / 0.45)',
               }}
             >
-              <span
-                className="absolute -top-0.5 left-1 text-[8px] font-mono font-bold bg-background/90 px-1 rounded select-none whitespace-nowrap"
-                style={{ color: 'hsl(285 85% 68%)' }}
-              >
-                {run.label}
-              </span>
+              {hoveredRunKey === `tempkey-${run.startBeat}` && (
+                <span
+                  className="absolute left-1/2 -translate-x-1/2 -top-6 px-2 py-0.5 text-[10px] font-mono font-bold rounded border select-none whitespace-nowrap z-40"
+                  style={{
+                    color: 'hsl(285 90% 80%)',
+                    backgroundColor: 'hsl(240 12% 10%)',
+                    borderColor: 'hsl(285 85% 62%)',
+                    boxShadow: '0 2px 8px hsl(0 0% 0% / 0.6)',
+                  }}
+                >
+                  {run.label}
+                </span>
+              )}
             </div>
           ))}
+
 
           {/* Chord blocks */}
           {chords.map(chord => {
@@ -1317,6 +1346,11 @@ export default function SongTimeline({
                     setDragChord({ id: chord.id, offsetBeats });
                   }
                 }}
+                onMouseEnter={() => {
+                  const run = secondaryKeyRuns.find(r => r.ids.includes(chord.id));
+                  setHoveredRunKey(run ? `tempkey-${run.startBeat}` : null);
+                }}
+                onMouseLeave={() => setHoveredRunKey(null)}
                 onClick={(e) => handleChordClick(chord, e)}
                 onContextMenu={(e) => handleChordContextMenu(chord, e)}
                 onDoubleClick={(e) => {

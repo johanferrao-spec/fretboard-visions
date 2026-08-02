@@ -1055,7 +1055,26 @@ const Index = () => {
               onPlay={handlePlay}
               onStop={handleStop}
               onArrangementChange={({ chords, measures, bpm, sections }) => {
-                timeline.setChords(chords);
+                // Timeline-only: collapse back-to-back identical chords into a
+                // single region. The chart grid keeps its separate bars.
+                const merged = [...chords]
+                  .sort((a, b) => a.startBeat - b.startBeat)
+                  .reduce<typeof chords>((acc, c) => {
+                    const prev = acc[acc.length - 1];
+                    if (
+                      prev &&
+                      prev.root === c.root &&
+                      prev.chordType === c.chordType &&
+                      prev.bassNote === c.bassNote &&
+                      Math.abs(prev.startBeat + prev.duration - c.startBeat) < 1e-6
+                    ) {
+                      prev.duration += c.duration;
+                      return acc;
+                    }
+                    acc.push({ ...c });
+                    return acc;
+                  }, []);
+                timeline.setChords(merged);
                 timeline.setMeasures(measures);
                 if (bpm && bpm !== timeline.bpm) timeline.setBpm(bpm);
                 setArrangementSections(sections);
