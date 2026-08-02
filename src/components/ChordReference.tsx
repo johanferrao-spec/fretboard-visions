@@ -1479,11 +1479,13 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick, tuni
   );
 }
 
-function VoiceLeadingDiagram({ voicing, color, onClick, isActive = false }: {
+function VoiceLeadingDiagram({ voicing, color, onClick, isActive = false, draggable = false, onDragStart }: {
   voicing: VoiceLeadingVoicing;
   color: string;
   onClick?: () => void;
   isActive?: boolean;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
 }) {
   const frettedNotes = voicing.frets.filter(f => f > 0);
   const minFret = frettedNotes.length > 0 ? Math.min(...frettedNotes) : 1;
@@ -1504,6 +1506,8 @@ function VoiceLeadingDiagram({ voicing, color, onClick, isActive = false }: {
   return (
     <button
       onClick={onClick}
+      draggable={draggable}
+      onDragStart={onDragStart}
       className="flex flex-col items-center rounded-lg shrink-0 transition-all"
       style={{
         border: isActive ? `3px solid hsl(${color})` : `1.5px solid hsla(${color}, 0.35)`,
@@ -1933,6 +1937,15 @@ function VoiceLeadingPanel({
   const key = current ? chordKey(current) : '';
   const savedList = saved[key] ?? [];
 
+  // Degree colour of the current chord relative to the selected key.
+  const currentColor = useMemo(() => {
+    if (!current) return VL_COLOR;
+    const deg = getChordDegree(keyRoot, current.root, current.chordType, keyMode);
+    if (deg >= 0) return SCALE_DEGREE_COLORS[deg];
+    const semi = (((NOTE_NAMES.indexOf(current.root) - NOTE_NAMES.indexOf(keyRoot)) % 12) + 12) % 12;
+    return formulaSemitoneToDegree(semi).color;
+  }, [current, keyRoot, keyMode]);
+
   const saveCurrent = () => {
     const v = voicings[selected];
     if (!v || !key) return;
@@ -1976,8 +1989,8 @@ function VoiceLeadingPanel({
           className="h-7 w-7 rounded bg-secondary text-secondary-foreground hover:bg-muted font-mono text-[13px]"
           title="Previous chord"
         >◀</button>
-        <div className="px-3 py-1 rounded-lg min-w-[120px] text-center border" style={{ borderColor: `hsl(${VL_COLOR} / 0.5)`, backgroundColor: `hsl(${VL_COLOR} / 0.15)` }}>
-          <div className="text-[14px] font-mono font-black leading-none" style={{ color: `hsl(${VL_COLOR})` }}>{current.root} {current.chordType}</div>
+        <div className="px-3 py-1 rounded-lg min-w-[120px] text-center border-2" style={{ borderColor: `hsl(${currentColor})`, backgroundColor: `hsl(${currentColor} / 0.18)`, boxShadow: `0 0 10px hsl(${currentColor} / 0.35)` }}>
+          <div className="text-[14px] font-mono font-black leading-none" style={{ color: `hsl(${currentColor})` }}>{current.root} {current.chordType}</div>
           <div className="text-[9px] font-mono text-muted-foreground mt-0.5">chord {idx + 1} of {sequence.length}</div>
         </div>
         <button
@@ -2015,28 +2028,6 @@ function VoiceLeadingPanel({
         </div>
       </div>
 
-      {/* Progression strip */}
-      <div className="flex gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'thin' }}>
-        {sequence.map((c, i) => {
-          const deg = getChordDegree(keyRoot, c.root, c.chordType, keyMode);
-          const semi = (((NOTE_NAMES.indexOf(c.root) - NOTE_NAMES.indexOf(keyRoot)) % 12) + 12) % 12;
-          const col = deg >= 0 ? SCALE_DEGREE_COLORS[deg] : formulaSemitoneToDegree(semi).color;
-          const count = (saved[chordKey(c)] ?? []).length;
-          return (
-            <button
-              key={c.id}
-              onClick={() => setIdx(i)}
-              className="px-2 py-1 rounded text-[10px] font-mono font-bold shrink-0 border-2 transition-all"
-              style={{
-                backgroundColor: i === idx ? `hsl(${col})` : `hsl(${col} / 0.28)`,
-                borderColor: i === idx ? `hsl(${col})` : `hsl(${col} / 0.5)`,
-                color: i === idx ? '#000' : `hsl(${col})`,
-                boxShadow: i === idx ? `0 0 10px hsl(${col} / 0.5)` : 'none',
-              }}
-            >{c.root} {c.chordType}{count > 0 ? ` (${count})` : ''}</button>
-          );
-        })}
-      </div>
 
       {/* Candidate voicings under the chosen melody */}
       {!voiceLeadingMelody ? (
@@ -2056,56 +2047,66 @@ function VoiceLeadingPanel({
               color={VL_COLOR}
               isActive={i === selected}
               onClick={() => setSelected(i)}
+              draggable
+              onDragStart={e => { e.dataTransfer.setData('text/vl-voicing', String(i)); e.dataTransfer.effectAllowed = 'copy'; }}
             />
           ))}
         </div>
       )}
 
-      {/* Saved chain — one lane per chord in the progression */}
-      <div className="rounded-lg border p-1.5 flex flex-col gap-1" style={{ borderColor: `hsl(${VL_COLOR} / 0.35)`, backgroundColor: 'hsl(var(--card) / 0.4)' }}>
-        <div className="text-[9px] font-mono uppercase tracking-wider" style={{ color: `hsl(${VL_COLOR})` }}>Voice-leading chain</div>
-        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
-          {sequence.map(c => {
-            const k = chordKey(c);
-            const list = saved[k] ?? [];
-            const active = savedIdx[k] ?? 0;
-            return (
-              <div key={c.id} className="shrink-0 rounded-md border px-1.5 py-1 flex flex-col gap-1" style={{ borderColor: 'hsl(var(--border))' }}>
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] font-mono font-bold text-foreground/90">{c.root} {c.chordType}</span>
-                  {list.length > 1 && (
-                    <>
-                      <button onClick={() => cycleSaved(k, list, -1)} className="h-4 w-4 rounded bg-secondary text-[8px] font-mono">◀</button>
-                      <span className="text-[8px] font-mono text-muted-foreground">{active + 1}/{list.length}</span>
-                      <button onClick={() => cycleSaved(k, list, 1)} className="h-4 w-4 rounded bg-secondary text-[8px] font-mono">▶</button>
-                    </>
-                  )}
-                </div>
-                {list.length === 0 ? (
-                  <div className="text-[9px] font-mono text-muted-foreground italic px-1 py-2">empty</div>
-                ) : (
-                  <div className="flex gap-1">
-                    {list.map((v, i) => (
-                      <div key={`${k}-${i}`} className="relative">
-                        <VoiceLeadingDiagram
-                          voicing={v}
-                          color={VL_COLOR}
-                          isActive={i === active}
-                          onClick={() => { setSavedIdx(p => ({ ...p, [k]: i })); onSetInversionVoicing?.(v); }}
-                        />
-                        <button
-                          onClick={() => removeSaved(k, i)}
-                          className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-mono leading-none"
-                          title="Remove from chain"
-                        >×</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      {/* Saved chain — the current chord only; each chord keeps its own chain */}
+      <div
+        className="rounded-lg border p-1.5 flex flex-col gap-1"
+        style={{ borderColor: `hsl(${VL_COLOR} / 0.35)`, backgroundColor: 'hsl(var(--card) / 0.4)' }}
+        onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+        onDrop={e => {
+          e.preventDefault();
+          const raw = e.dataTransfer.getData('text/vl-voicing');
+          const i = Number(raw);
+          const v = voicings[i];
+          if (!v || !key) return;
+          setSaved(prev => {
+            const list = prev[key] ?? [];
+            if (list.some(x => x.frets.join(',') === v.frets.join(','))) return prev;
+            return { ...prev, [key]: [...list, v] };
+          });
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <div className="text-[9px] font-mono uppercase tracking-wider" style={{ color: `hsl(${VL_COLOR})` }}>
+            Voice-leading chain — {current.root} {current.chordType}
+          </div>
+          {savedList.length > 1 && (
+            <div className="flex items-center gap-1">
+              <button onClick={() => cycleSaved(key, savedList, -1)} className="h-4 w-4 rounded bg-secondary text-[8px] font-mono">◀</button>
+              <span className="text-[8px] font-mono text-muted-foreground">{(savedIdx[key] ?? 0) + 1}/{savedList.length}</span>
+              <button onClick={() => cycleSaved(key, savedList, 1)} className="h-4 w-4 rounded bg-secondary text-[8px] font-mono">▶</button>
+            </div>
+          )}
         </div>
+        {savedList.length === 0 ? (
+          <div className="text-[10px] font-mono text-muted-foreground italic px-1 py-4 text-center">
+            Drag a voicing here to build the chain for this chord
+          </div>
+        ) : (
+          <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+            {savedList.map((v, i) => (
+              <div key={`${key}-${i}`} className="relative">
+                <VoiceLeadingDiagram
+                  voicing={v}
+                  color={VL_COLOR}
+                  isActive={i === (savedIdx[key] ?? 0)}
+                  onClick={() => { setSavedIdx(p => ({ ...p, [key]: i })); onSetInversionVoicing?.(v); }}
+                />
+                <button
+                  onClick={() => removeSaved(key, i)}
+                  className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-mono leading-none"
+                  title="Remove from chain"
+                >×</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
