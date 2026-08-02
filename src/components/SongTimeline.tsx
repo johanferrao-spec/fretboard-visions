@@ -1256,18 +1256,26 @@ export default function SongTimeline({
                 left: `${(run.startBeat / totalBeats) * 100}%`,
                 width: `${((run.endBeat - run.startBeat) / totalBeats) * 100}%`,
                 height: 'calc(100% - 8px)',
-                border: '2px solid hsl(285 85% 62% / 0.95)',
-                boxShadow: '0 0 8px hsl(285 85% 62% / 0.35)',
+                border: '4px solid hsl(285 85% 62%)',
+                boxShadow: '0 0 10px hsl(285 85% 62% / 0.45)',
               }}
             >
-              <span
-                className="absolute -top-0.5 left-1 text-[8px] font-mono font-bold bg-background/90 px-1 rounded select-none whitespace-nowrap"
-                style={{ color: 'hsl(285 85% 68%)' }}
-              >
-                {run.label}
-              </span>
+              {hoveredRunKey === `tempkey-${run.startBeat}` && (
+                <span
+                  className="absolute left-1/2 -translate-x-1/2 -top-6 px-2 py-0.5 text-[10px] font-mono font-bold rounded border select-none whitespace-nowrap z-40"
+                  style={{
+                    color: 'hsl(285 90% 80%)',
+                    backgroundColor: 'hsl(240 12% 10%)',
+                    borderColor: 'hsl(285 85% 62%)',
+                    boxShadow: '0 2px 8px hsl(0 0% 0% / 0.6)',
+                  }}
+                >
+                  {run.label}
+                </span>
+              )}
             </div>
           ))}
+
 
           {/* Chord blocks */}
           {chords.map(chord => {
