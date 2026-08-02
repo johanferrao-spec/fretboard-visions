@@ -566,17 +566,26 @@ export default function SongTimeline({
     onSeek?.(beat);
   }, [getRawBeatFromX, isPlaying, onStop, onSeek]);
 
-  // Get color for a chord based on its degree in the key
+  // Get color for a chord based on its degree — inside a secondary ii–V run the
+  // degree is measured against the temporarily tonicised key.
   const getChordColor = (chord: TimelineChord): string => {
+    const temp = tempKeyByChordId.get(chord.id);
+    if (temp) {
+      const d = getChordDegree(temp.tonic, chord.root, chord.chordType, temp.mode);
+      if (d >= 0) return SCALE_DEGREE_COLORS[d];
+    }
     const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
     if (degree >= 0) return SCALE_DEGREE_COLORS[degree];
     return '220, 15%, 50%';
   };
 
   const isBorrowed = (chord: TimelineChord): boolean => {
+    const temp = tempKeyByChordId.get(chord.id);
+    if (temp && getChordDegree(temp.tonic, chord.root, chord.chordType, temp.mode) >= 0) return false;
     const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
     return degree < 0;
   };
+
 
   // In cell view, grow vertically as more rows of cells are added (each row ≈ 90px tall + gap).
   const cellRows = cellView ? Math.max(1, Math.ceil(Math.ceil(measures / 4) / 4)) : 0;
