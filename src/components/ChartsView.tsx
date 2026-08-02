@@ -1609,6 +1609,41 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     return out;
   })();
 
+  // Temporary key changes (secondary ii–V / ii–V–I) — purple enclosure boxes.
+  const tempKeySegments = (() => {
+    const out: {
+      key: string; rowStart: number; rowEnd: number; colStart: number; colEnd: number; label: string;
+    }[] = [];
+    tempKeyRuns.forEach(run => {
+      const byRenderRow = new Map<number, { colStart: number; colEnd: number }>();
+      for (let k = run.start; k <= run.end; k++) {
+        if (!slots[k]?.chord) continue;
+        const row = renderRowOfLogical[logicalRowOf(k)] + endingRowOffset(k);
+        const colStart = (startUnits[k] % COLS) + 1;
+        const colEnd = colStart + slots[k].bars;
+        const prev = byRenderRow.get(row);
+        byRenderRow.set(row, prev
+          ? { colStart: Math.min(prev.colStart, colStart), colEnd: Math.max(prev.colEnd, colEnd) }
+          : { colStart, colEnd });
+      }
+      let first = true;
+      byRenderRow.forEach((cols, row) => {
+        out.push({
+          key: `tempkey-${slots[run.start].id}-${row}`,
+          rowStart: row,
+          rowEnd: row + 1,
+          colStart: cols.colStart,
+          colEnd: cols.colEnd,
+          label: first ? run.label : '',
+        });
+        first = false;
+      });
+    });
+    return out;
+  })();
+
+
+
 
 
 
