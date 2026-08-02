@@ -3178,6 +3178,74 @@ function classifyVoiceLeadingShape(
   return null;
 }
 
+/** All Drop 2 / Drop 3 structures for a chord, as normalised offsets plus the
+ *  interval-from-root of each voice, so a shape can be matched voice by voice. */
+function dropShapeVariants(tones: number[]): { type: VoiceLeadingVoicingType; offsets: number[]; degrees: number[] }[] {
+  const out: { type: VoiceLeadingVoicingType; offsets: number[]; degrees: number[] }[] = [];
+  for (let k = 0; k < tones.length; k++) {
+    const close = closePositionOffsets(tones, k);
+    for (const n of [2, 3] as const) {
+      if (close.length < n) continue;
+      const idx = close.length - n;
+      const raw = close.slice();
+      raw[idx] -= 12;
+      raw.sort((a, b) => a - b);
+      const min = raw[0];
+      out.push({
+        type: n === 2 ? 'Drop 2' : 'Drop 3',
+        offsets: raw.map(v => v - min),
+        degrees: raw.map(v => (((tones[k] + v) % 12) + 12) % 12),
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Classify a shape, allowing the TOP voice to be altered so a chosen melody
+ * note sits on top. The lower voices must still form the bottom of a genuine
+ * Drop 2 / Drop 3 / Shell structure — the top voice is then substituted.
+ */
+function classifyAlteredTopShape(
+  pitches: number[],
+  rootIdx: number,
+  intervals: number[],
+  thirdInterval?: number,
+  seventhInterval?: number,
+): { type: VoiceLeadingVoicingType; modified: boolean } | null {
+  const strict = classifyVoiceLeadingShape(pitches, rootIdx, intervals, thirdInterval, seventhInterval);
+  if (strict) return { type: strict, modified: false };
+
+  const lower = pitches.slice(0, -1);
+  if (lower.length < 2) return null;
+  const lowerDeg = lower.map(p => ((p % 12) - rootIdx + 12) % 12);
+  if (new Set(lowerDeg).size !== lowerDeg.length) return null; // no doubled lower voices
+  const lowerOffsets = lower.map(p => p - lower[0]);
+
+  const tones = [...new Set(intervals)].sort((a, b) => a - b);
+
+  // Drop 2 / Drop 3 with an altered top voice.
+  if (lower.length === tones.length - 1) {
+    for (const shape of dropShapeVariants(tones)) {
+      const wantOffsets = shape.offsets.slice(0, -1);
+      const wantDegrees = shape.degrees.slice(0, -1);
+      if (
+        sameOffsets(lowerOffsets, wantOffsets.map(v => v - wantOffsets[0])) &&
+        wantDegrees.every((d, i) => d === lowerDeg[i])
+      ) {
+        return { type: shape.type, modified: true };
+      }
+    }
+  }
+
+  // Shell with an altered top voice: bottom pair drawn from root / 3rd / 7th.
+  if (lower.length === 2 && thirdInterval !== undefined && seventhInterval !== undefined) {
+    const shellSet = new Set([0, thirdInterval, seventhInterval]);
+    if (lowerDeg.every(d => shellSet.has(d))) return { type: 'Shell', modified: true };
+  }
+
+  return null;
+}
 
 
 export function generateVoiceLeadingVoicings(
