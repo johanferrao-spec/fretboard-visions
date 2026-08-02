@@ -3326,7 +3326,7 @@ export function generateVoiceLeadingVoicings(
       });
 
       const intervalNameMap: Record<number, string> = {
-        0: 'R', 2: '9', 3: '♭3', 4: '3', 5: '11', 6: '♭5', 7: '5',
+        0: 'R', 1: '♭9', 2: '9', 3: '♭3', 4: '3', 5: '11', 6: '♭5', 7: '5',
         8: '♭6', 9: '6', 10: '♭7', 11: '7', 14: '9', 17: '11', 21: '13',
       };
       const shortNames: Record<string, string> = {
@@ -3417,12 +3417,13 @@ export function generateVoiceLeadingVoicings(
     else if (v.hasThird || v.hasSeventh) score += 40;
     score += v.notes.length * 5;
     if (melodyIsChordTone) score += 6;
+    if (v.modified) score -= 12;
     score -= v.span * 2;
     score -= minFret * 0.2;
     return { v, score };
   });
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 14).map(s => s.v);
+  return scored.slice(0, 18).map(s => s.v);
 }
 
 /** Broad chord family used by key/modulation detection. */
