@@ -2060,56 +2060,66 @@ function VoiceLeadingPanel({
               color={VL_COLOR}
               isActive={i === selected}
               onClick={() => setSelected(i)}
+              draggable
+              onDragStart={e => { e.dataTransfer.setData('text/vl-voicing', String(i)); e.dataTransfer.effectAllowed = 'copy'; }}
             />
           ))}
         </div>
       )}
 
-      {/* Saved chain — one lane per chord in the progression */}
-      <div className="rounded-lg border p-1.5 flex flex-col gap-1" style={{ borderColor: `hsl(${VL_COLOR} / 0.35)`, backgroundColor: 'hsl(var(--card) / 0.4)' }}>
-        <div className="text-[9px] font-mono uppercase tracking-wider" style={{ color: `hsl(${VL_COLOR})` }}>Voice-leading chain</div>
-        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
-          {sequence.map(c => {
-            const k = chordKey(c);
-            const list = saved[k] ?? [];
-            const active = savedIdx[k] ?? 0;
-            return (
-              <div key={c.id} className="shrink-0 rounded-md border px-1.5 py-1 flex flex-col gap-1" style={{ borderColor: 'hsl(var(--border))' }}>
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] font-mono font-bold text-foreground/90">{c.root} {c.chordType}</span>
-                  {list.length > 1 && (
-                    <>
-                      <button onClick={() => cycleSaved(k, list, -1)} className="h-4 w-4 rounded bg-secondary text-[8px] font-mono">◀</button>
-                      <span className="text-[8px] font-mono text-muted-foreground">{active + 1}/{list.length}</span>
-                      <button onClick={() => cycleSaved(k, list, 1)} className="h-4 w-4 rounded bg-secondary text-[8px] font-mono">▶</button>
-                    </>
-                  )}
-                </div>
-                {list.length === 0 ? (
-                  <div className="text-[9px] font-mono text-muted-foreground italic px-1 py-2">empty</div>
-                ) : (
-                  <div className="flex gap-1">
-                    {list.map((v, i) => (
-                      <div key={`${k}-${i}`} className="relative">
-                        <VoiceLeadingDiagram
-                          voicing={v}
-                          color={VL_COLOR}
-                          isActive={i === active}
-                          onClick={() => { setSavedIdx(p => ({ ...p, [k]: i })); onSetInversionVoicing?.(v); }}
-                        />
-                        <button
-                          onClick={() => removeSaved(k, i)}
-                          className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-mono leading-none"
-                          title="Remove from chain"
-                        >×</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      {/* Saved chain — the current chord only; each chord keeps its own chain */}
+      <div
+        className="rounded-lg border p-1.5 flex flex-col gap-1"
+        style={{ borderColor: `hsl(${VL_COLOR} / 0.35)`, backgroundColor: 'hsl(var(--card) / 0.4)' }}
+        onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+        onDrop={e => {
+          e.preventDefault();
+          const raw = e.dataTransfer.getData('text/vl-voicing');
+          const i = Number(raw);
+          const v = voicings[i];
+          if (!v || !key) return;
+          setSaved(prev => {
+            const list = prev[key] ?? [];
+            if (list.some(x => x.frets.join(',') === v.frets.join(','))) return prev;
+            return { ...prev, [key]: [...list, v] };
+          });
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <div className="text-[9px] font-mono uppercase tracking-wider" style={{ color: `hsl(${VL_COLOR})` }}>
+            Voice-leading chain — {current.root} {current.chordType}
+          </div>
+          {savedList.length > 1 && (
+            <div className="flex items-center gap-1">
+              <button onClick={() => cycleSaved(key, savedList, -1)} className="h-4 w-4 rounded bg-secondary text-[8px] font-mono">◀</button>
+              <span className="text-[8px] font-mono text-muted-foreground">{(savedIdx[key] ?? 0) + 1}/{savedList.length}</span>
+              <button onClick={() => cycleSaved(key, savedList, 1)} className="h-4 w-4 rounded bg-secondary text-[8px] font-mono">▶</button>
+            </div>
+          )}
         </div>
+        {savedList.length === 0 ? (
+          <div className="text-[10px] font-mono text-muted-foreground italic px-1 py-4 text-center">
+            Drag a voicing here to build the chain for this chord
+          </div>
+        ) : (
+          <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+            {savedList.map((v, i) => (
+              <div key={`${key}-${i}`} className="relative">
+                <VoiceLeadingDiagram
+                  voicing={v}
+                  color={VL_COLOR}
+                  isActive={i === (savedIdx[key] ?? 0)}
+                  onClick={() => { setSavedIdx(p => ({ ...p, [key]: i })); onSetInversionVoicing?.(v); }}
+                />
+                <button
+                  onClick={() => removeSaved(key, i)}
+                  className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-mono leading-none"
+                  title="Remove from chain"
+                >×</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
