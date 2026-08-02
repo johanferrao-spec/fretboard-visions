@@ -8,6 +8,8 @@ import {
   type ChordVoicing, type ArpeggioPosition,
 } from '@/lib/music';
 import type { ScaleSelection, ChordSelection, DisplayMode, Orientation } from '@/hooks/useFretboard';
+import { playFretNote } from '@/lib/guitarMidi';
+
 
 interface FretboardProps {
   maxFrets: number;
