@@ -22,7 +22,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { NoteName } from '@/lib/music';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, getChordDegree, keyModeToScale, normalizeKeyMode, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
+import { playFretShape, playPitchClasses, setMidiPlaybackEnabled } from '@/lib/guitarMidi';
+import { TUNING_PRESETS, NOTE_NAMES, getVoicingsForChord, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, getChordDegree, keyModeToScale, normalizeKeyMode, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -114,6 +115,7 @@ const Index = () => {
   const [chordAddRoot, setChordAddRoot] = useState<NoteName | null>(null);
   const [chordAddHasNotes, setChordAddHasNotes] = useState(false);
   const [chordOctaveShift, setChordOctaveShift] = useState(0);
+  const [midiPlayback, setMidiPlayback] = useState(false);
   // Handlers exposed by BackingTrackView so the chord timeline toolbar can show Save/Load
   const [backingApi, setBackingApi] = useState<{
     save: (name: string) => void;
