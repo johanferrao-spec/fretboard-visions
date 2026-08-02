@@ -1291,6 +1291,7 @@ export default function SongTimeline({
             const leftPct = (chord.startBeat / totalBeats) * 100;
             const widthPct = (chord.duration / totalBeats) * 100;
             const color = getChordColor(chord);
+            const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
             const borrowed = isBorrowed(chord);
             // Chords inside a secondary ii–V run are coloured against their
             // temporary key, so treat them as diatonic (full-strength colour).
