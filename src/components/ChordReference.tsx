@@ -1734,10 +1734,12 @@ function CompingToolPanel({
   const items = useMemo(() => {
     let list = allItems.filter(it => kinds[it.kind]);
     if (showFretBox) {
-      list = list.filter(it => it.frets.every(f => f <= 0 || (f >= fretBoxStart && f <= boxEnd)));
+      list = list.filter(it =>
+        it.frets.every((f, si) => (f < 0 ? true : allowedStrings.has(si) && (f === 0 || (f >= fretBoxStart && f <= boxEnd)))),
+      );
     }
     return list;
-  }, [allItems, kinds, showFretBox, fretBoxStart, boxEnd]);
+  }, [allItems, kinds, showFretBox, fretBoxStart, boxEnd, allowedStrings]);
 
   useEffect(() => { setSelected(0); }, [items]);
 
