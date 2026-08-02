@@ -1937,7 +1937,7 @@ function ScaleViewPanel({
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); toggleDominantDegree(i); }}
-                    className="mt-1 w-full rounded-lg border text-[9px] font-mono font-bold uppercase tracking-wider py-1 px-1 transition-colors"
+                    className="w-full rounded-b-lg rounded-t-none border border-t-0 text-[9px] font-mono font-bold uppercase tracking-wider py-1 px-1 transition-colors"
                     style={{
                       backgroundColor: isDom ? `hsl(${color})` : 'hsl(var(--background) / 0.95)',
                       borderColor: `hsl(${color})`,
