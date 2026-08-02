@@ -2540,9 +2540,9 @@ function ScaleViewPanel({
         <div className="flex flex-col gap-1.5 shrink-0" style={{ width: 168 }}>
           {([
             { key: 'harmony', label: 'Functional Harmony', color: 'var(--primary)' },
+            { key: 'modes', label: 'Modes', color: 'var(--accent)' },
             { key: 'drop', label: 'Drop Voicings', color: 'var(--primary)' },
             { key: 'comping', label: 'Comping Tool', color: '285 85% 62%' },
-            { key: 'modes', label: 'Modes', color: 'var(--accent)' },
           ] as const).map(t => {
             const on = sectionTab === t.key;
             const isAccent = t.color === 'var(--accent)';
