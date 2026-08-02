@@ -234,7 +234,6 @@ interface ChordReferenceProps {
   voiceLeadingMelody: { stringIndex: number; fret: number } | null;
   setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
   onVoiceLeadingChordChange?: (c: { root: NoteName; chordType: string } | null) => void;
-  onVoiceLeadingChordChange?: (c: { root: NoteName; chordType: string } | null) => void;
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
   setShowFretBox?: (v: boolean) => void;
