@@ -2467,7 +2467,7 @@ function ScaleViewPanel({
                     return (
                       <button
                         key={m.scale}
-                        onClick={() => onApplyScale?.(primaryScale.root, m.scale, 'scale')}
+                        onClick={() => { onApplyScale?.(primaryScale.root, m.scale, 'scale'); setModeMenuOpen(false); }}
                         className="w-full text-[11px] font-mono font-bold rounded px-2 py-1 text-left transition-transform hover:scale-[1.02]"
                         style={{
                           backgroundColor: `hsl(${color})`,
