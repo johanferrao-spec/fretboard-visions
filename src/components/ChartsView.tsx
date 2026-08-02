@@ -256,17 +256,84 @@ const detectKeyFromChords = (
 ): { root: NoteName; mode: KeyMode } | null => {
   if (entries.length < 2) return null;
   const isBasic = keyMode === 'major' || keyMode === 'minor'
-    || keyMode === 'ionian' || keyMode === 'aeolian';
-  const modes: KeyMode[] = isBasic ? ['major', 'minor'] : [keyMode];
+    || keyMode === 'ionian' || keyMode === 'aeolian'
+    || keyMode === 'dorian' || keyMode === 'phrygian'
+    || keyMode === 'lydian' || keyMode === 'mixolydian';
+  // Modal charts are common, so a basic selection lets every diatonic mode compete.
+  const modes: KeyMode[] = isBasic
+    ? ['major', 'minor', 'dorian', 'mixolydian', 'lydian', 'phrygian']
+    : [keyMode];
+  // Modes share the same note set, so a small prior keeps ambiguous charts in
+  // major/minor and only picks an exotic mode when the evidence is clear.
+  const MODE_BIAS: Partial<Record<KeyMode, number>> = {
+    major: 1.5, minor: 1.5, dorian: 0.4, mixolydian: 0.4, lydian: 0, phrygian: 0,
+  };
   let best: { root: NoteName; mode: KeyMode } | null = null;
   let bestScore = -Infinity;
   for (const mode of modes) {
     for (const candidate of NOTE_NAMES) {
-      const score = scoreKey(entries, candidate, mode);
+      const score = scoreKey(entries, candidate, mode) + (MODE_BIAS[mode] ?? 0);
       if (score > bestScore) { bestScore = score; best = { root: candidate, mode }; }
     }
   }
   return best;
+};
+
+/**
+ * Find secondary ii–V and ii–V–I runs that momentarily tonicise another key.
+ * Returns, per slot index, the temporary tonic so degree colours (and a purple
+ * enclosure box) can show the modulation.
+ */
+export interface TempKeyRun {
+  start: number;   // slot index (inclusive)
+  end: number;     // slot index (inclusive)
+  tonic: NoteName;
+  mode: KeyMode;
+  label: string;
+}
+
+const semisBetween = (a: NoteName, b: NoteName) =>
+  (((NOTE_NAMES.indexOf(b) - NOTE_NAMES.indexOf(a)) % 12) + 12) % 12;
+const transposeNote = (n: NoteName, semis: number): NoteName =>
+  NOTE_NAMES[(((NOTE_NAMES.indexOf(n) + semis) % 12) + 12) % 12];
+
+const detectSecondaryKeys = (
+  slots: ChartSlot[],
+  homeKey: NoteName,
+  homeMode: KeyMode,
+): TempKeyRun[] => {
+  // Work on the chord-bearing slots in order.
+  const idxs = slots.map((s, i) => (s.chord ? i : -1)).filter(i => i >= 0);
+  const homeRoots = new Set(getDiatonicChords(homeKey, homeMode).map(d => d.root));
+  const out: TempKeyRun[] = [];
+  for (let p = 0; p < idxs.length - 1; p++) {
+    const a = slots[idxs[p]].chord!;
+    const b = slots[idxs[p + 1]].chord!;
+    const famA = chordFamily(a.chordType);
+    const famB = chordFamily(b.chordType);
+    // ii (minor 7 / m7♭5) → V (dominant) a fourth up.
+    if ((famA === 'min' || famA === 'dim') && famB === 'dom' && semisBetween(a.root, b.root) === 5) {
+      const tonic = transposeNote(b.root, 5);
+      const isMinorTarget = famA === 'dim';
+      let end = idxs[p + 1];
+      let resolved = false;
+      const nxt = idxs[p + 2] !== undefined ? slots[idxs[p + 2]].chord : undefined;
+      if (nxt && nxt.root === tonic) { end = idxs[p + 2]; resolved = true; }
+      // Only flag it when it leaves the home key (a home-key ii–V–I is not a modulation).
+      const leavesHome = !homeRoots.has(a.root) || !homeRoots.has(b.root)
+        || (resolved && !homeRoots.has(tonic)) || tonic !== homeKey;
+      if (!leavesHome || tonic === homeKey) { p = idxs.indexOf(end) >= 0 ? idxs.indexOf(end) : p; continue; }
+      out.push({
+        start: idxs[p],
+        end,
+        tonic,
+        mode: isMinorTarget ? 'minor' : 'major',
+        label: resolved ? `ii–V–I of ${tonic}` : `ii–V of ${tonic}`,
+      });
+      p = idxs.indexOf(end);
+    }
+  }
+  return out;
 };
 
 
