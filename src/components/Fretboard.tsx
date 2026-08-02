@@ -1459,6 +1459,7 @@ export default function Fretboard({
                 <button
                   onDoubleClick={(e) => { e.stopPropagation(); if (!identifyMode && !arpAddMode) onToggleString(stringIdx); }}
                   onClick={(e) => {
+                    playFretNote(tuning, stringIdx, 0);
                     if (identifyMode) {
                       e.stopPropagation();
                       const newFrets = [...identifyFrets];
@@ -1470,6 +1471,7 @@ export default function Fretboard({
                       onArpAddClick(stringIdx, 0);
                     }
                   }}
+
                   className={`shrink-0 w-7 h-full flex items-center justify-center font-mono font-bold transition-all z-10 ${
                     isDisabled ? 'text-muted-foreground/30 line-through' : 'text-muted-foreground'
                   } ${isVertical ? '-rotate-90' : ''}`}
