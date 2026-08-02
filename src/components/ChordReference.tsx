@@ -233,6 +233,7 @@ interface ChordReferenceProps {
   setVoiceLeadingMode: (v: boolean) => void;
   voiceLeadingMelody: { stringIndex: number; fret: number } | null;
   setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
+  onVoiceLeadingChordChange?: (c: { root: NoteName; chordType: string } | null) => void;
   onApplyBeginnerPreset?: (preset: { root: NoteName; scale: string; fretBoxStart: number; fretBoxSize: number } | null) => void;
   onApplyOpenChord?: (frets: (number | -1)[], fingers: string[]) => void;
   setShowFretBox?: (v: boolean) => void;
@@ -1037,7 +1038,7 @@ export default function ChordReference({
   ghostNoteOpacity, setGhostNoteOpacity,
   dropMode, setDropMode,
   threeNpsMode, setThreeNpsMode,
-  voiceLeadingMode, setVoiceLeadingMode, voiceLeadingMelody, setVoiceLeadingMelody,
+  voiceLeadingMode, setVoiceLeadingMode, voiceLeadingMelody, setVoiceLeadingMelody, onVoiceLeadingChordChange,
   onApplyBeginnerPreset, onApplyOpenChord,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
   showFretBox, fretBoxStart = 1, fretBoxSize = 5, fretBoxStringStart = 0, fretBoxStringSize = 6,
@@ -1254,6 +1255,7 @@ export default function ChordReference({
           setVoiceLeadingMode={setVoiceLeadingMode}
           voiceLeadingMelody={voiceLeadingMelody}
           setVoiceLeadingMelody={setVoiceLeadingMelody}
+          onVoiceLeadingChordChange={onVoiceLeadingChordChange}
           onApplyScale={onApplyScale}
           showFretBox={showFretBox}
           fretBoxStart={fretBoxStart}
@@ -1874,7 +1876,7 @@ const chordKey = (c: { root: NoteName; chordType: string }) => `${c.root}|${c.ch
 
 function VoiceLeadingPanel({
   timelineChords, tuning, onSetInversionVoicing,
-  voiceLeadingMelody, setVoiceLeadingMelody,
+  voiceLeadingMelody, setVoiceLeadingMelody, onCurrentChordChange,
   keyRoot = 'C' as NoteName, keyMode = 'major' as KeyMode,
 }: {
   timelineChords: TimelineChord[];
@@ -1882,6 +1884,7 @@ function VoiceLeadingPanel({
   onSetInversionVoicing?: (v: InversionVoicing | null) => void;
   voiceLeadingMelody: { stringIndex: number; fret: number } | null;
   setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
+  onCurrentChordChange?: (c: { root: NoteName; chordType: string } | null) => void;
   keyRoot?: NoteName;
   keyMode?: KeyMode;
 }) {
@@ -1917,6 +1920,13 @@ function VoiceLeadingPanel({
   useEffect(() => { setIdx(i => (sequence.length ? Math.min(i, sequence.length - 1) : 0)); }, [sequence.length]);
 
   const current = sequence[idx];
+
+  // Publish the current chord so the fretboard can show its arpeggio tones.
+  useEffect(() => {
+    if (!current) { onCurrentChordChange?.(null); return; }
+    onCurrentChordChange?.({ root: current.root, chordType: COMPING_SEVENTH_TYPE[current.chordType] || current.chordType });
+  }, [current, onCurrentChordChange]);
+  useEffect(() => () => onCurrentChordChange?.(null), [onCurrentChordChange]);
 
   const voicings = useMemo<VoiceLeadingVoicing[]>(() => {
     if (!current || !voiceLeadingMelody) return [];
@@ -2036,7 +2046,7 @@ function VoiceLeadingPanel({
         </div>
       ) : voicings.length === 0 ? (
         <div className="text-[11px] font-mono text-muted-foreground italic p-2">
-          No Drop 2 / Drop 3 / Shell voicing of {current.root} {current.chordType} has that note as its highest voice. Pick another note.
+          No Drop 2 / Drop 3 / Shell shape of {current.root} {current.chordType} can be modified to put that note on top. Pick another note.
         </div>
       ) : (
         <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
@@ -2123,7 +2133,7 @@ function ScaleViewPanel({
   dropMode, setDropMode,
   threeNpsMode, setThreeNpsMode,
   voiceLeadingMode, setVoiceLeadingMode,
-  voiceLeadingMelody, setVoiceLeadingMelody,
+  voiceLeadingMelody, setVoiceLeadingMelody, onVoiceLeadingChordChange,
   onApplyScale,
   showFretBox = false, fretBoxStart = 1, fretBoxSize = 5, setShowFretBox,
   fretBoxStringStart = 0, fretBoxStringSize = 6,
@@ -2147,6 +2157,7 @@ function ScaleViewPanel({
   setVoiceLeadingMode: (v: boolean) => void;
   voiceLeadingMelody: { stringIndex: number; fret: number } | null;
   setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
+  onVoiceLeadingChordChange?: (c: { root: NoteName; chordType: string } | null) => void;
   onApplyScale?: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   showFretBox?: boolean;
   fretBoxStart?: number;
@@ -2820,6 +2831,7 @@ function ScaleViewPanel({
             onSetInversionVoicing={onSetInversionVoicing}
             voiceLeadingMelody={voiceLeadingMelody}
             setVoiceLeadingMelody={setVoiceLeadingMelody}
+            onCurrentChordChange={onVoiceLeadingChordChange}
             keyRoot={primaryScale.root}
             keyMode={keyMode}
           />

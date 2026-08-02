@@ -110,6 +110,9 @@ const Index = () => {
   const [threeNpsMode, setThreeNpsMode] = useState(false);
   const [voiceLeadingMode, setVoiceLeadingMode] = useState(false);
   const [voiceLeadingMelody, setVoiceLeadingMelody] = useState<{ stringIndex: number; fret: number } | null>(null);
+  /** Chord currently selected in the Voice Leading transport — its arpeggio is
+   *  drawn on the fretboard so the user can see the available tones. */
+  const [voiceLeadingChord, setVoiceLeadingChord] = useState<{ root: NoteName; chordType: string } | null>(null);
   const arpAddClickRef = useRef<((si: number, fret: number) => void) | null>(null);
   const arpBarreDragRef = useRef<((fromSi: number, toSi: number, fret: number) => void) | null>(null);
   const [chordAddRoot, setChordAddRoot] = useState<NoteName | null>(null);
@@ -305,6 +308,16 @@ const Index = () => {
     const rootIdx = NOTE_NAMES.indexOf(chord.root);
     return new Set(formula.map(i => (rootIdx + (i % 12)) % 12));
   }, [scaleViewDegreeFilter, fb.primaryScale.root, fb.primaryScale.scale]);
+
+  // Arpeggio tones of the chord currently focused in Voice Leading.
+  const voiceLeadingChordTones = useMemo(() => {
+    if (!voiceLeadingMode || activeTab !== 'scaleview' || !voiceLeadingChord) return null;
+    const formula = CHORD_FORMULAS[voiceLeadingChord.chordType] || ARPEGGIO_FORMULAS[voiceLeadingChord.chordType];
+    if (!formula) return null;
+    const rootIdx = NOTE_NAMES.indexOf(voiceLeadingChord.root);
+    if (rootIdx < 0) return null;
+    return new Set(formula.map(i => (rootIdx + (i % 12)) % 12));
+  }, [voiceLeadingMode, activeTab, voiceLeadingChord]);
 
   // Voice-leading: register EVERY fretboard position as a clickable target so the user
   // can pick any note as their melody (top voice). Chord tones are still emphasized
@@ -799,7 +812,8 @@ const Index = () => {
               arpAddMode={fb.arpAddMode || (voiceLeadingMode && activeTab === 'scaleview')}
               onArpBarreDrag={(fromSi, toSi, fret) => arpBarreDragRef.current?.(fromSi, toSi, fret)}
                inversionVoicing={activeInversionVoicing}
-               scaleViewChordTones={scaleViewChordTones}
+               scaleViewChordTones={voiceLeadingChordTones ?? scaleViewChordTones}
+               voiceLeadingChordRoot={voiceLeadingChordTones ? voiceLeadingChord?.root ?? null : null}
                ghostNoteOpacity={fb.ghostNoteOpacity}
                voiceLeadingMelody={voiceLeadingMode && activeTab === 'scaleview' ? voiceLeadingMelody : null}
                voiceLeadingMelodyColor={voiceLeadingMode && activeTab === 'scaleview' && scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
@@ -891,6 +905,7 @@ const Index = () => {
                  }}
                  voiceLeadingMelody={voiceLeadingMelody}
                  setVoiceLeadingMelody={setVoiceLeadingMelody}
+                 onVoiceLeadingChordChange={setVoiceLeadingChord}
                 onApplyBeginnerPreset={(preset) => {
                   if (preset === null) {
                     // Deselect: turn off focus box

@@ -3105,6 +3105,9 @@ export interface VoiceLeadingVoicing extends InversionVoicing {
   melody: { stringIndex: number; fret: number };
   /** Structural family the shape belongs to — only Drop 2, Drop 3 and Shell are allowed. */
   voicingType: VoiceLeadingVoicingType;
+  /** True when the shape is a Drop/Shell structure whose top voice was altered
+   *  to place the chosen melody note on top (rather than a textbook shape). */
+  modified?: boolean;
 }
 
 /** Stack chord tones in close position starting from inversion `k`, as semitone offsets. */
@@ -3175,6 +3178,74 @@ function classifyVoiceLeadingShape(
   return null;
 }
 
+/** All Drop 2 / Drop 3 structures for a chord, as normalised offsets plus the
+ *  interval-from-root of each voice, so a shape can be matched voice by voice. */
+function dropShapeVariants(tones: number[]): { type: VoiceLeadingVoicingType; offsets: number[]; degrees: number[] }[] {
+  const out: { type: VoiceLeadingVoicingType; offsets: number[]; degrees: number[] }[] = [];
+  for (let k = 0; k < tones.length; k++) {
+    const close = closePositionOffsets(tones, k);
+    for (const n of [2, 3] as const) {
+      if (close.length < n) continue;
+      const idx = close.length - n;
+      const raw = close.slice();
+      raw[idx] -= 12;
+      raw.sort((a, b) => a - b);
+      const min = raw[0];
+      out.push({
+        type: n === 2 ? 'Drop 2' : 'Drop 3',
+        offsets: raw.map(v => v - min),
+        degrees: raw.map(v => (((tones[k] + v) % 12) + 12) % 12),
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Classify a shape, allowing the TOP voice to be altered so a chosen melody
+ * note sits on top. The lower voices must still form the bottom of a genuine
+ * Drop 2 / Drop 3 / Shell structure — the top voice is then substituted.
+ */
+function classifyAlteredTopShape(
+  pitches: number[],
+  rootIdx: number,
+  intervals: number[],
+  thirdInterval?: number,
+  seventhInterval?: number,
+): { type: VoiceLeadingVoicingType; modified: boolean } | null {
+  const strict = classifyVoiceLeadingShape(pitches, rootIdx, intervals, thirdInterval, seventhInterval);
+  if (strict) return { type: strict, modified: false };
+
+  const lower = pitches.slice(0, -1);
+  if (lower.length < 2) return null;
+  const lowerDeg = lower.map(p => ((p % 12) - rootIdx + 12) % 12);
+  if (new Set(lowerDeg).size !== lowerDeg.length) return null; // no doubled lower voices
+  const lowerOffsets = lower.map(p => p - lower[0]);
+
+  const tones = [...new Set(intervals)].sort((a, b) => a - b);
+
+  // Drop 2 / Drop 3 with an altered top voice.
+  if (lower.length === tones.length - 1) {
+    for (const shape of dropShapeVariants(tones)) {
+      const wantOffsets = shape.offsets.slice(0, -1);
+      const wantDegrees = shape.degrees.slice(0, -1);
+      if (
+        sameOffsets(lowerOffsets, wantOffsets.map(v => v - wantOffsets[0])) &&
+        wantDegrees.every((d, i) => d === lowerDeg[i])
+      ) {
+        return { type: shape.type, modified: true };
+      }
+    }
+  }
+
+  // Shell with an altered top voice: bottom pair drawn from root / 3rd / 7th.
+  if (lower.length === 2 && thirdInterval !== undefined && seventhInterval !== undefined) {
+    const shellSet = new Set([0, thirdInterval, seventhInterval]);
+    if (lowerDeg.every(d => shellSet.has(d))) return { type: 'Shell', modified: true };
+  }
+
+  return null;
+}
 
 
 export function generateVoiceLeadingVoicings(
@@ -3255,7 +3326,7 @@ export function generateVoiceLeadingVoicings(
       });
 
       const intervalNameMap: Record<number, string> = {
-        0: 'R', 2: '9', 3: '♭3', 4: '3', 5: '11', 6: '♭5', 7: '5',
+        0: 'R', 1: '♭9', 2: '9', 3: '♭3', 4: '3', 5: '11', 6: '♭5', 7: '5',
         8: '♭6', 9: '6', 10: '♭7', 11: '7', 14: '9', 17: '11', 21: '13',
       };
       const shortNames: Record<string, string> = {
@@ -3280,11 +3351,14 @@ export function generateVoiceLeadingVoicings(
           const hasSeventh = seventhInterval !== undefined && intervalsUsed.has(seventhInterval);
           if (!hasThird && !hasSeventh) return;
 
-          // Only Drop 2, Drop 3 and Shell structures are allowed here.
-          const voicingType = classifyVoiceLeadingShape(
+          // Drop 2 / Drop 3 / Shell structures — either textbook, or the same
+          // structure with its top voice modified to carry the melody note.
+          const classified = classifyAlteredTopShape(
             allPitches, rootIdx, intervals, thirdInterval, seventhInterval,
           );
-          if (!voicingType) return;
+          if (!classified) return;
+          const voicingType = classified.type;
+          const isModified = classified.modified;
 
 
           const frets: (number | -1)[] = Array(tuning.length).fill(-1);
@@ -3312,8 +3386,9 @@ export function generateVoiceLeadingVoicings(
           results.push({
             frets, notes,
             inversionNumber: bottomNotePitch.interval === 0 ? 0 : -1,
-            inversionLabel: `${voicingType} · melody on ${topNoteName}`,
+            inversionLabel: `${voicingType}${isModified ? ' (mod)' : ''} · melody on ${topNoteName}`,
             voicingType,
+            modified: isModified,
 
             slashName,
             alternateName: '',
@@ -3342,12 +3417,13 @@ export function generateVoiceLeadingVoicings(
     else if (v.hasThird || v.hasSeventh) score += 40;
     score += v.notes.length * 5;
     if (melodyIsChordTone) score += 6;
+    if (v.modified) score -= 12;
     score -= v.span * 2;
     score -= minFret * 0.2;
     return { v, score };
   });
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 14).map(s => s.v);
+  return scored.slice(0, 18).map(s => s.v);
 }
 
 /** Broad chord family used by key/modulation detection. */

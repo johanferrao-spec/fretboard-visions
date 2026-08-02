@@ -71,6 +71,8 @@ interface FretboardProps {
   onArpAddClick?: (stringIndex: number, fret: number) => void;
   onArpBarreDrag?: (fromStringIndex: number, toStringIndex: number, fret: number) => void;
   scaleViewChordTones?: Set<number> | null;
+  /** In voice-leading mode, colour chord tones relative to this chord root. */
+  voiceLeadingChordRoot?: NoteName | null;
   inversionVoicing?: import('@/lib/music').InversionVoicing | null;
   ghostNoteOpacity?: number;
   inversionDegreeColor?: string | null;
@@ -118,6 +120,7 @@ export default function Fretboard({
   arpOverlayOpacity = 0.3, arpPathVisible = true,
   arpAddMode = false, arpAddReferenceNotes, lookaheadNotes, threeNpsNotes, threeNpsColor, voiceLeadingMelody, voiceLeadingMelodyColor, voiceLeadingActive = false, onArpAddClick, onArpBarreDrag,
   scaleViewChordTones,
+  voiceLeadingChordRoot = null,
   inversionVoicing,
   ghostNoteOpacity = 0.75,
   inversionDegreeColor,
@@ -536,7 +539,7 @@ export default function Fretboard({
       const noteIdx = (['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const).indexOf(note);
       const isChordTone = scaleViewChordTones.has(noteIdx);
       const inP = isNoteInSelection(note, primaryScale.root, primaryScale.scale, primaryScale.mode);
-      if (!inP) {
+      if (!inP && !(voiceLeadingActive && isChordTone)) {
         // Voice-leading mode: keep non-scale notes visible & clickable as melody picks.
         if (voiceLeadingActive) {
           return {
@@ -553,7 +556,7 @@ export default function Fretboard({
       if (isChordTone) {
         let bg = inversionDegreeColor ? `hsl(${inversionDegreeColor})` : pColor;
         if (degreeColors) {
-          const dc = getDegreeColor(primaryScale.root, note);
+          const dc = getDegreeColor(voiceLeadingChordRoot ?? primaryScale.root, note);
           if (dc) bg = dc;
         }
         // Glow effect via ring
