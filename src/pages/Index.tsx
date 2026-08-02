@@ -664,6 +664,20 @@ const Index = () => {
               <Target size={12} /> Tuner
             </button>
 
+            {/* MIDI playback toggle */}
+            <button
+              onClick={() => { const v = !midiPlayback; setMidiPlayback(v); setMidiPlaybackEnabled(v); }}
+              className={`px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider transition-colors inline-flex items-center gap-1 ${
+                midiPlayback
+                  ? 'bg-primary text-primary-foreground shadow-[0_0_10px_hsl(var(--primary)/0.5)]'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              }`}
+              title="Hear notes and chords as a MIDI guitar when clicked"
+            >
+              <Music2 size={12} /> Midi Playback
+            </button>
+
+
             {/* Display mode + Size/Frets/Opacity sliders moved into Fretboard toolbar */}
 
 
