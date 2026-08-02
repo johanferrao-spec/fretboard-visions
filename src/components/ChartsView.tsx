@@ -76,8 +76,10 @@ interface ChartsViewProps {
   currentKey: NoteName;
   keyMode: KeyMode;
   onToggleCharts?: () => void;
-  /** Charts and backing tracks share a key — fired whenever the chart's key changes. */
-  onKeyChange?: (key: NoteName) => void;
+  /** Close the chart view entirely and return to the app's main screen. */
+  onClose?: () => void;
+  /** Charts, backing tracks and the fretboard share a key — fired on any key/mode change. */
+  onKeyChange?: (key: NoteName, mode: KeyMode) => void;
   /** Fired whenever the arrangement (or its underlying chords) change, so the
       parent can push the resulting chord progression into the backing-track timeline. */
   onArrangementChange?: (data: { chords: TimelineChord[]; measures: number; bpm: number; sections: { id: string; name: string; color: string; startBeat: number; lengthBeats: number }[] }) => void;
