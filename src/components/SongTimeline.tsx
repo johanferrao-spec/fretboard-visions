@@ -5,7 +5,7 @@ import type { NoteName } from '@/lib/music';
 import {
   NOTE_NAMES, CHORD_FORMULAS, getDiatonicChords, getChordVariations,
   getChordDegree, SCALE_DEGREE_COLORS, ROMAN_NUMERALS, ROMAN_NUMERALS_MINOR,
-  type ChordVariation, type KeyMode,
+  detectSecondaryKeyRuns, type ChordVariation, type KeyMode,
 } from '@/lib/music';
 import CellGridView from './ChordCellGrid';
 import { supabase } from '@/integrations/supabase/client';
