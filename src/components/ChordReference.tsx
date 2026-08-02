@@ -2259,6 +2259,7 @@ function ScaleViewPanel({
   };
 
   // Degrees the user has forced to a dominant 7 chord (secondary-dominant style)
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const [dominantDegrees, setDominantDegrees] = useState<Set<number>>(new Set());
   const toggleDominantDegree = (i: number) => {
     setDominantDegrees(prev => {
