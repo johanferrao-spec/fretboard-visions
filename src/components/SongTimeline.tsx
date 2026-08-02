@@ -1346,6 +1346,11 @@ export default function SongTimeline({
                     setDragChord({ id: chord.id, offsetBeats });
                   }
                 }}
+                onMouseEnter={() => {
+                  const run = secondaryKeyRuns.find(r => r.ids.includes(chord.id));
+                  setHoveredRunKey(run ? `tempkey-${run.startBeat}` : null);
+                }}
+                onMouseLeave={() => setHoveredRunKey(null)}
                 onClick={(e) => handleChordClick(chord, e)}
                 onContextMenu={(e) => handleChordContextMenu(chord, e)}
                 onDoubleClick={(e) => {
