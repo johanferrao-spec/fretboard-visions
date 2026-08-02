@@ -2546,6 +2546,11 @@ function ScaleViewPanel({
             showFretBox={showFretBox}
             fretBoxStart={fretBoxStart}
             fretBoxSize={fretBoxSize}
+            fretBoxStringStart={fretBoxStringStart}
+            fretBoxStringSize={fretBoxStringSize}
+            degreeColors={degreeColors}
+            keyRoot={primaryScale.root}
+            keyMode={keyMode}
           />
         )}
 
