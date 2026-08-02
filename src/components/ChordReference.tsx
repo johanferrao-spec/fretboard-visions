@@ -2157,6 +2157,7 @@ function ScaleViewPanel({
   setVoiceLeadingMode: (v: boolean) => void;
   voiceLeadingMelody: { stringIndex: number; fret: number } | null;
   setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
+  onVoiceLeadingChordChange?: (c: { root: NoteName; chordType: string } | null) => void;
   onApplyScale?: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   showFretBox?: boolean;
   fretBoxStart?: number;
