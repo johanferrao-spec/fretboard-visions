@@ -916,24 +916,24 @@ export default function SongTimeline({
         )}
 
 
-        <div className="ml-auto flex items-center gap-1 relative">
+        <div className="ml-auto flex items-center gap-0.5 relative">
           {backingTrackActive && (
             <>
               <button
                 onClick={() => { setShowSavePop(s => !s); setShowLoadPop(false); }}
-                className="px-2 py-1 rounded-md text-[9px] font-mono uppercase tracking-wider bg-primary/20 text-primary hover:bg-primary/30 transition-colors flex items-center gap-1"
+                className="p-1 rounded-md bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
                 title="Save backing track"
               >
-                <Save size={10} /> Save
+                <Save size={11} />
               </button>
               <button
                 onClick={() => { setShowLoadPop(s => !s); setShowSavePop(false); }}
-                className="px-2 py-1 rounded-md text-[9px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground hover:bg-muted transition-colors flex items-center gap-1"
+                className="p-1 rounded-md bg-secondary text-secondary-foreground hover:bg-muted transition-colors relative"
                 title="Load backing track"
               >
-                <FolderOpen size={10} /> Load
+                <FolderOpen size={11} />
                 {savedBackingTracks.length > 0 && (
-                  <span className="text-[8px] bg-muted rounded px-1 ml-0.5">{savedBackingTracks.length}</span>
+                  <span className="absolute -top-1 -right-1 text-[7px] bg-muted rounded-full w-3 h-3 flex items-center justify-center">{savedBackingTracks.length}</span>
                 )}
               </button>
               {showSavePop && (
