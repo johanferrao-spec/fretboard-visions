@@ -1291,9 +1291,10 @@ export default function SongTimeline({
             const leftPct = (chord.startBeat / totalBeats) * 100;
             const widthPct = (chord.duration / totalBeats) * 100;
             const color = getChordColor(chord);
-            const degree = getChordDegree(timelineKey, chord.root, chord.chordType, keyMode);
-            const isDiatonic = degree >= 0;
             const borrowed = isBorrowed(chord);
+            // Chords inside a secondary ii–V run are coloured against their
+            // temporary key, so treat them as diatonic (full-strength colour).
+            const isDiatonic = !borrowed;
             const chordLabel = `${chord.root}${chord.chordType === 'Major' ? '' : chord.chordType === 'Minor' ? 'm' : ` ${chord.chordType}`}`;
             const bassLabel = chord.bassNote ? `/${chord.bassNote}` : '';
 
