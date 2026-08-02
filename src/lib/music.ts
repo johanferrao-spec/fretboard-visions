@@ -3105,6 +3105,9 @@ export interface VoiceLeadingVoicing extends InversionVoicing {
   melody: { stringIndex: number; fret: number };
   /** Structural family the shape belongs to — only Drop 2, Drop 3 and Shell are allowed. */
   voicingType: VoiceLeadingVoicingType;
+  /** True when the shape is a Drop/Shell structure whose top voice was altered
+   *  to place the chosen melody note on top (rather than a textbook shape). */
+  modified?: boolean;
 }
 
 /** Stack chord tones in close position starting from inversion `k`, as semitone offsets. */
