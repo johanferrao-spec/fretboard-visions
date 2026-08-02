@@ -1632,10 +1632,10 @@ function CompingDiagram({ item, isActive, onClick, degreeColors = false, tuning 
         ))}
         {item.frets.map((f, si) => {
           if (f === -1) return <text key={`m${si}`} x={leftPad + si * cellW} y={topPad - 3} fontSize={9} fill="hsl(var(--destructive))" textAnchor="middle" fontFamily="monospace" fontWeight="bold">✕</text>;
-          if (f === 0) return <circle key={`o${si}`} cx={leftPad + si * cellW} cy={topPad - 5} r={3.5} fill="none" stroke={`hsl(${color})`} strokeWidth={1.5} />;
+          if (f === 0) return <circle key={`o${si}`} cx={leftPad + si * cellW} cy={topPad - 5} r={3.5} fill="none" stroke={dotColor(si, 0)} strokeWidth={1.5} />;
           const pos = f - startFret;
           if (pos < 0 || pos >= numFrets) return null;
-          return <circle key={`n${si}`} cx={leftPad + si * cellW} cy={topPad + pos * cellH + cellH / 2} r={5} fill={`hsl(${color})`} opacity={0.95} />;
+          return <circle key={`n${si}`} cx={leftPad + si * cellW} cy={topPad + pos * cellH + cellH / 2} r={5} fill={dotColor(si, f)} opacity={0.95} />;
         })}
       </svg>
       <div className="text-[8px] font-mono leading-tight text-muted-foreground">{item.kind}</div>
