@@ -767,7 +767,7 @@ export default function SongTimeline({
         </div>
 
         <div
-          className="flex items-center gap-1.5"
+          className="flex items-center gap-1"
           title={`Swing (${swingSubdivision === '8n' ? '8th' : '16th'} notes): 0 = straight, 100 = triplet feel`}
         >
           <div
@@ -777,10 +777,10 @@ export default function SongTimeline({
           >
             <button
               type="button"
-              className="text-[10px] font-mono text-muted-foreground uppercase px-1.5 py-0.5 rounded hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-1"
+              className="text-[9px] font-mono text-muted-foreground uppercase px-1 py-0.5 rounded hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-0.5"
             >
               Swing
-              <span className="text-[8px] opacity-70">{swingSubdivision === '8n' ? '8th' : '16th'}</span>
+              <span className="text-[7px] opacity-70">{swingSubdivision === '8n' ? '8th' : '16th'}</span>
             </button>
             {swingMenuOpen && (
               <div className="absolute top-full left-0 mt-0.5 z-50 bg-popover border border-border rounded shadow-lg py-0.5 min-w-[92px]">
