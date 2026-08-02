@@ -1544,7 +1544,9 @@ export default function Fretboard({
                             onMouseDown={(e) => {
                               e.stopPropagation();
                               e.preventDefault();
+                              playFretNote(tuning, stringIdx, fret);
                               if (arpAddMode && onArpAddClick) {
+
                                 arpDragRef.current = { startString: stringIdx, fret, coveredStrings: new Set([stringIdx]) };
                                 onArpAddClick(stringIdx, fret);
                               } else if (identifyMode) {
