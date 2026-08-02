@@ -3349,3 +3349,69 @@ export function generateVoiceLeadingVoicings(
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, 14).map(s => s.v);
 }
+
+/** Broad chord family used by key/modulation detection. */
+export function chordFamilyOf(t: string): 'maj' | 'min' | 'dom' | 'dim' | 'other' {
+  const s = (t || '').toLowerCase();
+  if (/half|m7b5|m7♭5|dim/.test(s)) return 'dim';
+  if (/^min|^m(?!aj)/.test(s)) return 'min';
+  if (/dominant|^7|^9$|^11$|^13$|7sus/.test(s)) return 'dom';
+  if (/maj|major|^6|add9|power/.test(s)) return 'maj';
+  return 'other';
+}
+
+/** Normalize a key mode to the seven diatonic names used by the UI selects. */
+export function normalizeKeyMode(mode: KeyMode): KeyMode {
+  if (mode === 'major') return 'ionian';
+  if (mode === 'minor') return 'aeolian';
+  return mode;
+}
+
+export interface SecondaryKeyRun {
+  /** Indices into the supplied chord array (inclusive). */
+  start: number;
+  end: number;
+  tonic: NoteName;
+  mode: KeyMode;
+  label: string;
+}
+
+/**
+ * Detect secondary ii–V and ii–V–I runs that momentarily tonicise another key.
+ * Shared by the chart grid and the backing-track timeline.
+ */
+export function detectSecondaryKeyRuns(
+  chords: { root: NoteName; chordType: string }[],
+  homeKey: NoteName,
+  homeMode: KeyMode,
+): SecondaryKeyRun[] {
+  const idx = (n: NoteName) => NOTE_NAMES.indexOf(n);
+  const up = (n: NoteName, s: number) => NOTE_NAMES[(((idx(n) + s) % 12) + 12) % 12];
+  const homeRoots = new Set(getDiatonicChords(homeKey, homeMode).map(d => d.root));
+  const out: SecondaryKeyRun[] = [];
+  for (let i = 0; i < chords.length - 1; i++) {
+    const a = chords[i], b = chords[i + 1];
+    const famA = chordFamilyOf(a.chordType), famB = chordFamilyOf(b.chordType);
+    const fourthUp = (((idx(b.root) - idx(a.root)) % 12) + 12) % 12 === 5;
+    if ((famA === 'min' || famA === 'dim') && famB === 'dom' && fourthUp) {
+      const tonic = up(b.root, 5);
+      const isMinorTarget = famA === 'dim';
+      let end = i + 1;
+      let resolved = false;
+      const nxt = chords[i + 2];
+      if (nxt && nxt.root === tonic) { end = i + 2; resolved = true; }
+      const leavesHome = tonic !== homeKey
+        && (!homeRoots.has(a.root) || !homeRoots.has(b.root) || !homeRoots.has(tonic));
+      if (!leavesHome) { i = end; continue; }
+      out.push({
+        start: i,
+        end,
+        tonic,
+        mode: isMinorTarget ? 'minor' : 'major',
+        label: `${resolved ? 'ii–V–I' : 'ii–V'} of ${tonic}${isMinorTarget ? 'm' : ''}`,
+      });
+      i = end;
+    }
+  }
+  return out;
+}
