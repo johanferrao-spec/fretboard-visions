@@ -1479,11 +1479,13 @@ function MiniChordDiagram({ voicing, stringGroup, isActive, color, onClick, tuni
   );
 }
 
-function VoiceLeadingDiagram({ voicing, color, onClick, isActive = false }: {
+function VoiceLeadingDiagram({ voicing, color, onClick, isActive = false, draggable = false, onDragStart }: {
   voicing: VoiceLeadingVoicing;
   color: string;
   onClick?: () => void;
   isActive?: boolean;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
 }) {
   const frettedNotes = voicing.frets.filter(f => f > 0);
   const minFret = frettedNotes.length > 0 ? Math.min(...frettedNotes) : 1;
