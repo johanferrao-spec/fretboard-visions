@@ -815,16 +815,35 @@ export default function SongTimeline({
 
         <div className="flex items-center gap-1">
           <span className="text-[10px] font-mono text-muted-foreground uppercase">Snap</span>
-          {(['1/4', '1/8', '1/16'] as SnapValue[]).map(s => (
-            <button
-              key={s}
-              onClick={() => setSnap(s)}
-              className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition-colors ${
-                snap === s ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:bg-muted'
-              }`}
-            >{s}</button>
-          ))}
+          <select
+            value={snap}
+            onChange={e => setSnap(e.target.value as SnapValue)}
+            className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500 text-black border border-amber-400 hover:bg-amber-400 cursor-pointer focus:outline-none"
+            aria-label="Snap value"
+          >
+            {(['1/4', '1/8', '1/16'] as SnapValue[]).map(s => (
+              <option key={s} value={s} className="bg-card text-foreground">{s}</option>
+            ))}
+          </select>
         </div>
+
+        {/* Timeline zoom */}
+        <div className="flex items-center gap-1" title="Timeline zoom (double-click to reset)">
+          <span className="text-[10px] font-mono text-muted-foreground uppercase">Zoom</span>
+          <input
+            type="range"
+            min={1}
+            max={4}
+            step={0.25}
+            value={zoom}
+            onChange={(e) => setZoom(parseFloat(e.target.value))}
+            onDoubleClick={() => setZoom(1)}
+            className="w-20 accent-primary cursor-pointer"
+            aria-label="Timeline zoom"
+          />
+          <span className="text-[9px] font-mono text-muted-foreground w-7 text-right">{zoom.toFixed(1)}x</span>
+        </div>
+
 
         <div className="flex items-center gap-1">
           <span className="text-[10px] font-mono text-muted-foreground uppercase">Bars</span>
