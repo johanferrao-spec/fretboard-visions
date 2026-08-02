@@ -1937,6 +1937,15 @@ function VoiceLeadingPanel({
   const key = current ? chordKey(current) : '';
   const savedList = saved[key] ?? [];
 
+  // Degree colour of the current chord relative to the selected key.
+  const currentColor = useMemo(() => {
+    if (!current) return VL_COLOR;
+    const deg = getChordDegree(keyRoot, current.root, current.chordType, keyMode);
+    if (deg >= 0) return SCALE_DEGREE_COLORS[deg];
+    const semi = (((NOTE_NAMES.indexOf(current.root) - NOTE_NAMES.indexOf(keyRoot)) % 12) + 12) % 12;
+    return formulaSemitoneToDegree(semi).color;
+  }, [current, keyRoot, keyMode]);
+
   const saveCurrent = () => {
     const v = voicings[selected];
     if (!v || !key) return;
