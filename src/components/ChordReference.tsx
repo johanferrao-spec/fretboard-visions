@@ -2019,28 +2019,6 @@ function VoiceLeadingPanel({
         </div>
       </div>
 
-      {/* Progression strip */}
-      <div className="flex gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'thin' }}>
-        {sequence.map((c, i) => {
-          const deg = getChordDegree(keyRoot, c.root, c.chordType, keyMode);
-          const semi = (((NOTE_NAMES.indexOf(c.root) - NOTE_NAMES.indexOf(keyRoot)) % 12) + 12) % 12;
-          const col = deg >= 0 ? SCALE_DEGREE_COLORS[deg] : formulaSemitoneToDegree(semi).color;
-          const count = (saved[chordKey(c)] ?? []).length;
-          return (
-            <button
-              key={c.id}
-              onClick={() => setIdx(i)}
-              className="px-2 py-1 rounded text-[10px] font-mono font-bold shrink-0 border-2 transition-all"
-              style={{
-                backgroundColor: i === idx ? `hsl(${col})` : `hsl(${col} / 0.28)`,
-                borderColor: i === idx ? `hsl(${col})` : `hsl(${col} / 0.5)`,
-                color: i === idx ? '#000' : `hsl(${col})`,
-                boxShadow: i === idx ? `0 0 10px hsl(${col} / 0.5)` : 'none',
-              }}
-            >{c.root} {c.chordType}{count > 0 ? ` (${count})` : ''}</button>
-          );
-        })}
-      </div>
 
       {/* Candidate voicings under the chosen melody */}
       {!voiceLeadingMelody ? (
