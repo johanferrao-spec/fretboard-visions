@@ -2379,15 +2379,9 @@ function ScaleViewPanel({
 
   // Apply octave shift to inversion voicing
   useEffect(() => {
-    if (voiceLeadingMode && filteredVlVoicings.length > 0) {
-      const idx = Math.min(currentVlIdx, filteredVlVoicings.length - 1);
-      onSetInversionVoicing?.(filteredVlVoicings[idx]);
-      return;
-    }
-    if (voiceLeadingMode && filteredVlVoicings.length === 0) {
-      onSetInversionVoicing?.(null);
-      return;
-    }
+    // Voice Leading owns the fretboard voicing while its panel is open.
+    if (voiceLeadingMode) return;
+
     if (dropMode && inversionStringGroup !== null && inversions.length > 0) {
       const idx = Math.min(currentInvIdx, inversions.length - 1);
       const baseInv = inversions[idx];
