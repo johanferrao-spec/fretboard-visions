@@ -170,8 +170,18 @@ export default function SongTimeline({
       startBeat: sorted[r.start].startBeat,
       endBeat: sorted[r.end].startBeat + sorted[r.end].duration,
       label: r.label,
+      tonic: r.tonic,
+      mode: r.mode,
+      ids: sorted.slice(r.start, r.end + 1).map(c => c.id),
     }));
   }, [chords, timelineKey, keyMode]);
+  /** Chord id -> temporary key it is tonicising (drives degree colours). */
+  const tempKeyByChordId = useMemo(() => {
+    const map = new Map<string, { tonic: NoteName; mode: KeyMode }>();
+    secondaryKeyRuns.forEach(run => run.ids.forEach(id => map.set(id, { tonic: run.tonic, mode: run.mode })));
+    return map;
+  }, [secondaryKeyRuns]);
+
   const { numerals: currentNumerals } = useMemo(() => {
     const ALL_MODES: KeyMode[] = ['major', 'minor', 'ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian', 'locrian'];
     if (keyMode === 'minor') return { numerals: ROMAN_NUMERALS_MINOR };
