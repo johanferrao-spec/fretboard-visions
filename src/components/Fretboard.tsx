@@ -8,6 +8,8 @@ import {
   type ChordVoicing, type ArpeggioPosition,
 } from '@/lib/music';
 import type { ScaleSelection, ChordSelection, DisplayMode, Orientation } from '@/hooks/useFretboard';
+import { playFretNote } from '@/lib/guitarMidi';
+
 
 interface FretboardProps {
   maxFrets: number;
@@ -1459,6 +1461,7 @@ export default function Fretboard({
                 <button
                   onDoubleClick={(e) => { e.stopPropagation(); if (!identifyMode && !arpAddMode) onToggleString(stringIdx); }}
                   onClick={(e) => {
+                    playFretNote(tuning, stringIdx, 0);
                     if (identifyMode) {
                       e.stopPropagation();
                       const newFrets = [...identifyFrets];
@@ -1470,6 +1473,7 @@ export default function Fretboard({
                       onArpAddClick(stringIdx, 0);
                     }
                   }}
+
                   className={`shrink-0 w-7 h-full flex items-center justify-center font-mono font-bold transition-all z-10 ${
                     isDisabled ? 'text-muted-foreground/30 line-through' : 'text-muted-foreground'
                   } ${isVertical ? '-rotate-90' : ''}`}
@@ -1540,7 +1544,9 @@ export default function Fretboard({
                             onMouseDown={(e) => {
                               e.stopPropagation();
                               e.preventDefault();
+                              playFretNote(tuning, stringIdx, fret);
                               if (arpAddMode && onArpAddClick) {
+
                                 arpDragRef.current = { startString: stringIdx, fret, coveredStrings: new Set([stringIdx]) };
                                 onArpAddClick(stringIdx, fret);
                               } else if (identifyMode) {
@@ -1599,7 +1605,9 @@ export default function Fretboard({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              playFretNote(tuning, stringIdx, fret);
                               if (arpAddMode && onArpAddClick && (fret > 0 || voiceLeadingActive)) {
+
                                 onArpAddClick(stringIdx, fret);
                               } else if (identifyMode) {
                                 // Simple toggle like chord library — barre is preserved by useEffect

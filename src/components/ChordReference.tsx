@@ -1855,7 +1855,263 @@ function CompingToolPanel({
   );
 }
 
+
+// ============================================================
+// VOICE LEADING — step through the timeline progression, pick a
+// melody note on the fretboard, and build a saved chain of
+// Drop 2 / Drop 3 / Shell voicings under that melody.
+// ============================================================
+
+const VL_COLOR = '280 80% 60%';
+const VL_STORE_KEY = 'mf-voice-leading-saved-v1';
+
+const chordKey = (c: { root: NoteName; chordType: string }) => `${c.root}|${c.chordType}`;
+
+function VoiceLeadingPanel({
+  timelineChords, tuning, onSetInversionVoicing,
+  voiceLeadingMelody, setVoiceLeadingMelody,
+  keyRoot = 'C' as NoteName, keyMode = 'major' as KeyMode,
+}: {
+  timelineChords: TimelineChord[];
+  tuning: number[];
+  onSetInversionVoicing?: (v: InversionVoicing | null) => void;
+  voiceLeadingMelody: { stringIndex: number; fret: number } | null;
+  setVoiceLeadingMelody: (m: { stringIndex: number; fret: number } | null) => void;
+  keyRoot?: NoteName;
+  keyMode?: KeyMode;
+}) {
+  const [idx, setIdx] = useState(0);
+  const [selected, setSelected] = useState(0);
+  const [hideOpenStrings, setHideOpenStrings] = useState(false);
+  const [saved, setSaved] = useState<Record<string, VoiceLeadingVoicing[]>>({});
+  const [savedIdx, setSavedIdx] = useState<Record<string, number>>({});
+
+  // Load / persist the saved voice-leading chain.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(VL_STORE_KEY);
+      if (raw) setSaved(JSON.parse(raw));
+    } catch {/* ignore corrupt storage */}
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem(VL_STORE_KEY, JSON.stringify(saved)); } catch {/* quota */}
+  }, [saved]);
+
+  // Progression: chords in beat order with consecutive repeats merged.
+  const sequence = useMemo(() => {
+    const sorted = [...timelineChords].sort((a, b) => a.startBeat - b.startBeat);
+    const out: TimelineChord[] = [];
+    for (const c of sorted) {
+      const prev = out[out.length - 1];
+      if (prev && prev.root === c.root && prev.chordType === c.chordType) continue;
+      out.push(c);
+    }
+    return out;
+  }, [timelineChords]);
+
+  useEffect(() => { setIdx(i => (sequence.length ? Math.min(i, sequence.length - 1) : 0)); }, [sequence.length]);
+
+  const current = sequence[idx];
+
+  const voicings = useMemo<VoiceLeadingVoicing[]>(() => {
+    if (!current || !voiceLeadingMelody) return [];
+    const seventh = COMPING_SEVENTH_TYPE[current.chordType] || current.chordType;
+    let list = generateVoiceLeadingVoicings(
+      current.root, seventh, voiceLeadingMelody.stringIndex, voiceLeadingMelody.fret, tuning,
+    );
+    if (hideOpenStrings) list = list.filter(v => !v.frets.some(f => f === 0));
+    return list;
+  }, [current, voiceLeadingMelody, tuning, hideOpenStrings]);
+
+  useEffect(() => { setSelected(0); }, [voicings]);
+
+  useEffect(() => {
+    if (voicings.length > 0) onSetInversionVoicing?.(voicings[selected] ?? null);
+  }, [voicings, selected, onSetInversionVoicing]);
+
+  const key = current ? chordKey(current) : '';
+  const savedList = saved[key] ?? [];
+
+  const saveCurrent = () => {
+    const v = voicings[selected];
+    if (!v || !key) return;
+    setSaved(prev => {
+      const list = prev[key] ?? [];
+      if (list.some(x => x.frets.join(',') === v.frets.join(','))) return prev;
+      return { ...prev, [key]: [...list, v] };
+    });
+  };
+
+  const removeSaved = (k: string, i: number) => {
+    setSaved(prev => ({ ...prev, [k]: (prev[k] ?? []).filter((_, j) => j !== i) }));
+  };
+
+  const cycleSaved = (k: string, list: VoiceLeadingVoicing[], dir: 1 | -1) => {
+    if (list.length === 0) return;
+    const next = (((savedIdx[k] ?? 0) + dir) % list.length + list.length) % list.length;
+    setSavedIdx(p => ({ ...p, [k]: next }));
+    onSetInversionVoicing?.(list[next]);
+  };
+
+  if (sequence.length === 0) {
+    return (
+      <div className="flex-1 rounded-xl p-6 border-2 border-dashed self-stretch flex flex-col items-center justify-center gap-2 min-w-0"
+        style={{ borderColor: `hsl(${VL_COLOR} / 0.4)`, backgroundColor: `hsl(${VL_COLOR} / 0.06)` }}>
+        <div className="text-[12px] font-mono font-bold uppercase tracking-wider" style={{ color: `hsl(${VL_COLOR})` }}>Voice Leading</div>
+        <p className="text-[11px] font-mono text-muted-foreground text-center max-w-md leading-relaxed">
+          Add chords to the timeline (or load a chart) to get started. You can then pick a melody note on the fretboard and build a chain of Drop 2, Drop 3 and Shell voicings under it for every chord.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 rounded-xl p-2 border-2 self-stretch min-w-0 flex flex-col gap-1.5"
+      style={{ borderColor: `hsl(${VL_COLOR} / 0.45)`, backgroundColor: `hsl(${VL_COLOR} / 0.07)` }}>
+      {/* Transport + melody status */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={() => setIdx(i => (i - 1 + sequence.length) % sequence.length)}
+          className="h-7 w-7 rounded bg-secondary text-secondary-foreground hover:bg-muted font-mono text-[13px]"
+          title="Previous chord"
+        >◀</button>
+        <div className="px-3 py-1 rounded-lg min-w-[120px] text-center border" style={{ borderColor: `hsl(${VL_COLOR} / 0.5)`, backgroundColor: `hsl(${VL_COLOR} / 0.15)` }}>
+          <div className="text-[14px] font-mono font-black leading-none" style={{ color: `hsl(${VL_COLOR})` }}>{current.root} {current.chordType}</div>
+          <div className="text-[9px] font-mono text-muted-foreground mt-0.5">chord {idx + 1} of {sequence.length}</div>
+        </div>
+        <button
+          onClick={() => setIdx(i => (i + 1) % sequence.length)}
+          className="h-7 w-7 rounded bg-secondary text-secondary-foreground hover:bg-muted font-mono text-[13px]"
+          title="Next chord"
+        >▶</button>
+
+        <div className="text-[10px] font-mono ml-1">
+          {voiceLeadingMelody ? (
+            <span style={{ color: 'hsl(var(--accent))' }}>
+              melody: string {6 - voiceLeadingMelody.stringIndex} · fret {voiceLeadingMelody.fret} · {voicings.length} voicing{voicings.length === 1 ? '' : 's'}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">click any note on the fretboard to set the melody (top voice)</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 ml-auto">
+          <label className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider cursor-pointer select-none"
+            style={{ color: hideOpenStrings ? `hsl(${VL_COLOR})` : 'hsl(var(--muted-foreground))' }}>
+            <input type="checkbox" checked={hideOpenStrings} onChange={e => setHideOpenStrings(e.target.checked)} className="h-3 w-3" style={{ accentColor: `hsl(${VL_COLOR})` }} />
+            No open strings
+          </label>
+          {voiceLeadingMelody && (
+            <button onClick={() => setVoiceLeadingMelody(null)} className="px-2 h-6 rounded bg-secondary text-secondary-foreground hover:bg-muted text-[9px] font-mono">clear</button>
+          )}
+          <button
+            onClick={saveCurrent}
+            disabled={voicings.length === 0}
+            className="px-2 h-6 rounded text-[9px] font-mono font-bold uppercase tracking-wider disabled:opacity-40"
+            style={{ backgroundColor: `hsl(${VL_COLOR})`, color: '#000' }}
+            title="Save this voicing into the voice-leading chain for this chord"
+          >Save voicing</button>
+        </div>
+      </div>
+
+      {/* Progression strip */}
+      <div className="flex gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'thin' }}>
+        {sequence.map((c, i) => {
+          const deg = getChordDegree(keyRoot, c.root, c.chordType, keyMode);
+          const semi = (((NOTE_NAMES.indexOf(c.root) - NOTE_NAMES.indexOf(keyRoot)) % 12) + 12) % 12;
+          const col = deg >= 0 ? SCALE_DEGREE_COLORS[deg] : formulaSemitoneToDegree(semi).color;
+          const count = (saved[chordKey(c)] ?? []).length;
+          return (
+            <button
+              key={c.id}
+              onClick={() => setIdx(i)}
+              className="px-2 py-1 rounded text-[10px] font-mono font-bold shrink-0 border-2 transition-all"
+              style={{
+                backgroundColor: i === idx ? `hsl(${col})` : `hsl(${col} / 0.28)`,
+                borderColor: i === idx ? `hsl(${col})` : `hsl(${col} / 0.5)`,
+                color: i === idx ? '#000' : `hsl(${col})`,
+                boxShadow: i === idx ? `0 0 10px hsl(${col} / 0.5)` : 'none',
+              }}
+            >{c.root} {c.chordType}{count > 0 ? ` (${count})` : ''}</button>
+          );
+        })}
+      </div>
+
+      {/* Candidate voicings under the chosen melody */}
+      {!voiceLeadingMelody ? (
+        <div className="text-[11px] font-mono text-muted-foreground italic p-2">
+          Click any note on the interactive fretboard — every voicing built from Drop 2, Drop 3 and Shell shapes that puts that note on top will appear here.
+        </div>
+      ) : voicings.length === 0 ? (
+        <div className="text-[11px] font-mono text-muted-foreground italic p-2">
+          No Drop 2 / Drop 3 / Shell voicing of {current.root} {current.chordType} has that note as its highest voice. Pick another note.
+        </div>
+      ) : (
+        <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+          {voicings.map((v, i) => (
+            <VoiceLeadingDiagram
+              key={`${v.frets.join('-')}-${i}`}
+              voicing={v}
+              color={VL_COLOR}
+              isActive={i === selected}
+              onClick={() => setSelected(i)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Saved chain — one lane per chord in the progression */}
+      <div className="rounded-lg border p-1.5 flex flex-col gap-1" style={{ borderColor: `hsl(${VL_COLOR} / 0.35)`, backgroundColor: 'hsl(var(--card) / 0.4)' }}>
+        <div className="text-[9px] font-mono uppercase tracking-wider" style={{ color: `hsl(${VL_COLOR})` }}>Voice-leading chain</div>
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+          {sequence.map(c => {
+            const k = chordKey(c);
+            const list = saved[k] ?? [];
+            const active = savedIdx[k] ?? 0;
+            return (
+              <div key={c.id} className="shrink-0 rounded-md border px-1.5 py-1 flex flex-col gap-1" style={{ borderColor: 'hsl(var(--border))' }}>
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] font-mono font-bold text-foreground/90">{c.root} {c.chordType}</span>
+                  {list.length > 1 && (
+                    <>
+                      <button onClick={() => cycleSaved(k, list, -1)} className="h-4 w-4 rounded bg-secondary text-[8px] font-mono">◀</button>
+                      <span className="text-[8px] font-mono text-muted-foreground">{active + 1}/{list.length}</span>
+                      <button onClick={() => cycleSaved(k, list, 1)} className="h-4 w-4 rounded bg-secondary text-[8px] font-mono">▶</button>
+                    </>
+                  )}
+                </div>
+                {list.length === 0 ? (
+                  <div className="text-[9px] font-mono text-muted-foreground italic px-1 py-2">empty</div>
+                ) : (
+                  <div className="flex gap-1">
+                    {list.map((v, i) => (
+                      <div key={`${k}-${i}`} className="relative">
+                        <VoiceLeadingDiagram
+                          voicing={v}
+                          color={VL_COLOR}
+                          isActive={i === active}
+                          onClick={() => { setSavedIdx(p => ({ ...p, [k]: i })); onSetInversionVoicing?.(v); }}
+                        />
+                        <button
+                          onClick={() => removeSaved(k, i)}
+                          className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-mono leading-none"
+                          title="Remove from chain"
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ScaleViewPanel({
+
   timelineChords = [],
   primaryScale, degreeFilter, setDegreeFilter,
 
@@ -2123,15 +2379,9 @@ function ScaleViewPanel({
 
   // Apply octave shift to inversion voicing
   useEffect(() => {
-    if (voiceLeadingMode && filteredVlVoicings.length > 0) {
-      const idx = Math.min(currentVlIdx, filteredVlVoicings.length - 1);
-      onSetInversionVoicing?.(filteredVlVoicings[idx]);
-      return;
-    }
-    if (voiceLeadingMode && filteredVlVoicings.length === 0) {
-      onSetInversionVoicing?.(null);
-      return;
-    }
+    // Voice Leading owns the fretboard voicing while its panel is open.
+    if (voiceLeadingMode) return;
+
     if (dropMode && inversionStringGroup !== null && inversions.length > 0) {
       const idx = Math.min(currentInvIdx, inversions.length - 1);
       const baseInv = inversions[idx];
@@ -2562,75 +2812,17 @@ function ScaleViewPanel({
         )}
 
         {sectionTab === 'voiceleading' && (
-          <div className="flex-1 rounded-xl p-2 border-2 self-stretch min-w-0" style={{ borderColor: 'hsl(280 80% 60% / 0.4)', backgroundColor: 'hsl(280 80% 60% / 0.08)' }}>
-            {degreeFilter === null ? (
-              <div className="text-[11px] font-mono text-muted-foreground leading-relaxed p-1">
-                <span className="font-bold" style={{ color: 'hsl(280 80% 70%)' }}>Voice Leading mode.</span> Pick a degree above and click any note on the fretboard to use it as your melody (top voice). Jazz comping voicings will appear here.
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {/* Header row: chord label · count · open-string toggle · clear */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-[10px] font-mono">
-                    <span className="font-bold" style={{ color: `hsl(${activeColor})` }}>{diatonicLabels[degreeFilter].label7}</span>
-                    {voiceLeadingMelody ? (
-                      <span className="text-muted-foreground"> · {filteredVlVoicings.length} voicing{filteredVlVoicings.length === 1 ? '' : 's'}</span>
-                    ) : (
-                      <span className="text-muted-foreground"> · click a fretboard note for melody</span>
-                    )}
-                  </div>
-                  <div className="flex gap-1.5 items-center">
-                    <label className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider cursor-pointer select-none" style={{ color: hideOpenStrings ? 'hsl(280 80% 70%)' : 'hsl(var(--muted-foreground))' }}>
-                      <input
-                        type="checkbox"
-                        checked={hideOpenStrings}
-                        onChange={(e) => setHideOpenStrings(e.target.checked)}
-                        className="h-3 w-3"
-                        style={{ accentColor: 'hsl(280 80% 60%)' }}
-                      />
-                      No open strings
-                    </label>
-                    {voiceLeadingMelody && (
-                      <button
-                        onClick={() => setVoiceLeadingMelody(null)}
-                        className="px-2 h-6 rounded bg-secondary text-secondary-foreground hover:bg-muted text-[9px] font-mono"
-                        title="Clear melody note"
-                      >clear</button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Voicings grid — multiple visible at once */}
-                {!voiceLeadingMelody ? (
-                  <div className="text-[11px] font-mono text-muted-foreground italic p-2">
-                    Click any note on the fretboard to set the melody (top voice).
-                  </div>
-                ) : filteredVlVoicings.length === 0 ? (
-                  <div className="text-[11px] font-mono text-muted-foreground italic p-2">
-                    {voiceLeadingVoicings.length === 0
-                      ? 'No voicings found for that melody note. Pick another note.'
-                      : 'All matching voicings use open strings — disable the filter to see them.'}
-                  </div>
-                ) : (
-                  <div
-                    className="flex gap-1 overflow-x-auto pb-1"
-                    style={{ scrollbarWidth: 'thin' }}
-                  >
-                    {filteredVlVoicings.map((v, idx) => (
-                      <VoiceLeadingDiagram
-                        key={idx}
-                        voicing={v}
-                        color={activeColor || '0, 0%, 60%'}
-                        isActive={idx === currentVlIdx}
-                        onClick={() => setCurrentVlIdx(idx)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <VoiceLeadingPanel
+            timelineChords={timelineChords}
+            tuning={tuning}
+            onSetInversionVoicing={onSetInversionVoicing}
+            voiceLeadingMelody={voiceLeadingMelody}
+            setVoiceLeadingMelody={setVoiceLeadingMelody}
+            keyRoot={primaryScale.root}
+            keyMode={keyMode}
+          />
         )}
+
 
         {/* Tab content panels */}
         {sectionTab === 'harmony' && (
