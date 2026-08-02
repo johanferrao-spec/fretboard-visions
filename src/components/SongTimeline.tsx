@@ -5,7 +5,7 @@ import type { NoteName } from '@/lib/music';
 import {
   NOTE_NAMES, CHORD_FORMULAS, getDiatonicChords, getChordVariations,
   getChordDegree, SCALE_DEGREE_COLORS, ROMAN_NUMERALS, ROMAN_NUMERALS_MINOR,
-  type ChordVariation, type KeyMode,
+  detectSecondaryKeyRuns, type ChordVariation, type KeyMode,
 } from '@/lib/music';
 import CellGridView from './ChordCellGrid';
 import { supabase } from '@/integrations/supabase/client';
@@ -162,6 +162,16 @@ export default function SongTimeline({
 
 
   const diatonicChords = useMemo(() => getDiatonicChords(timelineKey, keyMode), [timelineKey, keyMode]);
+
+  /** Secondary ii–V / ii–V–I runs, shown as purple boxes over the chord lane. */
+  const secondaryKeyRuns = useMemo(() => {
+    const sorted = [...chords].sort((a, b) => a.startBeat - b.startBeat);
+    return detectSecondaryKeyRuns(sorted, timelineKey, keyMode).map(r => ({
+      startBeat: sorted[r.start].startBeat,
+      endBeat: sorted[r.end].startBeat + sorted[r.end].duration,
+      label: r.label,
+    }));
+  }, [chords, timelineKey, keyMode]);
   const { numerals: currentNumerals } = useMemo(() => {
     const ALL_MODES: KeyMode[] = ['major', 'minor', 'ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian', 'locrian'];
     if (keyMode === 'minor') return { numerals: ROMAN_NUMERALS_MINOR };
@@ -1217,6 +1227,28 @@ export default function SongTimeline({
               }}
             />
           )}
+
+          {/* Temporary key changes (secondary ii–V / ii–V–I) — purple box. */}
+          {secondaryKeyRuns.map(run => (
+            <div
+              key={`tempkey-${run.startBeat}`}
+              className="absolute top-1 rounded-md pointer-events-none z-20"
+              style={{
+                left: `${(run.startBeat / totalBeats) * 100}%`,
+                width: `${((run.endBeat - run.startBeat) / totalBeats) * 100}%`,
+                height: 'calc(100% - 8px)',
+                border: '2px solid hsl(285 85% 62% / 0.95)',
+                boxShadow: '0 0 8px hsl(285 85% 62% / 0.35)',
+              }}
+            >
+              <span
+                className="absolute -top-0.5 left-1 text-[8px] font-mono font-bold bg-background/90 px-1 rounded select-none whitespace-nowrap"
+                style={{ color: 'hsl(285 85% 68%)' }}
+              >
+                {run.label}
+              </span>
+            </div>
+          ))}
 
           {/* Chord blocks */}
           {chords.map(chord => {
