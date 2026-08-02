@@ -434,7 +434,7 @@ const sectionDisplayName = (raw: string): string => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
-export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onKeyChange, onArrangementChange, onResetAll, isPlaying, currentBeat = 0, onPlay, onStop }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onClose, onKeyChange, onArrangementChange, onResetAll, isPlaying, currentBeat = 0, onPlay, onStop }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
     slots: ChartSlot[];
@@ -1949,9 +1949,9 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
           {totalBars % 1 === 0 ? totalBars : totalBars.toFixed(2)} bars · {slots.length} slots
         </span>
         <button
-          onClick={() => onToggleCharts?.()}
+          onClick={() => (onClose ? onClose() : onToggleCharts?.())}
           className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-secondary text-muted-foreground hover:bg-muted transition-colors"
-          title="Close charts and return to timeline"
+          title="Close charts and return to the main screen"
         >
           <X size={10} />
           Close
