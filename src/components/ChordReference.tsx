@@ -1646,6 +1646,8 @@ function CompingDiagram({ item, isActive, onClick, degreeColors = false, tuning 
 function CompingToolPanel({
   timelineChords, tuning, onSetInversionVoicing,
   showFretBox = false, fretBoxStart = 1, fretBoxSize = 5,
+  fretBoxStringStart = 0, fretBoxStringSize = 6,
+  degreeColors = false, keyRoot = 'C' as NoteName, keyMode = 'major' as KeyMode,
 }: {
   timelineChords: TimelineChord[];
   tuning: number[];
@@ -1653,8 +1655,18 @@ function CompingToolPanel({
   showFretBox?: boolean;
   fretBoxStart?: number;
   fretBoxSize?: number;
+  fretBoxStringStart?: number;
+  fretBoxStringSize?: number;
+  degreeColors?: boolean;
+  keyRoot?: NoteName;
+  keyMode?: KeyMode;
 }) {
   const boxEnd = fretBoxStart + fretBoxSize - 1;
+  // Row order on the fretboard is high-e first; map the focus-box rows to string indices.
+  const allowedStrings = useMemo(() => {
+    const order = [5, 4, 3, 2, 1, 0];
+    return new Set(order.slice(fretBoxStringStart, fretBoxStringStart + fretBoxStringSize));
+  }, [fretBoxStringStart, fretBoxStringSize]);
   const [kinds, setKinds] = useState<Record<CompingKind, boolean>>({ 'Drop 2': true, 'Drop 3': true, 'Shell': true });
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState(0);
