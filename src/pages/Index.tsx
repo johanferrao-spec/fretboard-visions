@@ -318,6 +318,39 @@ const Index = () => {
     return notes;
   }, [voiceLeadingMode, activeTab, fb.tuning]);
 
+  /* ── MIDI preview playback ──────────────────────────────────────────────
+     When the MIDI playback toggle is on, selecting a voicing (chord library,
+     drop voicings, comping tool, voice leading) or a diatonic degree in
+     Fretboard Mastery auditions the exact pitches of that chord. */
+  useEffect(() => {
+    if (!midiPlayback || !activeInversionVoicing) return;
+    playFretShape(fb.tuning, activeInversionVoicing.frets as (number | -1)[]);
+  }, [midiPlayback, activeInversionVoicing, fb.tuning]);
+
+  useEffect(() => {
+    if (!midiPlayback || !fb.activeChord) return;
+    const voicings = getVoicingsForChord(fb.activeChord.root, fb.activeChord.chordType, fb.activeChord.voicingSource);
+    const v = voicings[fb.activeChord.voicingIndex];
+    if (!v) return;
+    const shifted = v.frets.map(f => (f < 0 ? -1 : Math.max(0, f + chordOctaveShift * 12)));
+    playFretShape(fb.tuning, shifted as (number | -1)[]);
+  }, [midiPlayback, fb.activeChord, fb.tuning, chordOctaveShift]);
+
+  useEffect(() => {
+    if (!midiPlayback || scaleViewDegreeFilter === null || activeTab !== 'scaleview') return;
+    if (activeInversionVoicing) return; // a concrete shape is already sounding
+    const svKeyMode = scaleToKeyMode(fb.primaryScale.scale);
+    const chord = getDiatonicChords(fb.primaryScale.root, svKeyMode)[scaleViewDegreeFilter];
+    if (!chord) return;
+    const chordType7 = get7thChordType(chord.type, scaleViewDegreeFilter + 1, svKeyMode);
+    const formula = CHORD_FORMULAS[chordType7] || ARPEGGIO_FORMULAS[chordType7];
+    if (!formula) return;
+    playPitchClasses(NOTE_NAMES.indexOf(chord.root), formula.slice(0, 4));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [midiPlayback, scaleViewDegreeFilter, activeTab, fb.primaryScale.root, fb.primaryScale.scale]);
+
+
+
   // 3-Notes-Per-String overlay: compute pattern for the selected mode/degree
   const threeNpsData = useMemo(() => {
     if (!threeNpsMode || activeTab !== 'scaleview' || scaleViewDegreeFilter === null) return null;
