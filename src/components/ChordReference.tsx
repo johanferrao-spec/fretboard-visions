@@ -746,7 +746,6 @@ function ScalesPanel({
   onApplyPrimaryColor,
   onApplySecondaryColor,
 }: {
-  timelineChords?: TimelineChord[];
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   onApplySecondaryScale?: (slot: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string } | null) => void;
@@ -1832,6 +1831,7 @@ function ScaleViewPanel({
   showFretBox = false, fretBoxStart = 1, fretBoxSize = 5, setShowFretBox,
 
 }: {
+  timelineChords?: TimelineChord[];
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   degreeFilter: number | null;
   setDegreeFilter: (d: number | null) => void;
