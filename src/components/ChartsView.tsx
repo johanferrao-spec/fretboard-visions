@@ -2433,7 +2433,14 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
               const isHover = hoverSlot === slot.id;
               const isEditing = editingSlot === slot.id;
               const isParsing = parsingSlot === slot.id;
-              const color = slot.chord ? (showColours ? getChordColor(slot.chord) : '220 10% 72%') : null;
+              const tempKey = tempKeyOfSlot(idx);
+              const color = slot.chord
+                ? (showColours
+                    ? (tempKey
+                        ? getChordColorIn(slot.chord, tempKey.tonic, tempKey.mode)
+                        : getChordColor(slot.chord))
+                    : '220 10% 72%')
+                : null;
               const isActiveChord = followPlayhead && activeSlotId === slot.id;
               const section = sectionOfSlot(idx);
               const inDragSel = (sectionMode || voltaMode) && dragSel && idx >= dragSelStart && idx <= dragSelEnd;
