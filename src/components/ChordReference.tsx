@@ -2692,7 +2692,7 @@ function ScaleViewPanel({
                           stringGroup={inversionStringGroup}
                           isActive={currentInvIdx === idx}
                           color={activeColor || '0, 0%, 60%'}
-                          onClick={() => setCurrentInvIdx(idx)}
+                          onClick={() => { setCurrentInvIdx(idx); playFretShape(tuning, inv.frets as (number | -1)[]); }}
                           tuning={tuning}
                           degreeColorByPc={buildDegreeColorMap(NOTE_NAMES.indexOf(inv.notes[0] ? (diatonicLabels[degreeFilter!]?.root as NoteName) : 'C'))}
                         />
