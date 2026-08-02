@@ -1676,12 +1676,26 @@ function ScaleViewPanel({
     setDropDescriptions(prev => ({ ...prev, [key]: value }));
   };
 
+  // Degrees the user has forced to a dominant 7 chord (secondary-dominant style)
+  const [dominantDegrees, setDominantDegrees] = useState<Set<number>>(new Set());
+  const toggleDominantDegree = (i: number) => {
+    setDominantDegrees(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  };
+
   // Build 7th chord labels for each diatonic chord
   const diatonicLabels = useMemo(() => diatonicChords.map((chord, i) => {
+    if (dominantDegrees.has(i)) {
+      return { ...chord, label7: `${chord.root}7`, chordType7: 'Dominant 7' };
+    }
     const chordType7 = get7thChordType(chord.type, i + 1, keyMode);
     const suffix = get7thChordSymbol(chord.type, i + 1, keyMode);
     return { ...chord, label7: `${chord.root}${suffix}`, chordType7 };
-  }), [diatonicChords]);
+  }), [diatonicChords, keyMode, dominantDegrees]);
+
 
   // Mode names per scale degree (rotation of the parent scale).
   // For diatonic modes, rotate MAJOR_MODE_NAMES so the I chord matches the selected mode
