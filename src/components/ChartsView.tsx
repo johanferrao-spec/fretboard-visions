@@ -330,7 +330,7 @@ const detectSecondaryKeys = (
         end,
         tonic,
         mode: isMinorTarget ? 'minor' : 'major',
-        label: resolved ? `ii–V–I of ${tonic}` : `ii–V of ${tonic}`,
+        label: `${resolved ? 'ii–V–I' : 'ii–V'} of ${spellRootInKey(tonic, tonic, isMinorTarget ? 'minor' : 'major')}${isMinorTarget ? 'm' : ''}`,
       });
       p = idxs.indexOf(end);
     }
