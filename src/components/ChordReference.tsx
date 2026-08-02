@@ -1980,8 +1980,8 @@ function VoiceLeadingPanel({
           className="h-7 w-7 rounded bg-secondary text-secondary-foreground hover:bg-muted font-mono text-[13px]"
           title="Previous chord"
         >◀</button>
-        <div className="px-3 py-1 rounded-lg min-w-[120px] text-center border" style={{ borderColor: `hsl(${VL_COLOR} / 0.5)`, backgroundColor: `hsl(${VL_COLOR} / 0.15)` }}>
-          <div className="text-[14px] font-mono font-black leading-none" style={{ color: `hsl(${VL_COLOR})` }}>{current.root} {current.chordType}</div>
+        <div className="px-3 py-1 rounded-lg min-w-[120px] text-center border-2" style={{ borderColor: `hsl(${currentColor})`, backgroundColor: `hsl(${currentColor} / 0.18)`, boxShadow: `0 0 10px hsl(${currentColor} / 0.35)` }}>
+          <div className="text-[14px] font-mono font-black leading-none" style={{ color: `hsl(${currentColor})` }}>{current.root} {current.chordType}</div>
           <div className="text-[9px] font-mono text-muted-foreground mt-0.5">chord {idx + 1} of {sequence.length}</div>
         </div>
         <button
