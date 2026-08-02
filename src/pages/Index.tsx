@@ -1029,8 +1029,16 @@ const Index = () => {
             <ChartsView
               currentKey={timelineKey}
               keyMode={keyMode}
-              onKeyChange={(k) => setTimelineKey(k)}
+              onKeyChange={(k, m) => {
+                setTimelineKey(k);
+                if (m) {
+                  setKeyMode(m);
+                  // Fretboard Mastery follows the chart's detected key/mode.
+                  fb.setPrimaryScale({ mode: 'scale', root: k, scale: keyModeToScale(m) });
+                }
+              }}
               onToggleCharts={() => setShowCharts(v => !v)}
+              onClose={() => { setShowCharts(false); setActiveTab(null); }}
               isPlaying={timeline.isPlaying}
               currentBeat={timeline.currentBeat}
               onPlay={handlePlay}
