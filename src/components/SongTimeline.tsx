@@ -1367,7 +1367,7 @@ export default function SongTimeline({
                   // Open the variations/bass popup (was: delete)
                   handleChordContextMenu(chord, e);
                 }}
-                title={`${chordLabel}${bassLabel}${isDiatonic ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed' : ''} — click: seek, dbl-click: voicings, ⌘-click: delete`}
+                title={`${chordLabel}${bassLabel}${degree >= 0 ? ` (${currentNumerals[degree]})` : borrowed ? ' — borrowed' : ''} — click: seek, dbl-click: voicings, ⌘-click: delete`}
               >
                 <span
                   className="text-[10px] font-mono font-bold px-1.5 truncate"
