@@ -1506,6 +1506,8 @@ function VoiceLeadingDiagram({ voicing, color, onClick, isActive = false, dragga
   return (
     <button
       onClick={onClick}
+      draggable={draggable}
+      onDragStart={onDragStart}
       className="flex flex-col items-center rounded-lg shrink-0 transition-all"
       style={{
         border: isActive ? `3px solid hsl(${color})` : `1.5px solid hsla(${color}, 0.35)`,
