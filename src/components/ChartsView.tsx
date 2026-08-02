@@ -738,9 +738,50 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
         outSections.push({ id: `${item.id}`, name: sec.name, color: sec.color, startBeat: sectionStartBeat, lengthBeats });
       }
     }
+    // Safety net: a chart with chords must never produce an empty timeline.
+    // If the arrangement is empty (or its sections yielded nothing), fall back
+    // to playing every chord-bearing slot in written order.
+    if (out.length === 0 && slots.some(s => s.chord)) {
+      cursorBeats = 0;
+      chordIdx = 0;
+      for (let i = 0; i < slots.length; i++) {
+        const sl = slots[i];
+        const durBeats = (sl.bars / UNITS_PER_BAR) * 4;
+        if (sl.chord) {
+          out.push({
+            id: `chart-flat-${chordIdx++}`,
+            root: sl.chord.root,
+            chordType: sl.chord.chordType,
+            startBeat: cursorBeats,
+            duration: durBeats,
+          });
+        }
+        cursorBeats += durBeats;
+      }
+      // Mirror the written sections so the timeline still shows markers.
+      outSections.length = 0;
+      let unitCursor = 0;
+      for (const sec of sections) {
+        let startUnits = 0;
+        for (let i = 0; i < sec.startIdx && i < slots.length; i++) startUnits += slots[i].bars;
+        let lenUnits = 0;
+        for (let i = sec.startIdx; i <= sec.endIdx && i < slots.length; i++) lenUnits += slots[i].bars;
+        if (lenUnits > 0) {
+          outSections.push({
+            id: sec.id,
+            name: sec.name,
+            color: sec.color,
+            startBeat: (startUnits / UNITS_PER_BAR) * 4,
+            lengthBeats: (lenUnits / UNITS_PER_BAR) * 4,
+          });
+        }
+        unitCursor += lenUnits;
+      }
+    }
     const measures = Math.max(2, Math.ceil(cursorBeats / 4));
     emitRef.current({ chords: out, measures, bpm: tempo, sections: outSections });
   }, [arrangement, sections, slots, tempo]);
+
 
   /** Beat ranges each slot occupies in the rendered arrangement (for 'follow'). */
   const slotBeatRanges = useMemo(() => {
