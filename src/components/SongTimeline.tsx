@@ -604,14 +604,14 @@ export default function SongTimeline({
       <div className="flex items-center gap-1.5 px-2 py-1 border-b border-border shrink-0 overflow-hidden">
         <button
           onClick={isPlaying ? onStop : onPlay}
-          className={`p-1.5 rounded-md transition-colors ${
+          className={`p-1 rounded-md transition-colors ${
             isPlaying
               ? 'bg-destructive/20 text-destructive hover:bg-destructive/30'
               : 'bg-primary/20 text-primary hover:bg-primary/30'
           }`}
           title={isPlaying ? 'Stop' : 'Play'}
         >
-          {isPlaying ? <Square size={14} /> : <Play size={14} />}
+          {isPlaying ? <Square size={12} /> : <Play size={12} />}
         </button>
 
         {/* Volume slider — grows taller with volume, green→red, glowing */}
