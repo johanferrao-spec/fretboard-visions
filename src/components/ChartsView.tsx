@@ -889,6 +889,33 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
       }
       flushRun(slotSectionLabels.length);
 
+      // If the sheet had no real A/B/C structure (every run carries the same
+      // label, or none at all), the whole progression is ONE "A Section" box
+      // rather than a box per contiguous run / row.
+      const distinctLabels = new Set(
+        slotSectionLabels.map(l => normalizeSectionLabel(l)).filter(Boolean) as string[]
+      );
+      if (distinctLabels.size <= 1) {
+        const chordIdxs = newSlots.map((s, i) => (s.chord ? i : -1)).filter(i => i >= 0);
+        if (chordIdxs.length >= 2) {
+          const only = [...distinctLabels][0];
+          const name = only ? sectionDisplayName(only) : 'A';
+          newSections.length = 0;
+          defaultArrangement.length = 0;
+          const secId = uid('sec');
+          newSections.push({
+            id: secId,
+            name,
+            color: SECTION_COLORS[0],
+            startIdx: chordIdxs[0],
+            endIdx: chordIdxs[chordIdxs.length - 1],
+          });
+          labelToSectionIds.clear();
+          labelToSectionIds.set(only ?? 'A', [secId]);
+          defaultArrangement.push({ id: uid('arr'), sectionId: secId });
+        }
+      }
+
       const normalizedArrangement = arrangementLabels
         .map(label => normalizeSectionLabel(label))
         .filter((label): label is string => !!label);
@@ -901,7 +928,12 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
         const sectionId = ids[Math.min(occurrence, ids.length - 1)];
         return [{ id: uid('arr'), sectionId }];
       });
-      const newArrangement = structureArrangement.length > 0 ? structureArrangement : defaultArrangement;
+      let newArrangement = structureArrangement.length > 0 ? structureArrangement : defaultArrangement;
+      // Never leave an imported chart without an arrangement — otherwise the
+      // backing-track timeline receives nothing.
+      if (!newArrangement.length && newSections.length) {
+        newArrangement = newSections.map(s => ({ id: uid('arr'), sectionId: s.id }));
+      }
 
       snapshot();
       autoSectionEnabled.current = true;
@@ -910,6 +942,7 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
       setSlots(newSlots);
       setSections(newSections);
       setArrangement(newArrangement);
+
       // Only the import pass may auto-create sections.
       setTimeout(() => { autoSectionEnabled.current = false; }, 0);
       const sectionMsg = newSections.length > 0 ? ` in ${newSections.length} section${newSections.length === 1 ? '' : 's'}` : '';
