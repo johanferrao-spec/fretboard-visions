@@ -240,6 +240,8 @@ interface ChordReferenceProps {
   showFretBox?: boolean;
   fretBoxStart?: number;
   fretBoxSize?: number;
+  fretBoxStringStart?: number;
+  fretBoxStringSize?: number;
 
   onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
   chordOctaveShift: number;
@@ -1037,7 +1039,7 @@ export default function ChordReference({
   voiceLeadingMode, setVoiceLeadingMode, voiceLeadingMelody, setVoiceLeadingMelody,
   onApplyBeginnerPreset, onApplyOpenChord,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
-  showFretBox, fretBoxStart = 1, fretBoxSize = 5,
+  showFretBox, fretBoxStart = 1, fretBoxSize = 5, fretBoxStringStart = 0, fretBoxStringSize = 6,
 
   onChordAddStateChange,
   chordOctaveShift, setChordOctaveShift,
@@ -1255,6 +1257,8 @@ export default function ChordReference({
           showFretBox={showFretBox}
           fretBoxStart={fretBoxStart}
           fretBoxSize={fretBoxSize}
+          fretBoxStringStart={fretBoxStringStart}
+          fretBoxStringSize={fretBoxStringSize}
           setShowFretBox={setShowFretBox}
 
         />
@@ -1864,6 +1868,7 @@ function ScaleViewPanel({
   voiceLeadingMelody, setVoiceLeadingMelody,
   onApplyScale,
   showFretBox = false, fretBoxStart = 1, fretBoxSize = 5, setShowFretBox,
+  fretBoxStringStart = 0, fretBoxStringSize = 6,
 
 }: {
   timelineChords?: TimelineChord[];
@@ -1888,6 +1893,8 @@ function ScaleViewPanel({
   showFretBox?: boolean;
   fretBoxStart?: number;
   fretBoxSize?: number;
+  fretBoxStringStart?: number;
+  fretBoxStringSize?: number;
   setShowFretBox?: (v: boolean) => void;
 
 }) {
@@ -2268,7 +2275,7 @@ function ScaleViewPanel({
           {([
             { key: 'harmony', label: 'Functional Harmony', color: 'var(--primary)' },
             { key: 'drop', label: 'Drop Voicings', color: 'var(--primary)' },
-            { key: 'comping', label: 'Comping Tool', color: 'var(--accent)' },
+            { key: 'comping', label: 'Comping Tool', color: '285 85% 62%' },
             { key: 'modes', label: 'Modes', color: 'var(--accent)' },
           ] as const).map(t => {
             const on = sectionTab === t.key;
