@@ -1548,8 +1548,276 @@ function VoiceLeadingDiagram({ voicing, color, onClick, isActive = false }: {
   );
 }
 
+// ============================================================
+// COMPING TOOL — cycle through the timeline progression and see
+// Drop 2 / Drop 3 / Shell voicings for each chord.
+// ============================================================
+
+type CompingKind = 'Drop 2' | 'Drop 3' | 'Shell';
+
+interface CompingItem {
+  kind: CompingKind;
+  label: string;
+  frets: number[];
+  notes: { stringIndex: number; fret: number }[];
+  voicing: InversionVoicing;
+}
+
+const COMPING_KIND_COLORS: Record<CompingKind, string> = {
+  'Drop 2': 'var(--primary)',
+  'Drop 3': 'var(--accent)',
+  'Shell': '280 80% 60%',
+};
+
+/** Map any chord type coming off the timeline to a 7th-chord type usable by the drop generators. */
+const COMPING_SEVENTH_TYPE: Record<string, string> = {
+  'Major': 'Major 7', 'Major 6': 'Major 7', 'Major 7': 'Major 7', 'Major 9': 'Major 7',
+  'Minor': 'Minor 7', 'Minor 6': 'Minor 7', 'Minor 7': 'Minor 7', 'Minor 9': 'Minor 7',
+  'Dominant 7': 'Dominant 7', 'Dominant 9': 'Dominant 7', '7': 'Dominant 7',
+  'Diminished': 'Half-Dim 7', 'Half-Dim 7': 'Half-Dim 7', 'Dim 7': 'Dim 7',
+  'Min/Maj 7': 'Min/Maj 7',
+  'Augmented': 'Dominant 7', 'Sus2': 'Dominant 7', 'Sus4': 'Dominant 7',
+};
+
+function fretsToNotes(frets: number[]) {
+  const notes: { stringIndex: number; fret: number }[] = [];
+  frets.forEach((f, si) => { if (f >= 0) notes.push({ stringIndex: si, fret: f }); });
+  return notes;
+}
+
+function CompingDiagram({ item, isActive, onClick }: { item: CompingItem; isActive: boolean; onClick: () => void }) {
+  const color = COMPING_KIND_COLORS[item.kind];
+  const played = item.frets.filter(f => f > 0);
+  const minFret = played.length ? Math.min(...played) : 1;
+  const maxFret = played.length ? Math.max(...played) : 4;
+  const startFret = Math.max(1, Math.min(minFret, maxFret - 3));
+  const numFrets = 5;
+  const numStrings = 6;
+  const cellW = 12, cellH = 14, leftPad = 14, topPad = 12;
+  const w = leftPad + (numStrings - 1) * cellW + 10;
+  const h = topPad + numFrets * cellH + 6;
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center rounded-lg shrink-0 transition-all"
+      style={{
+        border: isActive ? `3px solid hsl(${color})` : `1.5px solid hsl(${color} / 0.35)`,
+        backgroundColor: isActive ? `hsl(${color} / 0.22)` : `hsl(${color} / 0.06)`,
+        boxShadow: isActive ? `0 0 10px hsl(${color} / 0.45)` : 'none',
+        padding: '3px 4px',
+        width: 92,
+        minWidth: 92,
+      }}
+    >
+      <div className="text-[9px] font-mono font-bold leading-tight truncate w-full text-center" style={{ color: `hsl(${color})` }}>
+        {item.label}
+      </div>
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        <text x={2} y={topPad + 10} fontSize={8} fill="hsl(var(--muted-foreground))" fontFamily="monospace">{startFret}</text>
+        {Array.from({ length: numFrets + 1 }, (_, i) => (
+          <line key={`f${i}`} x1={leftPad} y1={topPad + i * cellH} x2={leftPad + (numStrings - 1) * cellW} y2={topPad + i * cellH}
+            stroke="hsl(var(--fretboard-fret))" strokeWidth={i === 0 ? 2 : 0.5} strokeOpacity={0.55} />
+        ))}
+        {Array.from({ length: numStrings }, (_, si) => (
+          <line key={`s${si}`} x1={leftPad + si * cellW} y1={topPad} x2={leftPad + si * cellW} y2={topPad + numFrets * cellH}
+            stroke="hsl(var(--fretboard-string))" strokeWidth={0.75} strokeOpacity={0.9} strokeLinecap="round" />
+        ))}
+        {item.frets.map((f, si) => {
+          if (f === -1) return <text key={`m${si}`} x={leftPad + si * cellW} y={topPad - 3} fontSize={9} fill="hsl(var(--destructive))" textAnchor="middle" fontFamily="monospace" fontWeight="bold">✕</text>;
+          if (f === 0) return <circle key={`o${si}`} cx={leftPad + si * cellW} cy={topPad - 5} r={3.5} fill="none" stroke={`hsl(${color})`} strokeWidth={1.5} />;
+          const pos = f - startFret;
+          if (pos < 0 || pos >= numFrets) return null;
+          return <circle key={`n${si}`} cx={leftPad + si * cellW} cy={topPad + pos * cellH + cellH / 2} r={5} fill={`hsl(${color})`} opacity={0.95} />;
+        })}
+      </svg>
+      <div className="text-[8px] font-mono leading-tight text-muted-foreground">{item.kind}</div>
+    </button>
+  );
+}
+
+function CompingToolPanel({
+  timelineChords, tuning, onSetInversionVoicing,
+  showFretBox = false, fretBoxStart = 1, fretBoxSize = 5,
+}: {
+  timelineChords: TimelineChord[];
+  tuning: number[];
+  onSetInversionVoicing?: (v: InversionVoicing | null) => void;
+  showFretBox?: boolean;
+  fretBoxStart?: number;
+  fretBoxSize?: number;
+}) {
+  const boxEnd = fretBoxStart + fretBoxSize - 1;
+  const [kinds, setKinds] = useState<Record<CompingKind, boolean>>({ 'Drop 2': true, 'Drop 3': true, 'Shell': true });
+  const [idx, setIdx] = useState(0);
+  const [selected, setSelected] = useState(0);
+
+  // Progression: chords in beat order with consecutive repeats merged.
+  const sequence = useMemo(() => {
+    const sorted = [...timelineChords].sort((a, b) => a.startBeat - b.startBeat);
+    const out: TimelineChord[] = [];
+    for (const c of sorted) {
+      const prev = out[out.length - 1];
+      if (prev && prev.root === c.root && prev.chordType === c.chordType) continue;
+      out.push(c);
+    }
+    return out;
+  }, [timelineChords]);
+
+  useEffect(() => { setIdx(i => (sequence.length ? Math.min(i, sequence.length - 1) : 0)); }, [sequence.length]);
+
+  const current = sequence[idx];
+
+  const allItems = useMemo<CompingItem[]>(() => {
+    if (!current) return [];
+    const seventh = COMPING_SEVENTH_TYPE[current.chordType] || 'Dominant 7';
+    const items: CompingItem[] = [];
+
+    for (const g of ['upper', 'mid', 'lower'] as StringGroup[]) {
+      for (const v of generate7thInversions(current.root, seventh, g, tuning)) {
+        if (v.inversionNumber === -1) continue;
+        items.push({ kind: 'Drop 2', label: `${v.slashName} · ${v.inversionLabel}`, frets: v.frets as number[], notes: v.notes, voicing: v });
+      }
+    }
+    for (const g of ['lower', 'mid'] as StringGroup[]) {
+      for (const v of generateDrop3Inversions(current.root, seventh, g, tuning)) {
+        if (v.inversionNumber === -1) continue;
+        items.push({ kind: 'Drop 3', label: `${v.slashName} · ${v.inversionLabel}`, frets: v.frets as number[], notes: v.notes, voicing: v });
+      }
+    }
+    let shells = generateShellVoicings(current.root, current.chordType);
+    if (shells.length === 0) shells = generateShellVoicings(current.root, seventh);
+    shells.forEach((s, i) => {
+      const notes = fretsToNotes(s.frets);
+      items.push({
+        kind: 'Shell',
+        label: `${current.root} shell ${i + 1}`,
+        frets: s.frets,
+        notes,
+        voicing: {
+          frets: s.frets as (number | -1)[], notes, inversionNumber: 0, inversionLabel: 'Shell',
+          slashName: `${current.root} shell`, alternateName: '', bottomDegree: '', topDegree: '',
+          tab: s.frets.map(f => (f < 0 ? 'X' : f)).join(''), chordType: current.chordType, degreeOrder: 'R 3 7',
+        },
+      });
+    });
+
+    // Deduplicate identical shapes
+    const seen = new Set<string>();
+    return items.filter(it => {
+      const k = `${it.kind}:${it.frets.join(',')}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }, [current, tuning]);
+
+  const items = useMemo(() => {
+    let list = allItems.filter(it => kinds[it.kind]);
+    if (showFretBox) {
+      list = list.filter(it => it.frets.every(f => f <= 0 || (f >= fretBoxStart && f <= boxEnd)));
+    }
+    return list;
+  }, [allItems, kinds, showFretBox, fretBoxStart, boxEnd]);
+
+  useEffect(() => { setSelected(0); }, [items]);
+
+  useEffect(() => {
+    onSetInversionVoicing?.(items[selected] ? items[selected].voicing : null);
+  }, [items, selected, onSetInversionVoicing]);
+
+  if (sequence.length === 0) {
+    return (
+      <div className="flex-1 rounded-xl p-6 border-2 border-dashed border-border/60 bg-card/30 self-stretch flex flex-col items-center justify-center gap-2 min-w-0">
+        <div className="text-[12px] font-mono font-bold text-primary uppercase tracking-wider">Comping Tool</div>
+        <p className="text-[11px] font-mono text-muted-foreground text-center max-w-md leading-relaxed">
+          Add some chords to the timeline (or load a chart) to get started. The comping tool will then let you step through the progression and see Drop 2, Drop 3 and Shell voicings for every chord.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 rounded-xl p-2 border-2 border-primary/40 bg-primary/5 self-stretch min-w-0 flex flex-col gap-1.5">
+      {/* Header: transport + toggles */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={() => setIdx(i => (i - 1 + sequence.length) % sequence.length)}
+          className="h-7 w-7 rounded bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground font-mono text-[13px]"
+          title="Previous chord"
+        >◀</button>
+        <div className="px-3 py-1 rounded-lg bg-primary/15 border border-primary/50 min-w-[120px] text-center">
+          <div className="text-[14px] font-mono font-black text-primary leading-none">{current.root}{current.chordType === 'Major' ? '' : ''} {current.chordType}</div>
+          <div className="text-[9px] font-mono text-muted-foreground mt-0.5">chord {idx + 1} of {sequence.length}</div>
+        </div>
+        <button
+          onClick={() => setIdx(i => (i + 1) % sequence.length)}
+          className="h-7 w-7 rounded bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground font-mono text-[13px]"
+          title="Next chord"
+        >▶</button>
+
+        <div className="flex gap-1 ml-2">
+          {(['Drop 2', 'Drop 3', 'Shell'] as CompingKind[]).map(k => {
+            const on = kinds[k];
+            const color = COMPING_KIND_COLORS[k];
+            return (
+              <button
+                key={k}
+                onClick={() => setKinds(p => ({ ...p, [k]: !p[k] }))}
+                className="px-2.5 h-7 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider border-2 transition-all"
+                style={{
+                  backgroundColor: on ? `hsl(${color})` : `hsl(${color} / 0.1)`,
+                  borderColor: on ? `hsl(${color})` : `hsl(${color} / 0.4)`,
+                  color: on ? '#000' : `hsl(${color})`,
+                }}
+              >{k}</button>
+            );
+          })}
+        </div>
+
+        {showFretBox && (
+          <div className="text-[9px] font-mono uppercase tracking-wider text-accent ml-auto px-2 py-1 rounded border" style={{ borderColor: 'hsl(var(--accent) / 0.5)', backgroundColor: 'hsl(var(--accent) / 0.1)' }}>
+            Position focus: frets {fretBoxStart}–{boxEnd}
+          </div>
+        )}
+      </div>
+
+      {/* Progression strip */}
+      <div className="flex gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'thin' }}>
+        {sequence.map((c, i) => (
+          <button
+            key={c.id}
+            onClick={() => setIdx(i)}
+            className="px-2 py-1 rounded text-[10px] font-mono font-bold shrink-0 border transition-all"
+            style={{
+              backgroundColor: i === idx ? 'hsl(var(--primary))' : 'hsl(var(--secondary))',
+              borderColor: i === idx ? 'hsl(var(--primary))' : 'hsl(var(--border))',
+              color: i === idx ? 'hsl(var(--primary-foreground))' : 'hsl(var(--muted-foreground))',
+            }}
+          >{c.root} {c.chordType}</button>
+        ))}
+      </div>
+
+      {/* Voicings */}
+      {items.length === 0 ? (
+        <div className="text-[11px] font-mono text-muted-foreground italic p-2">
+          {showFretBox
+            ? `No ${Object.entries(kinds).filter(([, v]) => v).map(([k]) => k).join(' / ') || 'voicing'} shapes fit inside frets ${fretBoxStart}–${boxEnd}. Widen or move the position focus box.`
+            : 'Enable at least one voicing type above.'}
+        </div>
+      ) : (
+        <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+          {items.map((it, i) => (
+            <CompingDiagram key={`${it.kind}-${it.frets.join('-')}`} item={it} isActive={i === selected} onClick={() => setSelected(i)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ScaleViewPanel({
   primaryScale, degreeFilter, setDegreeFilter,
+
   inversionStringGroup, setInversionStringGroup,
   tuning, onSetArpeggioPosition, degreeColors,
   onSetInversionVoicing,
