@@ -8,6 +8,7 @@ import CommunityCharts from './CommunityCharts';
 import {
   NOTE_NAMES, NoteName, CHORD_FORMULAS, STANDARD_TUNING, TUNING_PRESETS,
   getVoicingsForChord, noteAtFret, getExtendedIntervalName, DEGREE_COLORS, buildFormulaPcMap,
+  formulaSemitoneToDegree,
   getCAGEDPositions, getIntervalName, CHORD_GROUPS, identifyChord,
   isVoicingTonallyValid, isPhysicallyPlayable, getTensionSuggestions, getChordTones,
   analyzeProgression, identifyArpeggioFromNotes, getChordDegree,
@@ -239,6 +240,8 @@ interface ChordReferenceProps {
   showFretBox?: boolean;
   fretBoxStart?: number;
   fretBoxSize?: number;
+  fretBoxStringStart?: number;
+  fretBoxStringSize?: number;
 
   onChordAddStateChange?: (rootNote: NoteName | null, hasNotes: boolean) => void;
   chordOctaveShift: number;
@@ -1036,7 +1039,7 @@ export default function ChordReference({
   voiceLeadingMode, setVoiceLeadingMode, voiceLeadingMelody, setVoiceLeadingMelody,
   onApplyBeginnerPreset, onApplyOpenChord,
   setShowFretBox, setFretBoxStart, setFretBoxSize,
-  showFretBox, fretBoxStart = 1, fretBoxSize = 5,
+  showFretBox, fretBoxStart = 1, fretBoxSize = 5, fretBoxStringStart = 0, fretBoxStringSize = 6,
 
   onChordAddStateChange,
   chordOctaveShift, setChordOctaveShift,
@@ -1254,6 +1257,8 @@ export default function ChordReference({
           showFretBox={showFretBox}
           fretBoxStart={fretBoxStart}
           fretBoxSize={fretBoxSize}
+          fretBoxStringStart={fretBoxStringStart}
+          fretBoxStringSize={fretBoxStringSize}
           setShowFretBox={setShowFretBox}
 
         />
@@ -1586,8 +1591,14 @@ function fretsToNotes(frets: number[]) {
   return notes;
 }
 
-function CompingDiagram({ item, isActive, onClick }: { item: CompingItem; isActive: boolean; onClick: () => void }) {
+function CompingDiagram({ item, isActive, onClick, degreeColors = false, tuning = STANDARD_TUNING, rootNote }: { item: CompingItem; isActive: boolean; onClick: () => void; degreeColors?: boolean; tuning?: number[]; rootNote?: NoteName }) {
   const color = COMPING_KIND_COLORS[item.kind];
+  const rootPc = rootNote ? NOTE_NAMES.indexOf(rootNote) : -1;
+  const dotColor = (si: number, fret: number) => {
+    if (!degreeColors || rootPc < 0) return `hsl(${color})`;
+    const semi = (((tuning[si] ?? 0) + fret - rootPc) % 12 + 12) % 12;
+    return `hsl(${formulaSemitoneToDegree(semi).color})`;
+  };
   const played = item.frets.filter(f => f > 0);
   const minFret = played.length ? Math.min(...played) : 1;
   const maxFret = played.length ? Math.max(...played) : 4;
@@ -1625,10 +1636,10 @@ function CompingDiagram({ item, isActive, onClick }: { item: CompingItem; isActi
         ))}
         {item.frets.map((f, si) => {
           if (f === -1) return <text key={`m${si}`} x={leftPad + si * cellW} y={topPad - 3} fontSize={9} fill="hsl(var(--destructive))" textAnchor="middle" fontFamily="monospace" fontWeight="bold">✕</text>;
-          if (f === 0) return <circle key={`o${si}`} cx={leftPad + si * cellW} cy={topPad - 5} r={3.5} fill="none" stroke={`hsl(${color})`} strokeWidth={1.5} />;
+          if (f === 0) return <circle key={`o${si}`} cx={leftPad + si * cellW} cy={topPad - 5} r={3.5} fill="none" stroke={dotColor(si, 0)} strokeWidth={1.5} />;
           const pos = f - startFret;
           if (pos < 0 || pos >= numFrets) return null;
-          return <circle key={`n${si}`} cx={leftPad + si * cellW} cy={topPad + pos * cellH + cellH / 2} r={5} fill={`hsl(${color})`} opacity={0.95} />;
+          return <circle key={`n${si}`} cx={leftPad + si * cellW} cy={topPad + pos * cellH + cellH / 2} r={5} fill={dotColor(si, f)} opacity={0.95} />;
         })}
       </svg>
       <div className="text-[8px] font-mono leading-tight text-muted-foreground">{item.kind}</div>
@@ -1639,6 +1650,8 @@ function CompingDiagram({ item, isActive, onClick }: { item: CompingItem; isActi
 function CompingToolPanel({
   timelineChords, tuning, onSetInversionVoicing,
   showFretBox = false, fretBoxStart = 1, fretBoxSize = 5,
+  fretBoxStringStart = 0, fretBoxStringSize = 6,
+  degreeColors = false, keyRoot = 'C' as NoteName, keyMode = 'major' as KeyMode,
 }: {
   timelineChords: TimelineChord[];
   tuning: number[];
@@ -1646,8 +1659,18 @@ function CompingToolPanel({
   showFretBox?: boolean;
   fretBoxStart?: number;
   fretBoxSize?: number;
+  fretBoxStringStart?: number;
+  fretBoxStringSize?: number;
+  degreeColors?: boolean;
+  keyRoot?: NoteName;
+  keyMode?: KeyMode;
 }) {
   const boxEnd = fretBoxStart + fretBoxSize - 1;
+  // Row order on the fretboard is high-e first; map the focus-box rows to string indices.
+  const allowedStrings = useMemo(() => {
+    const order = [5, 4, 3, 2, 1, 0];
+    return new Set(order.slice(fretBoxStringStart, fretBoxStringStart + fretBoxStringSize));
+  }, [fretBoxStringStart, fretBoxStringSize]);
   const [kinds, setKinds] = useState<Record<CompingKind, boolean>>({ 'Drop 2': true, 'Drop 3': true, 'Shell': true });
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState(0);
@@ -1715,10 +1738,12 @@ function CompingToolPanel({
   const items = useMemo(() => {
     let list = allItems.filter(it => kinds[it.kind]);
     if (showFretBox) {
-      list = list.filter(it => it.frets.every(f => f <= 0 || (f >= fretBoxStart && f <= boxEnd)));
+      list = list.filter(it =>
+        it.frets.every((f, si) => (f < 0 ? true : allowedStrings.has(si) && (f === 0 || (f >= fretBoxStart && f <= boxEnd)))),
+      );
     }
     return list;
-  }, [allItems, kinds, showFretBox, fretBoxStart, boxEnd]);
+  }, [allItems, kinds, showFretBox, fretBoxStart, boxEnd, allowedStrings]);
 
   useEffect(() => { setSelected(0); }, [items]);
 
@@ -1777,38 +1802,52 @@ function CompingToolPanel({
 
         {showFretBox && (
           <div className="text-[9px] font-mono uppercase tracking-wider text-accent ml-auto px-2 py-1 rounded border" style={{ borderColor: 'hsl(var(--accent) / 0.5)', backgroundColor: 'hsl(var(--accent) / 0.1)' }}>
-            Position focus: frets {fretBoxStart}–{boxEnd}
+            Position focus: frets {fretBoxStart}–{boxEnd} · {allowedStrings.size} string{allowedStrings.size === 1 ? '' : 's'}
           </div>
         )}
       </div>
 
-      {/* Progression strip */}
+      {/* Progression strip — cells filled with their scale-degree colour */}
       <div className="flex gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'thin' }}>
-        {sequence.map((c, i) => (
-          <button
-            key={c.id}
-            onClick={() => setIdx(i)}
-            className="px-2 py-1 rounded text-[10px] font-mono font-bold shrink-0 border transition-all"
-            style={{
-              backgroundColor: i === idx ? 'hsl(var(--primary))' : 'hsl(var(--secondary))',
-              borderColor: i === idx ? 'hsl(var(--primary))' : 'hsl(var(--border))',
-              color: i === idx ? 'hsl(var(--primary-foreground))' : 'hsl(var(--muted-foreground))',
-            }}
-          >{c.root} {c.chordType}</button>
-        ))}
+        {sequence.map((c, i) => {
+          const deg = getChordDegree(keyRoot, c.root, c.chordType, keyMode);
+          const semi = (((NOTE_NAMES.indexOf(c.root) - NOTE_NAMES.indexOf(keyRoot)) % 12) + 12) % 12;
+          const col = deg >= 0 ? SCALE_DEGREE_COLORS[deg] : formulaSemitoneToDegree(semi).color;
+          return (
+            <button
+              key={c.id}
+              onClick={() => setIdx(i)}
+              className="px-2 py-1 rounded text-[10px] font-mono font-bold shrink-0 border-2 transition-all"
+              style={{
+                backgroundColor: i === idx ? `hsl(${col})` : `hsl(${col} / 0.28)`,
+                borderColor: i === idx ? `hsl(${col})` : `hsl(${col} / 0.5)`,
+                color: i === idx ? '#000' : `hsl(${col})`,
+                boxShadow: i === idx ? `0 0 10px hsl(${col} / 0.5)` : 'none',
+              }}
+            >{c.root} {c.chordType}</button>
+          );
+        })}
       </div>
 
       {/* Voicings */}
       {items.length === 0 ? (
         <div className="text-[11px] font-mono text-muted-foreground italic p-2">
           {showFretBox
-            ? `No ${Object.entries(kinds).filter(([, v]) => v).map(([k]) => k).join(' / ') || 'voicing'} shapes fit inside frets ${fretBoxStart}–${boxEnd}. Widen or move the position focus box.`
+            ? `No ${Object.entries(kinds).filter(([, v]) => v).map(([k]) => k).join(' / ') || 'voicing'} shapes fit inside the position focus box (frets ${fretBoxStart}–${boxEnd}, ${allowedStrings.size} string${allowedStrings.size === 1 ? '' : 's'}). Widen or move the box.`
             : 'Enable at least one voicing type above.'}
         </div>
       ) : (
         <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
           {items.map((it, i) => (
-            <CompingDiagram key={`${it.kind}-${it.frets.join('-')}`} item={it} isActive={i === selected} onClick={() => setSelected(i)} />
+            <CompingDiagram
+              key={`${it.kind}-${it.frets.join('-')}`}
+              item={it}
+              isActive={i === selected}
+              onClick={() => setSelected(i)}
+              degreeColors={degreeColors}
+              tuning={tuning}
+              rootNote={current.root}
+            />
           ))}
         </div>
       )}
@@ -1829,6 +1868,7 @@ function ScaleViewPanel({
   voiceLeadingMelody, setVoiceLeadingMelody,
   onApplyScale,
   showFretBox = false, fretBoxStart = 1, fretBoxSize = 5, setShowFretBox,
+  fretBoxStringStart = 0, fretBoxStringSize = 6,
 
 }: {
   timelineChords?: TimelineChord[];
@@ -1853,6 +1893,8 @@ function ScaleViewPanel({
   showFretBox?: boolean;
   fretBoxStart?: number;
   fretBoxSize?: number;
+  fretBoxStringStart?: number;
+  fretBoxStringSize?: number;
   setShowFretBox?: (v: boolean) => void;
 
 }) {
@@ -2233,7 +2275,7 @@ function ScaleViewPanel({
           {([
             { key: 'harmony', label: 'Functional Harmony', color: 'var(--primary)' },
             { key: 'drop', label: 'Drop Voicings', color: 'var(--primary)' },
-            { key: 'comping', label: 'Comping Tool', color: 'var(--accent)' },
+            { key: 'comping', label: 'Comping Tool', color: '285 85% 62%' },
             { key: 'modes', label: 'Modes', color: 'var(--accent)' },
           ] as const).map(t => {
             const on = sectionTab === t.key;
@@ -2511,6 +2553,11 @@ function ScaleViewPanel({
             showFretBox={showFretBox}
             fretBoxStart={fretBoxStart}
             fretBoxSize={fretBoxSize}
+            fretBoxStringStart={fretBoxStringStart}
+            fretBoxStringSize={fretBoxStringSize}
+            degreeColors={degreeColors}
+            keyRoot={primaryScale.root}
+            keyMode={keyMode}
           />
         )}
 
