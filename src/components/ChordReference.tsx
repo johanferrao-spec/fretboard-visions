@@ -1676,12 +1676,26 @@ function ScaleViewPanel({
     setDropDescriptions(prev => ({ ...prev, [key]: value }));
   };
 
+  // Degrees the user has forced to a dominant 7 chord (secondary-dominant style)
+  const [dominantDegrees, setDominantDegrees] = useState<Set<number>>(new Set());
+  const toggleDominantDegree = (i: number) => {
+    setDominantDegrees(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  };
+
   // Build 7th chord labels for each diatonic chord
   const diatonicLabels = useMemo(() => diatonicChords.map((chord, i) => {
+    if (dominantDegrees.has(i)) {
+      return { ...chord, label7: `${chord.root}7`, chordType7: 'Dominant 7' };
+    }
     const chordType7 = get7thChordType(chord.type, i + 1, keyMode);
     const suffix = get7thChordSymbol(chord.type, i + 1, keyMode);
     return { ...chord, label7: `${chord.root}${suffix}`, chordType7 };
-  }), [diatonicChords]);
+  }), [diatonicChords, keyMode, dominantDegrees]);
+
 
   // Mode names per scale degree (rotation of the parent scale).
   // For diatonic modes, rotate MAJOR_MODE_NAMES so the I chord matches the selected mode
@@ -1898,27 +1912,47 @@ function ScaleViewPanel({
             const isActive = degreeFilter === i;
             const color = SCALE_DEGREE_COLORS[i];
             const modeName = modeNames[i] ?? '';
+            const isDom = dominantDegrees.has(i);
             return (
-              <button
-                key={i}
-                onClick={() => setDegreeFilter(isActive ? null : i)}
-                className="rounded-xl font-bold transition-all flex flex-col items-center justify-center py-1 px-1"
-                style={{
-                  backgroundColor: isActive ? `hsla(${color}, 0.15)` : `hsl(${color})`,
-                  border: isActive ? `3px solid hsl(${color})` : `2px solid hsl(${color})`,
-                  color: isActive ? `hsl(${color})` : '#000',
-                  boxShadow: isActive ? `0 0 14px hsla(${color}, 0.6), inset 0 0 8px hsla(${color}, 0.2)` : 'none',
-                  minHeight: 40,
-                }}
-              >
-                <span className="text-[16px] font-black">{chord.roman}</span>
-                <span className="text-[11px] font-mono opacity-80 truncate w-full text-center">
-                  {threeNpsMode ? modeName : chord.label7}
-                </span>
-              </button>
+              <div key={i} className="relative group">
+                <button
+                  onClick={() => setDegreeFilter(isActive ? null : i)}
+                  className="w-full rounded-xl font-bold transition-all flex flex-col items-center justify-center py-1 px-1"
+                  style={{
+                    backgroundColor: isActive ? `hsla(${color}, 0.15)` : `hsl(${color})`,
+                    border: isActive ? `3px solid hsl(${color})` : `2px solid hsl(${color})`,
+                    color: isActive ? `hsl(${color})` : '#000',
+                    boxShadow: isActive ? `0 0 14px hsla(${color}, 0.6), inset 0 0 8px hsla(${color}, 0.2)` : 'none',
+                    minHeight: 40,
+                  }}
+                >
+                  <span className="text-[16px] font-black">{chord.roman}</span>
+                  <span className="text-[11px] font-mono opacity-80 truncate w-full text-center">
+                    {threeNpsMode ? modeName : chord.label7}
+                  </span>
+                </button>
+
+                {/* Hover-reveal: make this degree a dominant 7 */}
+                <div className="absolute left-0 right-0 top-full z-50 overflow-hidden max-h-0 opacity-0 pointer-events-none group-hover:max-h-16 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toggleDominantDegree(i); }}
+                    className="mt-1 w-full rounded-lg border text-[9px] font-mono font-bold uppercase tracking-wider py-1 px-1 transition-colors"
+                    style={{
+                      backgroundColor: isDom ? `hsl(${color})` : 'hsl(var(--background) / 0.95)',
+                      borderColor: `hsl(${color})`,
+                      color: isDom ? '#000' : `hsl(${color})`,
+                    }}
+                    title={isDom ? `Revert ${chord.root} to its diatonic quality` : `Make ${chord.root} a dominant 7`}
+                  >
+                    {isDom ? `${chord.root}7 ✓` : 'Dominant'}
+                  </button>
+                </div>
+              </div>
             );
           })}
         </div>
+
       </div>
 
       {/* Section tabs — Functional Harmony / Drop Voicings / Modes / Voice Leading */}
