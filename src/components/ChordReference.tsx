@@ -22,6 +22,7 @@ import {
 } from '@/lib/music';
 import type { ChordSelection, ScaleSelection } from '@/hooks/useFretboard';
 import type { TimelineChord } from '@/hooks/useSongTimeline';
+import { playFretShape } from '@/lib/guitarMidi';
 
 
 // Mode diagram: shows a mode's first-position shape built on a pentatonic skeleton
