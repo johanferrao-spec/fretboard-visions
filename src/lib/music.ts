@@ -2469,6 +2469,36 @@ export function generateThreeNpsPattern(
   return result;
 }
 
+/** Reverse of scaleToKeyMode: the scale name used by the fretboard for a key mode. */
+export function keyModeToScale(mode: KeyMode): string {
+  const map: Partial<Record<KeyMode, string>> = {
+    major: 'Major (Ionian)',
+    ionian: 'Major (Ionian)',
+    minor: 'Natural Minor (Aeolian)',
+    aeolian: 'Natural Minor (Aeolian)',
+    dorian: 'Dorian',
+    phrygian: 'Phrygian',
+    lydian: 'Lydian',
+    mixolydian: 'Mixolydian',
+    locrian: 'Locrian',
+    harmonic_minor: 'Harmonic Minor',
+    locrian_nat6: 'Locrian ♮6',
+    ionian_sharp5: 'Ionian #5',
+    dorian_sharp4: 'Dorian #4',
+    phrygian_dominant: 'Phrygian Dominant',
+    lydian_sharp2: 'Lydian #2',
+    superlocrian_bb7: 'Superlocrian ♭♭7',
+    melodic_minor: 'Melodic Minor',
+    dorian_b2: 'Dorian ♭2',
+    lydian_augmented: 'Lydian Augmented',
+    lydian_dominant: 'Lydian Dominant',
+    mixolydian_b6: 'Mixolydian ♭6',
+    locrian_nat2: 'Locrian ♮2',
+    superlocrian: 'Superlocrian (Altered)',
+  };
+  return map[mode] ?? 'Major (Ionian)';
+}
+
 export function scaleToKeyMode(scaleName: string): KeyMode {
   const map: Record<string, KeyMode> = {
     'Major (Ionian)': 'ionian',
