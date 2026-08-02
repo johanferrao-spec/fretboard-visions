@@ -1912,27 +1912,47 @@ function ScaleViewPanel({
             const isActive = degreeFilter === i;
             const color = SCALE_DEGREE_COLORS[i];
             const modeName = modeNames[i] ?? '';
+            const isDom = dominantDegrees.has(i);
             return (
-              <button
-                key={i}
-                onClick={() => setDegreeFilter(isActive ? null : i)}
-                className="rounded-xl font-bold transition-all flex flex-col items-center justify-center py-1 px-1"
-                style={{
-                  backgroundColor: isActive ? `hsla(${color}, 0.15)` : `hsl(${color})`,
-                  border: isActive ? `3px solid hsl(${color})` : `2px solid hsl(${color})`,
-                  color: isActive ? `hsl(${color})` : '#000',
-                  boxShadow: isActive ? `0 0 14px hsla(${color}, 0.6), inset 0 0 8px hsla(${color}, 0.2)` : 'none',
-                  minHeight: 40,
-                }}
-              >
-                <span className="text-[16px] font-black">{chord.roman}</span>
-                <span className="text-[11px] font-mono opacity-80 truncate w-full text-center">
-                  {threeNpsMode ? modeName : chord.label7}
-                </span>
-              </button>
+              <div key={i} className="relative group">
+                <button
+                  onClick={() => setDegreeFilter(isActive ? null : i)}
+                  className="w-full rounded-xl font-bold transition-all flex flex-col items-center justify-center py-1 px-1"
+                  style={{
+                    backgroundColor: isActive ? `hsla(${color}, 0.15)` : `hsl(${color})`,
+                    border: isActive ? `3px solid hsl(${color})` : `2px solid hsl(${color})`,
+                    color: isActive ? `hsl(${color})` : '#000',
+                    boxShadow: isActive ? `0 0 14px hsla(${color}, 0.6), inset 0 0 8px hsla(${color}, 0.2)` : 'none',
+                    minHeight: 40,
+                  }}
+                >
+                  <span className="text-[16px] font-black">{chord.roman}</span>
+                  <span className="text-[11px] font-mono opacity-80 truncate w-full text-center">
+                    {threeNpsMode ? modeName : chord.label7}
+                  </span>
+                </button>
+
+                {/* Hover-reveal: make this degree a dominant 7 */}
+                <div className="absolute left-0 right-0 top-full z-50 overflow-hidden max-h-0 opacity-0 pointer-events-none group-hover:max-h-16 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toggleDominantDegree(i); }}
+                    className="mt-1 w-full rounded-lg border text-[9px] font-mono font-bold uppercase tracking-wider py-1 px-1 transition-colors"
+                    style={{
+                      backgroundColor: isDom ? `hsl(${color})` : 'hsl(var(--background) / 0.95)',
+                      borderColor: `hsl(${color})`,
+                      color: isDom ? '#000' : `hsl(${color})`,
+                    }}
+                    title={isDom ? `Revert ${chord.root} to its diatonic quality` : `Make ${chord.root} a dominant 7`}
+                  >
+                    {isDom ? `${chord.root}7 ✓` : 'Dominant'}
+                  </button>
+                </div>
+              </div>
             );
           })}
         </div>
+
       </div>
 
       {/* Section tabs — Functional Harmony / Drop Voicings / Modes / Voice Leading */}
