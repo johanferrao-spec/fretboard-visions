@@ -22,7 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { NoteName } from '@/lib/music';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, getChordDegree, keyModeToScale, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
+import { TUNING_PRESETS, NOTE_NAMES, getChordTones, STRING_GROUP_CONFIG, DROP3_STRING_GROUP_CONFIG, getDiatonicChords, scaleToKeyMode, get7thChordType, CHORD_FORMULAS, ARPEGGIO_FORMULAS, SCALE_FORMULAS, SCALE_DEGREE_COLORS, generateThreeNpsPattern, getChordDegree, keyModeToScale, normalizeKeyMode, type TuningPreset, type KeyMode, type ArpeggioPosition, type InversionVoicing } from '@/lib/music';
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -90,6 +90,17 @@ const Index = () => {
   const [keyMode, setKeyMode] = useState<KeyMode>(() => normalizeKeyMode(scaleToKeyMode(fb.primaryScale.scale)));
 
   const [activeTab, setActiveTab] = useState<'beginner' | 'scales' | 'scaleview' | 'chords' | 'arpeggios' | 'caged' | 'identify' | 'changes' | 'backing' | 'community' | 'tuning' | null>(null);
+  // Key/mode is shared by the backing track, the chart view and Fretboard
+  // Mastery — changing it anywhere updates all three.
+  const syncKeyMode = useCallback((m: KeyMode) => {
+    const norm = normalizeKeyMode(m);
+    setKeyMode(norm);
+    fb.setPrimaryScale({ mode: 'scale', root: timelineKey, scale: keyModeToScale(norm) });
+  }, [fb, timelineKey]);
+  const syncTimelineKey = useCallback((k: NoteName) => {
+    setTimelineKey(k);
+    fb.setPrimaryScale({ mode: 'scale', root: k, scale: keyModeToScale(keyMode) });
+  }, [fb, keyMode]);
   const [scaleViewDegreeFilter, setScaleViewDegreeFilter] = useState<number | null>(null);
   const [scaleViewMode, setScaleViewMode] = useState<'basic' | 'inversion'>('basic');
   const [dropMode, setDropMode] = useState<'drop2' | 'drop3' | null>(null);
@@ -930,9 +941,9 @@ const Index = () => {
               volume={volume}
               onVolumeChange={handleVolumeChange}
               timelineKey={timelineKey}
-              setTimelineKey={setTimelineKey}
+              setTimelineKey={syncTimelineKey}
               keyMode={keyMode}
-              setKeyMode={setKeyMode}
+              setKeyMode={syncKeyMode}
               onSeek={handleSeek}
               onSetChordBass={timeline.setChordBass}
               backingTrackActive={activeTab === 'backing'}
@@ -1032,11 +1043,10 @@ const Index = () => {
               keyMode={keyMode}
               onKeyChange={(k, m) => {
                 setTimelineKey(k);
-                if (m) {
-                  setKeyMode(m);
-                  // Fretboard Mastery follows the chart's detected key/mode.
-                  fb.setPrimaryScale({ mode: 'scale', root: k, scale: keyModeToScale(m) });
-                }
+                const norm = m ? normalizeKeyMode(m) : keyMode;
+                if (m) setKeyMode(norm);
+                // Fretboard Mastery follows the chart's detected key/mode.
+                fb.setPrimaryScale({ mode: 'scale', root: k, scale: keyModeToScale(norm) });
               }}
               onToggleCharts={() => setShowCharts(v => !v)}
               onClose={() => { setShowCharts(false); setActiveTab(null); }}
