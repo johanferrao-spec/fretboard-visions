@@ -807,7 +807,7 @@ const Index = () => {
                  inversionDegreeColor={scaleViewDegreeFilter !== null ? SCALE_DEGREE_COLORS[scaleViewDegreeFilter] : null}
                  chordAddRootNote={chordAddRoot}
                  chordAddHasNotes={chordAddHasNotes}
-                  suppressScaleNotes={activeTab === 'chords'}
+                  suppressScaleNotes={activeTab === 'chords' || (voiceLeadingMode && activeTab === 'scaleview')}
                    chordOctaveShift={chordOctaveShift}
                   threeNpsNotes={threeNpsData?.notes}
                   threeNpsColor={threeNpsData?.color}
