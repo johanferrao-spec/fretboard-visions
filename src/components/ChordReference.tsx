@@ -746,6 +746,7 @@ function ScalesPanel({
   onApplyPrimaryColor,
   onApplySecondaryColor,
 }: {
+  timelineChords?: TimelineChord[];
   primaryScale: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string };
   onApplyScale: (root: NoteName, scale: string, mode: 'scale' | 'arpeggio') => void;
   onApplySecondaryScale?: (slot: { mode: 'scale' | 'arpeggio'; root: NoteName; scale: string } | null) => void;
@@ -1232,6 +1233,7 @@ export default function ChordReference({
         />
       ) : activeTab === 'scaleview' ? (
         <ScaleViewPanel
+          timelineChords={timelineChords}
           primaryScale={primaryScale}
           degreeFilter={scaleViewDegreeFilter}
           setDegreeFilter={setScaleViewDegreeFilter}
@@ -1816,6 +1818,7 @@ function CompingToolPanel({
 }
 
 function ScaleViewPanel({
+  timelineChords = [],
   primaryScale, degreeFilter, setDegreeFilter,
 
   inversionStringGroup, setInversionStringGroup,
