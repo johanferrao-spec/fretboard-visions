@@ -16,7 +16,7 @@ import ChromaticTuner from '@/components/ChromaticTuner';
 import InstrumentSamplers from '@/components/BackingTrack/InstrumentSamplers';
 import { useSharedSampleLibrary as useSampleLibrary } from '@/hooks/SampleLibraryContext';
 import { ensureToneAudioContext } from '@/hooks/engine/audioContext';
-import { ChevronUp, Settings, Target, LogIn, LogOut, User as UserIcon, BookOpen } from 'lucide-react';
+import { ChevronUp, Settings, Target, LogIn, LogOut, User as UserIcon, BookOpen, Music2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
