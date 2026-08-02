@@ -2444,9 +2444,10 @@ function ScaleViewPanel({
             const currentIdx = Math.max(0, STANDARD_MODES.findIndex(m => m.scale === currentMode));
             const currentColor = SCALE_DEGREE_COLORS[currentIdx];
             return (
-              <div className="relative group">
+              <div className="relative">
                 <button
                   type="button"
+                  onClick={() => setModeMenuOpen(o => !o)}
                   className="w-full text-[11px] font-mono font-bold rounded border px-2 py-1 flex items-center justify-between"
                   style={{
                     backgroundColor: `hsl(${currentColor})`,
@@ -2457,7 +2458,8 @@ function ScaleViewPanel({
                   <span>{STANDARD_MODES[currentIdx].label}</span>
                   <span className="opacity-60">▾</span>
                 </button>
-                <div className="absolute left-0 right-0 top-full mt-1 z-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity flex flex-col gap-0.5 p-1 rounded border border-border bg-background/95 backdrop-blur shadow-lg">
+                <div className={`absolute left-0 right-0 top-full mt-1 z-50 transition-opacity flex-col gap-0.5 p-1 rounded border border-border bg-background/95 backdrop-blur shadow-lg ${modeMenuOpen ? 'flex opacity-100' : 'hidden opacity-0 pointer-events-none'}`}>
+
                   {STANDARD_MODES.map((m, i) => {
                     const color = SCALE_DEGREE_COLORS[i];
                     const isSel = m.scale === currentMode;
