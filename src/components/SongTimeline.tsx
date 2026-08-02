@@ -813,12 +813,12 @@ export default function SongTimeline({
 
 
 
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Snap</span>
+        <div className="flex items-center gap-0.5">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">Snap</span>
           <select
             value={snap}
             onChange={e => setSnap(e.target.value as SnapValue)}
-            className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500 text-black border border-amber-400 hover:bg-amber-400 cursor-pointer focus:outline-none"
+            className="px-1 py-0.5 rounded text-[9px] font-mono bg-amber-500 text-black border border-amber-400 hover:bg-amber-400 cursor-pointer focus:outline-none"
             aria-label="Snap value"
           >
             {(['1/4', '1/8', '1/16'] as SnapValue[]).map(s => (
@@ -828,8 +828,8 @@ export default function SongTimeline({
         </div>
 
         {/* Timeline zoom */}
-        <div className="flex items-center gap-1" title="Timeline zoom (double-click to reset)">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Zoom</span>
+        <div className="flex items-center gap-0.5" title="Timeline zoom (double-click to reset)">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">Zoom</span>
           <input
             type="range"
             min={1}
@@ -838,10 +838,10 @@ export default function SongTimeline({
             value={zoom}
             onChange={(e) => setZoom(parseFloat(e.target.value))}
             onDoubleClick={() => setZoom(1)}
-            className="w-20 accent-primary cursor-pointer"
+            className="w-14 accent-primary cursor-pointer"
             aria-label="Timeline zoom"
           />
-          <span className="text-[9px] font-mono text-muted-foreground w-7 text-right">{zoom.toFixed(1)}x</span>
+          <span className="text-[8px] font-mono text-muted-foreground w-6 text-right">{zoom.toFixed(1)}x</span>
         </div>
 
 
