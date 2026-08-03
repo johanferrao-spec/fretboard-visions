@@ -1109,17 +1109,18 @@ export default function SongTimeline({
               className="border-r border-border/30 bg-card/40 flex flex-col items-center justify-center gap-2"
               onMouseDown={(e) => e.stopPropagation()}
             >
-              {/* Chart toggle — centered — with transpose beneath. */}
+              {/* Chart toggle + Read Chart drop box, side by side. */}
+              <div className="flex items-center gap-1.5 px-1.5 w-full">
               <button
                 onClick={() => onToggleCharts?.()}
-                className={`w-[150px] h-8 justify-center rounded-md text-[11px] font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors border shadow-sm ${
+                className={`flex-1 h-7 justify-center rounded-md text-[11px] font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors border shadow-sm ${
                   chartsActive
                     ? 'bg-amber-500 text-black border-amber-400 hover:bg-amber-400'
                     : 'bg-amber-500/80 text-black border-amber-400/80 hover:bg-amber-400'
                 }`}
                 title={chartsActive ? 'Close chart and return to DAW' : 'Open chart panel'}
               >
-                <LayoutGrid size={14} />
+                <LayoutGrid size={12} />
                 Chart
               </button>
               {/* Read Chart drop box — same behaviour as the one in the chart panel. */}
@@ -1137,7 +1138,7 @@ export default function SongTimeline({
                   const file = e.dataTransfer.files?.[0];
                   if (file) onReadChartFile?.(file);
                 }}
-                className={`w-[150px] h-8 flex items-center justify-center gap-1.5 rounded-md border-2 border-dashed cursor-pointer transition-colors ${
+                className={`flex-1 h-7 flex items-center justify-center gap-1 rounded-md border-2 border-dashed cursor-pointer transition-colors ${
                   readDragOver
                     ? 'border-amber-400 bg-amber-400/10 text-amber-300'
                     : 'border-border/60 text-muted-foreground hover:border-amber-400/60 hover:text-amber-300'
@@ -1145,7 +1146,7 @@ export default function SongTimeline({
                 title="Drop a screenshot of a chord chart; AI will fill the chart."
               >
                 {readingChart ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-                <span className="text-[10px] font-mono uppercase tracking-wider">
+                <span className="text-[9px] font-mono uppercase tracking-wider leading-none text-center">
                   {readingChart ? 'Reading…' : 'Read Chart'}
                 </span>
                 <input
@@ -1159,6 +1160,7 @@ export default function SongTimeline({
                   }}
                 />
               </label>
+              </div>
               <div className="flex flex-col items-center gap-0.5" title="Transpose everything (chords + key centre)">
                 <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">
                   Transpose
