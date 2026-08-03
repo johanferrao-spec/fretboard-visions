@@ -1079,6 +1079,14 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
     }
   }, [snapshot]);
 
+  // A file dropped on the timeline's Read Chart box is handed over here.
+  useEffect(() => {
+    if (!pendingReadFile) return;
+    onPendingReadConsumed?.();
+    readChartFromFile(pendingReadFile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingReadFile]);
+
 
 
 
