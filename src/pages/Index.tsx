@@ -29,6 +29,8 @@ const Index = () => {
   const { user, signOut } = useAuth();
   const fb = useFretboard();
   const timeline = useSongTimeline();
+  const [pendingChartFile, setPendingChartFile] = useState<File | null>(null);
+  const [readingChartFile, setReadingChartFile] = useState(false);
   const midi = useMidiEngine();
   const sampleLib = useSampleLibrary();
   const resolveUserSample = useCallback(
@@ -1018,6 +1020,13 @@ const Index = () => {
               onDeleteBackingTrack={(id) => backingApi?.remove(id)}
               savedBackingTracks={backingApi?.saved || []}
               chartsActive={showCharts && activeTab === 'backing'}
+              readingChart={readingChartFile}
+              onReadChartFile={(file) => {
+                setActiveTab('backing');
+                setShowCharts(true);
+                setReadingChartFile(true);
+                setPendingChartFile(file);
+              }}
               onTranspose={handleTranspose}
               onToggleCharts={() => {
                 if (activeTab !== 'backing') {
@@ -1113,6 +1122,8 @@ const Index = () => {
                 fb.setPrimaryScale({ mode: 'scale', root: k, scale: keyModeToScale(norm) });
               }}
               onToggleCharts={() => setShowCharts(v => !v)}
+              pendingReadFile={pendingChartFile}
+              onPendingReadConsumed={() => { setPendingChartFile(null); setReadingChartFile(false); }}
               onClose={() => { setShowCharts(false); setActiveTab(null); }}
               isPlaying={timeline.isPlaying}
               currentBeat={timeline.currentBeat}
