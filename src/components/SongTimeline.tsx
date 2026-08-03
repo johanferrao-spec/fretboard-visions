@@ -1112,7 +1112,7 @@ export default function SongTimeline({
               {/* Chart toggle — centered — with transpose beneath. */}
               <button
                 onClick={() => onToggleCharts?.()}
-                className={`px-5 py-2 rounded-md text-[11px] font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors border shadow-sm ${
+                className={`w-[150px] h-8 justify-center rounded-md text-[11px] font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors border shadow-sm ${
                   chartsActive
                     ? 'bg-amber-500 text-black border-amber-400 hover:bg-amber-400'
                     : 'bg-amber-500/80 text-black border-amber-400/80 hover:bg-amber-400'
@@ -1137,7 +1137,7 @@ export default function SongTimeline({
                   const file = e.dataTransfer.files?.[0];
                   if (file) onReadChartFile?.(file);
                 }}
-                className={`w-[150px] flex items-center justify-center gap-1.5 px-2 py-1 rounded border-2 border-dashed cursor-pointer transition-colors ${
+                className={`w-[150px] h-8 flex items-center justify-center gap-1.5 rounded-md border-2 border-dashed cursor-pointer transition-colors ${
                   readDragOver
                     ? 'border-amber-400 bg-amber-400/10 text-amber-300'
                     : 'border-border/60 text-muted-foreground hover:border-amber-400/60 hover:text-amber-300'
@@ -1419,14 +1419,14 @@ export default function SongTimeline({
                 </span>
                 {/* Resize handles */}
                 <div
-                  className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center hover:brightness-125"
+                  className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
                   style={{ background: 'hsl(var(--foreground) / 0.35)' }}
                   title="Drag to resize from left"
                 >
                   <ChevronsLeftRight size={9} className="text-background pointer-events-none" />
                 </div>
                 <div
-                  className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center hover:brightness-125"
+                  className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
                   style={{ background: 'hsl(var(--foreground) / 0.35)' }}
                   title="Drag to resize from right"
                 >
