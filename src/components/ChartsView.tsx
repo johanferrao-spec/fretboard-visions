@@ -92,6 +92,9 @@ interface ChartsViewProps {
   currentBeat?: number;
   onPlay?: () => void;
   onStop?: () => void;
+  /** Image file dropped on the timeline's Read Chart box — parsed on arrival. */
+  pendingReadFile?: File | null;
+  onPendingReadConsumed?: () => void;
 }
 
 /** 1 grid column = 1/8 bar. 32 columns per row = 4 bars per row. */
@@ -434,7 +437,7 @@ const sectionDisplayName = (raw: string): string => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
-export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onClose, onKeyChange, onArrangementChange, onResetAll, isPlaying, currentBeat = 0, onPlay, onStop }: ChartsViewProps) {
+export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleCharts, onClose, onKeyChange, onArrangementChange, onResetAll, isPlaying, currentBeat = 0, onPlay, onStop, pendingReadFile, onPendingReadConsumed }: ChartsViewProps) {
   // ---- Persisted state (survives closing/reopening the Charts panel) ----
   type PersistedState = {
     slots: ChartSlot[];
@@ -1075,6 +1078,14 @@ export default function ChartsView({ currentKey, keyMode: keyModeProp, onToggleC
       setReadingChart(false);
     }
   }, [snapshot]);
+
+  // A file dropped on the timeline's Read Chart box is handed over here.
+  useEffect(() => {
+    if (!pendingReadFile) return;
+    onPendingReadConsumed?.();
+    readChartFromFile(pendingReadFile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingReadFile]);
 
 
 

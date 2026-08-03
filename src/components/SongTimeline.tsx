@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight, Sparkles, Loader2, Search } from 'lucide-react';
+import { Upload, Play, Square, Trash2, Music, X, ChevronDown, ChevronUp, Save, FolderOpen, LayoutGrid, List, ChevronsLeftRight, Sparkles, Loader2, Search } from 'lucide-react';
 import type { TimelineChord, SnapValue, Genre, GrooveId } from '@/hooks/useSongTimeline';
 import type { NoteName } from '@/lib/music';
 import {
@@ -61,6 +61,10 @@ interface SongTimelineProps {
   onToggleCharts?: () => void;
   /** Transpose all chords and the key centre by N semitones. */
   onTranspose?: (semitones: number) => void;
+  /** Image dropped on the Read Chart box — parsed by the Charts panel. */
+  onReadChartFile?: (file: File) => void;
+  /** True while the Charts panel is parsing a dropped chart image. */
+  readingChart?: boolean;
 }
 
 export default function SongTimeline({
@@ -72,12 +76,13 @@ export default function SongTimeline({
   onSeek, onSetChordBass,
   backingTrackActive, onOpenBackingTrack, onCloseBackingTrack,
   onSaveBackingTrack, onLoadBackingTrack, onDeleteBackingTrack, savedBackingTracks = [],
-  chartsActive, onToggleCharts, onTranspose,
+  chartsActive, onToggleCharts, onTranspose, onReadChartFile, readingChart,
 }: SongTimelineProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   // Horizontal timeline zoom (1 = fit to width). The measure-label strip and the
   // chord grid scroll together so bar numbers always sit above their bars.
   const [zoom, setZoom] = useState(1);
+  const [readDragOver, setReadDragOver] = useState(false);
   // Cumulative semitone offset applied via the transpose buttons (display only).
   const [transposeAmount, setTransposeAmount] = useState(0);
   const labelScrollRef = useRef<HTMLDivElement>(null);
@@ -1117,6 +1122,43 @@ export default function SongTimeline({
                 <LayoutGrid size={14} />
                 Chart
               </button>
+              {/* Read Chart drop box — same behaviour as the one in the chart panel. */}
+              <label
+                onDragOver={(e) => {
+                  if (e.dataTransfer.types.includes('Files')) {
+                    e.preventDefault();
+                    setReadDragOver(true);
+                  }
+                }}
+                onDragLeave={() => setReadDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setReadDragOver(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) onReadChartFile?.(file);
+                }}
+                className={`w-[150px] flex items-center justify-center gap-1.5 px-2 py-1 rounded border-2 border-dashed cursor-pointer transition-colors ${
+                  readDragOver
+                    ? 'border-amber-400 bg-amber-400/10 text-amber-300'
+                    : 'border-border/60 text-muted-foreground hover:border-amber-400/60 hover:text-amber-300'
+                }`}
+                title="Drop a screenshot of a chord chart; AI will fill the chart."
+              >
+                {readingChart ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                <span className="text-[10px] font-mono uppercase tracking-wider">
+                  {readingChart ? 'Reading…' : 'Read Chart'}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onReadChartFile?.(file);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
               <div className="flex flex-col items-center gap-0.5" title="Transpose everything (chords + key centre)">
                 <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground">
                   Transpose
